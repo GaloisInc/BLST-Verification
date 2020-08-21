@@ -1,0 +1,9 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+
+# Convert line endings to CRLF on checkout and to LF on commit
+* text eol=crlf
+* text eol=lf
+# Treat images as binary
+*.jpg binary
+*.bc binary

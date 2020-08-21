@@ -1,0 +1,50 @@
+////// Field extensions
+//
+// Extension fields are represented as polynomial quotient rings,
+// so the elements of an extension of degree m can be represented
+// by polynomials of degree at most m-1, with operations
+// carried out modulo some irreducible polynomial of degree m.
+//
+// We use the Polynomial module, which represents polynomials by
+// their sequence of coefficients, in big-endian order, that is
+// with the constant coefficient appearing last.
+//
+// The modulus is represented a bit strangely; see below.
+
+module ExtensionField where
+
+import Common::Field
+import Polynomial
+
+/**
+ * An extension field, represented as a polynomial quotient ring.
+ *
+ * The modulus is not represented directly as in the `Polynomial` module,
+ * but instead we use a finite sequence `s: [k]t` to represent the poynomial
+ *
+ *     x^k - sum [(s!i) * x^i | i <- [0 .. (`k-1)] ]
+ *
+ * This `s` is in fact the polynomial giving the reduction of x^k modulo
+ * the modulus.  So for example, the modulus
+ *
+ *      x^3 - x^2 - 5
+ *
+ * is represented as `[1,0,5]`.
+ *
+ * The modulus should be an irreducible polynomial; we do not check that here.
+ */
+extension_field: {k, t} (fin k, k >= 1) => FieldRep t -> [k]t -> FieldRep ([k]t)
+extension_field F p =
+    { is_val = all F.is_val
+    , normalize = map F.normalize
+    , field_zero = poly_0 F
+    , field_unit = poly_1 F
+    , add (a,b) = poly_add F a b // uncurry
+    , sub (a,b) = poly_sub F a b
+    , neg = map  F.neg
+    , mul (a,b) = poly_mul_mod F a b p
+    , sq a = poly_mul_mod F a a p
+    , half = map F.half
+    , div (a,b) = poly_mul_mod F a bi p where bi = poly_inverse_mod F b p
+    , is_equal (a,b) = all F.is_equal (zip a b)
+    }
