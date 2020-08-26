@@ -1,0 +1,73 @@
+// Some tests of the algebraic properties of curve operations
+
+import PrimeField
+import ExtensionField
+import ShortWeierstrassCurve
+
+F7 = prime_field_bv 0b111
+C1: EllipticCurve [3]
+C1 = {base_field = F7, a = 0, b = 1}
+
+F13 = prime_field`{13}
+C2: EllipticCurve (Z 13)
+C2 = {base_field = F13, a = 3, b = 1} // 18 rational points
+
+F3 = prime_field`{3}
+F9 = extension_field F3 [0,2]
+C3: EllipticCurve _ // [2](Z 3) can be inferred
+C3 = {base_field = F9, a = [1,1], b=[1,2]}
+
+double_stays_on_curve C S =
+   is_point_affine C S ==> is_point_affine C (double C S)
+
+property double_stays_on_curve1 = double_stays_on_curve C1
+property double_stays_on_curve2 = double_stays_on_curve C2
+property double_stays_on_curve3 = double_stays_on_curve C3
+
+add_closed C P Q =
+   is_point_affine C P /\ is_point_affine C Q ==>
+   is_point_affine C (add C P Q)
+
+property add_closed1 = add_closed C1
+property add_closed2 = add_closed C2
+property add_closed3 = add_closed C3
+
+add_commutes C P Q =
+   is_point_affine C P /\ is_point_affine C Q ==>
+   same_point_affine C (add C P Q) (add C Q P)
+
+property add_commutes1 = add_commutes C1
+property add_commutes2 = add_commutes C2
+property add_commutes3 = add_commutes C3
+
+subtraction_inverts_addition C P Q =
+   is_point_affine C P /\ is_point_affine C Q ==>
+   same_point_affine C (sub C (add C P Q) Q) P  
+
+property subtraction_inverts_addition1 = subtraction_inverts_addition C1
+property subtraction_inverts_addition2 = subtraction_inverts_addition C2
+property subtraction_inverts_addition3 = subtraction_inverts_addition C3
+
+addition_inverts_subtraction C P Q =
+   is_point_affine C P /\ is_point_affine C Q ==>
+   same_point_affine C (add C (sub C P Q) Q) P  
+
+property addition_inverts_subtraction1 = addition_inverts_subtraction C1
+property addition_inverts_subtraction2 = addition_inverts_subtraction C2
+property addition_inverts_subtraction3 = addition_inverts_subtraction C3
+
+mult_sum C S a b =
+    is_point_affine C S /\ a <= 0x3f /\ b <= 0x3f ==> // so a+b does not overflow
+    same_point_affine C (mult C (a+b) S) (add C (mult C a S) (mult C b S))
+
+property mult_sum1 = mult_sum C1
+property mult_sum2 = mult_sum C2
+property mult_sum3 = mult_sum C3
+
+mult_prod C S a b =
+    is_point_affine C S /\ a <= 0x0f /\ b <= 0x0f ==> // so a*b does not overflow
+    same_point_affine C (mult C (a*b) S) (mult C a (mult C b S))
+
+property mult_prod1 = mult_prod C1
+property mult_prod2 = mult_prod C2
+property mult_prod3 = mult_prod C3
