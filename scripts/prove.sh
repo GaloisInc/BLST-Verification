@@ -1,4 +1,4 @@
 #!/bin/sh
 set -e
 
-saw proof/test.saw
+saw proof/expand_message_xmd.saw

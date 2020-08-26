@@ -1,4 +1,0 @@
-m <- llvm_load_module "../server.o.bc";
-
-include "helpers.saw";
-

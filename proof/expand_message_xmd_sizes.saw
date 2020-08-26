@@ -1,0 +1,35 @@
+// Here we compute the list of sizes that will be used as third argument of
+// `sha256_bcopy` while executing `expand_message_xmd`, depending on msg_len,
+// aug_len, and dst_len. We can then generate overrides for each.
+
+// `sha256_update` maintains a 64 bytes buffer that can be filled up
+// incrementally. When it is full, `sha256_block_data_order` is called.
+// However, when data of length 64 is readily available in the input and the
+// current offset is 0, `sha256_update` does not bother copying input bytes in
+// its buffer.
+
+// `sha256_update` is called first with `aug_len`, then `msg_len`, then `3 +
+// DST_len + 1`.
+
+// TODO: why not do everything in Cryptol? Can we eval cryptol sequences? Yes
+// we can with `eval_list`. However doing things in Cryptol seems clumsy
+// because there's no type of lists (just fixed-length sequences). Is this
+// really the case?
+
+let sizes_ len offset = // returns a pair; first elem is offset, then list of override sizes
+  if eval_bool {{ `len == 0 \/ (`offset == 0 /\ `len % 64 == 0)}}
+    then (0, [])
+    else
+      if eval_bool {{ `len <= (64-`offset) }} // fits in the remaining buffer space, so there will be a single copy
+      then (eval_size {|offset+len|}, [eval_size {| len |}])
+      else // does not fit in the remaining buffer space; there will be one or two copies
+        if eval_bool {{ `offset != 0 }} // two copies
+        then (eval_size {|(offset + len) % 64|}, [eval_size {| 64-offset |}, eval_size {| (offset + len) % 64|}])
+        else (eval_size {|len % 64|}, [eval_size {|len % 64|}]); // one copy
+
+let sizes aug_len msg_len (dst_len:Int) = do {
+  let (offset_1, ss_1) = sizes_ aug_len 0;
+  let (offset_2, ss_2) = sizes_ msg_len offset_1;
+  let (_, ss_3) = sizes_ (eval_size {|dst_len+4|}) offset_2;
+  return (concat ss_1 (concat ss_2 ss_3)); // TODO: how to eliminate duplicates here?
+};

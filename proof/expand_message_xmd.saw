@@ -1,0 +1,83 @@
+///////////////////////////////////////////////////////////////////////////////
+// Imports
+///////////////////////////////////////////////////////////////////////////////
+
+m <- llvm_load_module "../server.o.bc";
+
+include "helpers.saw";
+include "expand_message_xmd_sizes.saw";
+
+///////////////////////////////////////////////////////////////////////////////
+// Specifications
+///////////////////////////////////////////////////////////////////////////////
+
+// len_in_bytes is a multiple of 64
+// NOTE: bytes_ptr is a pointer to `unsigned char` that will later be cast to
+// int64; thus we are going to assume it's aligned on 64 bits
+let expand_message_xmd_spec len_in_bytes aug_len msg_len DST_len = do {
+  let bytes_type = (llvm_array len_in_bytes (llvm_int 8));
+  bytes_ptr <- crucible_alloc_aligned 8 bytes_type;
+  (_, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 64));
+  (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 64));
+  (_, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 64));
+  crucible_execute_func [bytes_ptr, crucible_term {{ `len_in_bytes : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}, msg_ptr, crucible_term {{ `msg_len : [64] }}, DST_ptr, crucible_term {{ `DST_len : [64] }}];
+  new_bytes <- crucible_fresh_var "new_bytes" bytes_type;
+  crucible_points_to bytes_ptr (crucible_term new_bytes);
+};
+
+let blst_sha256_emit_spec = do {
+  (_, h_ptr) <- ptr_to_fresh_readonly "h" (llvm_array 8 (llvm_int 32)); // should always be initialized
+  let md_type = (llvm_array 32 (llvm_int 8));
+  md_ptr <- crucible_alloc md_type;
+  crucible_execute_func [md_ptr, h_ptr];
+  new_md <- crucible_fresh_var "new_md" md_type;
+  crucible_points_to md_ptr (crucible_term new_md);
+};
+
+// blocks is a number of 512-bit blocks, which corresponds to 64 bytes
+let blst_sha256_block_data_order_spec blocks = do {
+  let h_type = (llvm_array 8 (llvm_int 32));
+  (_, h_ptr) <- ptr_to_fresh "h" h_type;
+  (_, inp_ptr) <- ptr_to_fresh_readonly "inp" (llvm_array (eval_size {| 64*blocks |}) (llvm_int 8));
+  crucible_execute_func [h_ptr, inp_ptr, crucible_term {{ `blocks : [64] }}];
+  new_h <- crucible_fresh_var "new_h" h_type;
+  crucible_points_to h_ptr (crucible_term new_h);
+};
+
+let blst_sha256_bcopy_spec len = do {
+  let buf_type = (llvm_array len (llvm_int 8));
+  buf_ptr <- crucible_alloc buf_type;
+  (_, inp_ptr) <- ptr_to_fresh_readonly "inp" (llvm_array len (llvm_int 8));
+  crucible_execute_func [buf_ptr, inp_ptr, crucible_term {{ `len : [64] }}];
+  new_buf <- crucible_fresh_var "new_buf" buf_type;
+  crucible_points_to buf_ptr (crucible_term new_buf);
+};
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Proofs
+///////////////////////////////////////////////////////////////////////////////
+
+blst_sha256_block_data_order_1_ov <- crucible_llvm_unsafe_assume_spec m "blst_sha256_block_data_order" (blst_sha256_block_data_order_spec 1);
+blst_sha256_block_data_order_7_ov <- crucible_llvm_unsafe_assume_spec m "blst_sha256_block_data_order" (blst_sha256_block_data_order_spec 7);
+blst_sha256_emit_ov <- crucible_llvm_unsafe_assume_spec m "blst_sha256_emit" blst_sha256_emit_spec;
+
+let make_blst_sha256_bcopy_ov len = crucible_llvm_unsafe_assume_spec m "blst_sha256_bcopy" (blst_sha256_bcopy_spec len);
+
+let make_blst_sha256_bcopy_ovs aug_len msg_len dst_len = do {
+  ss <- (sizes aug_len msg_len dst_len);
+  ovs <- (for ss make_blst_sha256_bcopy_ov);
+  return ovs;
+};
+
+// len_in_bytes of 128 seems to be fixed. Rest is variable, but aug_len is 96 or 48
+let aug_len = 96;
+let msg_len = 76;
+let dst_len= 9;
+let bytes = 128;
+
+blst_sha256_bcopy_ovs <- make_blst_sha256_bcopy_ovs aug_len msg_len dst_len;
+
+let overrides = (concat [blst_sha256_block_data_order_1_ov, blst_sha256_block_data_order_7_ov, blst_sha256_emit_ov] blst_sha256_bcopy_ovs);
+
+expand_message_xmd_ov <- crucible_llvm_verify m "expand_message_xmd" overrides false (expand_message_xmd_spec bytes aug_len msg_len dst_len) abc;
