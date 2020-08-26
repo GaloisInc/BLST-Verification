@@ -1,0 +1,125 @@
+// Tests for hashing to curve E1, from draft-irtf-cfrg-hash-to-curve-09
+
+import HashToCurveE1
+import ShortWeierstrassCurve as EC
+import Parameters as P
+
+// Appendix I.1  tests expand_msg
+
+dst_1 = "QUUX-V01-CS02-with-expander"
+
+property expand_test_1 =
+    expand_msg ("", dst_1) ==
+    split 0xf659819a6473c1835b25ea59e3d38914c98b374f0970b7e4c92181df928fca88
+
+property expand_test_2 =
+    expand_msg ("abc", dst_1) ==
+    split 0x1c38f7c211ef233367b2420d04798fa4698080a8901021a795a1151775fe4da7
+
+property expand_test_3 =
+    expand_msg ("abcdef0123456789", dst_1) ==
+    split 0x8f7e7b66791f0da0dbb5ec7c22ec637f79758c0a48170bfb7c4611bd304ece89
+
+msg_q128 = "q128_qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" #
+           "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" #
+           "qqqqqqqqqqqqqqqqqqqqqqqqq"
+
+property expand_test_4 =
+    expand_msg (msg_q128, dst_1) ==
+    split 0x72d5aa5ec810370d1f0013c0df2f1d65699494ee2a39f72e1716b1b964e1c642
+
+
+msg_a512 = "a512_"  # ['a' | _ <- [0..511]]
+
+property expand_test_5 =
+    expand_msg (msg_a512, dst_1) ==
+    split 0x3b8e704fc48336aca4c2a12195b720882f2162a4b7b13a9c350db46f429b771b
+
+// From Section H.9.1, BLS12381G1_XMD:SHA-256_SSWU_RO_
+
+to_Fp: {n} (fin n, n <= 384) => [n] -> [384]
+to_Fp bits = (zext bits) // mod something?
+
+dst = "QUUX-V01-CS02-with-BLS12381G1_XMD:SHA-256_SSWU_RO_"
+
+ex1_msg = ""
+
+ex1_us = hash_to_field`{count=2} (ex1_msg, dst)
+
+ex1_expected_us =
+   [ to_Fp 0x0ba14bd907ad64a016293ee7c2d276b8eae71f25a4b941eece7b0d89f17f75cb3ae5438a614fb61d6835ad59f29c564f
+   , to_Fp 0x019b9bd7979f12657976de2884c7cce192b82c177c80e0ec604436a7f538d231552f0d96d9f7babe5fa3b19b3ff25ac9
+   ]
+
+property hash_to_field_test_1 =
+    ex1_us == ex1_expected_us
+
+// .. the first step works (map_to_curve, going to Curve_E')
+
+property map_to_curve_test_1_1_a =
+    EC::is_point_affine Curve_E' (map_to_curve_simple_swu (ex1_us@0))
+
+property map_to_curve_test_1_1_b =
+    EC::is_point_affine Curve_E' (map_to_curve_simple_swu (ex1_us@1))
+
+// ... and the isogeny gets us to the curve C
+
+property map_to_curve_test_1_2_a =
+    EC::is_point_affine P::E (map_to_curve_simple_swu_AB0 (ex1_us@0))
+
+property map_to_curve_test_1_2_b =
+    EC::is_point_affine P::E (map_to_curve_simple_swu_AB0 (ex1_us@1))
+
+// .. and indeed to the correct points on that curve
+
+property map_to_curve_test_1_3_a =
+    EC::same_point_affine P::E (map_to_curve_simple_swu_AB0 (ex1_us@0))
+    (0x11a3cce7e1d90975990066b2f2643b9540fa40d6137780df4e753a8054d07580db3b7f1f03396333d4a359d1fe3766fe,
+     0x0eeaf6d794e479e270da10fdaf768db4c96b650a74518fc67b04b03927754bac66f3ac720404f339ecdcc028afa091b7)
+
+property map_to_curve_test_1_3_b =
+    EC::same_point_affine P::E (map_to_curve_simple_swu_AB0 (ex1_us@1))
+    (0x160003aaf1632b13396dbad518effa00fff532f604de1a7fc2082ff4cb0afa2d63b2c32da1bef2bf6c5ca62dc6b72f9c,
+     0x0d8bb2d14e20cf9f6036152ed386d79189415b6d015a20133acb4e019139b94e9c146aaad5817f866c95d609a361735e)
+
+// ... finally, the overall mapping gets us the correct result.
+
+property hash_to_curve_test_1 =
+    EC::same_point_affine P::E (hash_to_curve ("", dst))
+    (0x052926add2207b76ca4fa57a8734416c8dc95e24501772c814278700eed6d1e4e8cf62d9c09db0fac349612b759e79a1,
+     0x08ba738453bfed09cb546dbb0783dbb3a5f1f566ed67bb6be0e8c67e2e81a4cc68ee29813bb7994998f3eae0c9c6a265)
+
+// Example 2
+
+ex2_msg = "abc"
+ex2_us = hash_to_field`{count=2} (ex2_msg, dst)
+
+ex2_expected_us =
+ [ to_Fp 0x0d921c33f2bad966478a03ca35d05719bdf92d347557ea166e5bba579eea9b83e9afa5c088573c2281410369fbd32951
+ , to_Fp 0x003574a00b109ada2f26a37a91f9d1e740dffd8d69ec0c35e1e9f4652c7dba61123e9dd2e76c655d956e2b3462611139
+ ]
+
+property hash_to_field_test_2 =
+  ex2_us == ex2_expected_us
+
+property hash_to_curve_test_2 =
+    EC::same_point_affine P::E (hash_to_curve ("abc", dst))
+    (0x03567bc5ef9c690c2ab2ecdf6a96ef1c139cc0b2f284dca0a9a7943388a49a3aee664ba5379a7655d3c68900be2f6903,
+     0x0b9c15f3fe6e5cf4211f346271d7b01c8f3b28be689c8429c85b67af215533311f0b8dfaaa154fa6b88176c229f2885d)
+
+// Examples 3 .. 
+
+property hash_to_curve_test_3 =
+    EC::same_point_affine P::E (hash_to_curve ("abcdef0123456789", dst))
+    (0x11e0b079dea29a68f0383ee94fed1b940995272407e3bb916bbf268c263ddd57a6a27200a784cbc248e84f357ce82d98,
+     0x03a87ae2caf14e8ee52e51fa2ed8eefe80f02457004ba4d486d6aa1f517c0889501dc7413753f9599b099ebcbbd2d709)
+
+property hash_to_curve_test_4 =
+    EC::same_point_affine P::E (hash_to_curve (msg_q128, dst))
+    (0x15f68eaa693b95ccb85215dc65fa81038d69629f70aeee0d0f677cf22285e7bf58d7cb86eefe8f2e9bc3f8cb84fac488,
+     0x1807a1d50c29f430b8cafc4f8638dfeeadf51211e1602a5f184443076715f91bb90a48ba1e370edce6ae1062f5e6dd38)
+
+property hash_to_curve_test_5 =
+    EC::same_point_affine P::E (hash_to_curve (msg_a512, dst))
+    (0x082aabae8b7dedb0e78aeb619ad3bfd9277a2f77ba7fad20ef6aabdc6c31d19ba5a6d12283553294c1825c4b3ca2dcfe,
+     0x05b84ae5a942248eea39e1d91030458c40153f3b654ab7872d779ad1e942856a20c438e8d99bc8abfbf74729ce1f7ac8)

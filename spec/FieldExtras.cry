@@ -1,0 +1,31 @@
+module FieldExtras where
+
+import Common::Field
+
+/**
+ * Sum of a list of field elements
+ */
+F_sum: {t, n} (fin n) => FieldRep t -> [n]t -> t
+F_sum F vs = sums!0 where
+    sums = [F.field_zero] # [F.add (s, v) | s <- sums | v <- vs]
+
+/**
+ * Product of a list of field elements
+ */
+F_prod: {t, n} (fin n) => FieldRep t -> [n]t -> t
+F_prod F vs = prods!0 where
+    prods = [F.field_unit] # [F.mul (s, v) | s <- prods | v <- vs]
+
+/**
+ * F_expt F x e = x^e, computed in field F.
+ */
+F_expt: {t, n} (fin n) => FieldRep t -> t -> [n] -> t
+F_expt F x e = powers ! 0 where
+    powers = [F.field_unit] #
+             [if b then F.mul (x, F.sq p) else F.sq p | p <- powers | b <- e]
+
+/**
+ * Is a field element zero?
+ */
+F_is_zero: {t} FieldRep t -> t -> Bit
+F_is_zero F x = F.is_equal (x, F.field_zero)
