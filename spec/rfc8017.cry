@@ -1,0 +1,22 @@
+module rfc8017 where
+// Some definitions from RFC 8107 (PKCS #1), November 2016
+// 
+
+// Section 4. Data Conversion Primitives
+//
+// The intent is to convert to and from "Integers".  For Cryptol,
+// we make them work with any integer-like type.
+
+// The bytes are assembled in big-endian order.
+
+/*
+ * I2OSP`{xLen=y} x corresponds to the RFC's notation "I2OSP(x, y)"
+ */
+I2OSP: {xLen, a} (fin xLen, Integral a) => a -> [xLen][8]
+I2OSP x = split (fromInteger (toInteger x))
+
+// TODO: it may be dangerous to let type "a" be inferred; sometimes
+// Cryptol infers [n] for n < xLen*8, which then ignores high-order bits.
+
+OS2IP: {xLen, a} (fin xLen, Ring a) => [xLen][8] -> a
+OS2IP x = fromInteger (toInteger (join x))
