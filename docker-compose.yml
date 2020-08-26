@@ -1,0 +1,9 @@
+version: '3'
+services:
+  blst:
+    build: .
+    volumes:
+      #- ./build:/workdir/build:rw # not needed?
+      - ./blst:/workdir/blst:rw # for now we build there
+      - ./proof:/workdir/proof:ro
+      - ./spec:/workdir/spec:ro
