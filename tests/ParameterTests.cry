@@ -1,0 +1,22 @@
+import Parameters
+import ShortWeierstrassCurve
+
+// representation of field elements:
+
+property Fp_to_octets_to_Fp x = octets_to_Fp (Fp_to_octets x) == x
+
+property Fp_12_to_octets_to_Fp_12 x = octets_to_Fp_12 (Fp_12_to_octets x) == x
+
+// Sanity checks on the curve parameters
+
+property BP_on_E =
+    is_point_affine E BP // BP is on curve E
+
+property BP'_on_E' =
+    is_point_affine E' BP' // BP' is on curve E'
+
+property BP_order =
+    is_point_O E (mult E r BP) // r*BP = O
+
+property BP'_order =
+    is_point_O E' (mult E' r BP') // r*BP' = O

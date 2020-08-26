@@ -1,0 +1,164 @@
+// Parameters for the BLS12_381 signature, from draft-irtf-cfrg-pairing-friendly-curves-07
+
+module Parameters where
+
+import Polynomial
+import PrimeField
+import ExtensionField
+import ShortWeierstrassCurve
+
+////////////////////////////////////////////////////////////////
+// Pairing-friendly curves, Section 4.2.2
+//
+
+// t = -2^63 - 2^62 - 2^60 - 2^57 - 2^48 - 2^16
+t_signed_form: [64][2] // list of {-1,0,1}, used in ate pairing
+// here, just {-1, 0} used
+t_signed_form = [ [bit,bit] | bit <-  <| x^^63 + x^^62 + x^^60 + x^^57 + x^^48 + x^^16 |> ]
+
+type p = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+
+/*
+Fp = PrimeField`{p}
+type t_Fp = Z p
+*/
+Fp = prime_field_bv`{384} `p  // representation of F_p
+type t_Fp = [384]  // ... and the underlying Cryptol type
+
+//       F_p^2 = F_p[u] / (u^2 + 1)
+Fp_2 = extension_field Fp [0,`p-1] // [Fp.field_zero, Fp.neg Fp.field_unit] // [0,-1]
+type t_Fp_2 = [2]t_Fp
+
+/** u is the generator for F_p^2 over F_p */
+u: t_Fp_2
+u = poly_x Fp
+
+u_plus_1: t_Fp_2
+u_plus_1 = Fp_2.add (u, poly_1 Fp)
+
+/**
+ * Lift a value from F_p to F_p^2
+ */
+Fp_to_Fp_2: t_Fp -> t_Fp_2
+Fp_to_Fp_2 = poly_const Fp
+
+//       F_p^6 = F_p^2[v] / (v^3 - u - 1)
+Fp_6 = extension_field Fp_2 [Fp_2.field_zero, Fp_2.field_zero, u_plus_1]
+type t_Fp_6 = [3]t_Fp_2
+
+/** v is the generator for F_p^6 over F_p^2 */
+v: t_Fp_6
+v = poly_x Fp_2
+
+/**
+ * Lift a value from F_p^2 to F_p^6
+ */
+Fp_2_to_Fp_6: t_Fp_2 -> t_Fp_6
+Fp_2_to_Fp_6 = poly_const Fp_2
+
+/**
+ * Lift a value from F_p to F_p^6
+ */
+Fp_to_Fp_6: t_Fp -> t_Fp_6
+Fp_to_Fp_6 x = Fp_2_to_Fp_6 (Fp_to_Fp_2 x)
+
+//       F_p^12 = F_p^6[w] / (w^2 - v).
+Fp_12 = extension_field Fp_6 [Fp_6.field_zero, v]
+type t_Fp_12 = [2]t_Fp_6
+
+/** w is the generator for F_p^12 over F_p^6 */
+w: t_Fp_12
+w = poly_x Fp_6
+
+/**
+ * Lift a value from F_p^6 to F_p^12
+ */
+Fp_6_to_Fp_12: t_Fp_6 -> t_Fp_12
+Fp_6_to_Fp_12 = poly_const Fp_6
+
+/**
+ * Lift a value from F_p^2 to F_p^12
+ */
+Fp_2_to_Fp_12: t_Fp_2 -> t_Fp_12
+Fp_2_to_Fp_12 x = Fp_6_to_Fp_12 (Fp_2_to_Fp_6 x)
+
+/**
+ * Lift a value from F_p to F_p^12
+ */
+Fp_to_Fp_12: t_Fp -> t_Fp_12
+Fp_to_Fp_12 x = Fp_2_to_Fp_12 (Fp_to_Fp_2 x)
+
+////////////////////////////////////////////////////////////////
+//
+// Pairing-friendly curves, Section 2.5, representation convention
+//
+
+// Given function f: t -> octets, then we just concatenate the octet streams, starting with the
+// constant coefficient
+private
+  poly_to_octets: {t,k,n} (fin k, fin n) => (t->[n*8]) -> [k]t -> [k*n*8]
+  poly_to_octets f p = join (map f (reverse p))
+
+Fp_to_octets: t_Fp -> [48*8] // big endian
+Fp_to_octets x = x
+
+Fp_12_to_octets: t_Fp_12 -> [12*48*8]
+Fp_12_to_octets = poly_to_octets (poly_to_octets (poly_to_octets Fp_to_octets))
+
+private
+  octets_to_poly: {t,k,n} (fin k, fin n) => ([n*8]->t) -> [k*n*8] -> [k]t
+  octets_to_poly f octets = map f (reverse (split octets))
+
+octets_to_Fp: [48*8] -> t_Fp
+octets_to_Fp octets = octets // TODO: chould we check that they are not too big?
+
+octets_to_Fp_2: [2*48*8] -> t_Fp_2
+octets_to_Fp_2 = (octets_to_poly`{k=2} octets_to_Fp)
+
+octets_to_Fp_12: [12*48*8] -> t_Fp_12
+octets_to_Fp_12 = octets_to_poly`{k=2} (octets_to_poly`{k=3} (octets_to_poly`{k=2} octets_to_Fp))
+
+
+////////////////////////////////////////////////////////////////
+//
+// parameters for a base point on the main curve, Section 4.2.1
+//
+
+r = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+
+BP_x = octets_to_Fp 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb
+
+BP_y = octets_to_Fp 0x08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1
+
+h = 0x396c8c005555e1568c00aaab0000aaab
+
+BP = (BP_x, BP_y)
+
+b: t_Fp
+b = 4
+
+E: EllipticCurve t_Fp
+E = {base_field = Fp, a = Fp.field_zero, b = b}
+
+r' =  0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+
+x'_0 = octets_to_Fp 0x024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8
+
+x'_1 =  octets_to_Fp 0x13e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e
+
+y'_0 = octets_to_Fp 0x0ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801
+
+y'_1 = octets_to_Fp 0x0606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be
+
+h' = 0x5d543a95414e7f1091d50792876a202cd91de4547085abaa68a205b2e5a7ddfa628f1cb4d9e82ef21537e293a6691ae1616ec6e786f0c70cf1c38e31c7238e5
+
+BP_x' = [x'_1, x'_0]
+BP_y' = [y'_1, y'_0]
+
+BP' = (BP_x', BP_y')
+
+b': t_Fp_2
+b' = [4,4]  // 4(u+1)
+
+E': EllipticCurve t_Fp_2
+E' = {base_field = Fp_2, a = Fp_2.field_zero, b = b'}
