@@ -1,0 +1,194 @@
+// Curves in Weierstrass short form, over an arbitrary field
+//
+// That is, the curve equation is y^2 = x^3 + ax + b for some a, b in the field.
+//
+// We use affine coordinates, and describe Jacobian projective coordiates.
+// Points are represented as tuples, corresponding to normal math notation.
+//
+// We represent the point at infinity by the affine coordinates (0,0), which is fine so long as
+// b is not 0.  This is the case for all curves of interest in this project.
+//
+// The curve operations are in no way optimized; we are only interested in getting the
+// mathematically correct answer here.
+
+module ShortWeierstrassCurve where
+
+import Common::Field
+
+type EllipticCurve t =
+  { base_field: FieldRep t
+  , a: t
+  , b: t
+  } // maybe also add cardinality, order, etc.
+
+type AffinePoint rep = (rep, rep) // (x, y)
+type ProjectivePoint rep = (rep, rep, rep) // (X:Y:Z)
+
+/**
+ * The "point at infinity" on an elliptic curve; the zero for point addition.
+ * That's the letter "O" in the name, not the digit "0".
+ */
+point_O: {t} EllipticCurve t ->  AffinePoint t
+point_O C = (F.field_zero, F.field_zero) where F = C.base_field
+
+/**
+ * Is a point the point at infinity for a given curve?
+ */
+is_point_O: {t} EllipticCurve t ->  AffinePoint t -> Bool
+is_point_O C S = same_point_affine C S (point_O C)
+
+/**
+ * The Jacobian projective coordinates of a point in affine coordinates.
+ */
+projectify: {t} EllipticCurve t -> AffinePoint t -> ProjectivePoint t
+projectify C (x,y) = (x, y, C.base_field.field_unit)
+
+/**
+ * The affine coordinates of a point in Jacobian projective coordinates.
+ */
+affinify: {t} EllipticCurve t -> ProjectivePoint t -> AffinePoint t
+affinify C (x,y,z) = if is_zero F z
+                     then point_O C
+                     else (F.mul(lambda2, x), F.mul(lambda3, y))
+    where
+        F = C.base_field
+        lambda = F.div (F.field_unit, z)
+        lambda2 = F.sq lambda
+        lambda3 = F.mul(lambda, lambda2)
+
+private
+    cubed: {t} FieldRep t -> t -> t
+    cubed F x = F.mul (x, F.sq x)
+
+    fourth: {t} FieldRep t -> t -> t
+    fourth F x = F.sq (F.sq x)
+
+    sixth: {t} FieldRep t -> t -> t
+    sixth F x = F.sq (cubed F x)
+
+    is_zero: {t} FieldRep t -> t -> Bit
+    is_zero F x = F.is_equal (x, F.field_zero)
+
+    // it would be convenient if FieldRep included a function for multiplying
+    // by a constant
+    twice: {t} FieldRep t -> t -> t
+    twice F x = F.add (x, x)
+
+    thrice: {t} FieldRep t -> t -> t
+    thrice F x = F.add (x, twice F x)
+  
+/**
+ * Determine whether two projective points are different representations of
+ * the same point on the curve.
+ */
+same_point: {t} EllipticCurve t -> ProjectivePoint t ->  ProjectivePoint t -> Bool
+same_point C (x,y,z) (x',y',z')  =
+    F.is_equal (F.mul (x, F.sq z'), F.mul (x', F.sq z)) /\
+    F.is_equal (F.mul (y, cubed F z'), F.mul (y', cubed F z))
+    where F = C.base_field
+
+/**
+ * Are two affine points on a curve equal?
+ */
+same_point_affine:  {t} EllipticCurve t -> AffinePoint t ->  AffinePoint t -> Bool
+same_point_affine C (x,y) (x',y') = F.is_equal (x, x') /\ F.is_equal (y, y')
+    where F = C.base_field
+
+/**
+ * Is a given point in affine coordinates on a given curve?
+ */
+is_point_affine: {t} EllipticCurve t -> AffinePoint t -> Bit
+is_point_affine C S = is_point_O C S \/
+                      (F.is_val x /\ F.is_val y /\
+                       F.is_equal(F.sq y, F.add(cubed F x, F.add (F.mul (C.a, x), C.b))))
+    where F = C.base_field
+          (x,y) = S
+
+/**
+ * Is a given point in Jaconian projective coordinates on a given curve?
+ */
+is_point_projective : {t} EllipticCurve t -> ProjectivePoint t -> Bit
+is_point_projective C (x,y,z) = F.is_val x /\ F.is_val y /\ F.is_val z /\ F.is_equal(F.sq y, t)
+    where t = F.add(cubed F x, F.add (F.mul (F.mul (C.a, x), fourth F z), F.mul (C.b, sixth F z)))
+          F = C.base_field
+
+
+// Group operations on the curve, using affine coordinates
+
+/**
+ * The negative of a point in affine coordinates on a curve.
+ */
+neg: {t} EllipticCurve t -> AffinePoint t -> AffinePoint t
+neg C (x,y) = (x, C.base_field.neg y)
+
+double: {t} EllipticCurve t -> AffinePoint t -> AffinePoint t
+double C P = if is_point_O C P then P
+             | is_zero C.base_field P.1 then point_O C // check this!
+             else double_non_O C P
+
+private
+    double_non_O: {t} EllipticCurve t -> AffinePoint t -> AffinePoint t
+    double_non_O C (x1,y1) = (x3,y3) where
+        F = C.base_field
+        // x3 = (3*x1^2+a)^2/(2*y1)^2-x1-x1
+        x3 = F.sub (F.sq R0, twice F x1)
+        //y3 = (2*x1+x1)*(3*x1^2+a)/(2*y1)-(3*x1^2+a)^33/(2*y1)^3-y1
+        // y3 = F.sub (F.sub (R1, R2), y1)
+        // alt formula (Wiki)
+        y3 = F.sub (F.mul (R0, F.sub(x1,x3)), y1)
+        R0 = F.div (F.add (thrice F (F.sq x1), C.a), twice F y1) // (3*x1^2+a)/(2*y1)
+        R1 = F.mul (thrice F x1, R2)
+        R2 = cubed F R0
+
+/**
+ * The sum of two points in affine coordinates on a curve.
+ * This can give meaningless results if the given points are not in fact
+ * on the curve.
+ */
+add: {t} EllipticCurve t -> AffinePoint t -> AffinePoint t -> AffinePoint t
+add C P Q = if same_point_affine C P (point_O C) then Q
+            |  same_point_affine C Q (point_O C) then P
+            |  same_point_affine C P (neg C Q) then point_O C
+            |  same_point_affine C P Q then double C P
+            else raw_add C P Q 
+
+private
+  raw_add: {t} EllipticCurve t -> AffinePoint t -> AffinePoint t -> AffinePoint t
+  raw_add C (x1,y1) (x2,y2) = (x3,y3) where
+    F = C.base_field
+    // x3 = (y2-y1)^2/(x2-x1)^2-x1-x2
+    x3 = F.sub (F.sub (F.sq R0, x1), x2)
+    // y3 = (2*x1+x2)*(y2-y1)/(x2-x1)-(y2-y1)^3/(x2-x1)^3-y1
+    y3 = F.sub (F.sub (R1, R2), y1)
+    R0 = F.div (F.sub (y2, y1), F.sub (x2, x1)) // (y2-y1)/(x2-x1)
+    R1 = F.mul (F.add (twice F x1, x2), R0)
+    R2 = cubed F R0
+
+
+/**
+ * The difference of two points in affine coordinates on a curve.
+ * This can give meaningless results if the given points are not in fact
+ *  on the curve.
+ */
+sub: {t} EllipticCurve t -> AffinePoint t -> AffinePoint t -> AffinePoint t
+sub C P Q = add C P (neg C Q)
+
+/**
+ * Integer multiple of a point on the elliptic curve.  The multiplier,
+ * a bitvector, is interpreted as a non-negative integer.
+ */ 
+mult: {k, t} (fin k, k >= 1) => EllipticCurve t -> [k] -> AffinePoint t -> AffinePoint t
+mult C d S = if d == 0 then point_O C
+             | d == 1 then S
+             | same_point_affine C S (point_O C) then point_O C
+             else Rs!1
+  where k = 0b00 # d // 2 extra top bits, so h does not overflow (e.g. for d=0b11)
+        h = k + k + k
+        Rs = [point_O C] # // start with 1 instead of S; we don't really know where the high-bit is
+             [ if hi && ~ki then add C RiDouble S
+                | ~hi && ki then sub C RiDouble S
+                else RiDouble
+               where RiDouble = double C Ri
+             | ki <- k
+             | hi <- h
+             | Ri <- Rs ]
