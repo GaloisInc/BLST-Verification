@@ -1,0 +1,202 @@
+module Polynomial where
+
+import Common::Field
+
+///// Polynomials over a field
+//
+//  A value `p: [k]t` represents a polyomial with `p!0` giving the constant coefficient
+//  thus for example `[1,0,2]` represents x^2 + 2, as does `[0,1,0,2]`
+
+/**
+ * Are two polynomials equal?  This uses the equality defined in the underlying field,
+ * so `poly_equal p q` might not be the same as `p == q`.
+ */
+poly_equal:  {t,k} (fin k, k>=1) => FieldRep t -> ([k]t, [k]t) -> Bool
+poly_equal F (p,q) = and (zipWith (curry F.is_equal) p q)
+
+/**
+ * 0, as a polynomial over a field
+ */
+poly_0: {t,k} (fin k) => FieldRep t -> [k]t
+poly_0 F = repeat F.field_zero
+
+/**
+ *
+ * Constant polynomial: a member of the base field viewed as a polynomial
+ */
+poly_const: {t,k} (fin k, k >= 1) => FieldRep t -> t -> [k]t
+poly_const F c = (repeat F.field_zero) # [c]
+
+/**
+ * 1, as a polynomial over a field
+ */
+poly_1: {t,k} (fin k, k >= 1) => FieldRep t -> [k]t
+poly_1 F = poly_const F F.field_unit
+
+/**
+ * x, as a polynomial over a field
+ */
+poly_x: {t,k} (fin k, k >= 2) => FieldRep t -> [k]t
+poly_x F = (repeat F.field_zero) # [F.field_unit, F.field_zero]
+
+/**
+ * The degree of a polynomial.  We arbitrarily return 0 for the degree ofthe zero polynomial.
+ */
+poly_degree: {t, k, a} (fin k, Ring a, Literal (max 1 k) a)
+             => FieldRep t -> [k+1]t -> a
+poly_degree F coeffs = (ds!0).0 where
+    ds = [(`k,True)] # [ if lz /\ F.is_equal(ci, F.field_zero) then (d-1,True) else (d, False)
+                       | (d,lz) <- ds
+                       | ci <- coeffs
+                       ]
+
+/**
+ * The leading coefficient of a non-zero polynomial.  This is the coefficient of the
+ * largest power of x that has a non-zero coefficient.
+ */
+leading_coefficient: {t,k} (fin k) => FieldRep t -> [k]t -> t
+leading_coefficient F p =
+    foldr (\ c a -> if F.is_equal (c, F.field_zero) then a else c) F.field_zero p
+
+/**
+ * The sum of two polynomials over a field.
+ */
+poly_add: {t,k} (fin k) => FieldRep t -> [k]t -> [k]t -> [k]t
+poly_add F = zipWith (curry F.add)
+
+/**
+ * The difference of two polynomials over a field.
+ */
+poly_sub: {t,k} (fin k) => FieldRep t -> [k]t -> [k]t -> [k]t
+poly_sub F = zipWith (curry F.sub)
+
+private
+    shifts: {k,t} (fin k, k >= 1) => t -> [k]t -> [k][k]t
+    shifts pad seq = take seqs where
+        seqs = [seq] # [shift s | s <- seqs]
+        shift s = tail s # [pad]
+
+/**
+ * The product of two polynomials over a field, truncated at their size
+ * That is, if p, q: [k]t, then all terms c*x^i for i >= k are dropped.
+ *
+ * Function `poly_full_mul` does not discard those terms.
+ */
+poly_mul: {t,k} (fin k, k>=1) => FieldRep t -> [k]t -> [k]t -> [k]t
+poly_mul F p q = foldl (poly_add`{t,k} F) (poly_0 F) rows where
+    rows: [k][k]t
+    rows = zipWith (\ c s -> map (curry F.mul c) s) p (reverse (shifts F.field_zero q))
+
+/**
+ * The product of two polynomials over a field, with  result type
+ * guaranteed to hold all the non-zero coefficients of the result.
+ *
+ * Compare to function `poly_mul`.
+ */
+poly_full_mul: {t,k} (fin k, k>=1) => FieldRep t -> [k]t -> [k]t -> [2*k-1]t
+poly_full_mul F p q = foldl (poly_add F) (poly_0 F) rows where
+    rows: [k][2*k-1]t
+    rows = zipWith (\ c s -> map (curry F.mul c) s) p (reverse (full_shifts F.field_zero q))
+    full_shifts: t -> [k]t -> [k][2*k-1]t
+    full_shifts pad seq = take seqs where
+        seqs = [(repeat pad) # seq] # [shift s | s <- seqs]
+        shift s = tail s # [pad]
+
+/**
+ * Division with remainder for two polynomials over a field.
+ * If p, q, r, d: [k]t, d is not poly_0, and (q,r) = poly_div_mod F p d,
+ * then p == poly_add (poly_mul d q) r 
+ */
+poly_div_mod: {k,t} (fin k, k >= 1) => FieldRep t -> [k]t -> [k]t -> ([k]t, [k]t)
+poly_div_mod F dividend divisor =(quot, rems!0) where
+    // shifted divisors, from most to least shifted
+    ds: [k][k]t
+    ds = reverse (shifts F.field_zero divisor)
+    // we only use the shifts when the leading coefficient is still in
+    use: [k]Bool
+    use = reverse us where
+      us = [True] # [u /\ F.is_equal (d@0, F.field_zero) | u <- us | d <- take`{k-1} (reverse ds)]
+    // index into remainder to be used
+    ix: [k+1][width k]
+    ix = [0] # [if u then i+1 else i | u <- use | i <- ix]
+    // c is the reciprocal of the leading coefficient of the divisor
+    c = F.div (F.field_unit, leading_coefficient F divisor)
+    // quot is the quotient, built from the highest degree down
+    quot: [k]t
+    quot = [ if u then F.mul (c, rem@i) else F.field_zero
+           | u <- use
+           | rem <- rems
+           | i <- ix
+           ]
+    // remainders at successive stages
+    rems: [k+1][k]t
+    rems = [dividend] # [ zipWith (curry F.sub) r (map (curry F.mul q) d)
+                        | r <- rems
+                        | q <- quot
+                        | d <- ds
+                        ]
+
+
+/* For operations modulo some polynomial, we use a finite sequence
+ * s: [k]t to represent the poynomial
+ *
+ *   x^k - sum [(s!i) * x^i | i <- [0 .. (`k-1)] ]      (*)
+ *
+ * In other words, s represents the reduction of x^k modulo the
+ * polynomial.
+ *
+ * We refer to (*) as "the polynomial corresponding to modulus s"
+ * in documentation below.
+ */
+
+private
+    /**
+     * (shifts_mod F p m)@i = (x^i * p) mod (Polynomial_of m)
+     */
+    shifts_mod: {k,t} (fin k, k >= 1) => FieldRep t -> [k]t -> [k]t -> [k][k]t
+    shifts_mod F p m = take seqs where
+        seqs = [p] # [shift s | s <- seqs]
+        shift s = poly_add F (tail s # [F.field_zero]) (map (curry F.mul (s@0)) m)
+
+/*
+ * poly_mul_mod F p q m = p*q mod (Polynomial_of m), where
+ * p and q are polynomials in F[x]
+ */
+poly_mul_mod: {t,k} (fin k, k>=1) => FieldRep t -> [k]t -> [k]t -> [k]t -> [k]t
+poly_mul_mod F p q m = foldl (poly_add`{t,k} F) (poly_0 F) rows where
+    rows: [k][k]t
+    rows = zipWith (\ c s -> map (curry F.mul c) s) p (reverse (shifts_mod F q m))
+
+// specialized version of xgcd used for inverse_mod
+// we then do not need the "t" part, and can reduce mod along the way.
+// TODO: Find a citation for this algorithm
+
+/**
+ * Inverse of one polynomial modulo a second that it is relatively prime to.
+ * For example, over GF(3), the inverse of `x+1` mod `x^2` is `2x+1`, since
+ * `(x+1)(2x+1) = 2x^2 + 1`, which is 1 modulo `x^2`.
+ */
+poly_inverse_mod: {k,t} (fin k, k >= 1) => FieldRep t -> [k]t -> [k]t -> [k]t
+poly_inverse_mod F p q = r where
+    // if we just do xgcd p (polynomial_of q), that's in [k+1]t
+    // so instead we compute divrem (poly_of q) p
+    // drop the msb (which will be 0) and can continue in [k]t
+    poly_of_q = [F.field_unit] # (map F.neg q) // expanded modulus
+    expand_p = [F.field_zero] # p // extra bit for p
+    (q1,r1) = poly_div_mod F poly_of_q expand_p
+    // Now, continue xgcd from the second step
+    tuples = [ (tail r1, p, map F.neg (tail q1), poly_1 F) ]
+             # map (pim_step F q) tuples
+    (p1,p2,s1,s2) = tuples@(`k:Integer) // ":Integer" eliminates a type-inference warning
+    // now p1 should be a constant polynomial, but might not be 1
+    // i.e p*s1 = p1 mod (poly_of_q)
+    // so multiply through by its inverse
+    r = map (curry F.mul (F.div (F.field_unit, p1!0))) s1
+
+private
+    pim_step F m (p1, p2, s1, s2) =
+        if poly_equal F (p2, poly_0 F)
+        then (p1, p2, s1, s2)
+        else ( (p2, r, s2, poly_sub F s1 (poly_mul_mod F q s2 m)) where
+               (q,r) = poly_div_mod F p1 p2
+             )
