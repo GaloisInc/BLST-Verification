@@ -19,19 +19,19 @@ import Common::mod_arith
  */
 prime_field: {k} (fin k, k >= 3, k > 2*(k/2)) =>  FieldRep (Z k)
 prime_field =
-     { is_val x = True
-     , normalize x = x
-     , add (x, y) = x + y
-     , sub (x, y) = x - y
-     , neg x = -x
-     , mul (x,y) = x*y
-     , sq x = x*x
-     , half x = moddiv x 2
-     , div (x,y) = moddiv x y
-     , field_zero = 0
-     , field_unit = 1
-     , is_equal (x, y) = x==y
-     }
+    { is_val x = True
+    , normalize x = x
+    , add (x, y) = x + y
+    , sub (x, y) = x - y
+    , neg x = -x
+    , mul (x,y) = x*y
+    , sq x = x*x
+    , half x = moddiv x 2
+    , div (x,y) = moddiv x y
+    , field_zero = 0
+    , field_unit = 1
+    , is_equal (x, y) = x==y
+    }
 
 /**
  * A finite field with a prime number of elements, represented using
@@ -41,16 +41,16 @@ prime_field =
  */
 prime_field_bv: {n} (fin n, n >= 1) => [n] -> FieldRep [n]
 prime_field_bv m =
-     { is_val x = x < m
-     , normalize x = (x % m)
-     , add (x, y) = mod_add (m,x,y)
-     , sub (x, y) = mod_sub (m,x,y)
-     , neg x = mod_neg (m, x)
-     , mul (x,y) = mod_mul (m, x, y)
-     , sq x = mod_mul (m, x, x)
-     , half x = mod_half (m, x)
-     , div (x,y) = mod_div (m, x, y)
-     , field_zero = 0
-     , field_unit = 1
-     , is_equal (x, y) = x==y // does this need to handle unnormalized values?
-     }
+    { is_val x = x < m
+    , normalize x = (x % m)
+    , add (x, y) = mod_add (m,x,y)
+    , sub (x, y) = mod_sub (m,x,y)
+    , neg x = mod_neg (m, x)
+    , mul (x,y) = mod_mul (m, x, y)
+    , sq x = mod_mul (m, x, x)
+    , half x = mod_half (m, x)
+    , div (x,y) = mod_div (m, x, y)
+    , field_zero = 0
+    , field_unit = 1
+    , is_equal (x, y) = x==y // does this need to handle unnormalized values?
+    }

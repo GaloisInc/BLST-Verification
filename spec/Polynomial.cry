@@ -31,7 +31,7 @@ poly_const F c = (repeat F.field_zero) # [c]
  * 1, as a polynomial over a field
  */
 poly_1: {t,k} (fin k, k >= 1) => FieldRep t -> [k]t
-poly_1 F = (repeat F.field_zero) # [F.field_unit] // = poly_constF  F.field_unit
+poly_1 F = poly_const F F.field_unit
 
 /**
  * x, as a polynomial over a field
@@ -104,11 +104,11 @@ poly_full_mul F p q = foldl (poly_add F) (poly_0 F) rows where
 
 /**
  * Division with remainder for two polynomials over a field.
- * If q, d: [k]t and (q,r) = divmod F p q, then
- * p == poly_add (poly_mul d q) r 
+ * If p, q, r, d: [k]t, d is not poly_0, and (q,r) = poly_div_mod F p d,
+ * then p == poly_add (poly_mul d q) r 
  */
-poly_divmod: {k,t} (fin k, k >= 1) => FieldRep t -> [k]t -> [k]t -> ([k]t, [k]t)
-poly_divmod F dividend divisor =(quot, rems!0) where
+poly_div_mod: {k,t} (fin k, k >= 1) => FieldRep t -> [k]t -> [k]t -> ([k]t, [k]t)
+poly_div_mod F dividend divisor =(quot, rems!0) where
     // shifted divisors, from most to least shifted
     ds: [k][k]t
     ds = reverse (shifts F.field_zero divisor)
@@ -183,7 +183,7 @@ poly_inverse_mod F p q = r where
     // drop the msb (which will be 0) and can continue in [k]t
     poly_of_q = [F.field_unit] # (map F.neg q) // expanded modulus
     expand_p = [F.field_zero] # p // extra bit for p
-    (q1,r1) = poly_divmod F poly_of_q expand_p
+    (q1,r1) = poly_div_mod F poly_of_q expand_p
     // Now, continue xgcd from the second step
     tuples = [ (tail r1, p, map F.neg (tail q1), poly_1 F) ]
              # map (pim_step F q) tuples
@@ -198,5 +198,5 @@ private
         if poly_equal F (p2, poly_0 F)
         then (p1, p2, s1, s2)
         else ( (p2, r, s2, poly_sub F s1 (poly_mul_mod F q s2 m)) where
-               (q,r) = poly_divmod F p1 p2
+               (q,r) = poly_div_mod F p1 p2
              )
