@@ -59,9 +59,9 @@ iso_map: (t_F, t_F) -> (t_F, t_F)
 iso_map (x', y') = (x, y) where
     x_powers = [F.field_unit] # [F.mul(x', xi) | xi <- x_powers]
     x_num = F_sum F [F.mul(ki, xi) | ki <- k1s | xi <- x_powers]
-    x_den = F_sum F [F.mul(ki, xi) | ki <- k2s | xi <- x_powers]
+    x_den = F.add (x_powers@10, F_sum F [F.mul(ki, xi) | ki <- k2s | xi <- x_powers])
     y_num = F_sum F [F.mul(ki, xi) | ki <- k3s | xi <- x_powers]
-    y_den = F_sum F [F.mul(ki, xi) | ki <- k4s | xi <- x_powers]
+    y_den = F.add (x_powers@15, F_sum F [F.mul(ki, xi) | ki <- k4s | xi <- x_powers])
     x = F.div (x_num, x_den)
     y = F.mul (y', F.div(y_num, y_den))
 
@@ -91,7 +91,6 @@ k2s = // k2s@i is "k_(2,i)" from the spec
    , 0x14a7ac2a9d64a8b230b3f5b074cf01996e7f63c21bca68a81996e1cdf9822c580fa5b9489d11e2d311f7d99bbdcc5a5e
    , 0x0a10ecf6ada54f825e920b3dafc7a3cce07f8d1d7161366b74100da67f39883503826692abba43704776ec3a79a1d641
    , 0x095fc13ab9e92ad4476d6e3eb3a56680f682b4ee96f7d03776df533978f31c1593174e4b4b7865002d6384d168ecdd0a
-   , 1 // not explicitly listed in the spec, but appears in the formula as just x'^10
    ]
 
 k3s =
@@ -129,5 +128,4 @@ k4s =
    , 0x0ad6b9514c767fe3c3613144b45f1496543346d98adf02267d5ceef9a00d9b8693000763e3b90ac11e99b138573345cc
    , 0x02660400eb2e4f3b628bdd0d53cd76f2bf565b94e72927c1cb748df27942480e420517bd8714cc80d1fadc1326ed06f7
    , 0x0e0fa1d816ddc03e6b24255e0d7819c171c40f65e273b853324efcd6356caa205ca2f570f13497804415473a1d634b8f
-   , 1 // not explicitly listed in the spec, but appears in the formula as just x'^15
    ]

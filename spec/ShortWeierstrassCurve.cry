@@ -105,7 +105,7 @@ is_point_affine C S = is_point_O C S \/
           (x,y) = S
 
 /**
- * Is a given point in Jaconian projective coordinates on a given curve?
+ * Is a given point in Jacobian projective coordinates on a given curve?
  */
 is_point_projective : {t} EllipticCurve t -> ProjectivePoint t -> Bit
 is_point_projective C (x,y,z) = F.is_val x /\ F.is_val y /\ F.is_val z /\ F.is_equal(F.sq y, t)
