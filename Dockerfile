@@ -1,7 +1,7 @@
 FROM ubuntu:20.04
 
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
-RUN apt-get update --fix-missing # at the time of writing this, curl fails to install (404 not found) with running `apt-get update` with `--fix-missing`.
+RUN apt-get update
 RUN apt-get install -y apt-utils
 
 # Install and configure locale `en_US.UTF-8` (otherwise SAW sometimes fails to write to the
@@ -18,11 +18,8 @@ RUN pip3 install wllvm # whole-program-llvm
 
 WORKDIR /workdir
 
-# add install.sh first to avoid re-installing everything when other scripts change
-ADD ./scripts/install.sh /workdir/scripts/install.sh
-RUN ./scripts/install.sh
-
-ADD ./scripts/ /workdir/scripts/
+ADD ./scripts/install.sh /workdir/install.sh
+RUN /workdir/install.sh
 
 ENV PATH=/workdir/bin:$PATH
 
