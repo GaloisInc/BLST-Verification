@@ -27,10 +27,9 @@ parameter
 
     // various constraints thrown up by the type checker
     type constraint 8 * ((128 + lg2 p) /^ 8) >= 384
-    //type constraint 2 * m * ((128 + lg2 p) /^ 8) <= 255
     type constraint 2 * m <= 127
 
-    // Convert a list of elemebnts of F_p to an element of F_q
+    // Convert a list of elements of F_p to an element of F_q
     base_to_F: [m]t_Fp -> t_F
 
     // The curve (will be E1 or E2)
