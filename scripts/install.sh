@@ -5,16 +5,20 @@ set -e
 Z3_URL='https://github.com/Z3Prover/z3/releases/download/z3-4.8.8/z3-4.8.8-x64-ubuntu-16.04.zip'
 YICES_URL='https://yices.csl.sri.com/releases/2.6.2/yices-2.6.2-x86_64-pc-linux-gnu-static-gmp.tar.gz'
 
-# Determine the URL of the latest SAW and Cryptol nightly
-#########################################################
+if [ $# -nt 0 ] && [ "$1" == "--latest" ]; then
+  # Determine the URL of the latest SAW and Cryptol nightly
+  #########################################################
+  SAW_DATE=$(curl -s https://saw.galois.com/builds/nightly/ | grep saw | grep -o "[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}" | sort | tail -n 1) # `grep -o` says print only the matched substring
+  SAW_NIGHTLY=$(curl -s https://saw.galois.com/builds/nightly/ | grep -oP "saw.*?${SAW_DATE}-Ubuntu.*?\.tar\.gz"  | head -n 1) # `curl -s` means silent; `grep -o` says print only the matched substring; `grep -P` says Perl syntax, which we use to get a lazy match (shortest) with .*?
+  SAW_URL="https://saw.galois.com/builds/nightly/${SAW_NIGHTLY}"
 
-SAW_DATE=$(curl -s https://saw.galois.com/builds/nightly/ | grep saw | grep -o "[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}" | sort | tail -n 1) # `grep -o` says print only the matched substring
-SAW_NIGHTLY=$(curl -s https://saw.galois.com/builds/nightly/ | grep -oP "saw.*?${SAW_DATE}-Ubuntu.*?\.tar\.gz"  | head -n 1) # `curl -s` means silent; `grep -o` says print only the matched substring; `grep -P` says Perl syntax, which we use to get a lazy match (shortest) with .*?
-SAW_URL="https://saw.galois.com/builds/nightly/${SAW_NIGHTLY}"
-
-CRYPTOL_DATE=$(curl -s https://cryptol.net/builds/nightly/ | grep cryptol | grep -o "[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}" | sort | tail -n 1) # `grep -o` says print only the matched substring
-CRYPTOL_NIGHTLY=$(curl -s https://cryptol.net/builds/nightly/ | grep -oP "cryptol.*?${CRYPTOL_DATE}-Ubuntu.*?\.tar\.gz"  | head -n 1) # `curl -s` means silent; `grep -o` says print only the matched substring; `grep -P` says Perl syntax, which we use to get a lazy match (shortest) with .*?
-CRYPTOL_URL="https://cryptol.net/builds/nightly/${CRYPTOL_NIGHTLY}"
+  CRYPTOL_DATE=$(curl -s https://cryptol.net/builds/nightly/ | grep cryptol | grep -o "[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}" | sort | tail -n 1) # `grep -o` says print only the matched substring
+  CRYPTOL_NIGHTLY=$(curl -s https://cryptol.net/builds/nightly/ | grep -oP "cryptol.*?${CRYPTOL_DATE}-Ubuntu.*?\.tar\.gz"  | head -n 1) # `curl -s` means silent; `grep -o` says print only the matched substring; `grep -P` says Perl syntax, which we use to get a lazy match (shortest) with .*?
+  CRYPTOL_URL="https://cryptol.net/builds/nightly/${CRYPTOL_NIGHTLY}"
+else
+  SAW_URL="https://saw.galois.com/builds/nightly/saw-0.4.0.99-2020-08-26-Ubuntu14.04-64.tar.gz"
+  CRYPTOL_URL="https://cryptol.net/builds/nightly/cryptol-2.8.1-2020-04-26-Ubuntu14.04-64.tar.gz"
+fi
 
 # Install Z3, Yices, SAW, and Cryptol
 #####################################

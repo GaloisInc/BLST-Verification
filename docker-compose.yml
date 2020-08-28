@@ -7,3 +7,5 @@ services:
       - ./blst:/workdir/blst:rw # for now we build there
       - ./proof:/workdir/proof:ro
       - ./spec:/workdir/spec:ro
+      - ./tests:/workdir/tests:ro
+      - ./scripts:/workdir/scripts:ro
