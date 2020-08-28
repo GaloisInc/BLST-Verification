@@ -11,25 +11,41 @@
 // `sha256_update` is called first with `aug_len`, then `msg_len`, then `3 +
 // DST_len + 1`.
 
-// TODO: why not do everything in Cryptol? Can we eval cryptol sequences? Yes
-// we can with `eval_list`. However doing things in Cryptol seems clumsy
-// because there's no type of lists (just fixed-length sequences). Is this
-// really the case?
+include "dedup.saw";
 
-let sizes_ len offset = // returns a pair; first elem is offset, then list of override sizes
-  if eval_bool {{ `len == 0 \/ (`offset == 0 /\ `len % 64 == 0)}}
-    then (0, [])
+let blst_sha256_bcopy_sizes_ len offset = do { // returns a pair; first elem is offset, then list of override sizes
+  let sizes =
+    if eval_bool {{ `len == 0 \/ (`offset == 0 /\ `len % 64 == 0)}}
+    then []
     else
       if eval_bool {{ `len <= (64-`offset) }} // fits in the remaining buffer space, so there will be a single copy
-      then (eval_size {|offset+len|}, [eval_size {| len |}])
+      then [eval_size {| len |}]
       else // does not fit in the remaining buffer space; there will be one or two copies
-        if eval_bool {{ `offset != 0 }} // two copies
-        then (eval_size {|(offset + len) % 64|}, [eval_size {| 64-offset |}, eval_size {| (offset + len) % 64|}])
-        else (eval_size {|len % 64|}, [eval_size {|len % 64|}]); // one copy
+        if eval_bool {{ (`offset + `len) % 64 == 0 }}
+        then [eval_size {| 64-offset |}] // one copy
+        else [eval_size {| 64-offset |}, eval_size {| (offset + len) % 64|}]; // two copies
+  let new_offset = eval_size {|(offset + len) % 64|};
+  return (new_offset, sizes);
+};
 
-let sizes aug_len msg_len (dst_len:Int) = do {
-  let (offset_1, ss_1) = sizes_ aug_len 0;
-  let (offset_2, ss_2) = sizes_ msg_len offset_1;
-  let (_, ss_3) = sizes_ (eval_size {|dst_len+4|}) offset_2;
-  return (concat ss_1 (concat ss_2 ss_3)); // TODO: how to eliminate duplicates here?
+let blst_sha256_bcopy_sizes aug_len msg_len (dst_len:Int) = do {
+  (offset_1, ss_1) <- blst_sha256_bcopy_sizes_ aug_len 0;
+  (offset_2, ss_2) <- blst_sha256_bcopy_sizes_ msg_len offset_1;
+  (_, ss_3) <- blst_sha256_bcopy_sizes_ (eval_size {|dst_len+4|}) offset_2;
+  let res = dedup (concat ss_1 (concat ss_2 ss_3));
+  return res;
+};
+
+let blst_sha256_block_data_order_sizes_ len offset =
+  if eval_bool {{ (`len + `offset) > 128 }}
+  then (eval_size {| (offset + len) % 64 |}, [eval_size {| (len - (64 - offset)) / 64 |}])
+  else (eval_size {| (offset + len) % 64 |}, []);
+
+let blst_sha256_block_data_order_sizes aug_len msg_len (dst_len:Int) = do {
+  let (offset_1, ss_1) = blst_sha256_block_data_order_sizes_ aug_len 0;
+  let (offset_2, ss_2) = blst_sha256_block_data_order_sizes_ msg_len offset_1;
+  let (_, ss_3) = blst_sha256_block_data_order_sizes_ (eval_size {|dst_len+4|}) offset_2;
+  let rest = [1, eval_int {{ ( ((33 + `dst_len + 1 + 9) + 63) && (-64:[64]) ) /64 }}];
+  let res = (dedup (concat rest (concat ss_1 (concat ss_2 ss_3))));
+  return res;
 };
