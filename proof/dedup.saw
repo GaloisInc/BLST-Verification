@@ -1,0 +1,19 @@
+let eq x y = eval_bool {{ (`x:Integer) == `y }};
+
+let member =
+  rec f = (\x ys ->
+    if null ys
+    then false 
+    else if eq x (head ys)
+         then true
+         else f x (tail ys))
+  in f;
+
+let dedup ys =
+  rec f = (\xs acc ->
+    if null xs
+    then acc
+    else if member (head xs) acc
+         then f (tail xs) acc
+         else f (tail xs) (concat [head xs] acc))
+  in f ys [];
