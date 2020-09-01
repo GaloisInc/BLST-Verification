@@ -1,0 +1,216 @@
+///////////////////////////////////////////////////////////////////////////////
+// Imports
+///////////////////////////////////////////////////////////////////////////////
+
+include "helpers.saw";
+include "list_utils.saw";
+
+m <- llvm_load_module "../server.o.bc";
+
+///////////////////////////////////////////////////////////////////////////////
+// Specifications
+///////////////////////////////////////////////////////////////////////////////
+
+let blst_sha256_emit_spec = do {
+  (_, h_ptr) <- ptr_to_fresh_readonly "h" (llvm_array 8 (llvm_int 32)); // should always be initialized
+  let md_type = (llvm_array 32 (llvm_int 8));
+  md_ptr <- crucible_alloc md_type;
+  crucible_execute_func [md_ptr, h_ptr];
+  new_md <- crucible_fresh_var "new_md" md_type;
+  crucible_points_to md_ptr (crucible_term new_md);
+};
+
+// blocks is a number of 512-bit blocks, which corresponds to 64 bytes
+let blst_sha256_block_data_order_spec blocks = do {
+  let h_type = (llvm_array 8 (llvm_int 32));
+  (_, h_ptr) <- ptr_to_fresh "h" h_type;
+  (_, inp_ptr) <- ptr_to_fresh_readonly "inp" (llvm_array (eval_size {| 64*blocks |}) (llvm_int 8));
+  crucible_execute_func [h_ptr, inp_ptr, crucible_term {{ `blocks : [64] }}];
+  new_h <- crucible_fresh_var "new_h" h_type;
+  crucible_points_to h_ptr (crucible_term new_h);
+};
+
+let blst_sha256_bcopy_spec len = do {
+  let buf_type = (llvm_array len (llvm_int 8));
+  buf_ptr <- crucible_alloc buf_type;
+  (_, inp_ptr) <- ptr_to_fresh_readonly "inp" (llvm_array len (llvm_int 8));
+  crucible_execute_func [buf_ptr, inp_ptr, crucible_term {{ `len : [64] }}];
+  new_buf <- crucible_fresh_var "new_buf" buf_type;
+  crucible_points_to buf_ptr (crucible_term new_buf);
+};
+
+let blst_sha256_hcopy_spec = do {
+  let h_type = (llvm_array 8 (llvm_int 32));
+  dst_ptr <- crucible_alloc h_type;
+  (_, src_ptr) <- ptr_to_fresh_readonly "src" h_type;
+  crucible_execute_func [dst_ptr, src_ptr];
+  new_dst <- crucible_fresh_var "new_dst" h_type;
+  crucible_points_to dst_ptr (crucible_term new_dst);
+};
+
+//let HMAC_init_spec len = do {
+  //// TODO: we might have to specify the struct ctx more precisely because only some part must be initialized
+  //(_, ctx_ptr) <- ptr_to_fresh "ctx" (llvm_struct "HMAC_SHA256_CTX");
+  //(_, K_ptr) <- ptr_to_fresh "K" (llvm_array len (llvm_int 8));
+  //crucible_execute_func [ctx_ptr, K_ptr, crucible_term {{ `len : [64] }}];
+  //new_ctx <- crucible_fresh_var "new_ctx" (llvm_struct "HMAC_SHA256_CTX");
+  //crucible_points_to ctx_ptr (crucible_term new_ctx);
+//};
+
+let vec256_type = (llvm_array 256 (llvm_int 64));
+
+let blst_keygen_spec IKM_len info_len = do {
+  SK_ptr <- crucible_alloc vec256_type;
+  (_, IKM_ptr) <- ptr_to_fresh_readonly "IKM" (llvm_array IKM_len (llvm_int 8));
+  (_, info_ptr) <- ptr_to_fresh_readonly "info" (llvm_array info_len (llvm_int 8));
+  crucible_execute_func [SK_ptr, IKM_ptr, crucible_term {{ `IKM_len:[64]}}, info_ptr, crucible_term {{ `info_len:[64]}}];
+  new_SK <- crucible_fresh_var "new_SK" vec256_type;
+  crucible_points_to SK_ptr (crucible_term new_SK);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Proofs
+///////////////////////////////////////////////////////////////////////////////
+
+// We start with blst_keygen. blst_keygen calls sha256_block_data_order and
+// sha256_update_bcopy, which are assembly routines that operate on
+// variable-size data. The main difficulty is that for each call to those two
+// routines, we must create an override using the concrete sizes of the data
+// used in the call.
+
+// sha256_update_bcopy and sha256_block_data_order are called sha256_update
+// (among others). Here we define what data sizes are used in those calls.
+
+// `sha256_update` maintains a 64 bytes buffer that is filled up incrementally
+// using `sha256_bcopy`. When it is full, `sha256_block_data_order` is called.
+// However, when data of length 64 is readily available in the input and the
+// current offset is 0, `sha256_update` does not bother copying input bytes in
+// its buffer.
+
+// bcopy size in one call to sha256_update:
+let sha256_update_bcopy_sizes len offset = do { // returns a pair; first elem is offset, then list of override sizes
+  let sizes =
+    if eval_bool {{ `len == 0 \/ (`offset == 0 /\ `len % 64 == 0)}}
+    then []
+    else
+      if eval_bool {{ `len <= (64-`offset) }} // fits in the remaining buffer space, so there will be a single copy
+      then [eval_size {| len |}]
+      else // does not fit in the remaining buffer space; there will be one or two copies
+        if eval_bool {{ (`offset + `len) % 64 == 0 }}
+        then [eval_size {| 64-offset |}] // one copy
+        else [eval_size {| 64-offset |}, eval_size {| (offset + len) % 64|}]; // two copies
+  let new_offset = eval_size {|(offset + len) % 64|};
+  return (new_offset, sizes);
+};
+
+// `sha256_block_data_order` is called with multiples of the block size. Here
+// we compute what sizes are used.
+
+// sha256_block_data_order in one call to sha256_update:
+let sha256_update_block_data_order_sizes len offset =
+  if eval_bool {{ (`len + `offset) > 128 }}
+  then (eval_size {| (offset + len) % 64 |}, [eval_size {| (len - (64 - offset)) / 64 |}])
+  else (eval_size {| (offset + len) % 64 |}, []);
+
+// Now we define the size for the whole of blst_keygen.
+
+let HMAC_init_bcopy_sizes len = do {
+  // TODO: how do I make this less ugly?
+  (offset_1_, ss_1_) <- sha256_update_bcopy_sizes len 0;
+  let (offset_1, ss_1) =
+    if eval_bool {{ `len > 64 }}
+    then (offset_1_, ss_1_)
+    else (0, []);
+  (offset_2, ss_2) <- sha256_update_bcopy_sizes 64 offset_1;
+  return (offset_2, (dedup (concat ss_1 ss_2)));
+};
+
+let HMAC_init_block_data_order_sizes len = do {
+  // TODO: how do I make this less ugly?
+  let (offset_1_, ss_1_) = sha256_update_block_data_order_sizes len 0;
+  let (offset_1, ss_1) =
+    if eval_bool {{ `len > 64 }}
+    then (offset_1_, ss_1_)
+    else (0, []);
+  let (offset_2, ss_2) = sha256_update_block_data_order_sizes 64 offset_1;
+  return (offset_2, (dedup (foldr concat [ss_1, ss_2] [1])));
+};
+
+let blst_keygen_bcopy_sizes salt_len IKM_len info_len L = do {
+  // * HKDF_extract
+  //   * HMAC_init
+  (offset_1, ss_1) <- HMAC_init_bcopy_sizes salt_len;
+  return ss_1;
+  //   * HMAC_update
+  (_, ss_2) <- sha256_update_bcopy_sizes IKM_len offset_1;
+  //   * HMAC_final
+  //      nothing
+  // * HKDF_expand
+  //   * HMAC_init (resets the offset)
+  (offset_3, ss_3) <- HMAC_init_bcopy_sizes 32;
+  let ss_4 = if eval_bool {{ `info_len != 0 }} then [info_len] else [];
+  (offset_5, ss_5) <- sha256_update_bcopy_sizes (eval_size {| info_len + 1 |}) offset_3;
+  // now there is a while loop, but the offset is reset at every iteration and the sizes are constant
+  (_, ss_6) <- sha256_update_bcopy_sizes 32 0; // offset is 32 after this
+  (_, ss_7) <- sha256_update_bcopy_sizes (eval_size {| info_len + 1 |}) 32;
+  let ss_8 = [ eval_size {| L % 32 |} ];
+  return (dedup (foldr concat [ss_1, ss_2, ss_3, ss_4, ss_5, ss_6, ss_7, ss_8] []));
+};
+
+let blst_keygen_block_data_order_sizes salt_len IKM_len info_len L = do {
+  // * HKDF_extract
+  //   * HMAC_init
+  (offset_1, ss_1) <- HMAC_init_block_data_order_sizes salt_len;
+  //   * HMAC_update
+  let (_, ss_2) = sha256_update_block_data_order_sizes IKM_len offset_1;
+  //   * HMAC_final (size is 1 here)
+  // * HKDF_expand
+  //   * HMAC_init (resets the offset)
+  (offset_3, ss_3) <- HMAC_init_block_data_order_sizes 32;
+  let ss_4 = if eval_bool {{ `info_len != 0 }} then [info_len] else [];
+  let (offset_5, ss_5) = sha256_update_block_data_order_sizes (eval_size {| info_len + 1 |}) offset_3;
+  // now there is a while loop, but the offset is reset at every iteration and the sizes are constant
+  let (_, ss_6) = sha256_update_block_data_order_sizes 32 0; // offset is 32 after this
+  let (_, ss_7) = sha256_update_block_data_order_sizes (eval_size {| info_len + 1 |}) 32;
+  let ss_8 = [ eval_size {| L % 32 |} ];
+  return (dedup (foldr concat [ss_1, ss_2, ss_3, ss_4, ss_5, ss_6, ss_7, ss_8] [1]));
+};
+
+// Now we create all the overrides:
+
+let IKM_len = 89;
+let info_len = 490;
+// sizes fixed in keygen.c:
+let salt_len = 20;
+let L = 48;
+
+// sha256_block_data_order:
+let make_blst_sha256_block_data_order_ov len = crucible_llvm_unsafe_assume_spec m "blst_sha256_block_data_order" (blst_sha256_block_data_order_spec len);
+let make_blst_sha256_block_data_order_ovs salt_len IKM_len info_len L = do {
+  ss <- (blst_keygen_block_data_order_sizes salt_len IKM_len info_len L);
+  ovs <- (for ss make_blst_sha256_block_data_order_ov);
+  return ovs;
+};
+blst_sha256_block_data_order_ovs <- make_blst_sha256_block_data_order_ovs salt_len IKM_len info_len L;
+
+// sha256_bcopy:
+let make_blst_sha256_bcopy_ov len = crucible_llvm_unsafe_assume_spec m "blst_sha256_bcopy" (blst_sha256_bcopy_spec len);
+let make_blst_sha256_bcopy_ovs salt_len IKM_len info_len L = do {
+  ss <- (blst_keygen_bcopy_sizes salt_len IKM_len info_len L);
+  ovs <- (for ss make_blst_sha256_bcopy_ov);
+  return ovs;
+};
+blst_sha256_bcopy_ovs <- make_blst_sha256_bcopy_ovs salt_len IKM_len info_len L;
+
+blst_sha256_emit_ov <- crucible_llvm_unsafe_assume_spec m "blst_sha256_emit" blst_sha256_emit_spec;
+
+blst_sha256_hcopy_ov <- crucible_llvm_unsafe_assume_spec m "blst_sha256_hcopy" blst_sha256_hcopy_spec;
+
+// TODO: we also need overrides for redc_mont_256 and mul_mont_sparse_256
+
+// finally we verify blst_keygen:
+
+blst_keygen_ov <-
+  let overrides = foldr concat [blst_sha256_block_data_order_ovs, blst_sha256_bcopy_ovs] [blst_sha256_emit_ov, blst_sha256_hcopy_ov]
+  in crucible_llvm_verify m "blst_keygen" overrides false (blst_keygen_spec IKM_len info_len) abc;
+
