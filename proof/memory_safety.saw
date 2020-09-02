@@ -232,6 +232,8 @@ let blst_keygen_block_data_order_sizes salt_len IKM_len info_len L = do {
 // TODO: this case triggers a weird error
 let IKM_len = 5;
 let info_len = 67;
+// TODO: it's also taking too long with info_len > 100
+// TODO: next steps: try with C stubs for bcopy and update_block
 
 //let IKM_len = 512;
 //let info_len = 67;
