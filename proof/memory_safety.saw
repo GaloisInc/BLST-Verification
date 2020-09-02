@@ -140,41 +140,51 @@ let sha256_update_bcopy_sizes len offset = do { // returns a pair; first elem is
 
 // sha256_block_data_order in one call to sha256_update:
 let sha256_update_block_data_order_sizes len offset =
-  if eval_bool {{ ((`len:Integer) + (`offset:Integer)) > 128 }}
-  then (eval_size {| (offset + len) % 64 |}, [eval_size {| (len - (64 - offset)) / 64 |}])
-  else (eval_size {| (offset + len) % 64 |}, []);
+  if eval_bool {{ (`offset  == 0) /\ ((`len:Integer) + (`offset:Integer)) >= 64 }}
+  then (0, [eval_size {| (offset + len) / 64 |}])
+  else
+    if eval_bool {{ ((`len:Integer) + (`offset:Integer)) >= 64 }}
+    then
+      if eval_bool {{ ((`len:Integer) + (`offset:Integer)) >= 128 }}
+      then (eval_size {| (offset + len) % 64 |}, [1, eval_size {| ((len + offset) / 64) - 1 |}])
+      else (eval_size {| (offset + len) % 64 |}, [1])
+    else (eval_size {| (offset + len) % 64 |}, []);
 
 // Now we define the size for the whole of blst_keygen.
 
 let HMAC_init_bcopy_sizes len = do {
   // TODO: how do I make this less ugly?
-  (offset_1_, ss_1_) <- sha256_update_bcopy_sizes len 0;
-  let (offset_1, ss_1) =
+  (_, ss_1_) <- sha256_update_bcopy_sizes len 0;
+  let ss_1 =
     if eval_bool {{ (`len:Integer) > 64 }}
-    then (offset_1_, ss_1_)
-    else (0, [len]);
-  (offset_2, ss_2) <- sha256_update_bcopy_sizes 64 offset_1;
-  //return (offset_2, (dedup (concat ss_1 ss_2)));
-  return (offset_2, ((concat ss_1 ss_2)));
+    then ss_1_
+    else [len];
+  (_, ss_2) <- sha256_update_bcopy_sizes 64 0;
+  return (0, (dedup (concat ss_1 ss_2)));
 };
 
 let HMAC_init_block_data_order_sizes len = do {
   // TODO: how do I make this less ugly?
-  let (offset_1_, ss_1_) = sha256_update_block_data_order_sizes len 0;
-  let (offset_1, ss_1) =
+  let (_, ss_1_) = sha256_update_block_data_order_sizes len 0;
+  let ss_1 =
     if eval_bool {{ (`len:Integer) > 64 }}
-    then (offset_1_, ss_1_)
-    else (0, []);
-  let (offset_2, ss_2) = sha256_update_block_data_order_sizes 64 offset_1;
-  return (offset_2, (dedup (foldr concat [ss_1, ss_2] [1])));
+    then ss_1_
+    else [];
+  let (_, ss_2) = sha256_update_block_data_order_sizes 64 0;
+  for (dedup (foldr concat [ss_1, ss_2] [1])) print;
+  print "end hmac init";
+  return (0, (dedup (foldr concat [ss_1, ss_2] [1])));
 };
 
 let blst_keygen_bcopy_sizes salt_len IKM_len info_len L = do { // TODO: this is wrong
   // * HKDF_extract
   //   * HMAC_init
-  (offset_1, ss_1) <- HMAC_init_bcopy_sizes salt_len;
+  (_, ss_1) <- HMAC_init_bcopy_sizes salt_len;
+  //   * offset is 0 after this
   //   * HMAC_update
-  (_, ss_2) <- sha256_update_bcopy_sizes IKM_len offset_1;
+  (offset_2, ss_2) <- sha256_update_bcopy_sizes IKM_len 0;
+  //   * HMAC_update again (with size 1)
+  (_, ss_x) <- sha256_update_bcopy_sizes 1 offset_2; // TODO: ss_x because added later
   //   * HMAC_final
   //      nothing
   // * HKDF_expand
@@ -186,37 +196,38 @@ let blst_keygen_bcopy_sizes salt_len IKM_len info_len L = do { // TODO: this is 
   (_, ss_6) <- sha256_update_bcopy_sizes 32 0; // offset is 32 after this
   (_, ss_7) <- sha256_update_bcopy_sizes (eval_size {| info_len + 3 |}) 32; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
   let ss_8 = [ eval_size {| L % 32 |} ];
-  //let res = dedup (foldr concat [ss_1, ss_2, ss_3, ss_4, ss_5, ss_6, ss_7, ss_8] []);
-  let res = (foldr concat [ss_1, ss_2, ss_3, ss_4, ss_5, ss_6, ss_7, ss_8] []);
+  //let res = foldr concat [ss_1, ss_2, ss_x, ss_3, ss_4, ss_5, ss_6, ss_7, ss_8] [];
+  let res = dedup (foldr concat [ss_1, ss_2, ss_x, ss_3, ss_4, ss_5, ss_6, ss_7, ss_8] []);
   for res print;
   return res;
 };
 
-let blst_keygen_block_data_order_sizes salt_len IKM_len info_len L = do { // TODO: seems wrong too...
+let blst_keygen_block_data_order_sizes salt_len IKM_len info_len L = do {
   // * HKDF_extract
   //   * HMAC_init
-  (offset_1, ss_1) <- HMAC_init_block_data_order_sizes salt_len;
+  (_, ss_1) <- HMAC_init_block_data_order_sizes salt_len;
+  //   * offset is 0 after this
   //   * HMAC_update
-  let (_, ss_2) = sha256_update_block_data_order_sizes IKM_len offset_1;
+  let (offset_2, ss_2) = sha256_update_block_data_order_sizes IKM_len 0;
+  //   * HMAC_update again (with size 1)
+  let (_, ss_x) = sha256_update_block_data_order_sizes 1 offset_2; // TODO: ss_x because added later
   //   * HMAC_final (size is 1 here)
   // * HKDF_expand
   //   * HMAC_init (resets the offset)
   (offset_3, ss_3) <- HMAC_init_block_data_order_sizes 32;
-  let ss_4 = if eval_bool {{ `info_len != 0 }} then [info_len] else [];
   let (offset_5, ss_5) = sha256_update_block_data_order_sizes (eval_size {| info_len + 3 |}) offset_3; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
   // now there is a while loop, but the offset is reset at every iteration and the sizes are constant
   let (_, ss_6) = sha256_update_block_data_order_sizes 32 0; // offset is 32 after this
   let (_, ss_7) = sha256_update_block_data_order_sizes (eval_size {| info_len + 3 |}) 32; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
-  let ss_8 = [ eval_size {| L % 32 |} ];
-  let res = dedup (foldr concat [ss_1, ss_2, ss_3, ss_4, ss_5, ss_6, ss_7, ss_8] [1]); // sha256_final uses 1
+  let res = dedup (foldr concat [ss_1, ss_2, ss_x, ss_3, ss_5, ss_6, ss_7] [1]); // sha256_final uses 1
   for res print;
   return res;
 };
 
 // Now we create all the overrides:
 
-let IKM_len = 17;
-let info_len = 21;
+let IKM_len = 5;
+let info_len = 67;
 // sizes fixed in keygen.c:
 let salt_len = 20;
 let L = 48;
@@ -237,7 +248,8 @@ let make_blst_sha256_bcopy_ovs salt_len IKM_len info_len L = do {
   ovs <- (for ss make_blst_sha256_bcopy_ov);
   return ovs;
 };
-blst_sha256_bcopy_ovs <- make_blst_sha256_bcopy_ovs salt_len IKM_len info_len L; // TODO: fails!
+blst_sha256_bcopy_ovs <- make_blst_sha256_bcopy_ovs salt_len IKM_len info_len L;
+// The brute-force approach:
 //blst_sha256_bcopy_ovs <- do {
   //let ss = from_to 1 35;
   //ovs <- (for ss make_blst_sha256_bcopy_ov);
