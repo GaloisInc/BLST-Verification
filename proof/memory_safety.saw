@@ -128,9 +128,12 @@ let sha256_update_bcopy_sizes len offset = do { // returns a pair; first elem is
       if eval_bool {{ (`len:Integer) <= (64-(`offset:Integer)) }} // fits in the remaining buffer space, so there will be a single copy
       then [eval_size {| len |}]
       else // does not fit in the remaining buffer space; there will be one or two copies
-        if eval_bool {{ ((`offset:Integer) + (`len:Integer)) % 64 == 0 }}
-        then [eval_size {| 64-offset |}] // one copy
-        else [eval_size {| 64-offset |}, eval_size {| (offset + len) % 64|}]; // two copies
+        if eval_bool {{ `offset == 0 }}
+        then [eval_size {| len % 64 |}] // one copy
+        else
+          if eval_bool {{ ((`offset:Integer) + (`len:Integer)) % 64 == 0 }}
+          then [eval_size {| 64-offset |}] // one copy
+          else [eval_size {| 64-offset |}, eval_size {| (offset + len) % 64|}]; // two copies
   let new_offset = eval_size {|(offset + len) % 64|};
   return (new_offset, sizes);
 };
@@ -191,7 +194,7 @@ let blst_keygen_bcopy_sizes salt_len IKM_len info_len L = do { // TODO: this is 
   //   * HMAC_init (resets the offset? it seems)
   (offset_3, ss_3) <- HMAC_init_bcopy_sizes 32;
   let ss_4 = if eval_bool {{ `info_len != 0 }} then [info_len] else [];
-  (offset_5, ss_5) <- sha256_update_bcopy_sizes (eval_size {| info_len + 3 |}) offset_3; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
+  (offset_5, ss_5) <- sha256_update_bcopy_sizes (eval_size {| info_len + 3 |}) 0; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
   // now there is a while loop, but the offset is reset at every iteration and the sizes are constant
   (_, ss_6) <- sha256_update_bcopy_sizes 32 0; // offset is 32 after this
   (_, ss_7) <- sha256_update_bcopy_sizes (eval_size {| info_len + 3 |}) 32; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
@@ -226,8 +229,13 @@ let blst_keygen_block_data_order_sizes salt_len IKM_len info_len L = do {
 
 // Now we create all the overrides:
 
+// TODO: this case triggers a weird error
 let IKM_len = 5;
 let info_len = 67;
+
+//let IKM_len = 512;
+//let info_len = 67;
+
 // sizes fixed in keygen.c:
 let salt_len = 20;
 let L = 48;
