@@ -1,8 +1,13 @@
 #!/bin/sh
 set -e
 
-export LLVM_COMPILER=clang
+mkdir -p build/llvm
+rm -r build/llvm
+cp -r blst build/llvm
+cd build/llvm
 
-wllvm -g -march=native -mno-avx -c /workdir/blst/src/server.c
-wllvm -g -march=native -mno-avx -c /workdir/blst/build/assembly.S
-extract-bc /workdir/server.o
+export CFLAGS='-g -fPIC -Wall -Wextra -Werror'
+export CC=wllvm
+export LLVM_COMPILER=clang
+./build.sh
+extract-bc --bitcode libblst.a
