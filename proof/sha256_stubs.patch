@@ -1,0 +1,29 @@
+diff --git a/src/sha256.h b/src/sha256.h
+index 0e10703..1cff6e8 100644
+--- a/src/sha256.h
++++ b/src/sha256.h
+@@ -20,9 +20,22 @@
+ #define sha256_bcopy blst_sha256_bcopy
+ #define sha256_emit  blst_sha256_emit
+ 
+-void sha256_block_data_order(unsigned int *h, const void *inp, size_t blocks);
++// Here we provide C stubs for the assembly functions that take variable-length
++// data. This is because dealing with overrides in this case is overly
++// difficult at this point.
++#include "string.h"
++void sha256_block_data_order(unsigned int *h, const void *inp, size_t blocks)
++{
++  int i;
++  for (i = 0; i < 8; i++) {
++    h[i] = 0;
++  }
++};
+ void sha256_hcopy(unsigned int dst[8], const unsigned int src[8]);
+-void sha256_bcopy(void *dst, const void *src, size_t len);
++void sha256_bcopy(void *dst, const void *src, size_t len)
++{
++  memcpy(dst, src, len);
++};
+ 
+ /*
+  * If SHA256_CTX conflicts with something, just redefine it to alternative

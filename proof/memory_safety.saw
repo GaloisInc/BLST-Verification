@@ -1,0 +1,104 @@
+///////////////////////////////////////////////////////////////////////////////
+// Imports
+///////////////////////////////////////////////////////////////////////////////
+
+include "helpers.saw";
+
+m <- llvm_load_module "../server.o.bc";
+
+///////////////////////////////////////////////////////////////////////////////
+// Specifications
+///////////////////////////////////////////////////////////////////////////////
+
+let vec256_type = (llvm_array 4 (llvm_int 64));
+let vec512_type = (llvm_array 8 (llvm_int 64));
+
+// First we provide specs for assembly routines in order to create overrides
+// for them. We will only override assembly routines that operate on
+// constant-size data, as otherwise dealing with overrides is difficult. Thus
+// we also do not specify the assembly routines that operate on variable-size
+// data.
+
+let blst_sha256_emit_spec = do {
+  (_, h_ptr) <- ptr_to_fresh_readonly "h" (llvm_array 8 (llvm_int 32)); // should always be initialized
+  let md_type = (llvm_array 32 (llvm_int 8));
+  md_ptr <- crucible_alloc md_type;
+  crucible_execute_func [md_ptr, h_ptr];
+  new_md <- crucible_fresh_var "new_md" md_type;
+  crucible_points_to md_ptr (crucible_term new_md);
+};
+
+let blst_sha256_hcopy_spec = do {
+  let h_type = (llvm_array 8 (llvm_int 32));
+  dst_ptr <- crucible_alloc h_type;
+  (_, src_ptr) <- ptr_to_fresh_readonly "src" h_type;
+  crucible_execute_func [dst_ptr, src_ptr];
+  new_dst <- crucible_fresh_var "new_dst" h_type;
+  crucible_points_to dst_ptr (crucible_term new_dst);
+};
+
+let redc_mont_256_spec = do {
+  ret_ptr <- crucible_alloc vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec512_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  n0 <- crucible_fresh_var "n0" (llvm_int 64);
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, crucible_term n0];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let mul_mont_sparse_256_spec = do { // NOTE: first two args are aliases
+  ret_ptr <- crucible_alloc vec256_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  n0 <- crucible_fresh_var "n0" (llvm_int 64);
+  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term n0];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+// Now we give specs for the functions we verify:
+
+let blst_keygen_spec IKM_len info_len = do {
+  SK_ptr <- crucible_alloc vec256_type;
+
+  IKM <- crucible_fresh_var "IKM" (llvm_array IKM_len (llvm_int 8));
+  IKM_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array IKM_len (llvm_int 8));
+  crucible_points_to IKM_ptr (crucible_term IKM);
+
+  info <- crucible_fresh_var "info" (llvm_array info_len (llvm_int 8));
+  info_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array info_len (llvm_int 8));
+  crucible_points_to info_ptr (crucible_term info);
+
+  crucible_execute_func [SK_ptr, IKM_ptr, crucible_term {{ `IKM_len:[64]}}, info_ptr, crucible_term {{ `info_len:[64]}}];
+  // TODO: replace by points_to
+  new_SK <- crucible_fresh_var "new_SK" vec256_type;
+  crucible_points_to SK_ptr (crucible_term new_SK);
+};
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Proofs
+///////////////////////////////////////////////////////////////////////////////
+
+let IKM_len = 557;
+let info_len = 67;
+// sizes fixed in keygen.c:
+let salt_len = 20;
+let L = 48;
+
+// Now we create all the overrides
+
+blst_sha256_emit_ov <- crucible_llvm_unsafe_assume_spec m "blst_sha256_emit" blst_sha256_emit_spec;
+
+blst_sha256_hcopy_ov <- crucible_llvm_unsafe_assume_spec m "blst_sha256_hcopy" blst_sha256_hcopy_spec;
+
+redc_mont_256_ov <- crucible_llvm_unsafe_assume_spec m "redcx_mont_256" redc_mont_256_spec; // TODO: __ADX__ seems defined and thus recx is used; is that normal?
+
+mul_mont_sparse_256_ov <- crucible_llvm_unsafe_assume_spec m "mulx_mont_sparse_256" mul_mont_sparse_256_spec;
+
+// finally we verify blst_keygen:
+
+blst_keygen_ov <-
+  let overrides = [blst_sha256_emit_ov, blst_sha256_hcopy_ov, redc_mont_256_ov, mul_mont_sparse_256_ov]
+  in crucible_llvm_verify m "blst_keygen" overrides false (blst_keygen_spec IKM_len info_len) abc;
