@@ -12,6 +12,8 @@ m <- llvm_load_module "../server.o.bc";
 
 let vec256_type = (llvm_array 4 (llvm_int 64));
 let vec512_type = (llvm_array 8 (llvm_int 64));
+let vec384_type = (llvm_array 6 (llvm_int 64));
+let limb_type = (llvm_int 64);
 
 // First we provide specs for assembly routines in order to create overrides
 // for them. We will only override assembly routines that operate on
@@ -41,19 +43,150 @@ let redc_mont_256_spec = do {
   ret_ptr <- crucible_alloc vec256_type;
   (_, a_ptr) <- ptr_to_fresh_readonly "a" vec512_type;
   (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
-  n0 <- crucible_fresh_var "n0" (llvm_int 64);
+  n0 <- crucible_fresh_var "n0" limb_type;
   crucible_execute_func [ret_ptr, a_ptr, b_ptr, crucible_term n0];
   new_ret <- crucible_fresh_var "new_ret" vec256_type;
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
-let mul_mont_sparse_256_spec = do { // NOTE: first two args are aliases
-  ret_ptr <- crucible_alloc vec256_type;
+let mul_mont_sparse_256_alias_spec = do { // NOTE: first two args are aliases
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
   (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
-  n0 <- crucible_fresh_var "n0" (llvm_int 64);
+  n0 <- crucible_fresh_var "n0" limb_type;
   crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term n0];
   new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let mul_mont_384_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr, crucible_term n0];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let mul_mont_384_alias_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term n0];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let sqr_mont_384_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term n0];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let sqr_mont_384_alias_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [ret_ptr, ret_ptr, p_ptr, crucible_term n0];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+
+let add_mod_384_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let add_mod_384_alias_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_execute_func [ret_ptr, ret_ptr, ret_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let sub_mod_384_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let sub_mod_384_alias_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let mul_by_3_mod_384_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let mul_by_3_mod_384_alias_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_execute_func [ret_ptr, ret_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let mul_by_8_mod_384_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let mul_by_8_mod_384_alias_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_execute_func [ret_ptr, ret_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let vec_select_144_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" (llvm_array 144 (llvm_int 1));
+  (_, a_ptr) <- ptr_to_fresh "a" (llvm_array 144 (llvm_int 1));
+  (_, b_ptr) <- ptr_to_fresh "b" (llvm_array 144 (llvm_int 1));
+  sel_a <- crucible_fresh_var "sel_a" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, crucible_term sel_a];
+  new_ret <- crucible_fresh_var "new_ret" (llvm_array 144 (llvm_int 1));
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let vec_select_144_alias_1_3_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" (llvm_array 144 (llvm_int 1));
+  (_, a_ptr) <- ptr_to_fresh "a" (llvm_array 144 (llvm_int 1));
+  sel_a <- crucible_fresh_var "sel_a" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, ret_ptr, crucible_term sel_a];
+  new_ret <- crucible_fresh_var "new_ret" (llvm_array 144 (llvm_int 1));
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
@@ -72,6 +205,14 @@ let blst_keygen_spec IKM_len info_len = do {
 
   crucible_execute_func [SK_ptr, IKM_ptr, crucible_term {{ `IKM_len:[64]}}, info_ptr, crucible_term {{ `info_len:[64]}}];
   // TODO: replace by points_to
+  new_SK <- crucible_fresh_var "new_SK" vec256_type;
+  crucible_points_to SK_ptr (crucible_term new_SK);
+};
+
+let blst_sk_to_pk_in_g1_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1");
+  (_, SK_ptr) <- ptr_to_fresh_readonly "SK" vec256_type;
+  crucible_execute_func [out_ptr, SK_ptr];
   new_SK <- crucible_fresh_var "new_SK" vec256_type;
   crucible_points_to SK_ptr (crucible_term new_SK);
 };
@@ -95,10 +236,34 @@ blst_sha256_hcopy_ov <- crucible_llvm_unsafe_assume_spec m "blst_sha256_hcopy" b
 
 redc_mont_256_ov <- crucible_llvm_unsafe_assume_spec m "redcx_mont_256" redc_mont_256_spec; // TODO: __ADX__ seems defined and thus recx is used; is that normal?
 
-mul_mont_sparse_256_ov <- crucible_llvm_unsafe_assume_spec m "mulx_mont_sparse_256" mul_mont_sparse_256_spec;
+mul_mont_sparse_256_ov <- crucible_llvm_unsafe_assume_spec m "mulx_mont_sparse_256" mul_mont_sparse_256_alias_spec;
+
+mul_mont_384_ov <- crucible_llvm_unsafe_assume_spec m "mulx_mont_384" mul_mont_384_spec;
+mul_mont_384_alias_ov <- crucible_llvm_unsafe_assume_spec m "mulx_mont_384" mul_mont_384_alias_spec;
+
+sqr_mont_384_ov <- crucible_llvm_unsafe_assume_spec m "sqrx_mont_384" sqr_mont_384_spec;
+sqr_mont_384_alias_ov <- crucible_llvm_unsafe_assume_spec m "sqrx_mont_384" sqr_mont_384_alias_spec;
+
+add_mod_384_ov <- crucible_llvm_unsafe_assume_spec m "add_mod_384" add_mod_384_spec;
+add_mod_384_alias_ov <- crucible_llvm_unsafe_assume_spec m "add_mod_384" add_mod_384_alias_spec;
+
+sub_mod_384_ov <- crucible_llvm_unsafe_assume_spec m "sub_mod_384" sub_mod_384_spec;
+sub_mod_384_alias_ov <- crucible_llvm_unsafe_assume_spec m "sub_mod_384" sub_mod_384_alias_spec;
+
+mul_by_3_mod_384_ov <- crucible_llvm_unsafe_assume_spec m "mul_by_3_mod_384" mul_by_3_mod_384_spec;
+mul_by_3_mod_384_alias_ov <- crucible_llvm_unsafe_assume_spec m "mul_by_3_mod_384" mul_by_3_mod_384_alias_spec;
+
+mul_by_8_mod_384_ov <- crucible_llvm_unsafe_assume_spec m "mul_by_8_mod_384" mul_by_8_mod_384_spec;
+mul_by_8_mod_384_alias_ov <- crucible_llvm_unsafe_assume_spec m "mul_by_8_mod_384" mul_by_8_mod_384_alias_spec;
+
+vec_select_144_ov <- crucible_llvm_unsafe_assume_spec m "vec_select_144" vec_select_144_spec;
+vec_select_144_alias_1_3_ov <- crucible_llvm_unsafe_assume_spec m "vec_select_144" vec_select_144_alias_1_3_spec;
 
 // finally we verify blst_keygen:
 
 blst_keygen_ov <-
   let overrides = [blst_sha256_emit_ov, blst_sha256_hcopy_ov, redc_mont_256_ov, mul_mont_sparse_256_ov]
   in crucible_llvm_verify m "blst_keygen" overrides false (blst_keygen_spec IKM_len info_len) abc;
+
+blst_sk_to_pk_in_g1_ov <-
+  crucible_llvm_verify m "blst_sk_to_pk_in_g1" [sqr_mont_384_ov, add_mod_384_ov, sqr_mont_384_alias_ov, sub_mod_384_ov, sub_mod_384_alias_ov, add_mod_384_alias_ov, mul_by_3_mod_384_ov, mul_by_3_mod_384_alias_ov, mul_mont_384_ov, mul_mont_384_alias_ov, mul_by_8_mod_384_ov, mul_by_8_mod_384_alias_ov, vec_select_144_ov, vec_select_144_alias_1_3_ov] false blst_sk_to_pk_in_g1_spec abc;
