@@ -3,8 +3,8 @@ services:
   blst:
     build: .
     volumes:
-      #- ./build:/workdir/build:rw # not needed?
-      - ./blst:/workdir/blst:rw # for now we build there
+      - ./build:/workdir/build:rw
+      - ./blst:/workdir/blst:ro
       - ./proof:/workdir/proof:ro
       - ./spec:/workdir/spec:ro
       - ./tests:/workdir/tests:ro
