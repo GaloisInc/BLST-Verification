@@ -94,20 +94,21 @@ negative_t = <| x^^63 + x^^62 + x^^60 + x^^57 + x^^48 + x^^16 |>
  * as defined in Appendix A.2 of  draft-irtf-cfrg-pairing-friendly-curves-07
  */
 bls_ate_pairing: EC::AffinePoint t1 -> EC::AffinePoint t2 -> t12
-bls_ate_pairing p q = ate_pairing (phi_1 p) (EC::neg c12 (phi_2 q))
+bls_ate_pairing p q = ate_pairing (phi_1 p) (phi_2 q)
 
-// We only ever use -Q in the computation, so we negate before the call
 ate_pairing: EC::AffinePoint t12 -> EC::AffinePoint t12 -> t12
-ate_pairing P negQ = final_exponentiation (ate_pairing' P negQ)
+ate_pairing P Q = final_exponentiation (ate_pairing' P Q)
 
 // skipping the final exponentation
 ate_pairing': EC::AffinePoint t12 -> EC::AffinePoint t12 -> t12
-ate_pairing' P negQ =  last_f where
+ate_pairing' P Q =  last_f where
+   negQ = EC::neg c12 Q
    (last_f, _) = f_Ts ! 0
    f_Ts = [(f12.field_unit, negQ)] #
           [ miller_step P negQ fT ci | fT <- f_Ts | ci <- tail negative_t]
 
 // in the Miller loop, c_i is only ever 0 or -1, here represented by False and True
+// We only subtract Q, never add, so we take -Q as a parameter
 miller_step:  EC::AffinePoint t12 -> EC::AffinePoint t12 -> (t12, EC::AffinePoint t12)
               -> Bit -> (t12, EC::AffinePoint t12)
 miller_step P negQ (f, T) ci = (f', T') where
