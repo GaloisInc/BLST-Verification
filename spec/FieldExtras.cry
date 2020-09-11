@@ -29,3 +29,22 @@ F_expt F x e = powers ! 0 where
  */
 F_is_zero: {t} FieldRep t -> t -> Bit
 F_is_zero F x = F.is_equal (x, F.field_zero)
+
+private
+    kth_square: {k, t} (fin k, k>=1) => FieldRep t -> t -> t
+    kth_square F x = squares@(`k) where
+        squares = [x] # [F.sq y | y <- squares]
+
+/**
+ * k_expt`{k} F b e computes b^e in field f, using `k` bits of the exponent at a time.
+ * This is not exactly Brauer's "2^k-ary" method, but is close.
+ * This can be more efficient than the formal `F_expt` function that uses the convential
+ * "square-and-multiply" algorithm.
+ */
+k_expt: {k, n, t} (fin k, fin n, k>=1, n>=1) => FieldRep t -> t -> [n*k] -> t
+k_expt F b e = acc!0 where
+    digits: [n][k]
+    digits = split e
+    small_powers = [F.field_unit] # [F.mul(b, sp) | sp <- small_powers] // 1, b, b^2, ...
+    acc = [small_powers@(digits@0)] # [F.mul(small_powers@d, kth_square`{k} F a) | a <- acc | d <- tail digits]
+

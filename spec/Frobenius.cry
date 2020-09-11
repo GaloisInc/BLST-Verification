@@ -1,0 +1,62 @@
+/* Frobenius and related functions on the BLS fields. */
+
+module Frobenius where
+
+import Parameters as P
+import FieldExtras
+
+type t1 = P::t_Fp
+type t2 = P::t_Fp_2
+type t6 = P::t_Fp_6
+type t12 = P::t_Fp_12 
+
+f1 = P::Fp
+f2 = P::Fp_2
+f6 = P::Fp_6
+f12 = P::Fp_12
+
+
+// F_p2
+
+conjugate_2: t2 -> t2
+conjugate_2 [a,b] = [f1.neg a, b] // a*u + b -> -a*u + b
+
+f2_frobenius: t2  -> t2
+f2_frobenius x = conjugate_2 x
+
+// F_p6
+
+// We have f6 = f2(v) where v^3 = (u+1).
+// Then v^p = v^(3 ((p-1)/3)) * v = (u+1)^((p-1)/3) * v
+
+v_frobenius_constant: t2
+v_frobenius_constant = F_expt f2 P::u_plus_1 (`((P::p-1)/3):[381])
+
+v_frobenius_constant_sq: t2
+v_frobenius_constant_sq = f2.sq v_frobenius_constant
+
+// Now (av^2+bv+c)^p = a^p k^2 v^2 + b^p k v + c^p
+
+f6_frobenius: t6 -> t6
+f6_frobenius [a,b,c] = [a',b',c'] where
+    a' = f2.mul (v_frobenius_constant_sq, f2_frobenius a)
+    b' = f2.mul (v_frobenius_constant, f2_frobenius b)
+    c' = f2_frobenius c
+
+// F_p12
+
+// We have f12 = f6(w) where w^2 = v so w^6 = (u+1)
+// thus w^p = w^(6 ((p-1)/6)) * w = (u+1)^((p-1)/6) * w
+
+w_frobenius_constant: t6
+w_frobenius_constant = P::Fp_2_to_Fp_6 (F_expt f2 P::u_plus_1 (`((P::p-1)/6):[381]))
+
+f12_frobenius: t12 -> t12
+f12_frobenius [a,b] = [a', b'] where
+    a' = f6.mul (w_frobenius_constant, f6_frobenius a)
+    b' = f6_frobenius b
+
+// The conjugate in F_p12 also gives x^(p^6), the six-fold Frobenius
+
+f12_conjugate: t12 -> t12
+f12_conjugate [a,b] = [f6.neg a, b] // a*w + b -> -a*w + b
