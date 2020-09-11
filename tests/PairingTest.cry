@@ -92,7 +92,7 @@ out1 =
        0x05b656cfa1dc10452329033d2bf1563f0e88716ae523a5c1a4d814ef2df6fc1ab3db6698b3fe067fa6bb2d716d1946a0]]]
 
 property ate_pairing'_OK =
-    ate_pairing' p1 (EC::neg c12 p2) == out1
+    ate_pairing' p1 p2 == out1
 
 out2: t12
 out2 =
