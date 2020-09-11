@@ -1,0 +1,155 @@
+// Pairing for tyhe BLS curves, from draft-irtf-cfrg-pairing-friendly-curves-07
+
+module Pairing where
+
+import Parameters as P
+import ShortWeierstrassCurve as EC
+import FieldExtras
+import Frobenius
+
+type t1 = P::t_Fp
+type t2 = P::t_Fp_2
+type t12 = P::t_Fp_12 
+
+f1 = P::Fp
+f2 = P::Fp_2
+f12 = P::Fp_12
+
+/**
+ * The curve E: y^2 = x^3 + 4, over F_p^12
+ */
+c12: EC::EllipticCurve t12
+c12 = { base_field = P::Fp_12, a = P::Fp_12.field_zero, b = P::Fp_to_Fp_12 P::b }
+
+/**
+ * Take a point on E/F_p to a point on E/F_p^12
+ * This just applies the field injection to the coordinates
+ */
+phi_1: EC::AffinePoint t1 -> EC::AffinePoint t12
+phi_1 (x,y) = (P::Fp_to_Fp_12 x, P::Fp_to_Fp_12 y)
+
+// alpha = (1-u)/2.  This constant is needed in the sextic twist in function `phi_2`
+alpha: t2
+alpha = f2.half (f2.sub (f2.field_unit, P::u))
+
+// Note: the layout of f12 over f2 is
+// [[a,c,e],[b,d,f]] represents a*w^5 + b*w^4 + c*w^3 + d*w^2 + e*w + f 
+
+/**
+ *  w4_times x = x*w^3
+ */
+w3_times: t2 -> t12
+w3_times x = [[z,x,z],[z,z,z]] where z = f2.field_zero
+
+/**
+ *  w4_times x = x * w^4
+ */
+w4_times: t2 -> t12
+w4_times x = [[z,z,z],[x,z,z]] where z = f2.field_zero
+
+/**
+ * Take a point on E'/F_p^2 to a point on E/F_p^12
+ * This applies a sextic twist
+ */
+phi_2: EC::AffinePoint t2 -> EC::AffinePoint t12
+phi_2 (x,y) = (x',y') where
+    x' = w4_times (f2.mul (x, alpha))
+    y' = w3_times (f2.mul (y, alpha))
+
+// The line_function
+
+private
+    twice x = f12.add (x,x)
+    thrice x = f12.add (x, twice x)
+
+/**
+ * The "Line_Function" from Appendix A of draft-irtf-cfrg-pairing-friendly-curves-07
+ */ 
+line_function: (t12,t12) -> (t12,t12) -> (t12,t12) -> t12
+line_function A B P = ret where
+    (A1,A2) = A
+    (B1,B2) = B
+    (P1,P2) = P
+    ret = if A == EC::neg c12 B // if A==-B
+          then f12.sub (P1, A1) // return P1 - A1
+          else f12.sub (f12.add (f12.mul (l, f12.sub (P1, A1)), A2), P2)
+    l = if A == B
+        then f12.div (thrice (f12.sq A1), twice A2)
+        else f12.div (f12.sub (B2, A2), f12.sub (B1, A1))
+
+
+// bls_ate_pairing, Appendix A.2 of the Draft
+//
+// The Draft does not make it clear that the Line Function acts on the curve
+// E(F_p^{`12}).  Optimizations are possible, as the points involved can be
+// represented by points on curves over smaller fields.  Here, we simply map
+// the points to the full curve and compute there.
+
+// t = -2^63 - 2^62 - 2^60 - 2^57 - 2^48 - 2^16
+negative_t:[64]
+negative_t = <| x^^63 + x^^62 + x^^60 + x^^57 + x^^48 + x^^16 |>
+
+/**
+ * The "Optimal Ate Pairing" for the BLS12_381 curves,
+ * as defined in Appendix A.2 of  draft-irtf-cfrg-pairing-friendly-curves-07
+ */
+bls_ate_pairing: EC::AffinePoint t1 -> EC::AffinePoint t2 -> t12
+bls_ate_pairing p q = ate_pairing (phi_1 p) (EC::neg c12 (phi_2 q))
+
+// We only ever use -Q in the computation, so we negate before the call
+ate_pairing: EC::AffinePoint t12 -> EC::AffinePoint t12 -> t12
+ate_pairing P negQ = final_exponentiation (ate_pairing' P negQ)
+
+// skipping the final exponentation
+ate_pairing': EC::AffinePoint t12 -> EC::AffinePoint t12 -> t12
+ate_pairing' P negQ =  last_f where
+   (last_f, _) = f_Ts ! 0
+   f_Ts = [(f12.field_unit, negQ)] #
+          [ miller_step P negQ fT ci | fT <- f_Ts | ci <- tail negative_t]
+
+// in the Miller loop, c_i is only ever 0 or -1, here represented by False and True
+miller_step:  EC::AffinePoint t12 -> EC::AffinePoint t12 -> (t12, EC::AffinePoint t12)
+              -> Bit -> (t12, EC::AffinePoint t12)
+miller_step P negQ (f, T) ci = (f', T') where
+    f0 = f12.mul (f12.sq f, line_function T T P)
+    T0 = EC::double c12 T
+    (f', T') = if ci
+               then (f12.mul (f0, line_function T0 negQ P),
+                     EC::add c12 T0 negQ)
+               else (f0, T0)
+
+
+// final exponentiation
+
+type r = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+type final_exponent = (P::p^^12 - 1) / r
+type small_final_e =  (P::p^^4 - P::p^^2 +1)/r
+
+final_exponentiation: t12 -> t12
+/* We could most simply define
+
+  final_expt x = k_expt`{6} f12 x (`final_exponent:[4314])
+
+  but is it rather inefficient to do so.  Instead, as noted in [1] and [2]
+  we can use the factorization
+
+     p^12-1 = (p^8+p^6 - p^2-1)*(p^4-p^2+1)
+            = (p^6-1)*(p^2+1)*(p^4-p^2+1)
+
+  and r since divides p^4-p^2+1, we can first use the Frobenius mapping to
+  easily compute x^(p^6-1)*(p^2+1), then complete the calculation
+  raising this to (p^4-p^2+1)/r.
+
+  For that last exponentiation, we use a (2^5)-ary breakdown of the exponent,
+  noting that 2^5 = 32 is pretty close the the square root of 1268, the number of
+  bits in the exponent.
+
+  [1] Beauchat et al.  "High-Speed Software Implementation of the Optimal
+      Ate airing over Barreto-Naehrig Curves"
+
+  [2] Scott et al. "On the final exponentiation for calculating pairings on
+      ordinary elliptic curves." eprint.iacr.org/2008/490
+ */
+final_exponentiation x = k_expt`{5} f12 x2 (`small_final_e:[1268+2]) where
+  x1 = f12.div (f12_conjugate x, x) // = x^(p^6 - 1)
+  x2 = f12.mul (f12_frobenius (f12_frobenius x1), x1) // x1^(p^2+1)

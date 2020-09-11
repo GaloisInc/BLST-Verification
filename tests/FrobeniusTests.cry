@@ -1,0 +1,21 @@
+import Parameters as P
+import Frobenius
+import FieldExtras
+
+p: [381]
+p = `P::p
+
+// It is a simple mathematical fact that the operations defined in module Frobenius are
+// in fact p^th powers.  We can run a few tests just to check against simple implementation
+// errors.
+
+property f2_frobenius_prop x =
+  f2_frobenius x' == F_expt f2 x' p where x' = f2.normalize x
+
+property f6_frobenius_prop x =
+  f6_frobenius x' == F_expt f6 x' p where x' = f6.normalize x
+
+property f12_frobenius_prop x =
+  f12_frobenius x' == F_expt f12 x' p where x' = f12.normalize x
+
+

@@ -1,0 +1,125 @@
+import Pairing
+import Parameters as P
+import ShortWeierstrassCurve as EC
+
+// These tests consist of some sanity checks on some of the functions used in the
+// pairing calculation, followed by a check of the test vectors given in Appendix B
+// of the Draft.
+
+// alpha*w^5 is the correct inverse, that is  w^{-1} = alpha*w^5
+property correct_inverse =
+  f12.mul (w4_times alpha, P::w) == f12.div (f12.field_unit, P::w)
+
+// multiples of the basepoint on E are mapped to the big curve c12
+property phi_1_is_OK (m:[8]) =
+  EC::is_point_affine c12 (phi_1 (EC::mult P::E m P::BP))
+
+// multiples of the basepoint on E' are mapped to the big curve c12
+property phi_2_is_OK (m:[8]) =
+  EC::is_point_affine c12 (phi_2 (EC::mult P::E' m P::BP'))
+
+
+// Test case from draft-irtf-cfrg-pairing-friendly-curves-07
+
+// .. first point
+
+x = 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb
+y = 0x08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1
+
+// ... confirm we are on the curve
+
+property p1_on_E = EC::is_point_affine P::E (x,y)
+
+p1 = phi_1 (x, y)
+
+property p1_on_c12 = EC::is_point_affine c12 p1
+
+
+// .. second point
+
+x'_0 = 0x024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8
+x'_1 = 0x13e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e
+
+x': t2
+x' = [x'_1, x'_0]
+
+y'_0 = 0x0ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801
+y'_1 = 0x0606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be
+
+y': t2
+y' = [y'_1, y'_0]
+
+// ... confirm we are on the curve
+
+property p2_on_E' = EC::is_point_affine P::E' (x',y')
+
+p2 = phi_2 (x', y')
+
+property p2_on_c12 = EC::is_point_affine c12 p2
+
+// expected results, 12 coefficients fom e_0 to e_11:
+expected_pairing =
+    [ // e0 .. e3:
+      0x11619b45f61edfe3b47a15fac19442526ff489dcda25e59121d9931438907dfd448299a87dde3a649bdba96e84d54558
+    , 0x153ce14a76a53e205ba8f275ef1137c56a566f638b52d34ba3bf3bf22f277d70f76316218c0dfd583a394b8448d2be7f
+    , 0x095668fb4a02fe930ed44767834c915b283b1c6ca98c047bd4c272e9ac3f3ba6ff0b05a93e59c71fba77bce995f04692
+    , 0x16deedaa683124fe7260085184d88f7d036b86f53bb5b7f1fc5e248814782065413e7d958d17960109ea006b2afdeb5f
+    // e4 .. e7:
+    , 0x09c92cf02f3cd3d2f9d34bc44eee0dd50314ed44ca5d30ce6a9ec0539be7a86b121edc61839ccc908c4bdde256cd6048
+    , 0x111061f398efc2a97ff825b04d21089e24fd8b93a47e41e60eae7e9b2a38d54fa4dedced0811c34ce528781ab9e929c7
+    , 0x01ecfcf31c86257ab00b4709c33f1c9c4e007659dd5ffc4a735192167ce197058cfb4c94225e7f1b6c26ad9ba68f63bc
+    , 0x08890726743a1f94a8193a166800b7787744a8ad8e2f9365db76863e894b7a11d83f90d873567e9d645ccf725b32d26f
+    // e8 .. e11:
+    , 0x0e61c752414ca5dfd258e9606bac08daec29b3e2c57062669556954fb227d3f1260eedf25446a086b0844bcd43646c10
+    , 0x0fe63f185f56dd29150fc498bbeea78969e7e783043620db33f75a05a0a2ce5c442beaff9da195ff15164c00ab66bdde
+    , 0x10900338a92ed0b47af211636f7cfdec717b7ee43900eee9b5fc24f0000c5874d4801372db478987691c566a8c474978
+    , 0x1454814f3085f0e6602247671bc408bbce2007201536818c901dbd4d2095dd86c1ec8b888e59611f60a301af7776be3d
+    ]
+
+out1: t12
+out1 = 
+    [[[0x10c839fd7d6519131e14836b595789b7121ba39388491a972b713f92f9c75d3612a4758fe5614d7877cdaf2292b7dcf2,
+       0x0ced20608aa7112c205ee7a703c2e77f96d1aef6fd865caafcb4a363d2f9de8ecc3acf61f888c8eedb1483397ba6438b],
+      [0x0cbccf94f2a6bcc12d54395ad34d72e308d2b753adce82cd21e864d7bdbc5dfdd093caa671baba5189ceb2764a4664ff,
+       0x0315d01b5d309e53bc4b7533c57146890a33c101cca9d8675fc099f9b80a6f8e25c61610c25299ea9ab42c9ea16eabb0],
+      [0x13dd0d23fe6b205afc16bd7f54193917adb5a1faff0b2f7ed7f786357f5ae1eace5bd97858230cc0352b88c97bbef640,
+       0x111758fd4779b9d7eda010f36caabfea0c08b6703f38849acf110661c09aa1d870d747518e310505f3342294588fb886]],
+     [[0x02f30075b452e4ff416acd7a2ec78f6a872bd26dd7e6d45548b1d6cb240a17c5f1d37ac061bb2f1c98a83cce6360791a,
+       0x185bcf0bf2faf0630cf185de213a3b63cf6b4c7bdd999a933ee5a7a6c3e6f636e49573d3eeb7bd81b0a4d0f90df5cf72],
+      [0x00d9c8d3f7978f9ed3bdc5524b450749b362c475132ab9f708510495733830e7d649bbb6a440011b781341ca221b589d,
+       0x099f5318bfc60dc7ce507207921d1723c624fc33f91dc50b4aa07e70fc882fc27bb4a7b87afc9abf86aabff35d91a9b9],
+      [0x06bfd617a725487f430a7836f515d7562831b88343ab58c39dba82fecc0de057f0dde4cb41a40ec56c7f6848c5780374,
+       0x05b656cfa1dc10452329033d2bf1563f0e88716ae523a5c1a4d814ef2df6fc1ab3db6698b3fe067fa6bb2d716d1946a0]]]
+
+property ate_pairing'_OK =
+    ate_pairing' p1 (EC::neg c12 p2) == out1
+
+out2: t12
+out2 =
+    [[[0x07e850bc5bf5dcb89dc030a689f045f36e464093aa549b95c3eace6873451db6cf6374a8a9c29bed19e0f3fa2899f03b,
+       0x0832f3fef66f64b46560617243b5e38291a18c2e1c4e5c3383bfcf87b2f40996f5505d61197a00ac57ac462e389aeeb9],
+      [0x19aa5557f245b2ca84ed238cb32b279150dbbf88415386a23c6fb0f05f167b86bef07a74921f06bb88092a6206cc58c3,
+       0x11f5e6bd624a29d8effc4ec21dd46d995045e66cc8657fb91a582b06bfdb925b343b9b7c279e547f8373ae7c9b601f3d],
+      [0x080686fcf89ea3bea2bad2570e6882097895ea3828ad67d807349e2cf032a7c965d83e06f795f295135ab0991f958aef,
+       0x055c3a150de9f27ddd94f8a9f44dff985452d80beb58d9109bbbc9b7155768c3e2ac57399be682674f77f5a593cf5fa3]],
+     [[0x0f63c4bee282d774a5f565bff148c57d6c872f426cfa0118f3326a32e339321ba7caf65c22bac0bbc12e567aafa5e20b,
+       0x152c9372d5c5379f2bc83de4767d582caad6d14a09b91556bcdb58f78cdc23e9726014205ca6e4daea514e835c30ffa6],
+      [0x1828b41889e6745acefd33c061bac175eff11b68853690f3fd4cf86bfa7da384d65c7694187f771c1dee96dd0e3e50ca,
+       0x181b92344a97b2be5183ff569d4e788a5c265eeff42b00016ccabe069eb66045bb202f93fdff68c4a69c5a2b114983a6],
+      [0x054010ee2fce8b2ef40ad45f69f8f34e8bff542a075af25a51b5558a3e20587f26c49ecb8f9d5e4f53502eca461a0191,
+       0x09cfb5cdbdfb170f707acf2a119c60c7a42d9607400a07cf0a1ca6a66d678258b11fd6eef8dab538549b29fbe5e940a5]]]
+
+// The "splits" here account for the way the elements of F_p12 are represented as a sequence of
+// 12 elements of F_p.
+//
+// Section 2.5 of the Draft claims that the representation convention of Appendix J.4 of
+// [I-D.ietf-lwig-curve-representations] is used, and explains how an element of a extension field
+// can be represented by an "octet stream".  Then it goes on to represent these elements as a collection
+// of 12 octet streams, without carefully explaining the order.
+
+property final_exponentiation_OK =
+  final_exponentiation out1 == split`{parts=2} (split`{parts=6} (reverse expected_pairing))
+
+// Note: There is no test here for the overall Ate pairing, because even though Cryptol can test both
+// main steps (ate_pairing'_OK and final_exponentiation_OK), it exhausts memory when computing
+// the composition of those two functions.
