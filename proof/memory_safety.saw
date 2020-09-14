@@ -13,6 +13,7 @@ m <- llvm_load_module "../server.o.bc";
 let vec256_type = (llvm_array 4 (llvm_int 64));
 let vec512_type = (llvm_array 8 (llvm_int 64));
 let vec384_type = (llvm_array 6 (llvm_int 64));
+let vec768_type = (llvm_array 12 (llvm_int 64));
 let vec384x_type = (llvm_array 12 (llvm_int 64)); // array of two vec384
 let limb_type = (llvm_int 64);
 
@@ -358,6 +359,49 @@ let cneg_mod_384_alias_1_2_spec = do {
   //crucible_points_to a_ptr (crucible_term new_a);
 //};
 
+let mul_mont_sparse_256_spec = do { // NOTE: first two args are aliases
+  ret_ptr <- crucible_alloc vec256_type;
+  //(_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  n0 <- crucible_fresh_var "n0" (llvm_int 64);
+  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term n0];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let vec256_type = (llvm_array 4 (llvm_int 64));
+let vec512_type = (llvm_array 8 (llvm_int 64));
+
+let blst_sha256_emit_spec = do {
+  (_, h_ptr) <- ptr_to_fresh_readonly "h" (llvm_array 8 (llvm_int 32)); // should always be initialized
+  let md_type = (llvm_array 32 (llvm_int 8));
+  md_ptr <- crucible_alloc md_type;
+  crucible_execute_func [md_ptr, h_ptr];
+  new_md <- crucible_fresh_var "new_md" md_type;
+  crucible_points_to md_ptr (crucible_term new_md);
+};
+
+
+let blst_sha256_hcopy_spec = do {
+  let h_type = (llvm_array 8 (llvm_int 32));
+  dst_ptr <- crucible_alloc h_type;
+  (_, src_ptr) <- ptr_to_fresh_readonly "src" h_type;
+  crucible_execute_func [dst_ptr, src_ptr];
+  new_dst <- crucible_fresh_var "new_dst" h_type;
+  crucible_points_to dst_ptr (crucible_term new_dst);
+};
+
+let redc_mont_384_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, crucible_term n0];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
 // Now we give specs for the functions we verify:
 
 let blst_keygen_spec IKM_len info_len = do {
@@ -393,6 +437,15 @@ let blst_sk_to_pk_in_g2_spec = do {
   crucible_points_to SK_ptr (crucible_term new_SK);
 };
 
+let hash_to_field_spec nelems aug_len msg_len DST_len = do {
+  elems_ptr <- crucible_alloc (llvm_array nelems vec384_type);
+  (_, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 64));
+  (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 64));
+  (_, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 64));
+  crucible_execute_func [elems_ptr, crucible_term {{ `nelems : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}, msg_ptr, crucible_term {{ `msg_len : [64] }}, DST_ptr, crucible_term {{ `DST_len : [64] }}];
+  new_elems <- crucible_fresh_var "new_elems" (llvm_array nelems vec384_type);
+  crucible_points_to elems_ptr (crucible_term new_elems);
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Proofs
@@ -403,6 +456,13 @@ let info_len = 67;
 // sizes fixed in keygen.c:
 let salt_len = 20;
 let L = 48;
+
+// for hash_to_field:
+// nelems = 2 to be fixed. Rest is variable, but aug_len is 96 or 48
+let aug_len = 96;
+let msg_len = 200;
+let dst_len= 9;
+let nelems = 2;
 
 // Now we create all the overrides
 
@@ -463,16 +523,25 @@ mul_by_8_mod_384x_alias_ov <- crucible_llvm_unsafe_assume_spec m "mul_by_8_mod_3
 vec_select_288_ov <- crucible_llvm_unsafe_assume_spec m "vec_select_288" vec_select_288_spec;
 vec_select_288_alias_1_3_ov <- crucible_llvm_unsafe_assume_spec m "vec_select_288" vec_select_288_alias_1_3_spec;
 
+blst_sha256_emit_ov <- crucible_llvm_unsafe_assume_spec m "blst_sha256_emit" blst_sha256_emit_spec;
+blst_sha256_hcopy_ov <- crucible_llvm_unsafe_assume_spec m "blst_sha256_hcopy" blst_sha256_hcopy_spec;
+
+redc_mont_384_ov <- crucible_llvm_unsafe_assume_spec m "redcx_mont_384" redc_mont_384_spec;
+
 // finally we verify functions:
 
-//blst_keygen_ov <-
-  //let overrides = [blst_sha256_emit_ov, blst_sha256_hcopy_ov, redc_mont_256_ov, mul_mont_sparse_256_ov]
-  //in crucible_llvm_verify m "blst_keygen" overrides false (blst_keygen_spec IKM_len info_len) abc;
+blst_keygen_ov <-
+  let overrides = [blst_sha256_emit_ov, blst_sha256_hcopy_ov, redc_mont_256_ov, mul_mont_sparse_256_ov]
+  in crucible_llvm_verify m "blst_keygen" overrides false (blst_keygen_spec IKM_len info_len) abc;
 
-//blst_sk_to_pk_in_g1_ov <-
-  //let overrides = [sqr_mont_384_ov, add_mod_384_ov, sqr_mont_384_alias_ov, sub_mod_384_ov, sub_mod_384_alias_ov, add_mod_384_alias_ov, mul_by_3_mod_384_ov, mul_by_3_mod_384_alias_ov, mul_mont_384_ov, mul_mont_384_alias_ov, mul_by_8_mod_384_ov, mul_by_8_mod_384_alias_ov, vec_select_144_alias_1_3_ov, vec_select_144_ov, cneg_mod_384_ov, cneg_mod_384_alias_1_2_ov]
-  //in crucible_llvm_verify m "blst_sk_to_pk_in_g1" overrides false blst_sk_to_pk_in_g1_spec abc;
+blst_sk_to_pk_in_g1_ov <-
+  let overrides = [sqr_mont_384_ov, add_mod_384_ov, sqr_mont_384_alias_ov, sub_mod_384_ov, sub_mod_384_alias_ov, add_mod_384_alias_ov, mul_by_3_mod_384_ov, mul_by_3_mod_384_alias_ov, mul_mont_384_ov, mul_mont_384_alias_ov, mul_by_8_mod_384_ov, mul_by_8_mod_384_alias_ov, vec_select_144_alias_1_3_ov, vec_select_144_ov, cneg_mod_384_ov, cneg_mod_384_alias_1_2_ov]
+  in crucible_llvm_verify m "blst_sk_to_pk_in_g1" overrides false blst_sk_to_pk_in_g1_spec abc;
 
 blst_sk_to_pk_in_g2_ov <-
   let overrides = [sqr_mont_384x_ov, add_mod_384x_ov, sqr_mont_384x_alias_ov, sub_mod_384x_ov, sub_mod_384x_alias_ov, add_mod_384x__alias_1_2_3_ov, mul_by_3_mod_384x_ov, mul_by_3_mod_384x_alias_ov, mul_mont_384x_ov, mul_mont_384x_alias_ov, mul_by_8_mod_384x_ov, mul_by_8_mod_384x_alias_ov, vec_select_288_ov, vec_select_288_alias_1_3_ov, cneg_mod_384_ov, cneg_mod_384_alias_1_2_ov]
   in crucible_llvm_verify m "blst_sk_to_pk_in_g2" overrides false blst_sk_to_pk_in_g2_spec abc;
+
+hash_to_field_ov <-
+  let overrides = [blst_sha256_emit_ov, blst_sha256_hcopy_ov, redc_mont_256_ov, mul_mont_sparse_256_ov, redc_mont_384_ov, mul_mont_384_alias_ov]
+  in crucible_llvm_verify m "hash_to_field" overrides false (hash_to_field_spec nelems aug_len msg_len dst_len) abc;
