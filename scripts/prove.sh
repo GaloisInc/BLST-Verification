@@ -1,4 +1,4 @@
 #!/bin/sh
 set -e
 
-saw proof/test.saw
+saw proof/memory_safety.saw
