@@ -880,7 +880,7 @@ let blst_p2_affine_in_g2_spec = do {
   crucible_execute_func [p_ptr];
 };
 
-let blst_p1_deserialize_spec = do {
+let blst_p1_deserialize_spec = do { // TODO: out is left invalid if there is an error
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
   (_, in_ptr) <- ptr_to_fresh_readonly "in" (llvm_array 96 (llvm_int 8));
   crucible_execute_func [out_ptr, in_ptr];
@@ -956,6 +956,14 @@ let POINTonE1_add_alias_spec = do {
   crucible_points_to out_ptr (crucible_term new_out);
 };
 
+let POINTonE1_add_alias_1_3_spec = do {
+  (_, out_ptr) <- ptr_to_fresh "out" (llvm_struct "struct.POINTonE1");
+  (_, p1_ptr) <- ptr_to_fresh_readonly "p2" (llvm_struct "struct.POINTonE1");
+  crucible_execute_func [out_ptr, p1_ptr, out_ptr];
+  new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
+  crucible_points_to out_ptr (crucible_term new_out);
+};
+
 let POINTonE2_add_spec = do {
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2");
   (_, p1_ptr) <- ptr_to_fresh_readonly "p1" (llvm_struct "struct.POINTonE2");
@@ -977,7 +985,7 @@ let POINTonE2_add_alias_spec = do {
 let POINTonE1_add_affine_spec = do {
   p3_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1");
   (_, p1_ptr) <- ptr_to_fresh_readonly "p1" (llvm_struct "struct.POINTonE1");
-  (_, p2_ptr) <- ptr_to_fresh_readonly "p2" (llvm_struct "struct.POINTonE1");
+  (_, p2_ptr) <- ptr_to_fresh_readonly "p2" (llvm_struct "struct.POINTonE1_affine");
   crucible_execute_func [p3_ptr, p1_ptr, p2_ptr];
   new_p3 <- crucible_fresh_var "new_p3" (llvm_struct "struct.POINTonE1");
   crucible_points_to p3_ptr (crucible_term new_p3);
@@ -985,7 +993,7 @@ let POINTonE1_add_affine_spec = do {
 
 let POINTonE1_add_affine_alias_spec = do {
   (_, p3_ptr) <- ptr_to_fresh "p3" (llvm_struct "struct.POINTonE1");
-  (_, p2_ptr) <- ptr_to_fresh_readonly "p2" (llvm_struct "struct.POINTonE1");
+  (_, p2_ptr) <- ptr_to_fresh_readonly "p2" (llvm_struct "struct.POINTonE1_affine");
   crucible_execute_func [p3_ptr, p3_ptr, p2_ptr];
   new_p3 <- crucible_fresh_var "new_p3" (llvm_struct "struct.POINTonE1");
   crucible_points_to p3_ptr (crucible_term new_p3);
@@ -994,7 +1002,7 @@ let POINTonE1_add_affine_alias_spec = do {
 let POINTonE2_add_affine_spec = do {
   p3_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2");
   (_, p1_ptr) <- ptr_to_fresh_readonly "p1" (llvm_struct "struct.POINTonE2");
-  (_, p2_ptr) <- ptr_to_fresh_readonly "p2" (llvm_struct "struct.POINTonE2");
+  (_, p2_ptr) <- ptr_to_fresh_readonly "p2" (llvm_struct "struct.POINTonE2_affine");
   crucible_execute_func [p3_ptr, p1_ptr, p2_ptr];
   new_p3 <- crucible_fresh_var "new_p3" (llvm_struct "struct.POINTonE2");
   crucible_points_to p3_ptr (crucible_term new_p3);
@@ -1002,7 +1010,7 @@ let POINTonE2_add_affine_spec = do {
 
 let POINTonE2_add_affine_alias_spec = do {
   (_, p3_ptr) <- ptr_to_fresh "p3" (llvm_struct "struct.POINTonE2");
-  (_, p2_ptr) <- ptr_to_fresh_readonly "p2" (llvm_struct "struct.POINTonE2");
+  (_, p2_ptr) <- ptr_to_fresh_readonly "p2" (llvm_struct "struct.POINTonE2_affine");
   crucible_execute_func [p3_ptr, p3_ptr, p2_ptr];
   new_p3 <- crucible_fresh_var "new_p3" (llvm_struct "struct.POINTonE2");
   crucible_points_to p3_ptr (crucible_term new_p3);
@@ -1187,6 +1195,7 @@ POINTonE1_384_dadd_affine_ov <- crucible_llvm_verify m "POINTonE1_dadd_affine" a
 POINTonE2_384x_dadd_affine_ov <- crucible_llvm_verify m "POINTonE2_dadd_affine" assumed_overrides false POINTonE2_384x_dadd_affine_spec abc;
 POINTonE1_add_ov <- crucible_llvm_verify m "POINTonE1_add" assumed_overrides false POINTonE1_add_spec abc;
 POINTonE1_add_alias_ov <- crucible_llvm_verify m "POINTonE1_add" assumed_overrides false POINTonE1_add_alias_spec abc;
+POINTonE1_add_alias_1_3_ov <- crucible_llvm_verify m "POINTonE1_add" assumed_overrides false POINTonE1_add_alias_1_3_spec abc;
 POINTonE2_add_ov <- crucible_llvm_verify m "POINTonE2_add" assumed_overrides false POINTonE2_add_spec abc;
 POINTonE2_add_alias_ov <- crucible_llvm_verify m "POINTonE2_add" assumed_overrides false POINTonE2_add_alias_spec abc;
 POINTonE1_add_affine_ov <- crucible_llvm_verify m "POINTonE1_add_affine" assumed_overrides false POINTonE1_add_affine_spec abc;
@@ -1200,12 +1209,12 @@ POINTonE2_double_alias_ov <- crucible_llvm_verify m "POINTonE2_double" assumed_o
 POINTonE1_is_equal_ov <- crucible_llvm_verify m "POINTonE1_is_equal" assumed_overrides false POINTonE1_is_equal_spec abc;
 POINTonE2_is_equal_ov <- crucible_llvm_verify m "POINTonE2_is_equal" assumed_overrides false POINTonE2_is_equal_spec abc;
 
-let ec_ops_overrides = [POINTonE1_is_equal_ov,POINTonE2_double_alias_ov,POINTonE2_double_ov,POINTonE1_double_alias_ov,POINTonE1_double_ov,POINTonE2_add_affine_alias_ov,POINTonE2_add_affine_ov,POINTonE1_add_affine_alias_ov,POINTonE1_add_affine_ov,POINTonE2_add_alias_ov,POINTonE2_add_ov,POINTonE1_add_ov,POINTonE1_add_alias_ov,POINTonE2_384x_dadd_affine_ov,POINTonE1_384_dadd_affine_ov,POINTonE2_384x_dadd_ov,POINTonE1_384_dadd_ov];
+let ec_ops_overrides = [POINTonE1_is_equal_ov,POINTonE2_double_alias_ov,POINTonE2_double_ov,POINTonE1_double_alias_ov,POINTonE1_double_ov,POINTonE2_add_affine_alias_ov,POINTonE2_add_affine_ov,POINTonE1_add_affine_alias_ov,POINTonE1_add_affine_ov,POINTonE2_add_alias_ov,POINTonE2_add_ov,POINTonE1_add_ov,POINTonE1_add_alias_1_3_ov,POINTonE1_add_alias_ov,POINTonE2_384x_dadd_affine_ov,POINTonE1_384_dadd_affine_ov,POINTonE2_384x_dadd_ov,POINTonE1_384_dadd_ov];
 
-//blst_keygen_ov <- crucible_llvm_verify m "blst_keygen" (concat keygen__blst_sha256_block_data_order_ovs assumed_overrides) false (blst_keygen_spec IKM_len info_len) abc;
+blst_keygen_ov <- crucible_llvm_verify m "blst_keygen" (concat keygen__blst_sha256_block_data_order_ovs assumed_overrides) false (blst_keygen_spec IKM_len info_len) abc;
 // TODO: compute sizes for sha256_block_data_order sizes for hash_to_field:
 //hash_to_field_ov <- crucible_llvm_verify m "hash_to_field" (concat keygen__blst_sha256_block_data_order_ovs assumed_overrides) false (hash_to_field_spec nelems aug_len msg_len dst_len) abc;
-//blst_sk_to_pk_in_g1_ov <- crucible_llvm_verify m "blst_sk_to_pk_in_g1" (concat ec_ops_overrides assumed_overrides) false blst_sk_to_pk_in_g1_spec abc;
+blst_sk_to_pk_in_g1_ov <- crucible_llvm_verify m "blst_sk_to_pk_in_g1" (concat ec_ops_overrides assumed_overrides) false blst_sk_to_pk_in_g1_spec abc;
 blst_sk_to_pk_in_g2_ov <-crucible_llvm_verify m "blst_sk_to_pk_in_g2" (concat ec_ops_overrides assumed_overrides) false blst_sk_to_pk_in_g2_spec abc;
 blst_p1_affine_in_g1_ov <- crucible_llvm_verify m "blst_p1_affine_in_g1" (concat ec_ops_overrides assumed_overrides) false blst_p1_affine_in_g1_spec abc;
 blst_p2_affine_in_g2_ov <- crucible_llvm_verify m "blst_p2_affine_in_g2" (concat ec_ops_overrides assumed_overrides) false blst_p2_affine_in_g2_spec abc;
