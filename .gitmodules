@@ -1,3 +1,6 @@
 [submodule "blst"]
 	path = blst
 	url = git@github.com:supranational/blst.git
+[submodule "cryptol-specs"]
+	path = cryptol-specs
+	url = git://github.com/GaloisInc/cryptol-specs
