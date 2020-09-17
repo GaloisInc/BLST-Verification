@@ -874,17 +874,17 @@ let blst_p1_deserialize_spec = do { // TODO: out is left invalid if there is an 
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
   (_, in_ptr) <- ptr_to_fresh_readonly "in" (llvm_array 96 (llvm_int 8));
   crucible_execute_func [out_ptr, in_ptr];
-  new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE1_affine");
-  crucible_points_to out_ptr (crucible_term new_out);
+  //new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE1_affine");
+  //crucible_points_to out_ptr (crucible_term new_out);
   ret <- crucible_fresh_var "ret" (llvm_int 32);
   crucible_return (crucible_term ret);
 };
-let blst_p2_deserialize_spec = do {
+let blst_p2_deserialize_spec = do { // TODO: out is left invalid if there is an error
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
   (_, in_ptr) <- ptr_to_fresh_readonly "in" (llvm_array 192 (llvm_int 8));
   crucible_execute_func [out_ptr, in_ptr];
-  new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE2_affine");
-  crucible_points_to out_ptr (crucible_term new_out);
+  //new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE2_affine");
+  //crucible_points_to out_ptr (crucible_term new_out);
   ret <- crucible_fresh_var "ret" (llvm_int 32);
   crucible_return (crucible_term ret);
 };
@@ -1214,5 +1214,5 @@ blst_sk_to_pk_in_g1_ov <- crucible_llvm_verify m "blst_sk_to_pk_in_g1" (concat e
 blst_sk_to_pk_in_g2_ov <-crucible_llvm_verify m "blst_sk_to_pk_in_g2" (concat ec_ops_overrides assumed_overrides) false blst_sk_to_pk_in_g2_spec abc;
 blst_p1_affine_in_g1_ov <- crucible_llvm_verify m "blst_p1_affine_in_g1" (concat ec_ops_overrides assumed_overrides) false blst_p1_affine_in_g1_spec abc;
 blst_p2_affine_in_g2_ov <- crucible_llvm_verify m "blst_p2_affine_in_g2" (concat ec_ops_overrides assumed_overrides) false blst_p2_affine_in_g2_spec abc;
-//blst_p1_deserialize_ov <- crucible_llvm_verify m "blst_p1_deserialize" (concat ec_ops_overrides assumed_overrides) false blst_p1_deserialize_spec abc;
-//blst_p2_deserialize_ov <- crucible_llvm_verify m "blst_p2_deserialize" (concat ec_ops_overrides assumed_overrides) false blst_p2_deserialize_spec abc;
+blst_p1_deserialize_ov <- crucible_llvm_verify m "blst_p1_deserialize" (concat ec_ops_overrides assumed_overrides) false blst_p1_deserialize_spec abc;
+blst_p2_deserialize_ov <- crucible_llvm_verify m "blst_p2_deserialize" (concat ec_ops_overrides assumed_overrides) false blst_p2_deserialize_spec abc;
