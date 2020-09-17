@@ -1,0 +1,15 @@
+name: Proofs
+on: [pull_request]
+
+jobs:
+  proofs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - run: docker-compose pull
+      - uses: satackey/action-docker-layer-caching@v0.0.8
+        continue-on-error: true
+      - run: docker-compose build
+      - run: docker-compose run blst
