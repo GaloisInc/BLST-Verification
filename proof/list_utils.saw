@@ -31,3 +31,10 @@ let from_to =
     then [x]
     else concat [x] (f (eval_size {| x+1 |}) y))
   in f;
+
+let map f =
+  rec m = (\xs ->
+    if null xs
+    then []
+    else concat [f (head xs)] (m (tail xs)))
+  in m;
