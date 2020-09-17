@@ -28,6 +28,8 @@ let size_type = (llvm_int 64);
 
 // We start with vect.h
 
+// TODO: use a set of spec templates (one for each signature)?
+
 let mul_mont_sparse_256_spec = do {
   (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
   (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
@@ -732,9 +734,9 @@ let sha256_update_bcopy_sizes len offset = do { // returns a pair; first elem is
 // we compute what sizes are used.
 
 // sha256_block_data_order sizes in one call to sha256_update:
-let sha256_update_block_data_order_sizes len offset =
+let sha256_update__block_data_order_sizes len offset =
   if eval_bool {{ (`offset  == 0) /\ ((`len:Integer) + (`offset:Integer)) >= 64 }}
-  then (0, [eval_size {| (offset + len) / 64 |}])
+  then (eval_size {| len % 64 |}, [eval_size {| len / 64 |}])
   else
     if eval_bool {{ ((`len:Integer) + (`offset:Integer)) >= 64 }}
     then
@@ -756,12 +758,12 @@ let HMAC_init_bcopy_sizes len = do {
 };
 
 let HMAC_init_block_data_order_sizes len = do {
-  let (_, ss_1_) = sha256_update_block_data_order_sizes len 0;
+  let (_, ss_1_) = sha256_update__block_data_order_sizes len 0;
   let ss_1 =
     if eval_bool {{ (`len:Integer) > 64 }}
     then ss_1_
     else [];
-  let (_, ss_2) = sha256_update_block_data_order_sizes 64 0;
+  let (_, ss_2) = sha256_update__block_data_order_sizes 64 0;
   //for (dedup (foldr concat [ss_1, ss_2] [1])) print;
   return (0, (dedup (foldr concat [ss_1, ss_2] [1])));
 };
@@ -798,20 +800,37 @@ let blst_keygen_block_data_order_sizes salt_len IKM_len info_len L = do {
   (_, ss_1) <- HMAC_init_block_data_order_sizes salt_len;
   //   * offset is 0 after this
   //   * HMAC_update
-  let (offset_2, ss_2) = sha256_update_block_data_order_sizes IKM_len 0;
+  let (offset_2, ss_2) = sha256_update__block_data_order_sizes IKM_len 0;
   //   * HMAC_update again (with size 1)
-  let (_, ss_x) = sha256_update_block_data_order_sizes 1 offset_2; // TODO: ss_x because added later
+  let (_, ss_x) = sha256_update__block_data_order_sizes 1 offset_2; // TODO: ss_x because added later
   //   * HMAC_final (size is 1 here)
   // * HKDF_expand
   //   * HMAC_init (resets the offset)
   (offset_3, ss_3) <- HMAC_init_block_data_order_sizes 32;
-  let (offset_5, ss_5) = sha256_update_block_data_order_sizes (eval_size {| info_len + 3 |}) offset_3; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
+  let (offset_5, ss_5) = sha256_update__block_data_order_sizes (eval_size {| info_len + 3 |}) offset_3; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
   // now there is a while loop, but the offset is reset at every iteration and the sizes are constant
-  let (_, ss_6) = sha256_update_block_data_order_sizes 32 0; // offset is 32 after this
-  let (_, ss_7) = sha256_update_block_data_order_sizes (eval_size {| info_len + 3 |}) 32; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
+  let (_, ss_6) = sha256_update__block_data_order_sizes 32 0; // offset is 32 after this
+  let (_, ss_7) = sha256_update__block_data_order_sizes (eval_size {| info_len + 3 |}) 32; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
   let res = dedup (foldr concat [ss_1, ss_2, ss_x, ss_3, ss_5, ss_6, ss_7] [1]); // sha256_final uses size 1
   //for res print;
   return res;
+};
+
+// Now we do the same for `hash_to_field`.
+
+// `hash_to_field` calls `expand_message_xmd`, which calls the sha-related functions.
+let blst_expand_message_xmd__block_data_order_sizes len_in_bytes aug_len msg_len DST_len = do {
+  // sha256_update(&ctx, aug, aug_len)
+  let (offset_1, ss_1) = sha256_update__block_data_order_sizes aug_len 0;
+  // sha256_update(&ctx, msg, msg_len)
+  let (offset_2, ss_2) = sha256_update__block_data_order_sizes msg_len offset_1;
+  // sha256_update(&ctx, b_i.c + 30, 3 + DST_len + 1)
+  let (_, ss_3) = sha256_update__block_data_order_sizes (eval_size {|DST_len + 4|}) offset_2;
+  // sha256_final(b_0.c, &ctx)
+  // sha256_block_data_order(ctx.h, b_i.c, b_i_blocks / 64)
+  let rest = [1, eval_int {{ ( ((33 + `dst_len + 1 + 9) + 63) && (-64:[64]) ) /64 }}];
+  //for (foldr concat [ss_1, ss_2, ss_3] rest) print;
+  return (dedup (foldr concat [ss_1, ss_2, ss_3] rest));
 };
 
 // Now we give specs for the functions we verify:
@@ -1062,13 +1081,13 @@ let IKM_len = 557;
 let info_len = 67;
 // sizes fixed in keygen.c:
 let salt_len = 20;
-let L = 48;
+let L = 64; // sizeof(vec384) + 128/8 = 64; vec384 has 6 limbs
 
 // for hash_to_field:
 // nelems = 2 to be fixed. Rest is variable, but aug_len is 96 or 48
 let aug_len = 96;
 let msg_len = 200;
-let dst_len= 9;
+let dst_len= 97;
 let nelems = 2;
 
 // Now we create all the overrides
@@ -1156,6 +1175,7 @@ blst_sha256_hcopy_ov <- crucible_llvm_unsafe_assume_spec m "blst_sha256_hcopy" b
 
 // sha256_block_data_order:
 let make_blst_sha256_block_data_order_ov len = crucible_llvm_unsafe_assume_spec m "blst_sha256_block_data_order" (blst_sha256_block_data_order_spec len);
+
 let make_keygen__blst_sha256_block_data_order_ovs salt_len IKM_len info_len L = do {
   ss <- (blst_keygen_block_data_order_sizes salt_len IKM_len info_len L);
   ovs <- (for ss make_blst_sha256_block_data_order_ov);
@@ -1178,6 +1198,14 @@ keygen__blst_sha256_bcopy_ovs <- make_keygen__blst_sha256_bcopy_ovs salt_len IKM
   //ovs <- (for ss make_blst_sha256_bcopy_ov);
   //return ovs;
 //};
+
+
+let make_hash_to_field__blst_sha256_block_data_order_ovs len_in_bytes aug_len msg_len dst_len = do {
+  ss <- (blst_expand_message_xmd__block_data_order_sizes (eval_size {| nelems*L |}) aug_len msg_len dst_len);
+  ovs <- (for ss make_blst_sha256_block_data_order_ov);
+  return ovs;
+};
+hash_to_field__blst_sha256_block_data_order_ovs <- make_hash_to_field__blst_sha256_block_data_order_ovs nelems aug_len msg_len dst_len;
 
 let assumed_overrides = concat vec_select_ovs [redc_mont_256_ov, redc_mont_256_alias_1_2_ov, mul_mont_sparse_256_alias_ov, mul_mont_sparse_256_ov, sqr_mont_sparse_256_ov, from_mont_256_ov, add_mod_256_ov, sub_mod_256_ov, mul_by_3_mod_256_ov, cneg_mod_256_ov, lshift_mod_256_ov, rshift_mod_256_ov, eucl_inverse_mod_256_ov, mul_mont_384_ov, mul_mont_384_alias_ov, sqr_mont_384_ov, sqr_mont_384_alias_ov, sqr_n_mul_mont_383_alias_1_2_ov, sqr_n_mul_mont_383_ov, redc_mont_384_ov, from_mont_384_ov, sgn0_pty_mont_384_ov, sgn0_pty_mont_384x_ov, sgn0_pty_mod_384_ov, sgn0_pty_mod_384x_ov, add_mod_384_ov, add_mod_384_alias_1_2_ov, add_mod_384_alias_1_2_3_ov, sub_mod_384_ov, sub_mod_384_alias_ov, mul_by_8_mod_384_ov, mul_by_8_mod_384_alias_ov, mul_by_3_mod_384_ov, mul_by_3_mod_384_alias_ov, cneg_mod_384_ov, cneg_mod_384_alias_1_2_ov, lshift_mod_384_ov, eucl_inverse_mod_384_ov, mul_mont_384x_ov, mul_mont_384x_alias_ov, sqr_mont_384x_alias_ov, sqr_mont_384x_ov, sqr_mont_384x_alias_ov, sqr_mont_382x_alias_ov, sqr_mont_382x_ov, mul_382x_ov, sqr_382x_ov, add_mod_384x_ov, add_mod_384x_alias_1_2_ov, add_mod_384x_alias_1_2_3_ov, sub_mod_384x_ov, sub_mod_384x_alias_ov, mul_by_8_mod_384x_ov, mul_by_8_mod_384x_alias_ov, mul_by_3_mod_384x_ov, mul_by_3_mod_384x_alias_ov, mul_by_1_plus_i_mod_384x_ov, add_mod_384x384_ov, blst_sha256_emit_ov, blst_sha256_hcopy_ov, blst_sha256_emit_ov, blst_sha256_hcopy_ov];
 
@@ -1208,8 +1236,7 @@ POINTonE2_is_equal_ov <- crucible_llvm_verify m "POINTonE2_is_equal" assumed_ove
 let ec_ops_overrides = [POINTonE1_is_equal_ov,POINTonE2_double_alias_ov,POINTonE2_double_ov,POINTonE1_double_alias_ov,POINTonE1_double_ov,POINTonE2_add_affine_alias_ov,POINTonE2_add_affine_ov,POINTonE1_add_affine_alias_ov,POINTonE1_add_affine_ov,POINTonE2_add_alias_ov,POINTonE2_add_ov,POINTonE1_add_ov,POINTonE1_add_alias_1_3_ov,POINTonE1_add_alias_ov,POINTonE2_384x_dadd_affine_ov,POINTonE1_384_dadd_affine_ov,POINTonE2_384x_dadd_ov,POINTonE1_384_dadd_ov];
 
 blst_keygen_ov <- crucible_llvm_verify m "blst_keygen" (concat keygen__blst_sha256_block_data_order_ovs assumed_overrides) false (blst_keygen_spec IKM_len info_len) abc;
-// TODO: compute sizes for sha256_block_data_order sizes for hash_to_field:
-//hash_to_field_ov <- crucible_llvm_verify m "hash_to_field" (concat keygen__blst_sha256_block_data_order_ovs assumed_overrides) false (hash_to_field_spec nelems aug_len msg_len dst_len) abc;
+hash_to_field_ov <- crucible_llvm_verify m "hash_to_field" (concat hash_to_field__blst_sha256_block_data_order_ovs assumed_overrides) false (hash_to_field_spec nelems aug_len msg_len dst_len) abc;
 blst_sk_to_pk_in_g1_ov <- crucible_llvm_verify m "blst_sk_to_pk_in_g1" (concat ec_ops_overrides assumed_overrides) false blst_sk_to_pk_in_g1_spec abc;
 blst_sk_to_pk_in_g2_ov <-crucible_llvm_verify m "blst_sk_to_pk_in_g2" (concat ec_ops_overrides assumed_overrides) false blst_sk_to_pk_in_g2_spec abc;
 blst_p1_affine_in_g1_ov <- crucible_llvm_verify m "blst_p1_affine_in_g1" (concat ec_ops_overrides assumed_overrides) false blst_p1_affine_in_g1_spec abc;
