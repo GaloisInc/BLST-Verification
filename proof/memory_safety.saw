@@ -1077,7 +1077,7 @@ let POINTonE2_is_equal_spec = do {
 // Proofs
 ///////////////////////////////////////////////////////////////////////////////
 
-let IKM_len = 557;
+let IKM_len = 129;
 let info_len = 67;
 // sizes fixed in keygen.c:
 let salt_len = 20;

@@ -9,3 +9,4 @@ services:
       - ./spec:/workdir/spec:ro
       - ./tests:/workdir/tests:ro
       - ./scripts:/workdir/scripts:ro
+      - ./patches:/workdir/patches:ro
