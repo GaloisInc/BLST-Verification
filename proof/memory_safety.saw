@@ -28,8 +28,6 @@ let size_type = (llvm_int 64);
 
 // We start with vect.h
 
-// TODO: use a set of spec templates (one for each signature)?
-
 let mul_mont_sparse_256_spec = do {
   (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
   (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
@@ -764,7 +762,6 @@ let HMAC_init_block_data_order_sizes len = do {
     then ss_1_
     else [];
   let (_, ss_2) = sha256_update__block_data_order_sizes 64 0;
-  //for (dedup (foldr concat [ss_1, ss_2] [1])) print;
   return (0, (dedup (foldr concat [ss_1, ss_2] [1])));
 };
 
@@ -776,7 +773,7 @@ let blst_keygen_bcopy_sizes salt_len IKM_len info_len L = do {
   //   * HMAC_update
   (offset_2, ss_2) <- sha256_update_bcopy_sizes IKM_len 0;
   //   * HMAC_update again (with size 1)
-  (_, ss_x) <- sha256_update_bcopy_sizes 1 offset_2; // TODO: ss_x because added later
+  (_, ss_x) <- sha256_update_bcopy_sizes 1 offset_2;
   //   * HMAC_final
   //      nothing
   // * HKDF_expand
@@ -788,9 +785,7 @@ let blst_keygen_bcopy_sizes salt_len IKM_len info_len L = do {
   (_, ss_6) <- sha256_update_bcopy_sizes 32 0; // offset is 32 after this
   (_, ss_7) <- sha256_update_bcopy_sizes (eval_size {| info_len + 3 |}) 32; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
   let ss_8 = [ eval_size {| L % 32 |} ];
-  //let res = foldr concat [ss_1, ss_2, ss_x, ss_3, ss_4, ss_5, ss_6, ss_7, ss_8] [];
   let res = dedup (foldr concat [ss_1, ss_2, ss_x, ss_3, ss_4, ss_5, ss_6, ss_7, ss_8] []);
-  //for res print;
   return res;
 };
 
@@ -802,7 +797,7 @@ let blst_keygen_block_data_order_sizes salt_len IKM_len info_len L = do {
   //   * HMAC_update
   let (offset_2, ss_2) = sha256_update__block_data_order_sizes IKM_len 0;
   //   * HMAC_update again (with size 1)
-  let (_, ss_x) = sha256_update__block_data_order_sizes 1 offset_2; // TODO: ss_x because added later
+  let (_, ss_x) = sha256_update__block_data_order_sizes 1 offset_2;
   //   * HMAC_final (size is 1 here)
   // * HKDF_expand
   //   * HMAC_init (resets the offset)
@@ -812,7 +807,6 @@ let blst_keygen_block_data_order_sizes salt_len IKM_len info_len L = do {
   let (_, ss_6) = sha256_update__block_data_order_sizes 32 0; // offset is 32 after this
   let (_, ss_7) = sha256_update__block_data_order_sizes (eval_size {| info_len + 3 |}) 32; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
   let res = dedup (foldr concat [ss_1, ss_2, ss_x, ss_3, ss_5, ss_6, ss_7] [1]); // sha256_final uses size 1
-  //for res print;
   return res;
 };
 
@@ -829,7 +823,6 @@ let blst_expand_message_xmd__block_data_order_sizes len_in_bytes aug_len msg_len
   // sha256_final(b_0.c, &ctx)
   // sha256_block_data_order(ctx.h, b_i.c, b_i_blocks / 64)
   let rest = [1, eval_int {{ ( ((33 + `dst_len + 1 + 9) + 63) && (-64:[64]) ) /64 }}];
-  //for (foldr concat [ss_1, ss_2, ss_3] rest) print;
   return (dedup (foldr concat [ss_1, ss_2, ss_3] rest));
 };
 
@@ -847,7 +840,6 @@ let blst_keygen_spec IKM_len info_len = do {
   crucible_points_to info_ptr (crucible_term info);
 
   crucible_execute_func [SK_ptr, IKM_ptr, crucible_term {{ `IKM_len:[64]}}, info_ptr, crucible_term {{ `info_len:[64]}}];
-  // TODO: replace by points_to
   new_SK <- crucible_fresh_var "new_SK" vec256_type;
   crucible_points_to SK_ptr (crucible_term new_SK);
 };
@@ -1084,8 +1076,7 @@ let salt_len = 20;
 let L = 64; // sizeof(vec384) + 128/8 = 64; vec384 has 6 limbs
 
 // for hash_to_field:
-// nelems = 2 to be fixed. Rest is variable, but aug_len is 96 or 48
-let aug_len = 96;
+let aug_len = 96; // aug_len should be 96 or 48
 let msg_len = 200;
 let dst_len= 97;
 let nelems = 2;
@@ -1184,7 +1175,7 @@ let make_keygen__blst_sha256_block_data_order_ovs salt_len IKM_len info_len L = 
 keygen__blst_sha256_block_data_order_ovs <- make_keygen__blst_sha256_block_data_order_ovs salt_len IKM_len info_len L;
 
 // sha256_bcopy:
-// TODO: there is an error with sha256_bcopy, thus for now it's replaced by a C stub.
+// TODO: there is an error with sha256_bcopy, thus for now it's replaced by a C stub and the following remains unused.
 let make_blst_sha256_bcopy_ov len = crucible_llvm_unsafe_assume_spec m "blst_sha256_bcopy" (blst_sha256_bcopy_spec len);
 let make_keygen__blst_sha256_bcopy_ovs salt_len IKM_len info_len L = do {
   ss <- (blst_keygen_bcopy_sizes salt_len IKM_len info_len L);
@@ -1192,9 +1183,9 @@ let make_keygen__blst_sha256_bcopy_ovs salt_len IKM_len info_len L = do {
   return ovs;
 };
 keygen__blst_sha256_bcopy_ovs <- make_keygen__blst_sha256_bcopy_ovs salt_len IKM_len info_len L;
-// The brute-force approach (too slow):
+// The brute-force approach. Also fails:
 //keygen__blst_sha256_bcopy_ovs <- do {
-  //let ss = from_to 1 200;
+  //let ss = from_to 1 64; // the SHA buffer is 64 bytes long, so we shouldn't be calling bcopy with more than that.
   //ovs <- (for ss make_blst_sha256_bcopy_ov);
   //return ovs;
 //};
