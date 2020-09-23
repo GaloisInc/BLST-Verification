@@ -1,0 +1,184 @@
+From c2b7c3c0b7f170539d59159f4f1b004c98a7878b Mon Sep 17 00:00:00 2001
+From: Giuliano Losa <giuliano@losa.fr>
+Date: Tue, 15 Sep 2020 18:54:05 -0700
+Subject: [PATCH] fix for the cast problem
+
+---
+ src/aggregate.c | 8 ++++----
+ src/ec_mult.h   | 2 +-
+ src/ec_ops.h    | 2 +-
+ src/exports.c   | 8 ++++----
+ src/map_to_g1.c | 8 ++++----
+ src/map_to_g2.c | 4 ++--
+ src/point.h     | 4 ++--
+ 7 files changed, 18 insertions(+), 18 deletions(-)
+
+diff --git a/src/aggregate.c b/src/aggregate.c
+index 43f9029..e2ab30f 100644
+--- a/src/aggregate.c
++++ b/src/aggregate.c
+@@ -102,7 +102,7 @@ static BLST_ERROR PAIRING_Aggregate_PK_in_G2(PAIRING *ctx,
+     if (sig != NULL) {
+         POINTonE1 *S = &ctx->AggrSign.e1;
+ 
+-        if (!POINTonE1_in_G1((const POINTonE1 *)sig))
++        if (!POINTonE1_in_G1(sig))
+             return BLST_POINT_NOT_IN_GROUP;
+ 
+         if (ctx->ctrl & AGGR_SIGN_SET) {
+@@ -194,7 +194,7 @@ static BLST_ERROR PAIRING_Aggregate_PK_in_G1(PAIRING *ctx,
+     if (sig != NULL) {
+         POINTonE2 *S = &ctx->AggrSign.e2;
+ 
+-        if (!POINTonE2_in_G2((const POINTonE2 *)sig))
++        if (!POINTonE2_in_G2(sig))
+             return BLST_POINT_NOT_IN_GROUP;
+ 
+         if (ctx->ctrl & AGGR_SIGN_SET) {
+@@ -416,7 +416,7 @@ BLST_ERROR blst_aggregate_in_g1(POINTonE1 *out, const POINTonE1 *in,
+             return BLST_POINT_NOT_ON_CURVE;
+     }
+ 
+-    if (!POINTonE1_in_G1((POINTonE1 *)P))
++    if (!POINTonE1_in_G1(P))
+         return BLST_POINT_NOT_IN_GROUP;
+ 
+     if (in == NULL) {
+@@ -450,7 +450,7 @@ BLST_ERROR blst_aggregate_in_g2(POINTonE2 *out, const POINTonE2 *in,
+             return BLST_POINT_NOT_ON_CURVE;
+     }
+ 
+-    if (!POINTonE2_in_G2((POINTonE2 *)P))
++    if (!POINTonE2_in_G2(P))
+         return BLST_POINT_NOT_IN_GROUP;
+ 
+     if (in == NULL) {
+diff --git a/src/ec_mult.h b/src/ec_mult.h
+index b5b5e67..bda2179 100644
+--- a/src/ec_mult.h
++++ b/src/ec_mult.h
+@@ -240,7 +240,7 @@ static void ptype##_mult_ladder(ptype *out, const ptype *p, \
+  * not a problem...
+  */
+ #define POINT_AFFINE_MULT_SCALAR_IMPL(ptype) \
+-static void ptype##_affine_mult_ladder(ptype *ret, const ptype *p_affine, \
++static void ptype##_affine_mult_ladder(ptype *ret, const ptype##_affine *p_affine, \
+                                        const byte *scalar, size_t bits) \
+ { \
+     ptype sum[1]; \
+diff --git a/src/ec_ops.h b/src/ec_ops.h
+index 36dcf74..60935b7 100644
+--- a/src/ec_ops.h
++++ b/src/ec_ops.h
+@@ -244,7 +244,7 @@ static void ptype##_add(ptype *out, const ptype *p1, const ptype *p2) \
+  * |p2| not equal to |p3|!!!
+  */
+ #define POINT_ADD_AFFINE_IMPL(ptype, bits, field, one) \
+-static void ptype##_add_affine(ptype *p3, const ptype *p1, const ptype *p2) \
++static void ptype##_add_affine(ptype *p3, const ptype *p1, const ptype##_affine *p2) \
+ { \
+     vec##bits Z1Z1, H, HH, I, J, r, V; \
+     limb_t p1inf = vec_is_zero(p1->Z, sizeof(p1->Z)); \
+diff --git a/src/exports.c b/src/exports.c
+index 7884d25..77872e6 100644
+--- a/src/exports.c
++++ b/src/exports.c
+@@ -227,8 +227,8 @@ void blst_p1_add_or_double(POINTonE1 *out, const POINTonE1 *a,
+                                            const POINTonE1 *b)
+ {   POINTonE1_dadd(out, a, b, NULL);   }
+ 
+-void blst_p1_add_affine(POINTonE1 *out, const POINTonE1 *a, const POINTonE1 *b)
+-{   POINTonE1_add_affine(out, a, b);   }
++void blst_p1_add_affine(POINTonE1 *out, const POINTonE1 *a, const POINTonE1 *b) // TODO: type of b?
++{   POINTonE1_add_affine(out, a, (const POINTonE1_affine*)b);   }
+ 
+ void blst_p1_add_or_double_affine(POINTonE1 *out, const POINTonE1 *a,
+                                                   const POINTonE1 *b)
+@@ -252,8 +252,8 @@ void blst_p2_add_or_double(POINTonE2 *out, const POINTonE2 *a,
+                                            const POINTonE2 *b)
+ {   POINTonE2_dadd(out, a, b, NULL);   }
+ 
+-void blst_p2_add_affine(POINTonE2 *out, const POINTonE2 *a, const POINTonE2 *b)
+-{   POINTonE2_add_affine(out, a, b);   }
++void blst_p2_add_affine(POINTonE2 *out, const POINTonE2 *a, const POINTonE2 *b) // type of b?
++{   POINTonE2_add_affine(out, a, (const POINTonE2_affine*)b);   }
+ 
+ void blst_p2_add_or_double_affine(POINTonE2 *out, const POINTonE2 *a,
+                                                   const POINTonE2 *b)
+diff --git a/src/map_to_g1.c b/src/map_to_g1.c
+index a5ec8bd..d4e03e0 100644
+--- a/src/map_to_g1.c
++++ b/src/map_to_g1.c
+@@ -494,7 +494,7 @@ static void POINTonE1_times_zz_minus_1_div_by_3(POINTonE1 *out,
+ }
+ #endif
+ 
+-static void sigma(POINTonE1 *out, const POINTonE1 *in)
++static void sigma(POINTonE1 *out, const POINTonE1_affine *in)
+ {
+     static const vec384 beta = {            /* such that beta^3 - 1 = 0  */
+         /* -1/2 * (1 + sqrt(-3)) = ((P-2)^(P-2)) * (1 + (P-3)^((P+1)/4)) */
+@@ -510,13 +510,13 @@ static void sigma(POINTonE1 *out, const POINTonE1 *in)
+     vec_copy(out->Z, BLS12_381_Rx.p, sizeof(out->Z));
+ }
+ 
+-static limb_t POINTonE1_in_G1(const POINTonE1 *p)
++static limb_t POINTonE1_in_G1(const POINTonE1_affine *p)
+ {
+     POINTonE1 t0, t1, t2;
+ 
+     /* Bowe, S., "Faster subgroup checks for BLS12-381"                 */
+     sigma(&t0, p);                      /* σ(P)                         */
+-    sigma(&t1, &t0);                    /* σ²(P)                        */
++    sigma(&t1, (POINTonE1_affine*)&t0);                    /* σ²(P)                        */
+ 
+     POINTonE1_double(&t0, &t0);         /* 2σ(P)                        */
+     POINTonE1_add_affine(&t2, &t1, p);  /* P +  σ²(P)                   */
+@@ -530,4 +530,4 @@ static limb_t POINTonE1_in_G1(const POINTonE1 *p)
+ }
+ 
+ limb_t blst_p1_affine_in_g1(const POINTonE1_affine *p)
+-{   return POINTonE1_in_G1((const POINTonE1 *)p);   }
++{   return POINTonE1_in_G1(p);   }
+diff --git a/src/map_to_g2.c b/src/map_to_g2.c
+index 2e7391d..8eac770 100644
+--- a/src/map_to_g2.c
++++ b/src/map_to_g2.c
+@@ -472,7 +472,7 @@ void blst_hash_to_g2(POINTonE2 *p, const unsigned char *msg, size_t msg_len,
+                                    const unsigned char *aug, size_t aug_len)
+ {   Hash_to_G2(p, msg, msg_len, DST, DST_len, aug, aug_len);   }
+ 
+-static limb_t POINTonE2_in_G2(const POINTonE2 *p)
++static limb_t POINTonE2_in_G2(const POINTonE2_affine *p)
+ {
+     POINTonE2 t0, t1, t2;
+ 
+@@ -493,4 +493,4 @@ static limb_t POINTonE2_in_G2(const POINTonE2 *p)
+ }
+ 
+ limb_t blst_p2_affine_in_g2(const POINTonE2_affine *p)
+-{   return POINTonE2_in_G2((const POINTonE2 *)p);   }
++{   return POINTonE2_in_G2(p);   }
+diff --git a/src/point.h b/src/point.h
+index ffda9da..ea65532 100644
+--- a/src/point.h
++++ b/src/point.h
+@@ -18,13 +18,13 @@ static void ptype##_dadd_affine(ptype *out, const ptype *p1,		\
+                          const ptype *p2);				\
+ static void ptype##_add(ptype *out, const ptype *p1, const ptype *p2);	\
+ static void ptype##_add_affine(ptype *out, const ptype *p1,		\
+-                                           const ptype *p2);		\
++                                           const ptype##_affine *p2);	\
+ static void ptype##_double(ptype *out, const ptype *p1);		\
+ static void ptype##_mult_w5(ptype *out, const ptype *point,		\
+                             const byte *scalar, size_t nbits);	\
+ static void ptype##_mult_ladder(ptype *out, const ptype *point,		\
+                                 const byte *scalar, size_t nbits);	\
+-static void ptype##_affine_mult_ladder(ptype *out, const ptype *p_aff,	\
++static void ptype##_affine_mult_ladder(ptype *out, const ptype##_affine *p_aff,\
+                                        const byte *scalar,		\
+                                        size_t nbits);			\
+ static void ptype##_cneg(ptype *p, limb_t cbit);			\
+-- 
+2.28.0
+

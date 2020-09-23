@@ -1,0 +1,40 @@
+let eq x y = eval_bool {{ (`x:Integer) == `y }};
+
+let member =
+  rec f = (\x ys ->
+    if null ys
+    then false
+    else if eq x (head ys)
+         then true
+         else f x (tail ys))
+  in f;
+
+let dedup ys =
+  rec f = (\xs acc ->
+    if null xs
+    then acc
+    else if member (head xs) acc
+         then f (tail xs) acc
+         else f (tail xs) (concat [head xs] acc))
+  in f ys [];
+
+let foldr f =
+  rec fold = (\xs z ->
+    if null xs
+    then z
+    else f (head xs) (fold (tail xs) z))
+  in fold;
+
+let from_to =
+  rec f = (\x y ->
+    if eq x y
+    then [x]
+    else concat [x] (f (eval_size {| x+1 |}) y))
+  in f;
+
+let map f =
+  rec m = (\xs ->
+    if null xs
+    then []
+    else concat [f (head xs)] (m (tail xs)))
+  in m;
