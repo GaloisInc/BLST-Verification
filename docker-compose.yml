@@ -1,7 +1,10 @@
-version: '3'
+version: "3"
 services:
   blst:
-    build: .
+    build:
+      context: .
+      args:
+        CI: ${CI}
     volumes:
       - ./build:/workdir/build:rw
       - ./blst:/workdir/blst:ro

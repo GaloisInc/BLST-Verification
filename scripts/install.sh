@@ -5,7 +5,7 @@ set -e
 Z3_URL='https://github.com/Z3Prover/z3/releases/download/z3-4.8.8/z3-4.8.8-x64-ubuntu-16.04.zip'
 YICES_URL='https://yices.csl.sri.com/releases/2.6.2/yices-2.6.2-x86_64-pc-linux-gnu-static-gmp.tar.gz'
 
-if [ $# -nt 0 ] && [ "$1" == "--latest" ]; then
+if [ $# -ne 0 ] && [ "$1" = "--latest" ]; then
   # Determine the URL of the latest SAW and Cryptol nightly
   #########################################################
   SAW_DATE=$(curl -s https://saw.galois.com/builds/nightly/ | grep saw | grep -o "[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}" | sort | tail -n 1) # `grep -o` says print only the matched substring
@@ -26,38 +26,60 @@ fi
 mkdir -p bin deps
 
 # fetch Z3
-if [ ! -f bin/z3 ]
-then
+fetch_z3(){
+  if [ ! -f bin/z3 ]
+  then
     mkdir -p deps/z3
-    wget $Z3_URL -O deps/z3.zip
-    unzip deps/z3.zip -d deps/z3
+    wget --quiet $Z3_URL -O deps/z3.zip
+    unzip -qq deps/z3.zip -d deps/z3
     cp deps/z3/*/bin/z3 bin/z3
-fi
+  fi
+}
 
 # fetch Yices
-if [ ! -f bin/yices ]
-then
+fetch_yices(){
+  if [ ! -f bin/yices ]
+  then
     mkdir -p deps/yices
-    wget $YICES_URL -O deps/yices.tar.gz
+    wget --quiet $YICES_URL -O deps/yices.tar.gz
     tar -x -f deps/yices.tar.gz --one-top-level=deps/yices
     cp deps/yices/*/bin/yices bin/yices
     cp deps/yices/*/bin/yices-smt2 bin/yices-smt2
-fi
+  fi
+}
 
 # fetch SAW
-if [ ! -f bin/saw ]
-then
+fetch_saw(){
+  if [ ! -f bin/saw ]
+  then
     mkdir -p deps/saw
-    wget $SAW_URL -O deps/saw.tar.gz
+    wget --quiet $SAW_URL -O deps/saw.tar.gz
     tar -x -f deps/saw.tar.gz --one-top-level=deps/saw
     cp deps/saw/*/bin/saw bin/saw
-fi
+  fi
+}
 
 # fetch Cryptol
-if [ ! -f bin/cryptol ]
-then
+fetch_cryptol(){
+  if [ ! -f bin/cryptol ]
+  then
     mkdir -p deps/cryptol
-    wget $CRYPTOL_URL -O deps/cryptol.tar.gz
+    wget --quiet $CRYPTOL_URL -O deps/cryptol.tar.gz
     tar -x -f deps/cryptol.tar.gz --one-top-level=deps/cryptol
     cp deps/cryptol/*/bin/cryptol bin/cryptol
+  fi
+}
+
+if [ -n "$CI" ]
+then
+  fetch_z3 &
+  fetch_yices &
+  fetch_saw &
+  fetch_cryptol &
+  wait
+else
+  fetch_z3
+  fetch_yices
+  fetch_saw
+  fetch_cryptol
 fi

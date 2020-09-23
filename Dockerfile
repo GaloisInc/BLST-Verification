@@ -18,6 +18,7 @@ RUN pip3 install wllvm # whole-program-llvm
 
 WORKDIR /workdir
 
+ARG CI=${CI}
 ADD ./scripts/install.sh /workdir/install.sh
 RUN /workdir/install.sh
 
