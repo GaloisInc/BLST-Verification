@@ -5,7 +5,7 @@ set -e
 Z3_URL='https://github.com/Z3Prover/z3/releases/download/z3-4.8.8/z3-4.8.8-x64-ubuntu-16.04.zip'
 YICES_URL='https://yices.csl.sri.com/releases/2.6.2/yices-2.6.2-x86_64-pc-linux-gnu-static-gmp.tar.gz'
 
-if [ $# -nt 0 ] && [ "$1" == "--latest" ]; then
+if [ $# -ne 0 ] && [ "$1" = "--latest" ]; then
   # Determine the URL of the latest SAW and Cryptol nightly
   #########################################################
   SAW_DATE=$(curl -s https://saw.galois.com/builds/nightly/ | grep saw | grep -o "[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}" | sort | tail -n 1) # `grep -o` says print only the matched substring
