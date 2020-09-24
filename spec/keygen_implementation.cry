@@ -1,0 +1,52 @@
+// import KeyGen
+
+// Implementation types for blst
+//
+
+type Vec256 = [4][64]
+//type Vec384 = [6][64]
+type Vec512 = [8][64]
+//type Vec768 = [12][64]
+
+type Limb = [64]
+
+// Vectors represent numbers, using a little-endian representation
+
+/**
+ * The integer represented by a vector (Vec256, Vec384, ...)
+ */
+vec_abs: {n} (fin n) => [n]Limb -> Integer
+vec_abs limbs = toInteger (join (reverse limbs))
+
+vec256_abs = vec_abs`{256/64}
+vec512_abs = vec_abs`{512/64}
+
+/**
+ * A vector representing a given integer.  The integer should be non-negative.
+ */
+vec_rep:  {n} (fin n) => Integer -> [n]Limb
+vec_rep x = reverse (split (fromInteger x))
+
+vec256_rep = vec_rep`{256}
+
+
+// for Montgomery mod r
+
+modulus = toInteger 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001 // r
+
+R = 2^^256
+
+R_inv = toInteger 0x1bbe869330009d577204078a4f77266aab6fca8f09dc705f13f75b69fe75c040
+
+// Montgomery representation of values
+
+R_reduced = R % modulus
+R_inv_reduced = R_inv % modulus
+
+to_mont x = (x*R) % modulus
+
+from_mont x = (x*R_inv) % modulus
+
+add_mont x y = (x+y) % modulus
+
+mul_mont x y = (x*y*R_inv) % modulus
