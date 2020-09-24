@@ -1,0 +1,9 @@
+let sqr_fp12_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  crucible_execute_func [ret_ptr, a_ptr];
+  new_sqr_fp12_ret <- crucible_fresh_var "new_sqr_fp12_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_sqr_fp12_ret);
+};
+
+sqr_fp12_ov <- crucible_llvm_verify m "sqr_fp12" assembly_overrides false sqr_fp12_spec abc;

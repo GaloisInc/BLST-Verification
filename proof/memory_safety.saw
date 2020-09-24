@@ -9,6 +9,7 @@ include "types.saw";
 m <- llvm_load_module "../build/llvm/libblst.a.bc";
 
 include "assembly_overrides.saw";
+include "fp12_tower.saw";
 include "keygen_defs.saw";
 include "hash_to_field_defs.saw";
 include "sha_overrides.saw";
