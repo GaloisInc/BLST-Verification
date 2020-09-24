@@ -1,0 +1,48 @@
+module KeyGen where
+
+// 2.3 KeyGen
+
+import Parameters as P
+import Primitive::Keyless::Hash::SHA256
+import Primitive::Symmetric::KDF::HKDF256
+import rfc8017
+
+/**
+ * KeyGen from draft-02
+ */
+KeyGen_r2: {IKM_len, info_len} ( IKM_len >= 32
+                               , validHMACSizes 20 (1+IKM_len)
+                               , validHMACSizes 32 (35+info_len)
+                               ) =>
+        ([IKM_len][8], [info_len][8]) -> Integer // [256]
+KeyGen_r2 (IKM, key_info) = SK where
+    type L = (3 * 256) /^ 16 // (ceil lg2 r) = 256, so L = 3*16=48
+    PRK = HKDF_Extract "BLS-SIG-KEYGEN-SALT-" (IKM # [0]) // I2OSP`{xLen=1} 0)
+    OKM = HKDF_Expand`{L=L} PRK (key_info # I2OSP`{xLen=2} `L)
+    // SK = (OS2IP OKM) % P::r
+    SK = (toInteger(OS2IP`{a=[256]} OKM)) % (toInteger P::r)
+
+
+/**
+ * KeyGen from draft-04
+ */
+KeyGen: {IKM_len, info_len} ( IKM_len >= 32
+                            , validHMACSizes 20 (1+IKM_len)
+                            , validHMACSizes 32 (35+info_len)
+                            ) =>
+        ([IKM_len][8], [info_len][8]) -> [256]
+// artificial cutoff at 3 iterations, to avoid an unbounded loop
+KeyGen (IKM, key_info) = (KeyGenLoop (sha (join "BLS-SIG-KEYGEN-SALT-")) IKM key_info) @ 3
+
+KeyGenLoop salt IKM info = keys where
+  salts = [salt] # [sha salt' | salt' <- salts]
+  keys = [key_gen_step salt] #
+         // hang on to a nonzero key, try again with revised salt otherwise
+         [if k == zero then key_gen_step salt' else k | k <- keys | salt' <- salts]
+  key_gen_step s = KeyGenStep s IKM info
+
+KeyGenStep salt IKM key_info = SK where
+    type L = (3 * 256) /^ 16 // (ceil lg2 r) = 256, so L = 3*16=48
+    PRK = HKDF_Extract (split salt) (IKM # [0]) // I2OSP`{xLen=1} 0)
+    OKM = HKDF_Expand`{L=L} PRK (key_info # I2OSP`{xLen=2} `L)
+    SK = (OS2IP OKM) % P::r
