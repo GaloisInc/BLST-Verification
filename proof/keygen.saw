@@ -3,7 +3,48 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 include "helpers.saw";
-include "list_utils.saw";
+// include "list_utils.saw";
+let eq x y = eval_bool {{ (`x:Integer) == `y }};
+
+let member =
+  rec f = (\x ys ->
+    if null ys
+    then false
+    else if eq x (head ys)
+         then true
+         else f x (tail ys))
+  in f;
+
+let dedup ys =
+  rec f = (\xs acc ->
+    if null xs
+    then acc
+    else if member (head xs) acc
+         then f (tail xs) acc
+         else f (tail xs) (concat [head xs] acc))
+  in f ys [];
+
+let foldr f =
+  rec fold = (\xs z ->
+    if null xs
+    then z
+    else f (head xs) (fold (tail xs) z))
+  in fold;
+
+let from_to =
+  rec f = (\x y ->
+    if eq x y
+    then [x]
+    else concat [x] (f (eval_size {| x+1 |}) y))
+  in f;
+
+let map f =
+  rec m = (\xs ->
+    if null xs
+    then []
+    else concat [f (head xs)] (m (tail xs)))
+  in m;
+// (end of list_utils)
 
 // m <- llvm_load_module "../build/llvm/libblst.a.bc.original"; // DO NOT NEED the bcopy patch
 m <- llvm_load_module "../build/llvm/libblst.a.bc";
@@ -56,7 +97,7 @@ let mul_mont_sparse_256_alias_spec = do { // NOTE: first two args are aliases
   (p, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
   crucible_precond {{ p ==  BLS12_381_r }} ;
   crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term {{ r0 }} ];
-  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  new_ret <- crucible_fresh_var "mul_mont_sparse_256_new_ret" vec256_type;
   crucible_points_to ret_ptr (crucible_term new_ret);
   crucible_postcond {{ vec256_abs new_ret == mul_mont (vec256_abs ret) (vec256_abs b) }}; 
 };
@@ -69,7 +110,7 @@ let redc_mont_256_spec = do {
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
   crucible_precond {{ b ==  BLS12_381_r }} ;
   crucible_execute_func [ret_ptr, a_ptr, b_ptr, crucible_term {{ r0 }}];
-  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  new_ret <- crucible_fresh_var "redc_mont_256_new_ret" vec256_type;
   crucible_points_to ret_ptr (crucible_term new_ret);
   crucible_postcond {{ vec256_abs new_ret == from_mont (vec512_abs a) }};
 };
@@ -328,6 +369,27 @@ let blst_keygen_spec IKM_len info_len = do {
   crucible_postcond {{ vec256_abs new_SK == KeyGen_r2 (IKM, info) }};
 };
 
+/*
+// easier to specify when n is divisible by 8, else we get old junk from the "return" value
+let limbs_from_be_bytes_spec n_div_8 = do {
+  let n = (eval_int {{8* (`n_div_8:[64])}});
+  ret_p <-crucible_alloc (llvm_array n_div_8 limb_type);
+  (inx, in_ptr) <- ptr_to_fresh "limbs_from_be_bytes_in" (llvm_array n (llvm_int 8)); // "in" is a keyword
+  crucible_execute_func [ret_p, in_ptr, crucible_term {{`n:[64] }}];
+  ret <- crucible_fresh_var "limbs_from_be_bytes_ret" (llvm_array n_div_8 limb_type);
+  crucible_points_to ret_p (crucible_term ret);
+  crucible_postcond {{ vec256_abs ret == toInteger (join inx) }};
+  };
+*/
+
+let limbs_from_be_bytes_spec48 = do {
+  ret_p <-crucible_alloc (llvm_array 6 limb_type);
+  (inx, in_ptr) <- ptr_to_fresh "limbs_from_be_bytes_in" (llvm_array 48 (llvm_int 8)); // "in" is a keyword
+  crucible_execute_func [ret_p, in_ptr, crucible_term {{ 48:[64] }}];
+  ret <- crucible_fresh_var "limbs_from_be_bytes_ret" (llvm_array 6 limb_type);
+  crucible_points_to ret_p (crucible_term ret);
+  crucible_postcond {{ vec512_abs (ret # zero) == toInteger (join inx) }};
+  };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Proofs
@@ -355,6 +417,10 @@ let make_blst_sha256_bcopy_ov len = crucible_llvm_unsafe_assume_spec m "blst_sha
 let assumed_overrides = [redc_mont_256_ov, mul_mont_sparse_256_alias_ov, blst_sha256_emit_ov, blst_sha256_hcopy_ov];
 
 // finally we verify functions:
+
+//limbs_from_be_bytes_ov_4 <- crucible_llvm_verify m "limbs_from_be_bytes" [] false (limbs_from_be_bytes_spec 4) z3;
+//limbs_from_be_bytes_ov_6 <- crucible_llvm_verify m "limbs_from_be_bytes" [] false (limbs_from_be_bytes_spec 6) z3;
+limbs_from_be_bytes_ov_48 <- crucible_llvm_verify m "limbs_from_be_bytes" [] false (limbs_from_be_bytes_spec48) z3;
 
 // Function to verify the instance of HKDF_Extract needed for a call to keygen
 let verify_HKDF_Extract_for salt_len IKM_len = do {
@@ -448,16 +514,25 @@ verify_keygen_part_for 40 20;
 */
 
 // end DEBUG
+mod_thm <- prove_print z3 {{ \x -> mul_mont (from_mont x) (2^^512 % modulus) == (x % modulus) }} ;
+mod_thm2 <- prove_print z3 {{
+  \x -> mul_mont (from_mont x)
+           (vec256_abs [14526898881837571181, 3129137299524312099, 419701826671360399, 524908885293268753])
+        == (x % modulus) }} ;
+        
+let set0 = cryptol_ss ();
+let set1 = addsimps [mod_thm2] set0;
+
 
 let verify_keygen_for IKM_len info_len = do {
   print ("%%%%% keygen (", IKM_len, info_len, ")  %%%%");
   ov1 <- verify_HKDF_Extract_for 20 IKM_len; // salt_len = 20
   ov2 <- verify_HKDF_Expand_for info_len 48; // L = 48
   // ret <- crucible_llvm_verify m "blst_keygen" (concat [ov1, ov2] assumed_overrides) false (blst_keygen_part_spec IKM_len info_len) (w4_unint_z3 ["HKDF_Extract", "HKDF_Expand"]);
-  ret <- crucible_llvm_verify m "blst_keygen" (concat [ov1, ov2] assumed_overrides) false (blst_keygen_spec IKM_len info_len) (do { print_goal; w4_unint_z3 ["HKDF_Extract", "HKDF_Expand"]; });
+  ret <- crucible_llvm_verify m "blst_keygen" (concat [ov1, ov2, limbs_from_be_bytes_ov_48] assumed_overrides) false (blst_keygen_spec IKM_len info_len) (do { simplify set1; print_goal; w4_unint_z3 ["HKDF_Extract", "HKDF_Expand"]; });
   return ret;
   };
 
 verify_keygen_for 32 4;
-verify_keygen_for 33 7;
-verify_keygen_for 80 16;
+// verify_keygen_for 33 7;
+// verify_keygen_for 80 16;
