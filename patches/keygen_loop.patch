@@ -1,31 +1,30 @@
-From 92ceb1a76908b382ca09a95e23c4eed7cb831f8e Mon Sep 17 00:00:00 2001
+From 4007fb5072b3461c8794d556819cf17aab230273 Mon Sep 17 00:00:00 2001
 From: Giuliano Losa <giuliano@losa.fr>
 Date: Mon, 21 Sep 2020 16:27:38 -0700
 Subject: [PATCH] bound loop to 3 iterations
 
 ---
- src/keygen.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+ src/keygen.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/src/keygen.c b/src/keygen.c
-index f0dd0ac..e6c26e6 100644
+index f0dd0ac..4171a86 100644
 --- a/src/keygen.c
 +++ b/src/keygen.c
-@@ -137,7 +137,7 @@ void blst_keygen(pow256 SK, const void *IKM, size_t IKM_len,
+@@ -137,6 +137,7 @@ void blst_keygen(pow256 SK, const void *IKM, size_t IKM_len,
       */
      info_len = info==NULL ? 0 : info_len;
  
--    do {
-+    for (int i = 0; i < 3; i++) {
++    int i = 0;
+     do {
          /* salt = H(salt) */
          sha256_init(&scratch.ctx.ctx);
-         sha256_update(&scratch.ctx.ctx, salt, salt_len);
-@@ -158,7 +158,7 @@ void blst_keygen(pow256 SK, const void *IKM, size_t IKM_len,
+@@ -158,7 +159,7 @@ void blst_keygen(pow256 SK, const void *IKM, size_t IKM_len,
          redc_mont_256(scratch.key, scratch.key, BLS12_381_r, r0);
          mul_mont_sparse_256(scratch.key, scratch.key, BLS12_381_rRR,
                              BLS12_381_r, r0);
 -    } while (vec_is_zero(scratch.key, sizeof(vec256)));
-+    };
++    } while (vec_is_zero(scratch.key, sizeof(vec256)) && i++ < 3);
  
      le_bytes_from_limbs(SK, scratch.key, sizeof(pow256));
  
