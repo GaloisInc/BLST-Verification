@@ -316,8 +316,6 @@ let HKDF_Expand_spec info_len L = do {
 };
 
 
-// import "../spec/KeyGen.cry";
-
 let blst_keygen_spec IKM_len info_len = do {
   SK_ptr <- crucible_alloc vec256_type;
 
@@ -430,3 +428,37 @@ verify_keygen_for 32 0;
 verify_keygen_for 32 4;
 verify_keygen_for 33 7;
 verify_keygen_for 80 16;
+
+// Now we need to show KeyGen_rep is the same function as KeyGen_r2
+//
+
+import "../spec/KeyGen.cry";
+
+abs_rep_256 <- prove_print z3 {{ \x -> vec256_abs (vec256_rep x) == x }};
+rep_abs_256 <- prove_print z3 {{ \x -> vec256_rep (vec256_abs x) == x }};
+
+// Currently just assume a property that will be shown in Coq later in the project
+
+funny_reduction <- prove_print (quickcheck 100) {{ \x -> mul_mont_r_bv (redc_r_bv x) (vec256_abs RR_rep) == drop (x % (zext bv_r)) }};
+
+let set0 = cryptol_ss ();
+let set1 = addsimps [abs_rep_256, rep_abs_256, funny_reduction] set0;
+
+let main_thm IKM_len info_len = {{
+  \ (IKM: [IKM_len][8], info:[info_len][8]) ->
+  vec256_abs (KeyGen_rep (IKM, info)) == KeyGen_r2 (IKM, info) }};
+
+let prove_keygen_equivalence_for a b = 
+  prove_print (do {
+    unfolding ["KeyGen_rep", "KeyGen_r2", "mul_mont_rep", "redc_rep"];
+    simplify set1;
+    w4_unint_z3 ["HKDF_Expand", "HKDF_Extract"];
+    })
+    (main_thm a b);
+
+// Now prove for the same parameter sizes as the code proof
+prove_keygen_equivalence_for 32 0;
+prove_keygen_equivalence_for 32 4;
+prove_keygen_equivalence_for 33 7;
+prove_keygen_equivalence_for 80 16;
+  

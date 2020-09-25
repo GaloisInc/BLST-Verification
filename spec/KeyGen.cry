@@ -14,14 +14,12 @@ KeyGen_r2: {IKM_len, info_len} ( IKM_len >= 32
                                , validHMACSizes 20 (1+IKM_len)
                                , validHMACSizes 32 (35+info_len)
                                ) =>
-        ([IKM_len][8], [info_len][8]) -> Integer // [256]
+        ([IKM_len][8], [info_len][8]) -> [256]
 KeyGen_r2 (IKM, key_info) = SK where
     type L = (3 * 256) /^ 16 // (ceil lg2 r) = 256, so L = 3*16=48
-    PRK = HKDF_Extract "BLS-SIG-KEYGEN-SALT-" (IKM # [0]) // I2OSP`{xLen=1} 0)
+    PRK = HKDF_Extract "BLS-SIG-KEYGEN-SALT-" (IKM # [0]) // [0] is I2OSP`{xLen=1} 0)
     OKM = HKDF_Expand`{L=L} PRK (key_info # I2OSP`{xLen=2} `L)
-    // SK = (OS2IP OKM) % P::r
-    SK = (toInteger(OS2IP`{a=[256]} OKM)) % (toInteger P::r)
-
+    SK = drop ((OS2IP`{a=[384]} OKM) % (zext P::r))
 
 /**
  * KeyGen from draft-04
