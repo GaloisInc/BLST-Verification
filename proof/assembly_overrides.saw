@@ -418,8 +418,8 @@ let mul_mont_384x_alias_spec = do {
   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
   n0 <- crucible_fresh_var "n0" limb_type;
   crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term n0];
-  new_mul_mont_384x_alias_ret <- crucible_fresh_var "new_mul_mont_384x_alias_ret" vec384x_type;
-  crucible_points_to ret_ptr (crucible_term new_mul_mont_384x_alias_ret);
+  new_mul_mont_384x_ret <- crucible_fresh_var "new_mul_mont_384x_ret" vec384x_type;
+  crucible_points_to ret_ptr (crucible_term new_mul_mont_384x_ret);
 };
 
 let sqr_mont_384x_spec = do {
@@ -608,6 +608,24 @@ let add_mod_384x384_alias_spec = do {
   crucible_points_to ret_ptr (crucible_term new_add_mod_384x384_ret);
 };
 
+let add_mod_384x384_alias_1_3_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec768_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_execute_func [ret_ptr, a_ptr, ret_ptr, p_ptr];
+  new_add_mod_384x384_ret <- crucible_fresh_var "new_add_mod_384x384_ret" vec768_type;
+  crucible_points_to ret_ptr (crucible_term new_add_mod_384x384_ret);
+};
+
+let add_mod_384x384_alias_1_2_3_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec768_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_execute_func [ret_ptr, ret_ptr, ret_ptr, p_ptr];
+  new_add_mod_384x384_ret <- crucible_fresh_var "new_add_mod_384x384_ret" vec768_type;
+  crucible_points_to ret_ptr (crucible_term new_add_mod_384x384_ret);
+};
+
+
 let sub_mod_384x384_spec = do {
   ret_ptr <- crucible_alloc vec768_type;
   (_, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
@@ -722,6 +740,8 @@ mul_by_1_plus_i_mod_384x_ov <- crucible_llvm_unsafe_assume_spec m "mul_by_1_plus
 mul_by_1_plus_i_mod_384x_alias_ov <- crucible_llvm_unsafe_assume_spec m "mul_by_1_plus_i_mod_384x" mul_by_1_plus_i_mod_384x_alias_spec;
 add_mod_384x384_ov <- crucible_llvm_unsafe_assume_spec m "add_mod_384x384" add_mod_384x384_spec;
 add_mod_384x384_alias_ov <- crucible_llvm_unsafe_assume_spec m "add_mod_384x384" add_mod_384x384_alias_spec;
+add_mod_384x384_alias_1_3_ov <- crucible_llvm_unsafe_assume_spec m "add_mod_384x384" add_mod_384x384_alias_1_3_spec;
+add_mod_384x384_alias_1_2_3_ov <- crucible_llvm_unsafe_assume_spec m "add_mod_384x384" add_mod_384x384_alias_1_2_3_spec;
 sub_mod_384x384_ov <- crucible_llvm_unsafe_assume_spec m "sub_mod_384x384" sub_mod_384x384_spec;
 sub_mod_384x384_alias_ov <- crucible_llvm_unsafe_assume_spec m "sub_mod_384x384" sub_mod_384x384_alias_spec;
 
@@ -736,4 +756,4 @@ vec_select_ovs <- do {
   return (foldr concat [ovs, ovs_1_2] ovs_1_3);
 };
 
-let assembly_overrides = concat vec_select_ovs [redc_mont_256_ov, redc_mont_256_alias_1_2_ov, mul_mont_sparse_256_alias_ov, mul_mont_sparse_256_ov, sqr_mont_sparse_256_ov, from_mont_256_ov, add_mod_256_ov, sub_mod_256_ov, mul_by_3_mod_256_ov, cneg_mod_256_ov, lshift_mod_256_ov, rshift_mod_256_ov, eucl_inverse_mod_256_ov, mul_mont_384_ov, mul_mont_384_alias_ov, sqr_mont_384_ov, sqr_mont_384_alias_ov, sqr_n_mul_mont_383_alias_1_2_ov, sqr_n_mul_mont_383_ov, redc_mont_384_ov, from_mont_384_ov, sgn0_pty_mont_384_ov, sgn0_pty_mont_384x_ov, sgn0_pty_mod_384_ov, sgn0_pty_mod_384x_ov, add_mod_384_ov, add_mod_384_alias_1_2_ov, add_mod_384_alias_1_2_3_ov, sub_mod_384_ov, sub_mod_384_alias_ov, mul_by_8_mod_384_ov, mul_by_8_mod_384_alias_ov, mul_by_3_mod_384_ov, mul_by_3_mod_384_alias_ov, cneg_mod_384_ov, cneg_mod_384_alias_1_2_ov, lshift_mod_384_ov, eucl_inverse_mod_384_ov, mul_mont_384x_ov, mul_mont_384x_alias_ov, sqr_mont_384x_alias_ov, sqr_mont_384x_ov, sqr_mont_384x_alias_ov, sqr_mont_382x_alias_ov, sqr_mont_382x_ov, mul_382x_ov, sqr_382x_ov, add_mod_384x_ov, add_mod_384x_alias_1_2_ov, add_mod_384x_alias_1_2_3_ov, sub_mod_384x_ov, sub_mod_384x_alias_ov, mul_by_8_mod_384x_ov, mul_by_8_mod_384x_alias_ov, mul_by_3_mod_384x_ov, mul_by_3_mod_384x_alias_ov, mul_by_1_plus_i_mod_384x_ov, add_mod_384x384_ov, sub_mod_384x384_ov, sub_mod_384x384_alias_ov, add_mod_384x384_alias_ov, mul_by_1_plus_i_mod_384x_alias_ov];
+let assembly_overrides = concat vec_select_ovs [redc_mont_256_ov, redc_mont_256_alias_1_2_ov, mul_mont_sparse_256_alias_ov, mul_mont_sparse_256_ov, sqr_mont_sparse_256_ov, from_mont_256_ov, add_mod_256_ov, sub_mod_256_ov, mul_by_3_mod_256_ov, cneg_mod_256_ov, lshift_mod_256_ov, rshift_mod_256_ov, eucl_inverse_mod_256_ov, mul_mont_384_ov, mul_mont_384_alias_ov, sqr_mont_384_ov, sqr_mont_384_alias_ov, sqr_n_mul_mont_383_alias_1_2_ov, sqr_n_mul_mont_383_ov, redc_mont_384_ov, from_mont_384_ov, sgn0_pty_mont_384_ov, sgn0_pty_mont_384x_ov, sgn0_pty_mod_384_ov, sgn0_pty_mod_384x_ov, add_mod_384_ov, add_mod_384_alias_1_2_ov, add_mod_384_alias_1_2_3_ov, sub_mod_384_ov, sub_mod_384_alias_ov, mul_by_8_mod_384_ov, mul_by_8_mod_384_alias_ov, mul_by_3_mod_384_ov, mul_by_3_mod_384_alias_ov, cneg_mod_384_ov, cneg_mod_384_alias_1_2_ov, lshift_mod_384_ov, eucl_inverse_mod_384_ov, mul_mont_384x_ov, mul_mont_384x_alias_ov, sqr_mont_384x_alias_ov, sqr_mont_384x_ov, sqr_mont_384x_alias_ov, sqr_mont_382x_alias_ov, sqr_mont_382x_ov, mul_382x_ov, sqr_382x_ov, add_mod_384x_ov, add_mod_384x_alias_1_2_ov, add_mod_384x_alias_1_2_3_ov, sub_mod_384x_ov, sub_mod_384x_alias_ov, mul_by_8_mod_384x_ov, mul_by_8_mod_384x_alias_ov, mul_by_3_mod_384x_ov, mul_by_3_mod_384x_alias_ov, mul_by_1_plus_i_mod_384x_ov, add_mod_384x384_ov, sub_mod_384x384_ov, sub_mod_384x384_alias_ov, add_mod_384x384_alias_ov, mul_by_1_plus_i_mod_384x_alias_ov, add_mod_384x384_alias_1_3_ov, add_mod_384x384_alias_1_2_3_ov];

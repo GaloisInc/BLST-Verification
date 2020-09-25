@@ -1,5 +1,5 @@
 let sqr_fp12_spec = do {
-  (_, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
+  ret_ptr <- crucible_alloc vec384fp12_type;
   (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
   crucible_execute_func [ret_ptr, a_ptr];
   new_sqr_fp12_ret <- crucible_fresh_var "new_sqr_fp12_ret" vec384fp12_type;
@@ -7,3 +7,66 @@ let sqr_fp12_spec = do {
 };
 
 sqr_fp12_ov <- crucible_llvm_verify m "sqr_fp12" assembly_overrides false sqr_fp12_spec abc;
+
+let cyclotomic_sqr_fp12_spec = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  crucible_execute_func [ret_ptr, a_ptr];
+  new_cyclotomic_sqr_fp12_ret <- crucible_fresh_var "new_cyclotomic_sqr_fp12_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_cyclotomic_sqr_fp12_ret);
+};
+
+cyclotomic_sqr_fp12_ov <- crucible_llvm_verify m "cyclotomic_sqr_fp12" assembly_overrides false cyclotomic_sqr_fp12_spec abc;
+
+let mul_fp12_spec = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384fp12_type;
+  crucible_execute_func [ret_ptr, b_ptr, a_ptr];
+  new_mul_fp12_ret <- crucible_fresh_var "new_mul_fp12_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_mul_fp12_ret);
+};
+
+mul_fp12_ov <- crucible_llvm_verify m "mul_fp12" assembly_overrides false mul_fp12_spec abc;
+
+let mul_by_xy00z0_fp12_spec = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  (_, xy00z0_ptr) <- ptr_to_fresh_readonly "xy00z0" vec384fp6_type;
+  crucible_execute_func [ret_ptr, a_ptr, xy00z0_ptr];
+  new_mul_by_xy00z0_fp12_ret <- crucible_fresh_var "new_mul_by_xy00z0_fp12_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_mul_by_xy00z0_fp12_ret);
+};
+
+mul_by_xy00z0_fp12_ov <- crucible_llvm_verify m "mul_by_xy00z0_fp12" assembly_overrides false mul_by_xy00z0_fp12_spec abc;
+
+let conjugate_fp12_spec = do {
+  (_, a_ptr) <- ptr_to_fresh "a" vec384fp12_type;
+  crucible_execute_func [a_ptr];
+  new_conjugate_fp12_a <- crucible_fresh_var "new_conjugate_fp12_a" vec384fp12_type;
+  crucible_points_to a_ptr (crucible_term new_conjugate_fp12_a);
+};
+
+conjugate_fp12_ov <- crucible_llvm_verify m "conjugate_fp12" assembly_overrides false conjugate_fp12_spec abc;
+
+let inverse_fp12_spec = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  crucible_execute_func [ret_ptr, a_ptr];
+  new_inverse_fp12_ret <- crucible_fresh_var "new_inverse_fp12_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_inverse_fp12_ret);
+};
+
+inverse_fp12_ov <- crucible_llvm_verify m "inverse_fp12" assembly_overrides false inverse_fp12_spec abc;
+
+let frobenius_map_fp12_spec = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (_, a_ptr) <- ptr_to_fresh "a" vec384fp12_type;
+  n <- crucible_fresh_var "n" size_type;
+  crucible_precond {{ n > 0 /\ n <= 3 }};
+  crucible_execute_func [ret_ptr, a_ptr, crucible_term n];
+  new_frobenius_map_fp12_ret <- crucible_fresh_var "new_frobenius_map_fp12_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_frobenius_map_fp12_ret);
+};
+
+frobenius_map_fp12_ov <- crucible_llvm_verify m "frobenius_map_fp12" assembly_overrides false frobenius_map_fp12_spec abc;
