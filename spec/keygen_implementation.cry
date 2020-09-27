@@ -16,6 +16,8 @@ type Vec512 = [8][64]
 
 type Limb = [64]
 
+type Pow256 = [32][8]
+
 // Vectors represent numbers, using a little-endian representation
 
 /**
@@ -34,6 +36,12 @@ vec_rep:  {n} (fin n) => [n*64] -> [n]Limb
 vec_rep x = reverse (split x)
 
 vec256_rep x = vec_rep`{256/64} x
+
+
+// Pow256 uses a little-endian representation
+
+pow256_abs: Pow256 -> [256]
+pow256_abs x = join (reverse x)
 
 // for Montgomery mod r
 
@@ -95,20 +103,51 @@ RR_rep = [14526898881837571181, 3129137299524312099, 419701826671360399, 5249088
 limbs_from_be_bytes_rep48: [48][8] -> [6]Limb
 limbs_from_be_bytes_rep48 bytes = reverse (split (join bytes))
 
+le_bytes_from_limbs_rep4: Vec256 -> Pow256
+le_bytes_from_limbs_rep4 limbs = reverse (split (join (reverse limbs)))
+
+property le_bytes_from_limbs_rep4_prop limbs =
+    pow256_abs (le_bytes_from_limbs_rep4 limbs) == vec256_abs limbs
+
 /**
  * KeyGen as implemented in the code
  */
+KeyGenStep_rep: {IKM_len, info_len} ( IKM_len >= 32
+                               , validHMACSizes 20 (1+IKM_len)
+                               , validHMACSizes 32 (35+info_len)
+                               ) =>
+        [256] -> [IKM_len][8] -> [info_len][8] -> Vec256
+KeyGenStep_rep salt IKM key_info = SK where
+    type L = (3 * 256) /^ 16 // (ceil lg2 r) = 256, so L = 3*16=48
+    PRK = HKDF_Extract (split salt) (IKM # [0]) // I2OSP`{xLen=1} 0)
+    OKM = HKDF_Expand`{L=L} PRK (key_info # I2OSP`{xLen=2} `L)
+    OKM_vec = (limbs_from_be_bytes_rep48 OKM) # [0,0]
+    SK = mul_mont_rep (redc_rep OKM_vec) RR_rep
+
+KeyGenLoop_rep: {IKM_len, info_len} ( IKM_len >= 32
+                               , validHMACSizes 20 (1+IKM_len)
+                               , validHMACSizes 32 (35+info_len)
+                               ) =>
+        [256] -> [IKM_len][8] -> [info_len][8] -> [inf]Vec256
+/*
+KeyGenLoop_rep salt IKM info = keys where
+  salts = [salt] # [sha salt' | salt' <- salts]
+  keys = [key_gen_step salt] #
+         // hang on to a nonzero key, try again with revised salt otherwise
+         [if k == zero then key_gen_step salt' else k | k <- keys | salt' <- salts]
+  key_gen_step s = KeyGenStep_rep s IKM info
+*/
+KeyGenLoop_rep salt IKM info = keys where
+    salts = [salt] # [sha salt' | salt' <- salts]
+    keys = [zero] #
+           // hang on to a nonzero key, try again with revised salt otherwise
+           [if k == zero then key_gen_step salt' else k | k <- keys | salt' <- salts]
+    key_gen_step s = KeyGenStep_rep s IKM info
+
 KeyGen_rep: {IKM_len, info_len} ( IKM_len >= 32
                                , validHMACSizes 20 (1+IKM_len)
                                , validHMACSizes 32 (35+info_len)
                                ) =>
-        ([IKM_len][8], [info_len][8]) -> Vec256
-KeyGen_rep (IKM, key_info) = SK where
-    type L = (3 * 256) /^ 16 // (ceil lg2 r) = 256, so L = 3*16=48
-    PRK = HKDF_Extract "BLS-SIG-KEYGEN-SALT-" (IKM # [0]) // I2OSP`{xLen=1} 0)
-    OKM = HKDF_Expand`{L=L} PRK (key_info # I2OSP`{xLen=2} `L)
-    // SK = (OS2IP OKM) % P::r
-    OKM_vec = (limbs_from_be_bytes_rep48 OKM) # [0,0]
-    SK = mul_mont_rep (redc_rep OKM_vec) RR_rep
-
-
+        ([IKM_len][8], [info_len][8]) -> Pow256
+KeyGen_rep (IKM, key_info) = le_bytes_from_limbs_rep4 SK_vec where
+    SK_vec = (KeyGenLoop_rep (sha (join "BLS-SIG-KEYGEN-SALT-")) IKM key_info) @ 1
