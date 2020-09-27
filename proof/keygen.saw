@@ -3,51 +3,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 include "helpers.saw";
-// include "list_utils.saw";
-let eq x y = eval_bool {{ (`x:Integer) == `y }};
-
-let member =
-  rec f = (\x ys ->
-    if null ys
-    then false
-    else if eq x (head ys)
-         then true
-         else f x (tail ys))
-  in f;
-
-let dedup ys =
-  rec f = (\xs acc ->
-    if null xs
-    then acc
-    else if member (head xs) acc
-         then f (tail xs) acc
-         else f (tail xs) (concat [head xs] acc))
-  in f ys [];
-
-let foldr f =
-  rec fold = (\xs z ->
-    if null xs
-    then z
-    else f (head xs) (fold (tail xs) z))
-  in fold;
-
-let from_to =
-  rec f = (\x y ->
-    if eq x y
-    then [x]
-    else concat [x] (f (eval_size {| x+1 |}) y))
-  in f;
-
-let map f =
-  rec m = (\xs ->
-    if null xs
-    then []
-    else concat [f (head xs)] (m (tail xs)))
-  in m;
-// (end of list_utils)
-
-// m <- llvm_load_module "../build/llvm/libblst.a.bc.original"; // DO NOT NEED the bcopy patch
-m <- llvm_load_module "../build/llvm/libblst.a.bc";
+include "list_utils.saw";
+m <- llvm_load_module "../build/llvm/libblst.a.one-iter.bc"; // TODO: usefull iters
 
 import "../cryptol-specs/Primitive/Keyless/Hash/SHA256.cry";
 
@@ -74,6 +31,9 @@ let vec384_type = (llvm_array 6 (llvm_int 64));
 let vec768_type = (llvm_array 12 (llvm_int 64));
 let vec768x_type = (llvm_array 24 (llvm_int 64));
 let vec384x_type = (llvm_array 12 (llvm_int 64)); // array of two vec384
+
+let pow256_type = llvm_array 32 (llvm_int 8);
+
 let limb_type = (llvm_int 64);
 let size_type = (llvm_int 64);
 
@@ -109,6 +69,15 @@ let redc_mont_256_spec = do {
   crucible_precond {{ b ==  BLS12_381_r }} ;
   crucible_execute_func [ret_ptr, a_ptr, b_ptr, crucible_term {{ r0 }}];
   crucible_points_to ret_ptr (crucible_term {{ redc_rep a }});
+};
+
+let redc_mont_256_alias_1_2_spec = do {
+  (a, a_ptr) <- ptr_to_fresh "a" vec512_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  crucible_precond {{ b ==  BLS12_381_r }} ;
+  crucible_execute_func [a_ptr, a_ptr, b_ptr, crucible_term {{ r0 }}];
+  // now only the first half of a is changed
+  crucible_points_to a_ptr (crucible_term {{ (redc_rep a) # (drop`{4} a) }});
 };
 
 // sha-related functions
@@ -262,6 +231,20 @@ let HKDF_Expand_block_data_order_sizes info_len L = do {
   return (dedup (foldr concat [ss_3, ss_5, ss_6, ss_7] [1])); // sha256_final uses size 1
 };
 
+// ... there are additional calls to sha from KeyGen,
+// ... the first with the predefined salt, then others with 32-byte hashes
+
+let blst_keygen_bcopy_sizes salt_len = do {
+  (_, ss_1) <- sha256_update_bcopy_sizes salt_len 0;
+  (_, ss_2) <- sha256_update_bcopy_sizes 32 0;
+  return (dedup (concat ss_1 ss_2));
+};
+
+let blst_keygen_block_data_order_sizes salt_len = do {
+  let (_, ss_1) =  sha256_update_block_data_order_sizes salt_len 0;
+  let (_, ss_2) = sha256_update_block_data_order_sizes 32 0;
+  return (dedup (foldr concat [ss_1, ss_2] [1])); // sha256_final uses size 1
+};
 
 // Now we give specs for the functions we verify:
 
@@ -317,7 +300,7 @@ let HKDF_Expand_spec info_len L = do {
 
 
 let blst_keygen_spec IKM_len info_len = do {
-  SK_ptr <- crucible_alloc vec256_type;
+  SK_ptr <- crucible_alloc pow256_type;
 
   IKM <- crucible_fresh_var "IKM" (llvm_array IKM_len (llvm_int 8));
   IKM_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array IKM_len (llvm_int 8));
@@ -348,6 +331,7 @@ let limbs_from_be_bytes_spec48 = do {
 mul_mont_sparse_256_alias_ov <- crucible_llvm_unsafe_assume_spec m "mulx_mont_sparse_256" mul_mont_sparse_256_alias_spec;
 
 redc_mont_256_ov <- crucible_llvm_unsafe_assume_spec m "redcx_mont_256" redc_mont_256_spec;
+redc_mont_256_alias_1_2_ov <- crucible_llvm_unsafe_assume_spec m "redcx_mont_256" redc_mont_256_alias_1_2_spec;
 
 blst_sha256_emit_ov <- crucible_llvm_unsafe_assume_spec m "blst_sha256_emit" blst_sha256_emit_spec;
 blst_sha256_hcopy_ov <- crucible_llvm_unsafe_assume_spec m "blst_sha256_hcopy" blst_sha256_hcopy_spec;
@@ -356,9 +340,10 @@ let make_blst_sha256_block_data_order_ov len = crucible_llvm_unsafe_assume_spec 
 
 let make_blst_sha256_bcopy_ov len = crucible_llvm_unsafe_assume_spec m "blst_sha256_bcopy" (blst_sha256_bcopy_spec len);
 
-let assumed_overrides = [redc_mont_256_ov, mul_mont_sparse_256_alias_ov,
-                         blst_sha256_emit_ov, blst_sha256_hcopy_ov
-                         ];
+let assumed_overrides = [ redc_mont_256_ov, redc_mont_256_alias_1_2_ov
+                        , mul_mont_sparse_256_alias_ov
+                        , blst_sha256_emit_ov, blst_sha256_hcopy_ov
+                        ];
 
 // finally we verify functions:
 
@@ -405,20 +390,40 @@ verify_HKDF_Expand_for 32 48;
 
 // MAIN PROOF
 //
-// Function to verify blst_keygen for gien input sizes.
+
+let keygen_salt_len = 20;
+
+bcopy_ovs_for_keygen <- do {
+  ss <- blst_keygen_bcopy_sizes keygen_salt_len;
+  ovs <- for ss  make_blst_sha256_bcopy_ov;
+  return ovs;
+};
+
+block_data_order_ovs_for_keygen <- do {
+  ss <- blst_keygen_block_data_order_sizes keygen_salt_len;
+  ovs <- for ss make_blst_sha256_block_data_order_ov;
+  return ovs;
+  };
+
+// Function to verify blst_keygen for given input sizes.
+
+let keygen_unints = ["HKDF_Extract", "HKDF_Expand"
+                    // , "processBlock_Common"
+                    , "mul_mont_rep", "redc_rep"
+                    , "limbs_from_be_bytes_rep48"]; 
 
 let verify_keygen_for IKM_len info_len = do {
   print ("%%%%% keygen (", IKM_len, info_len, ")  %%%%");
-  ov1 <- verify_HKDF_Extract_for 20 IKM_len; // salt_len = 20
+  ov1 <- verify_HKDF_Extract_for 32 IKM_len; // hashed salt_len = 32
   ov2 <- verify_HKDF_Expand_for info_len 48; // L = 48
-  // ret <- crucible_llvm_verify m "blst_keygen" (concat [ov1, ov2] assumed_overrides) false (blst_keygen_part_spec IKM_len info_len) (w4_unint_z3 ["HKDF_Extract", "HKDF_Expand"]);
+
   ret <- crucible_llvm_verify m "blst_keygen"
-  (concat [ov1, ov2, limbs_from_be_bytes_ov_48] assumed_overrides)
-  // (concat [ov1, ov2] assumed_overrides)
-  false
-  (blst_keygen_spec IKM_len info_len)
-  // (do { simplify set1; print_goal; w4_unint_z3 ["HKDF_Extract", "HKDF_Expand", "mul_mont_rep", "redc_rep"]; });
-  (w4_unint_z3 ["HKDF_Extract", "HKDF_Expand", "mul_mont_rep", "redc_rep"]);
+    (foldr concat [[ov1, ov2, limbs_from_be_bytes_ov_48], bcopy_ovs_for_keygen, block_data_order_ovs_for_keygen]
+                  assumed_overrides)
+    false
+    (blst_keygen_spec IKM_len info_len)
+    // (do { print_goal; goal_eval_unint keygen_unints; print_goal; w4_unint_z3 keygen_unints; });
+    (w4_unint_z3 keygen_unints);
   return ret;
   };
 
@@ -444,15 +449,64 @@ funny_reduction <- prove_print (quickcheck 100) {{ \x -> mul_mont_r_bv (redc_r_b
 let set0 = cryptol_ss ();
 let set1 = addsimps [abs_rep_256, rep_abs_256, funny_reduction] set0;
 
+let  keygen_lemma IKM_len info_len = {{
+  \ (salt: [256], IKM: [IKM_len][8], info:[info_len][8]) ->
+  vec256_abs (KeyGenStep_rep salt IKM info) == KeyGenStep salt IKM info }};
+
+/*
+let prove_keygen_lemma_for a b = 
+  prove_print (do {
+    unfolding ["KeyGenStep_rep", "KeyGenStep", "mul_mont_rep", "redc_rep"];
+    simplify set1;
+    print_goal;
+    goal_eval_unint ["HKDF_Expand", "HKDF_Extract", "sha"];
+    print_goal;
+    w4_unint_z3 ["HKDF_Expand", "HKDF_Extract"];
+    })
+    (keygen_lemma a b);
+*/
+let prove_keygen_lemma_for a b = 
+  prove_print (do {
+    unfolding ["KeyGenStep_rep", "KeyGenStep", "mul_mont_rep", "redc_rep"];
+    simplify set1;
+    w4_unint_z3 ["HKDF_Expand", "HKDF_Extract", "sha"]; // ["HKDF_Expand", "HKDF_Extract"];
+    })
+    (keygen_lemma a b);
+
+// kl0 <- prove_keygen_lemma_for 32 0; // Works
+
+print "@@@@ Main thm @@@@@";
+
 let main_thm IKM_len info_len = {{
   \ (IKM: [IKM_len][8], info:[info_len][8]) ->
-  vec256_abs (KeyGen_rep (IKM, info)) == KeyGen_r2 (IKM, info) }};
+  pow256_abs (KeyGen_rep (IKM, info)) == KeyGen (IKM, info) }};
+
+/*
+let prove_keygen_equivalence_for a b = 
+  prove_print (do {
+    unfolding ["KeyGen_rep", "KeyGen", "mul_mont_rep", "redc_rep"];
+    simplify set1;
+    // DEBUG
+    print_goal;
+    goal_eval_unint ["HKDF_Expand", "HKDF_Extract", "mul_mont_r_bv", "redc_r_bv"];
+    simplify set1;
+    print_goal;
+    w4_unint_z3 ["HKDF_Expand", "HKDF_Extract"];
+    })
+    (main_thm a b);
+*/
 
 let prove_keygen_equivalence_for a b = 
   prove_print (do {
-    unfolding ["KeyGen_rep", "KeyGen_r2", "mul_mont_rep", "redc_rep"];
+    unfolding [ "KeyGen_rep", "KeyGen", "KeyGenLoop_rep", "KeyGenLoop"
+              , "KeyGenStep_rep", "KeyGenStep",  "mul_mont_rep", "redc_rep"];
     simplify set1;
-    w4_unint_z3 ["HKDF_Expand", "HKDF_Extract"];
+    // DEBUG
+    //print_goal;
+    //goal_eval_unint ["HKDF_Expand", "HKDF_Extract", "mul_mont_r_bv", "redc_r_bv"];
+    //simplify set1;
+    print_goal;
+    w4_unint_z3 ["HKDF_Expand", "HKDF_Extract", "sha"];
     })
     (main_thm a b);
 

@@ -30,11 +30,11 @@ KeyGen: {IKM_len, info_len} ( IKM_len >= 32
                             ) =>
         ([IKM_len][8], [info_len][8]) -> [256]
 // artificial cutoff at 3 iterations, to avoid an unbounded loop
-KeyGen (IKM, key_info) = (KeyGenLoop (sha (join "BLS-SIG-KEYGEN-SALT-")) IKM key_info) @ 3
+KeyGen (IKM, key_info) = (KeyGenLoop (sha (join "BLS-SIG-KEYGEN-SALT-")) IKM key_info) @ 1
 
 KeyGenLoop salt IKM info = keys where
   salts = [salt] # [sha salt' | salt' <- salts]
-  keys = [key_gen_step salt] #
+  keys = [zero] #
          // hang on to a nonzero key, try again with revised salt otherwise
          [if k == zero then key_gen_step salt' else k | k <- keys | salt' <- salts]
   key_gen_step s = KeyGenStep s IKM info
@@ -43,4 +43,5 @@ KeyGenStep salt IKM key_info = SK where
     type L = (3 * 256) /^ 16 // (ceil lg2 r) = 256, so L = 3*16=48
     PRK = HKDF_Extract (split salt) (IKM # [0]) // I2OSP`{xLen=1} 0)
     OKM = HKDF_Expand`{L=L} PRK (key_info # I2OSP`{xLen=2} `L)
-    SK = (OS2IP OKM) % P::r
+    SK = drop ((OS2IP`{a=[384]} OKM) % (zext P::r))
+
