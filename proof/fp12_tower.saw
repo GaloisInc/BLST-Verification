@@ -59,14 +59,15 @@ let inverse_fp12_spec = do {
 
 inverse_fp12_ov <- crucible_llvm_verify m "inverse_fp12" assembly_overrides false inverse_fp12_spec abc;
 
-let frobenius_map_fp12_spec = do {
+let frobenius_map_fp12_spec n = do {
   ret_ptr <- crucible_alloc vec384fp12_type;
   (_, a_ptr) <- ptr_to_fresh "a" vec384fp12_type;
-  n <- crucible_fresh_var "n" size_type;
-  crucible_precond {{ n > 0 /\ n <= 3 }};
-  crucible_execute_func [ret_ptr, a_ptr, crucible_term n];
+  crucible_execute_func [ret_ptr, a_ptr, crucible_term {{ `n:[64] }}];
   new_frobenius_map_fp12_ret <- crucible_fresh_var "new_frobenius_map_fp12_ret" vec384fp12_type;
   crucible_points_to ret_ptr (crucible_term new_frobenius_map_fp12_ret);
 };
 
-frobenius_map_fp12_ov <- crucible_llvm_verify m "frobenius_map_fp12" assembly_overrides false frobenius_map_fp12_spec abc;
+let make_frobenius_map_fp12_ov n = crucible_llvm_verify m "frobenius_map_fp12" assembly_overrides false (frobenius_map_fp12_spec n) abc;
+frobenius_map_fp12_ovs <- for [1,2,3] make_frobenius_map_fp12_ov;
+
+// TODO: vec_is_equal
