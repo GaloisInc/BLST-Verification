@@ -1,10 +1,32 @@
+// Proof of correspondence for the KeyGen implementation
+//
+// Note that we cannot show termination, so we have a patch that caps the iterations at
+// a maximum of 4.  This should never in fact come up, we expect that the first iteration
+// will succeed in determining a nonzero key.
+//
+// SAW also cannot prove correctless for all input llengths; instead we must choose some
+// fixed input lengths, and can show correspondence for those.  See the selection at the end of
+// this file.
+
+// This proof is compositional.
+// 0.  We make some assumptions about the called assembly routines.
+//      We hope to verify these later in the project.
+// 1.  We first show that the HKDF implementation is OK
+// 2.  We then show that blst_keygen corresponds to a specially-crafted "implementation spec"
+//     (written in Cryptol).
+// 3.  Finally, we show the implementation spec agrees with the actual Cryptol specification.
+//     In this last step, we have one assumption about modular reduction of bitvectors that
+//     is assumed.  It can easily be shown to hold in the integers.  We plan to
+//     prove this property later in the project.
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // Imports
 ///////////////////////////////////////////////////////////////////////////////
 
 include "helpers.saw";
 include "list_utils.saw";
-m <- llvm_load_module "../build/llvm/libblst.a.one-iter.bc"; // TODO: usefull iters
+m <- llvm_load_module "../build/llvm/libblst.a.bc";
 
 import "../cryptol-specs/Primitive/Keyless/Hash/SHA256.cry";
 
@@ -37,13 +59,8 @@ let pow256_type = llvm_array 32 (llvm_int 8);
 let limb_type = (llvm_int 64);
 let size_type = (llvm_int 64);
 
-// First we provide specs for assembly routines in order to create overrides
-// for them. We will only override assembly routines that operate on
-// constant-size data, as otherwise dealing with overrides is difficult (for
-// now, those are given C stubs). Thus we also do not specify the assembly
-// routines that operate on variable-size data.
-
-// We start with vect.h
+// First we provide specs for the called assembly routines in order to create overrides
+// for them.
 
 let {{ r0 = 0xfffffffeffffffff }};
 let {{ BLS12_381_r = [0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48] }};
@@ -61,7 +78,6 @@ let mul_mont_sparse_256_alias_spec = do { // NOTE: first two args are aliases
 };
 
 // All uses have p_ptr == BLS12_381_r and n0 == r0
-
 let redc_mont_256_spec = do {
   ret_ptr <- crucible_alloc vec256_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec512_type;
@@ -322,6 +338,13 @@ let limbs_from_be_bytes_spec48 = do {
   crucible_points_to ret_p (crucible_term {{limbs_from_be_bytes_rep48 inx}});
   };
 
+// ... or this
+let vec_is_zero_spec n = do { // n is size IN LIMBS
+  (a, a_ptr) <- ptr_to_fresh "a" (llvm_array n limb_type);
+  crucible_execute_func [a_ptr, crucible_term {{ (8 * (`n:[64])) }}];
+  crucible_return (crucible_term {{ if a == (zero:[n][64]) then 1 else (0:[64]) }});
+  };
+
 ///////////////////////////////////////////////////////////////////////////////
 // Proofs
 ///////////////////////////////////////////////////////////////////////////////
@@ -345,9 +368,11 @@ let assumed_overrides = [ redc_mont_256_ov, redc_mont_256_alias_1_2_ov
                         , blst_sha256_emit_ov, blst_sha256_hcopy_ov
                         ];
 
-// finally we verify functions:
-
 limbs_from_be_bytes_ov_48 <- crucible_llvm_verify m "limbs_from_be_bytes" [] false (limbs_from_be_bytes_spec48) z3;
+
+vec_is_zero_ov_4 <- crucible_llvm_verify m "vec_is_zero" [] false (vec_is_zero_spec 4) z3;
+
+// finally we verify functions:
 
 // Function to verify the instance of HKDF_Extract needed for a call to keygen
 let verify_HKDF_Extract_for salt_len IKM_len = do {
@@ -385,7 +410,6 @@ let verify_HKDF_Expand_for info_len L = do {
 verify_HKDF_Expand_for 0 48;
 verify_HKDF_Expand_for 32 48;
 */
-
 // verify_HKDF_Expand_for 32 32; // -- Ill-typed;  L is too small
 
 // MAIN PROOF
@@ -405,20 +429,24 @@ block_data_order_ovs_for_keygen <- do {
   return ovs;
   };
 
-// Function to verify blst_keygen for given input sizes.
-
 let keygen_unints = ["HKDF_Extract", "HKDF_Expand"
                     // , "processBlock_Common"
                     , "mul_mont_rep", "redc_rep"
-                    , "limbs_from_be_bytes_rep48"]; 
+                    // , "limbs_from_be_bytes_rep48"
+                    ]; 
 
+// Function to verify blst_keygen for given input sizes.
 let verify_keygen_for IKM_len info_len = do {
   print ("%%%%% keygen (", IKM_len, info_len, ")  %%%%");
   ov1 <- verify_HKDF_Extract_for 32 IKM_len; // hashed salt_len = 32
   ov2 <- verify_HKDF_Expand_for info_len 48; // L = 48
 
   ret <- crucible_llvm_verify m "blst_keygen"
-    (foldr concat [[ov1, ov2, limbs_from_be_bytes_ov_48], bcopy_ovs_for_keygen, block_data_order_ovs_for_keygen]
+    (foldr concat [ [ ov1, ov2, limbs_from_be_bytes_ov_48
+                    // , vec_is_zero_ov_4 // leads to a memory load error?
+                    ]
+                  , bcopy_ovs_for_keygen, block_data_order_ovs_for_keygen
+                  ]
                   assumed_overrides)
     false
     (blst_keygen_spec IKM_len info_len)
@@ -427,92 +455,73 @@ let verify_keygen_for IKM_len info_len = do {
   return ret;
   };
 
-// and some specific sizes.
+// These work:
+//verify_keygen_for 32 0;
+//verify_keygen_for 32 4;
+//verify_keygen_for 33 7;
+//verify_keygen_for 80 16;
 
-verify_keygen_for 32 0;
-verify_keygen_for 32 4;
-verify_keygen_for 33 7;
-verify_keygen_for 80 16;
-
-// Now we need to show KeyGen_rep is the same function as KeyGen_r2
-//
+// Now we need to show KeyGen_rep is the same function as KeyGen
+// This is just about Cryptol functions.
 
 import "../spec/KeyGen.cry";
 
 abs_rep_256 <- prove_print z3 {{ \x -> vec256_abs (vec256_rep x) == x }};
 rep_abs_256 <- prove_print z3 {{ \x -> vec256_rep (vec256_abs x) == x }};
 
-// Currently just assume a property that will be shown in Coq later in the project
+// Currently, we just assume a property that will be shown in Coq later in the project
 
 funny_reduction <- prove_print (quickcheck 100) {{ \x -> mul_mont_r_bv (redc_r_bv x) (vec256_abs RR_rep) == drop (x % (zext bv_r)) }};
 
 let set0 = cryptol_ss ();
 let set1 = addsimps [abs_rep_256, rep_abs_256, funny_reduction] set0;
 
-let  keygen_lemma IKM_len info_len = {{
-  \ (salt: [256], IKM: [IKM_len][8], info:[info_len][8]) ->
-  vec256_abs (KeyGenStep_rep salt IKM info) == KeyGenStep salt IKM info }};
+// This lemma shows the loop bodies of the two definitions are equivalent
+let keygen_lemma IKM_len info_len = {{
+  \ (salt: [256]) (IKM: [IKM_len][8]) (info:[info_len][8]) ->
+  KeyGenStep salt IKM info == vec256_abs (KeyGenStep_rep salt IKM info) }};
 
-/*
+// function to prove the lemma for given sizes:
 let prove_keygen_lemma_for a b = 
   prove_print (do {
     unfolding ["KeyGenStep_rep", "KeyGenStep", "mul_mont_rep", "redc_rep"];
     simplify set1;
-    print_goal;
-    goal_eval_unint ["HKDF_Expand", "HKDF_Extract", "sha"];
-    print_goal;
-    w4_unint_z3 ["HKDF_Expand", "HKDF_Extract"];
-    })
-    (keygen_lemma a b);
-*/
-let prove_keygen_lemma_for a b = 
-  prove_print (do {
-    unfolding ["KeyGenStep_rep", "KeyGenStep", "mul_mont_rep", "redc_rep"];
-    simplify set1;
-    w4_unint_z3 ["HKDF_Expand", "HKDF_Extract", "sha"]; // ["HKDF_Expand", "HKDF_Extract"];
-    })
-    (keygen_lemma a b);
-
-// kl0 <- prove_keygen_lemma_for 32 0; // Works
-
-print "@@@@ Main thm @@@@@";
-
-let main_thm IKM_len info_len = {{
-  \ (IKM: [IKM_len][8], info:[info_len][8]) ->
-  pow256_abs (KeyGen_rep (IKM, info)) == KeyGen (IKM, info) }};
-
-/*
-let prove_keygen_equivalence_for a b = 
-  prove_print (do {
-    unfolding ["KeyGen_rep", "KeyGen", "mul_mont_rep", "redc_rep"];
-    simplify set1;
-    // DEBUG
-    print_goal;
-    goal_eval_unint ["HKDF_Expand", "HKDF_Extract", "mul_mont_r_bv", "redc_r_bv"];
-    simplify set1;
-    print_goal;
-    w4_unint_z3 ["HKDF_Expand", "HKDF_Extract"];
-    })
-    (main_thm a b);
-*/
-
-let prove_keygen_equivalence_for a b = 
-  prove_print (do {
-    unfolding [ "KeyGen_rep", "KeyGen", "KeyGenLoop_rep", "KeyGenLoop"
-              , "KeyGenStep_rep", "KeyGenStep",  "mul_mont_rep", "redc_rep"];
-    simplify set1;
-    // DEBUG
-    //print_goal;
-    //goal_eval_unint ["HKDF_Expand", "HKDF_Extract", "mul_mont_r_bv", "redc_r_bv"];
-    //simplify set1;
-    print_goal;
     w4_unint_z3 ["HKDF_Expand", "HKDF_Extract", "sha"];
     })
-    (main_thm a b);
+    (keygen_lemma a b);
 
-// Now prove for the same parameter sizes as the code proof
-prove_keygen_equivalence_for 32 0;
-prove_keygen_equivalence_for 32 4;
-prove_keygen_equivalence_for 33 7;
-prove_keygen_equivalence_for 80 16;
-  
+// prove_keygen_lemma_for 32 0; // Works
+
+let main_thm IKM_len info_len = {{
+  \ (IKM: [IKM_len][8]) (info:[info_len][8]) ->
+  pow256_abs (KeyGen_rep (IKM, info)) == KeyGen (IKM, info) }};
+
+
+// Function to prove the two Cryptol definitions are equivalent
+let prove_keygen_equivalence_for a b = do {
+  lemma <- prove_keygen_lemma_for a b; // get an instance of the lemma
+  prove_print (do {
+    unfolding [ "KeyGen_rep", "KeyGen", "KeyGenLoop_rep", "KeyGenLoop" ];
+    simplify (addsimp lemma (cryptol_ss ())); // use the lemma
+    w4_unint_z3 ["KeyGenStep_rep"];
+    })
+    (main_thm a b);
+  };
+
+// These work
+//prove_keygen_equivalence_for 32 0;
+//prove_keygen_equivalence_for 32 4;
+//prove_keygen_equivalence_for 33 7;
+//prove_keygen_equivalence_for 80 16;
+
+// Function to prove everything needed for given parameter sizes:
+let do_keygen_proofs_for IKM_len info_len = do {
+  verify_keygen_for IKM_len info_len;
+  prove_keygen_equivalence_for IKM_len info_len;
+  };
+
+// FINALLY!  Run the verifications steps for a variety of sizes.
+do_keygen_proofs_for 32 0;
+do_keygen_proofs_for 32 4;
+do_keygen_proofs_for 33 7;
+do_keygen_proofs_for 80 16;

@@ -129,14 +129,6 @@ KeyGenLoop_rep: {IKM_len, info_len} ( IKM_len >= 32
                                , validHMACSizes 32 (35+info_len)
                                ) =>
         [256] -> [IKM_len][8] -> [info_len][8] -> [inf]Vec256
-/*
-KeyGenLoop_rep salt IKM info = keys where
-  salts = [salt] # [sha salt' | salt' <- salts]
-  keys = [key_gen_step salt] #
-         // hang on to a nonzero key, try again with revised salt otherwise
-         [if k == zero then key_gen_step salt' else k | k <- keys | salt' <- salts]
-  key_gen_step s = KeyGenStep_rep s IKM info
-*/
 KeyGenLoop_rep salt IKM info = keys where
     salts = [salt] # [sha salt' | salt' <- salts]
     keys = [zero] #
@@ -150,4 +142,4 @@ KeyGen_rep: {IKM_len, info_len} ( IKM_len >= 32
                                ) =>
         ([IKM_len][8], [info_len][8]) -> Pow256
 KeyGen_rep (IKM, key_info) = le_bytes_from_limbs_rep4 SK_vec where
-    SK_vec = (KeyGenLoop_rep (sha (join "BLS-SIG-KEYGEN-SALT-")) IKM key_info) @ 1
+    SK_vec = (KeyGenLoop_rep (sha (join "BLS-SIG-KEYGEN-SALT-")) IKM key_info) @ 4
