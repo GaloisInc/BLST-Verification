@@ -24,8 +24,7 @@ KeyGen_r2 (IKM, key_info) = SK where
 /**
  * KeyGen from draft-04
  */
-KeyGen: {IKM_len, info_len} ( IKM_len >= 32
-                            , validHMACSizes 20 (1+IKM_len)
+KeyGen: {IKM_len, info_len} ( validHMACSizes 20 (1+IKM_len)
                             , validHMACSizes 32 (35+info_len)
                             ) =>
         ([IKM_len][8], [info_len][8]) -> [256]
@@ -39,8 +38,8 @@ KeyGenLoop salt IKM info = keys where
          [if k == zero then key_gen_step salt' else k | k <- keys | salt' <- salts]
   key_gen_step s = KeyGenStep s IKM info
 
-KeyGenStep:  {IKM_len, info_len} ( IKM_len >= 32
-                            , validHMACSizes 20 (1+IKM_len)
+KeyGenStep:  {IKM_len, info_len} (
+                              validHMACSizes 20 (1+IKM_len)
                             , validHMACSizes 32 (35+info_len)
                             ) =>
         [256] -> [IKM_len][8] ->[info_len][8] -> [256]
