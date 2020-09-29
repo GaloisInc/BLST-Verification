@@ -112,10 +112,9 @@ property le_bytes_from_limbs_rep4_prop limbs =
 /**
  * KeyGen as implemented in the code
  */
-KeyGenStep_rep: {IKM_len, info_len} ( IKM_len >= 32
-                               , validHMACSizes 20 (1+IKM_len)
-                               , validHMACSizes 32 (35+info_len)
-                               ) =>
+KeyGenStep_rep: {IKM_len, info_len} (validHMACSizes 20 (1+IKM_len)
+                                    , validHMACSizes 32 (35+info_len)
+                                    ) =>
         [256] -> [IKM_len][8] -> [info_len][8] -> Vec256
 KeyGenStep_rep salt IKM key_info = SK where
     type L = (3 * 256) /^ 16 // (ceil lg2 r) = 256, so L = 3*16=48
@@ -124,10 +123,9 @@ KeyGenStep_rep salt IKM key_info = SK where
     OKM_vec = (limbs_from_be_bytes_rep48 OKM) # [0,0]
     SK = mul_mont_rep (redc_rep OKM_vec) RR_rep
 
-KeyGenLoop_rep: {IKM_len, info_len} ( IKM_len >= 32
-                               , validHMACSizes 20 (1+IKM_len)
-                               , validHMACSizes 32 (35+info_len)
-                               ) =>
+KeyGenLoop_rep: {IKM_len, info_len} (validHMACSizes 20 (1+IKM_len)
+                                    , validHMACSizes 32 (35+info_len)
+                                    ) =>
         [256] -> [IKM_len][8] -> [info_len][8] -> [inf]Vec256
 KeyGenLoop_rep salt IKM info = keys where
     salts = [salt] # [sha salt' | salt' <- salts]
@@ -136,10 +134,9 @@ KeyGenLoop_rep salt IKM info = keys where
            [if k == zero then key_gen_step salt' else k | k <- keys | salt' <- salts]
     key_gen_step s = KeyGenStep_rep s IKM info
 
-KeyGen_rep: {IKM_len, info_len} ( IKM_len >= 32
-                               , validHMACSizes 20 (1+IKM_len)
-                               , validHMACSizes 32 (35+info_len)
-                               ) =>
+KeyGen_rep: {IKM_len, info_len} ( validHMACSizes 20 (1+IKM_len)
+                                , validHMACSizes 32 (35+info_len)
+                                ) =>
         ([IKM_len][8], [info_len][8]) -> Pow256
 KeyGen_rep (IKM, key_info) = le_bytes_from_limbs_rep4 SK_vec where
     SK_vec = (KeyGenLoop_rep (sha (join "BLS-SIG-KEYGEN-SALT-")) IKM key_info) @ 4
