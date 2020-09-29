@@ -338,7 +338,7 @@ let limbs_from_be_bytes_spec48 = do {
   crucible_points_to ret_p (crucible_term {{limbs_from_be_bytes_rep48 inx}});
   };
 
-// ... or this
+// ...and this is not needed
 let vec_is_zero_spec n = do { // n is size IN LIMBS
   (a, a_ptr) <- ptr_to_fresh "a" (llvm_array n limb_type);
   crucible_execute_func [a_ptr, crucible_term {{ (8 * (`n:[64])) }}];
@@ -370,7 +370,8 @@ let assumed_overrides = [ redc_mont_256_ov, redc_mont_256_alias_1_2_ov
 
 limbs_from_be_bytes_ov_48 <- crucible_llvm_verify m "limbs_from_be_bytes" [] false (limbs_from_be_bytes_spec48) z3;
 
-vec_is_zero_ov_4 <- crucible_llvm_verify m "vec_is_zero" [] false (vec_is_zero_spec 4) z3;
+// unused, but works:
+// vec_is_zero_ov_4 <- crucible_llvm_verify m "vec_is_zero" [] false (vec_is_zero_spec 4) z3;
 
 // finally we verify functions:
 
@@ -430,27 +431,22 @@ block_data_order_ovs_for_keygen <- do {
   };
 
 let keygen_unints = ["HKDF_Extract", "HKDF_Expand"
-                    // , "processBlock_Common"
                     , "mul_mont_rep", "redc_rep"
-                    // , "limbs_from_be_bytes_rep48"
                     ]; 
 
 // Function to verify blst_keygen for given input sizes.
 let verify_keygen_for IKM_len info_len = do {
-  print ("%%%%% keygen (", IKM_len, info_len, ")  %%%%");
   ov1 <- verify_HKDF_Extract_for 32 IKM_len; // hashed salt_len = 32
   ov2 <- verify_HKDF_Expand_for info_len 48; // L = 48
 
   ret <- crucible_llvm_verify m "blst_keygen"
     (foldr concat [ [ ov1, ov2, limbs_from_be_bytes_ov_48
-                    // , vec_is_zero_ov_4 // leads to a memory load error?
                     ]
                   , bcopy_ovs_for_keygen, block_data_order_ovs_for_keygen
                   ]
                   assumed_overrides)
     false
     (blst_keygen_spec IKM_len info_len)
-    // (do { print_goal; goal_eval_unint keygen_unints; print_goal; w4_unint_z3 keygen_unints; });
     (w4_unint_z3 keygen_unints);
   return ret;
   };
@@ -521,6 +517,7 @@ let do_keygen_proofs_for IKM_len info_len = do {
   };
 
 // FINALLY!  Run the verifications steps for a variety of sizes.
+do_keygen_proofs_for 16 0;
 do_keygen_proofs_for 32 0;
 do_keygen_proofs_for 32 4;
 do_keygen_proofs_for 33 7;
