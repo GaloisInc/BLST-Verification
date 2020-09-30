@@ -1,0 +1,5 @@
+let IKM_len = 129;
+let info_len = 67;
+// sizes fixed in keygen.c:
+let salt_len = 20;
+let L = 64; // sizeof(vec384) + 128/8 = 64; vec384 has 6 limbs
