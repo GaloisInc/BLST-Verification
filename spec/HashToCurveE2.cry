@@ -61,22 +61,23 @@ sqrt x = z where
     k = 1028732146235106349975324479215795277384839936929757896155643118032610843298655225875571310552543014690878354869257
     // Then (k(u+1))^2 = k^2(2u) = -u and
     //      (k(u-1))^2 = k^2(-2u) = u
-    c2 = [k, `p-k] // k*(u-1)
+    c2 = [k, P::Fp.neg k] // k*(u-1)
     c3 = [k, k] // k*(u+1)
 
 // sgn0 for m=2, from Section 4.1 
 sgn0 [x_1, x_0] =  sign_0 || (zero_0 && sign_1) where
     // [x_1, x_0] because Section 2.1 asks for a little-endian order of elements
-    sign_0 = [x_0!0] // least-signiifcant bit
-    zero_0 = [x_0 == 0] // represent the Boolean as 0 or 1
-    sign_1 = [x_1!0]  
+    x_0' = P::from_Fp x_0
+    x_1' = P::from_Fp x_1
+    sign_0 = [x_0'!0] // least-signiifcant bit
+    zero_0 = [x_0' == 0] // represent the Boolean as 0 or 1
+    sign_1 = [x_1'!0]  
 
 inv0 x = F_expt`{n=width q} F x `(q-2) // but could be F.div (F.field_unit, x)
 
 // for the isogenous curve
 private
-    to_Fp: {n} (fin n, n <= 384) => [n] -> [384]
-    to_Fp bits = (zext bits) // % something?
+    to_Fp  = P::to_Fp
 
 
 // Constants from Section 8.8.2
@@ -100,8 +101,8 @@ iso_map (x', y') = (x, y) where
     x = F.div (x_num, x_den)
     y = F.mul (y', F.div(y_num, y_den))
 
-to_Fp2: (P::t_Fp, P::t_Fp) -> P::t_Fp_2
-to_Fp2 (a,b) = [b, a] // a+b*I
+to_Fp2: ([384], [384]) -> P::t_Fp_2
+to_Fp2 (a,b) = [to_Fp b, to_Fp a] // a+b*I
 
 k1s = map to_Fp2 
    [ (0x05c759507e8e333ebb5b7a9a47d7ed8532c52d39fd3a042a88b58423c50ae15d5c2638e343d9c71c6238aaaaaaaa97d6,

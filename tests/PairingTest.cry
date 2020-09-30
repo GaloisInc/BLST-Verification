@@ -6,6 +6,8 @@ import Pairing
 import Parameters as P
 import ShortWeierstrassCurve as EC
 
+to_Fp = P::to_Fp // shorter expression for the injection
+
 // These tests consist of some sanity checks on some of the functions used in the
 // pairing calculation, followed by a check of the test vectors given in Appendix B
 // of the Draft.
@@ -27,8 +29,8 @@ property phi_2_is_OK (m:[8]) =
 
 // .. first point
 
-x = 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb
-y = 0x08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1
+x = to_Fp 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb
+y = to_Fp 0x08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1
 
 // ... confirm we are on the curve
 
@@ -41,14 +43,14 @@ property p1_on_c12 = EC::is_point_affine c12 p1
 
 // .. second point
 
-x'_0 = 0x024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8
-x'_1 = 0x13e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e
+x'_0 = to_Fp 0x024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8
+x'_1 = to_Fp 0x13e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e
 
 x': t2
 x' = [x'_1, x'_0]
 
-y'_0 = 0x0ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801
-y'_1 = 0x0606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be
+y'_0 = to_Fp 0x0ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801
+y'_1 = to_Fp 0x0606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be
 
 y': t2
 y' = [y'_1, y'_0]
@@ -62,7 +64,7 @@ p2 = phi_2 (x', y')
 property p2_on_c12 = EC::is_point_affine c12 p2
 
 // expected results, 12 coefficients fom e_0 to e_11:
-expected_pairing =
+expected_pairing = map to_Fp
     [ // e0 .. e3:
       0x11619b45f61edfe3b47a15fac19442526ff489dcda25e59121d9931438907dfd448299a87dde3a649bdba96e84d54558
     , 0x153ce14a76a53e205ba8f275ef1137c56a566f638b52d34ba3bf3bf22f277d70f76316218c0dfd583a394b8448d2be7f
@@ -81,7 +83,7 @@ expected_pairing =
     ]
 
 out1: t12
-out1 = 
+out1 = map (map (map to_Fp))
     [[[0x10c839fd7d6519131e14836b595789b7121ba39388491a972b713f92f9c75d3612a4758fe5614d7877cdaf2292b7dcf2,
        0x0ced20608aa7112c205ee7a703c2e77f96d1aef6fd865caafcb4a363d2f9de8ecc3acf61f888c8eedb1483397ba6438b],
       [0x0cbccf94f2a6bcc12d54395ad34d72e308d2b753adce82cd21e864d7bdbc5dfdd093caa671baba5189ceb2764a4664ff,
@@ -99,7 +101,7 @@ property ate_pairing'_OK =
     ate_pairing' p1 p2 == out1
 
 out2: t12
-out2 =
+out2 = map (map (map to_Fp))
     [[[0x07e850bc5bf5dcb89dc030a689f045f36e464093aa549b95c3eace6873451db6cf6374a8a9c29bed19e0f3fa2899f03b,
        0x0832f3fef66f64b46560617243b5e38291a18c2e1c4e5c3383bfcf87b2f40996f5505d61197a00ac57ac462e389aeeb9],
       [0x19aa5557f245b2ca84ed238cb32b279150dbbf88415386a23c6fb0f05f167b86bef07a74921f06bb88092a6206cc58c3,
@@ -127,3 +129,7 @@ property final_exponentiation_OK =
 // Note: There is no test here for the overall Ate pairing, because even though Cryptol can test both
 // main steps (ate_pairing'_OK and final_exponentiation_OK), it exhausts memory when computing
 // the composition of those two functions.
+
+//property ate_pairing_OK =
+//    ate_pairing p1 p2 == split`{parts=2} (split`{parts=6} (reverse expected_pairing))
+    
