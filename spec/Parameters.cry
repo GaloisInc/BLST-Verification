@@ -22,15 +22,36 @@ t_signed_form = [ [bit,bit] | bit <-  <| x^^63 + x^^62 + x^^60 + x^^57 + x^^48 +
 
 type p = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
 
-/*
-Fp = PrimeField`{p}
+// Choice of base representation for GF(p) is made here:
+
+// For the Z p version:
+Fp = prime_field`{p}
 type t_Fp = Z p
-*/
+
+to_Fp: {n} (fin n, n <= 384) => [n] -> t_Fp
+to_Fp bits = fromInteger (toInteger (zext`{m=384} bits))
+
+from_Fp: t_Fp -> [384]
+from_Fp x = fromInteger (fromZ x)
+
+/*
+// For the bivector version:
 Fp = prime_field_bv`{384} `p  // representation of F_p
 type t_Fp = [384]  // ... and the underlying Cryptol type
 
+to_Fp: {n} (fin n, n <= 384) => [n] -> t_Fp
+to_Fp bits = (zext bits) // mod something?
+
+from_Fp: t_Fp -> [384]
+from_Fp x = x
+*/
+
+// Nothing else should need to change depending on the version of base representation chosen above.
+
+
 //       F_p^2 = F_p[u] / (u^2 + 1)
-Fp_2 = extension_field Fp [0,`p-1] // [Fp.field_zero, Fp.neg Fp.field_unit] // [0,-1]
+// Fp_2 = extension_field Fp [0,`p-1] // [Fp.field_zero, Fp.neg Fp.field_unit] // [0,-1]
+Fp_2 = extension_field Fp [Fp.field_zero, Fp.neg Fp.field_unit] // [0,-1]
 type t_Fp_2 = [2]t_Fp
 
 /** u is the generator for F_p^2 over F_p */
@@ -104,7 +125,7 @@ private
   poly_to_octets f p = join (map f (reverse p))
 
 Fp_to_octets: t_Fp -> [48*8] // big endian
-Fp_to_octets x = x
+Fp_to_octets = from_Fp
 
 Fp_12_to_octets: t_Fp_12 -> [12*48*8]
 Fp_12_to_octets = poly_to_octets (poly_to_octets (poly_to_octets Fp_to_octets))
@@ -114,7 +135,8 @@ private
   octets_to_poly f octets = map f (reverse (split octets))
 
 octets_to_Fp: [48*8] -> t_Fp
-octets_to_Fp octets = octets // TODO: chould we check that they are not too big?
+// octets_to_Fp octets = octets // TODO: chould we check that they are not too big?
+octets_to_Fp octets = to_Fp octets // fromInteger (toInteger octets)
 
 octets_to_Fp_2: [2*48*8] -> t_Fp_2
 octets_to_Fp_2 = (octets_to_poly`{k=2} octets_to_Fp)

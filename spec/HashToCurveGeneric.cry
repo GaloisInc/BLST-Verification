@@ -11,7 +11,7 @@ module HashToCurveGeneric where
 import rfc8017 (I2OSP, OS2IP)
 import Primitive::Keyless::Hash::SHA256 as SHA256
 import Common::Field
-import Parameters (t_Fp, Fp)
+import Parameters (t_Fp, Fp, to_Fp)
 import FieldExtras
 import ShortWeierstrassCurve as EC
 import ExpandMessage
@@ -120,7 +120,7 @@ hash_to_field (msg, DST) = us where
       us = [ make_u_i part | part <- parts ]
       make_u_i: [m][L][8] -> t_F
       // "drop" here takes the 8*L-bit result and drops leading zeros to get to [384]
-      make_u_i part = base_to_F [drop ((OS2IP`{a=[L*8]} bytes) % `p) | bytes <- part]
+      make_u_i part = base_to_F [to_Fp (drop`{back=384} ((OS2IP`{a=[L*8]} bytes) % `p)) | bytes <- part]
 
 // 6.6.2 Simplified SWU
 

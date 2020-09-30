@@ -21,9 +21,8 @@ msg_a512 = "a512_"  # ['a' | _ <- [0..511]]
 
 // From Section H.10.1, BLS12381G2_XMD:SHA-256_SSWU_RO_
 
-to_Fp2: (P::t_Fp, P::t_Fp) -> P::t_Fp_2
-to_Fp2 (a,b) = [b, a] // a+b*I
-
+to_Fp2: ([384], [384]) -> P::t_Fp_2
+to_Fp2 (a,b) = [P::to_Fp b, P::to_Fp a] // a+b*I
 
 dst = "QUUX-V01-CS02-with-BLS12381G2_XMD:SHA-256_SSWU_RO_"
 
