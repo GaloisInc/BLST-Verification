@@ -23,4 +23,6 @@ RUN /workdir/install.sh
 
 ENV PATH=/workdir/bin:$PATH
 
+ENV CRYPTOLPATH=/workdir/cryptol-specs/:/workdir/spec
+
 ENTRYPOINT ["./scripts/docker_entrypoint.sh"]
