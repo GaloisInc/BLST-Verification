@@ -104,8 +104,8 @@ sk_to_pk sk = point_to_pubkey (EC::mult other_curve sk P)
 // 2.5 KeyValidate
 
 // The spec says to return VALID or INVALID; here we use True for VALID
-key_validate: [pubkey_len] -> Bool
-key_validate pk = ret where
+KeyValidate: [pubkey_len] -> Bool
+KeyValidate pk = ret where
     xP = pubkey_to_point pk  // step 1
     ret = maybe_cases xP
             False // xP is None, step 2
@@ -114,7 +114,7 @@ key_validate pk = ret where
 
 // 2.6 CoreSign
 
-CoreSign: {msg_len} (Hashable msg_len) => ([256], [msg_len][8]) -> [signature_len] // TODO: proper constraint
+CoreSign: {msg_len} (Hashable msg_len) => ([256], [msg_len][8]) -> [signature_len]
 CoreSign (sk, message) = signature where
     Q = hash_to_point message
     R = EC::mult main_curve sk Q
@@ -126,7 +126,7 @@ CoreVerify: {msg_len} (Hashable msg_len) => ([pubkey_len], [msg_len][8], [signat
 /* possible alternate definition
 CoreVerify(PK, message, signature) = maybe False step3 (signature_to_point signature) where // lines 1, 2
     step3 R = if signature_subgroup_check R == False then False // line 3
-               |  key_validate PK == False then False // line 4
+               |  KeyValidate PK == False then False // line 4
               else maybe False (step5 R) (pubkey_to_point PK) // line 5, but dealing with "maybe-ness"
     step5 R xP = C1 == C2 where // line 9
          Q = hash_to_point message // line 6
@@ -137,7 +137,7 @@ CoreVerify(PK, message, signature) =
     maybe_cases (signature_to_point signature)
         False // lines 1,2
         (\ R -> if signature_subgroup_check R == False then False  // line 3
-                |  key_validate PK == False then False // line 4
+                |  KeyValidate PK == False then False // line 4
                 else maybe_cases (pubkey_to_point PK)
                     False // line 5
                     (\ xP -> (C1 == C2 where // line 9
