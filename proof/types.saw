@@ -4,5 +4,8 @@ let vec384_type = (llvm_array 6 (llvm_int 64));
 let vec768_type = (llvm_array 12 (llvm_int 64));
 let vec768x_type = (llvm_array 24 (llvm_int 64));
 let vec384x_type = (llvm_array 12 (llvm_int 64)); // array of two vec384
+
 let limb_type = (llvm_int 64);
 let size_type = (llvm_int 64);
+
+let pow256_type = llvm_array 32 (llvm_int 8);
