@@ -32,7 +32,6 @@ hash_to_point hx = hash_to_curve (DST, hx)
 
 P: EC::AffinePoint t_F' // base point
 P = BP'
-// r -- fixed in both BLS variants  TODO: use it here as a parameter anyway??
 
 // pairing: (EC::AffinePoint t_F, EC::AffinePoint t_F') -> t_G
 pairing (p,q) = bls_ate_pairing p q // Section 2.2

@@ -1,8 +1,18 @@
+// Definitions from draft-irtf-cfrg-bls-signature-04
+//
+// That specification describes a number of "parameters" that are used in its
+// definitions, and later defines ciphersuites that instantiate those parameters.
+//
+// This module defines the specification in terms ofthe parameters, usig a Cryptol
+// parameterized module.  The instantiations are done in separate Cyytpol files,
+// as required by the language.
+
 module BLSGeneric where
 
 import ShortWeierstrassCurve as EC
 import Parameters as P
 import Maybe
+import Primitive::Keyless::Hash::SHA256
 import Primitive::Symmetric::KDF::HKDF256
 import rfc8017
 
@@ -17,7 +27,7 @@ parameter
     type t_G: * // representation type for field of the pairing result
 
     // TODO: need equality for t_G  WHY?
-    type constraint Eq t_G // TODO: FIX
+    type constraint Eq t_G
 
     type pubkey_len: #
     type signature_len: #
@@ -36,7 +46,7 @@ parameter
     // other primitives "determined by the above parameters"
     
     P: EC::AffinePoint t_F' // base point
-    // r -- fixed in both BLS variants  TODO: use it here as a parameter anyway??
+    // r -- is fixed in both BLS variants  Should we use it here as a parameter anyway??
 
     pairing: (EC::AffinePoint t_F, EC::AffinePoint t_F') -> t_G
 
@@ -53,16 +63,37 @@ type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + 
 
 // 2.3 KeyGen
 
-KeyGen: {IKM_len, info_len} ( IKM_len >= 32
-                            , validHMACSizes 20 (1+IKM_len)
+// KeyGen now has a loop that iterates until a nonzero secret key is produced.
+// Unfortunately there is no easy way for us to prove termination; that is a
+// very complex property of HKDF (if termination is indeed guaranteed).
+// Here we have artificially cutoff at 4 iterations.
+
+// Should there be a check that IKM_len >= 32?  The specification says is "MUST" be.
+
+KeyGen: {IKM_len, info_len} ( validHMACSizes 20 (1+IKM_len)
                             , validHMACSizes 32 (35+info_len)
                             ) =>
         ([IKM_len][8], [info_len][8]) -> [256]
-KeyGen (IKM, key_info) = SK where
+// artificial cutoff at 4 iterations, to avoid an unbounded loop
+KeyGen (IKM, key_info) = (KeyGenLoop (sha (join "BLS-SIG-KEYGEN-SALT-")) IKM key_info) @ 4
+
+KeyGenLoop salt IKM info = keys where
+  salts = [salt] # [sha salt' | salt' <- salts]
+  keys = [zero] #
+         // hang on to a nonzero key, try again with revised salt otherwise
+         [if k == zero then key_gen_step salt' else k | k <- keys | salt' <- salts]
+  key_gen_step s = KeyGenStep s IKM info
+
+KeyGenStep:  {IKM_len, info_len} (
+                              validHMACSizes 20 (1+IKM_len)
+                            , validHMACSizes 32 (35+info_len)
+                            ) =>
+        [256] -> [IKM_len][8] ->[info_len][8] -> [256]
+KeyGenStep salt IKM key_info = SK where
     type L = (3 * 256) /^ 16 // (ceil lg2 r) = 256, so L = 3*16=48
-    PRK = HKDF_Extract "BLS-SIG-KEYGEN-SALT-" (IKM # [0]) // I2OSP`{xLen=1} 0)
+    PRK = HKDF_Extract (split salt) (IKM # [0]) // I2OSP`{xLen=1} 0)
     OKM = HKDF_Expand`{L=L} PRK (key_info # I2OSP`{xLen=2} `L)
-    SK = drop ((OS2IP`{a=[384]} OKM) % (zext P::r)) // mod happens in 384 bits
+    SK = drop ((OS2IP`{a=[384]} OKM) % (zext P::r))
 
 // 2.4 SkToPk
 
@@ -75,11 +106,11 @@ sk_to_pk sk = point_to_pubkey (EC::mult other_curve sk P)
 // The spec says to return VALID or INVALID; here we use True for VALID
 key_validate: [pubkey_len] -> Bool
 key_validate pk = ret where
-    xP = pubkey_to_point pk
-    //ret = maybe False pubkey_subgroup_check xP
+    xP = pubkey_to_point pk  // step 1
     ret = maybe_cases xP
-            False // xP is None
-            (\y -> pubkey_subgroup_check y)
+            False // xP is None, step 2
+            (\y ->   (~ (EC::is_point_O other_curve y)) // Step 3
+                  /\ pubkey_subgroup_check y) // Step 4
 
 // 2.6 CoreSign
 
