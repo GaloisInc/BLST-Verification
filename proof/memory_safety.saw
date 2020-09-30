@@ -52,9 +52,9 @@ let blst_sk_to_pk_in_g2_spec = do {
 
 let hash_to_field_spec nelems aug_len msg_len DST_len = do {
   elems_ptr <- crucible_alloc (llvm_array nelems vec384_type);
-  (_, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 64));
-  (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 64));
-  (_, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 64));
+  (_, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
+  (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (_, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
   crucible_execute_func [elems_ptr, crucible_term {{ `nelems : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}, msg_ptr, crucible_term {{ `msg_len : [64] }}, DST_ptr, crucible_term {{ `DST_len : [64] }}];
   new_elems <- crucible_fresh_var "new_elems" (llvm_array nelems vec384_type);
   crucible_points_to elems_ptr (crucible_term new_elems);
