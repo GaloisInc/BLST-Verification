@@ -5,6 +5,7 @@ services:
     volumes:
       - ./build:/workdir/build:rw
       - ./blst:/workdir/blst:ro
+      - ./cryptol-specs:/workdir/cryptol-specs:ro
       - ./proof:/workdir/proof:ro
       - ./spec:/workdir/spec:ro
       - ./tests:/workdir/tests:ro
