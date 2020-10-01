@@ -90,6 +90,11 @@ let blst_p2_deserialize_spec = do { // TODO: out is left invalid if there is an 
   crucible_return (crucible_term ret);
 };
 
+// NOTE in keygen, something of size `info_len+3` is hashed
+block_data_order_ovs <- make_block_data_order_ovs [IKM_len, (eval_size {|info_len+3|}), aug_len, msg_len, dst_len];
+
+let sha_assembly_overrides = concat [blst_sha256_emit_ov, blst_sha256_hcopy_ov] block_data_order_ovs;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Proofs
 ///////////////////////////////////////////////////////////////////////////////
