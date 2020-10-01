@@ -37,27 +37,17 @@ let {{
     // hs =  [H] # [SHA256Compress H' (SHA256MessageSchedule M) | H' <- hs | M <- Ms]
     hs =  [H] # [processBlock_Common H' M | H' <- hs | M <- Ms]
 
-  // SHA_2_Common: 
+  // SHA_2_Common:
   SHA256foo : {n} (fin n) => [8][32] -> [64*n][8] -> [8][32]
   SHA256foo H a = SHA256Blocks H Ms where
      Ms = map split (split (join a))
     }};
-    
+
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
 
-let vec256_type = (llvm_array 4 (llvm_int 64));
-let vec512_type = (llvm_array 8 (llvm_int 64));
-let vec384_type = (llvm_array 6 (llvm_int 64));
-let vec768_type = (llvm_array 12 (llvm_int 64));
-let vec768x_type = (llvm_array 24 (llvm_int 64));
-let vec384x_type = (llvm_array 12 (llvm_int 64)); // array of two vec384
-
-let pow256_type = llvm_array 32 (llvm_int 8);
-
-let limb_type = (llvm_int 64);
-let size_type = (llvm_int 64);
+include "types.saw";
 
 // First we provide specs for the called assembly routines in order to create overrides
 // for them.
@@ -103,7 +93,7 @@ let blst_sha256_emit_spec = do {
   let md_type = (llvm_array 32 (llvm_int 8));
   md_ptr <- crucible_alloc md_type;
   crucible_execute_func [md_ptr, h_ptr];
-  crucible_points_to md_ptr (crucible_term {{ (split (join h)) :[32][8]}} );
+  crucible_points_to md_ptr (crucible_term {{ (split (join h)) : [32][8]}} );
 };
 
 let blst_sha256_hcopy_spec = do {
@@ -146,25 +136,6 @@ let blst_sha256_bcopy_spec len = do {
 // current offset is 0, `sha256_update` does not bother copying input bytes in
 // its buffer.
 
-// bcopy sizes in one call to sha256_update:
-let sha256_update_bcopy_sizes len offset = do { // returns a pair; first elem is offset, then list of override sizes
-  let sizes =
-    if eval_bool {{ `len == 0 \/ (`offset == 0 /\ (`len:Integer) % 64 == 0)}}
-    then []
-    else
-      if eval_bool {{ (`len:Integer) <= (64-(`offset:Integer)) }} // fits in the remaining buffer space, so there will be a single copy
-      then [eval_size {| len |}]
-      else // does not fit in the remaining buffer space; there will be one or two copies
-        if eval_bool {{ `offset == 0 }}
-        then [eval_size {| len % 64 |}] // one copy
-        else
-          if eval_bool {{ ((`offset:Integer) + (`len:Integer)) % 64 == 0 }}
-          then [eval_size {| 64-offset |}] // one copy
-          else [eval_size {| 64-offset |}, eval_size {| (offset + len) % 64|}]; // two copies
-  let new_offset = eval_size {|(offset + len) % 64|};
-  return (new_offset, sizes);
-};
-
 // `sha256_block_data_order` is called with multiples of the block size. Here
 // we compute what sizes are used.
 
@@ -182,16 +153,6 @@ let sha256_update_block_data_order_sizes len offset =
 
 // Now we define the sizes for the HKDF functions
 
-let HMAC_init_bcopy_sizes len = do {
-  (_, ss_1_) <- sha256_update_bcopy_sizes len 0;
-  let ss_1 =
-    if eval_bool {{ (`len:Integer) > 64 }}
-    then ss_1_
-    else [len];
-  (_, ss_2) <- sha256_update_bcopy_sizes 64 0;
-  return (0, (dedup (concat ss_1 ss_2)));
-};
-
 let HMAC_init_block_data_order_sizes len = do {
   let (_, ss_1_) = sha256_update_block_data_order_sizes len 0;
   let ss_1 =
@@ -201,19 +162,6 @@ let HMAC_init_block_data_order_sizes len = do {
   let (_, ss_2) = sha256_update_block_data_order_sizes 64 0;
   return (0, (dedup (foldr concat [ss_1, ss_2] [1])));
 };
-
-let HKDF_Extract_bcopy_sizes salt_len IKM_len = do {
-  //   * HMAC_init
-  (_, ss_1) <- HMAC_init_bcopy_sizes salt_len;
-  //   * offset is 0 after this
-  //   * HMAC_update
-  (offset_2, ss_2) <- sha256_update_bcopy_sizes IKM_len 0;
-  //   * HMAC_update again (with size 1)
-  (_, ss_x) <- sha256_update_bcopy_sizes 1 offset_2; // TODO: ss_x because added later
-  //   * HMAC_final
-  //      nothing
-  return (dedup (concat ss_1 (concat ss_2 ss_x)));
-  };
 
 let HKDF_Extract_block_data_order_sizes salt_len IKM_len = do {
   //   * HMAC_init
@@ -227,17 +175,6 @@ let HKDF_Extract_block_data_order_sizes salt_len IKM_len = do {
   return (dedup (concat ss_1 (concat ss_2 ss_x)));
   };
 
-let HKDF_Expand_bcopy_sizes info_len L = do {
-  (offset_3, ss_3) <- HMAC_init_bcopy_sizes 32;
-  let ss_4 = if eval_bool {{ `info_len != 0 }} then [info_len] else [];
-  (offset_5, ss_5) <- sha256_update_bcopy_sizes (eval_size {| info_len + 3 |}) 0; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
-  // now there is a while loop, but the offset is reset at every iteration and the sizes are constant
-  (_, ss_6) <- sha256_update_bcopy_sizes 32 0; // offset is 32 after this
-  (_, ss_7) <- sha256_update_bcopy_sizes (eval_size {| info_len + 3 |}) 32; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
-  let ss_8 = [ eval_size {| L % 32 |} ];
-  return (dedup (foldr concat [ss_3, ss_4, ss_5, ss_6, ss_7, ss_8] []));
-  };
-
 let HKDF_Expand_block_data_order_sizes info_len L = do {
   (offset_3, ss_3) <- HMAC_init_block_data_order_sizes 32;
   let (offset_5, ss_5) = sha256_update_block_data_order_sizes (eval_size {| info_len + 3 |}) offset_3; // NOTE: in the C code, info_len is first increased by 2 and then sha256_update is called with info_len + 1
@@ -249,12 +186,6 @@ let HKDF_Expand_block_data_order_sizes info_len L = do {
 
 // ... there are additional calls to sha from KeyGen,
 // ... the first with the predefined salt, then others with 32-byte hashes
-
-let blst_keygen_bcopy_sizes salt_len = do {
-  (_, ss_1) <- sha256_update_bcopy_sizes salt_len 0;
-  (_, ss_2) <- sha256_update_bcopy_sizes 32 0;
-  return (dedup (concat ss_1 ss_2));
-};
 
 let blst_keygen_block_data_order_sizes salt_len = do {
   let (_, ss_1) =  sha256_update_block_data_order_sizes salt_len 0;
@@ -370,6 +301,12 @@ let assumed_overrides = [ redc_mont_256_ov, redc_mont_256_alias_1_2_ov
 
 limbs_from_be_bytes_ov_48 <- crucible_llvm_verify m "limbs_from_be_bytes" [] false (limbs_from_be_bytes_spec48) z3;
 
+bcopy_ovs <- do {
+  let ss = from_to 1 64; // the SHA buffer is 64 bytes long, so we shouldn't be calling bcopy with more than that.
+  ovs <- (for ss make_blst_sha256_bcopy_ov);
+  return ovs;
+};
+
 // unused, but works:
 // vec_is_zero_ov_4 <- crucible_llvm_verify m "vec_is_zero" [] false (vec_is_zero_spec 4) z3;
 
@@ -377,13 +314,10 @@ limbs_from_be_bytes_ov_48 <- crucible_llvm_verify m "limbs_from_be_bytes" [] fal
 
 // Function to verify the instance of HKDF_Extract needed for a call to keygen
 let verify_HKDF_Extract_for salt_len IKM_len = do {
-  ss1 <- HKDF_Extract_bcopy_sizes salt_len IKM_len;
-  ovs1 <- for ss1 make_blst_sha256_bcopy_ov;
-
   ss <- HKDF_Extract_block_data_order_sizes salt_len IKM_len;
   ovs <- for ss make_blst_sha256_block_data_order_ov;
 
-  r <- crucible_llvm_verify m "HKDF_Extract" (concat ovs1 (concat ovs assumed_overrides)) false (HKDF_Extract_spec salt_len IKM_len) (w4_unint_z3 ["processBlock_Common"]);
+  r <- crucible_llvm_verify m "HKDF_Extract" (concat bcopy_ovs (concat ovs assumed_overrides)) false (HKDF_Extract_spec salt_len IKM_len) (w4_unint_z3 ["processBlock_Common"]);
   return r;
 };
 
@@ -397,13 +331,10 @@ verify_HKDF_Extract_for 32 5;
 // Function to verify the instance of HKDF_Expand needed for a call to keygen
 
 let verify_HKDF_Expand_for info_len L = do {
-  ss1 <- HKDF_Expand_bcopy_sizes info_len L;
-  ovs1 <- for ss1 make_blst_sha256_bcopy_ov;
-
   ss <- HKDF_Expand_block_data_order_sizes info_len L;
   ovs <- for ss make_blst_sha256_block_data_order_ov;
-  
-  r <- crucible_llvm_verify m "HKDF_Expand" (concat ovs1 (concat ovs assumed_overrides)) false (HKDF_Expand_spec info_len L) (w4_unint_z3 ["processBlock_Common"]);
+
+  r <- crucible_llvm_verify m "HKDF_Expand" (concat bcopy_ovs (concat ovs assumed_overrides)) false (HKDF_Expand_spec info_len L) (w4_unint_z3 ["processBlock_Common"]);
   return r;
   };
 
@@ -418,12 +349,6 @@ verify_HKDF_Expand_for 32 48;
 
 let keygen_salt_len = 20;
 
-bcopy_ovs_for_keygen <- do {
-  ss <- blst_keygen_bcopy_sizes keygen_salt_len;
-  ovs <- for ss  make_blst_sha256_bcopy_ov;
-  return ovs;
-};
-
 block_data_order_ovs_for_keygen <- do {
   ss <- blst_keygen_block_data_order_sizes keygen_salt_len;
   ovs <- for ss make_blst_sha256_block_data_order_ov;
@@ -432,7 +357,7 @@ block_data_order_ovs_for_keygen <- do {
 
 let keygen_unints = ["HKDF_Extract", "HKDF_Expand"
                     , "mul_mont_rep", "redc_rep"
-                    ]; 
+                    ];
 
 // Function to verify blst_keygen for given input sizes.
 let verify_keygen_for IKM_len info_len = do {
@@ -442,7 +367,7 @@ let verify_keygen_for IKM_len info_len = do {
   ret <- crucible_llvm_verify m "blst_keygen"
     (foldr concat [ [ ov1, ov2, limbs_from_be_bytes_ov_48
                     ]
-                  , bcopy_ovs_for_keygen, block_data_order_ovs_for_keygen
+                  , bcopy_ovs, block_data_order_ovs_for_keygen
                   ]
                   assumed_overrides)
     false
@@ -470,7 +395,7 @@ rep_abs_256 <- prove_print z3 {{ \x -> vec256_rep (vec256_abs x) == x }};
 funny_reduction <- prove_print (quickcheck 100) {{ \x -> mul_mont_r_bv (redc_r_bv x) (vec256_abs RR_rep) == drop (x % (zext bv_r)) }};
 
 let set0 = cryptol_ss ();
-let set1 = addsimps [abs_rep_256, rep_abs_256, funny_reduction] set0;
+let set1 = addsimps [abs_rep_256, funny_reduction] set0;
 
 // This lemma shows the loop bodies of the two definitions are equivalent
 let keygen_lemma IKM_len info_len = {{
@@ -478,7 +403,7 @@ let keygen_lemma IKM_len info_len = {{
   KeyGenStep salt IKM info == vec256_abs (KeyGenStep_rep salt IKM info) }};
 
 // function to prove the lemma for given sizes:
-let prove_keygen_lemma_for a b = 
+let prove_keygen_lemma_for a b =
   prove_print (do {
     unfolding ["KeyGenStep_rep", "KeyGenStep", "mul_mont_rep", "redc_rep"];
     simplify set1;
