@@ -10,11 +10,12 @@ import Common::Field
 import Parameters (t_Fp, Fp)
 import FieldExtras
 import ShortWeierstrassCurve as EC
+import ExpandMessage
 
 parameter
     type p: # // the field characteristic
     type constraint fin p
-    type constraint width p <= 384 // because we have already specialized t BLS12-381 below
+    type constraint width p <= 384 // because we have already specialized to BLS12-381 below
 
     type q: # // the number of elements in the field
     type constraint fin q
@@ -48,13 +49,6 @@ parameter
     A': t_F
     B': t_F
     iso_map: (t_F, t_F) -> (t_F, t_F)
-
-private
-    // From Section 4. Utility Functions
-
-    // For byte strings str1 and str2, strxor(str1, str2) returns the bitwise XOR of the two strings.
-    strxor: {k} ([k][8],[k][8]) -> [k][8]
-    strxor (s1, s2) = s1^s2
 
 // Section 3
 
@@ -112,7 +106,7 @@ hash_to_field (msg, DST) = us where
       type k = 128 // for BLS12-381
       type L = ((lg2 p) + k) /^ 8
       uniform_bytes: [count * m * L][8]
-      uniform_bytes = expand_msg (msg, DST)
+      uniform_bytes = expand_msg msg DST
       // The double loop in the Draft just splits pseduo_random_bytes into
       // "count" parts, each part consisting of m sub_parts,
       // each sub-part consisting of L bytes.
@@ -123,68 +117,6 @@ hash_to_field (msg, DST) = us where
       make_u_i: [m][L][8] -> t_F
       // "drop" here takes the 8*L-bit result and drops leading zeros to get to [384]
       make_u_i part = base_to_F [drop ((OS2IP`{a=[L*8]} bytes) % `p) | bytes <- part]
-
-// 5.3
-
-private
-    // The Draft uses hash function H taking byte strings and outputting byte strings.
-    // we therefore need some glue around SHA_256, which takes and returns bit strings.
-
-    // "Hashable n" holds if [n][8] is an acceptable argument for H
-    type constraint Hashable n = (61 >= width n)
-
-    H: {n} (Hashable n) => [n][8] -> [32][8]
-    H x = split (SHA256::sha (join x))
-
-
-expand_msg = expand_msg_xmd // as per the chosen suites
-
-// Due to the internal calls to H (SHA-256), there is a length limit on the inputs
-// to this function.  In particular, for computing b_0 we give an argument of length
-// r_in_bytes + len_msg + 2 + 1 + 1 + len_DST = 68 + len_msg + len_DST
-//
-// In Cryptol this is a type-checked condition rather than the "abort if" run-time check
-// in the Draft.
-
-type constraint Expandable len_msg len_DST  =  (61 >= width (69 + len_msg + len_DST))
-
-expand_msg_xmd: {len_msg, len_DST, len_in_bytes}
-                (fin len_msg
-                , fin len_DST
-                , len_DST <= 255
-                , fin len_in_bytes
-                , len_in_bytes /^ 32 <= 255
-                , Expandable len_msg len_DST
-                ) => ([len_msg][8], [len_DST][8]) -> [len_in_bytes][8]
-expand_msg_xmd (msg, DST) = take uniform_bytes where
-    //type b = 256                  // output length of SHA-256, in bits
-    //type b_in_bytes = b /^ 8      // = 32
-    type r_in_bytes = 64            // input block size of SHA-256
-    // type ell = len_in_bytes /^ b_in_bytes
-    // abort if ell > 255           // this is computed in the type constraint
-    DST_prime = DST # (I2OSP`{xLen=1} (`len_DST)) // Changed from rev 6
-    Z_pad = I2OSP`{xLen=r_in_bytes} (0)
-    l_i_b_str = I2OSP`{xLen=2} (`len_in_bytes)
-    msg' = Z_pad # msg # l_i_b_str # (I2OSP`{1} 0) # DST_prime
-    b_0 = H (msg')
-    b_1 = H (b_0 # (I2OSP`{xLen=1} 1) # DST_prime)
-    bs = [b_1] # [H(strxor(b_0, b_prev) # (I2OSP`{xLen=1} i) # DST_prime) | b_prev <- bs | i:[8] <- [2...]]
-    uniform_bytes = join bs
-
-expand_b0: {len_msg, len_DST, len_in_bytes}
-                (fin len_msg
-                , fin len_DST
-                , len_DST <= 255
-                , fin len_in_bytes
-                , len_in_bytes /^ 32 <= 255
-                , Expandable len_msg len_DST
-                ) => ([len_msg][8], [len_DST][8]) -> [32][8]
-expand_b0 (msg, DST) = b_0 where
-    type r_in_bytes = 64            // input block size of SHA-256
-    DST_prime = DST # (I2OSP`{xLen=1} (`len_DST)) # [0x80]
-    Z_pad = I2OSP`{xLen=r_in_bytes} (0)
-    l_i_b_str = I2OSP`{xLen=2} (`len_in_bytes)
-    b_0 = H (Z_pad # msg # l_i_b_str # (I2OSP`{1} 0) # DST_prime)
 
 // 6.6.2 Simplified SWU
 
