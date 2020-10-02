@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
 ////// Field extensions
 //
 // Extension fields are represented as polynomial quotient rings,

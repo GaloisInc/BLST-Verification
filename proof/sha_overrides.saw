@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
 import "../cryptol-specs/Primitive/Keyless/Hash/SHA256.cry";
 
 // Needed for the sha subfunction specifications:

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
 import Pairing
 import Parameters as P
 import ShortWeierstrassCurve as EC

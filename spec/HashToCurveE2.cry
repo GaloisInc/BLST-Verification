@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
 module HashToCurveE2 = HashToCurveGeneric where
 
 // NOTE: Our ExtensionField and Polynonial modules represents elements

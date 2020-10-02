@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
 // Proof of correspondence for the KeyGen implementation
 //
 // Note that we cannot show termination, so we have a patch that caps the iterations at
