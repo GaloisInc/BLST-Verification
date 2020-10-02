@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
 // Two representation of a finite field with p elements, where p is prime.
 //
 // The first uses the modular type "Z n", while the second uses bit vectors.

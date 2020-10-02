@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
 // Curves in Weierstrass short form, over an arbitrary field
 //
 // That is, the curve equation is y^2 = x^3 + ax + b for some a, b in the field.

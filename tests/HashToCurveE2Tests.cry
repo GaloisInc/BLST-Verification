@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
 // Tests for hashing to curve E1, from draft-irtf-cfrg-hash-to-curve-09
 
 import HashToCurveE2
