@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
 // Hash-to-curve for BLS
 // Two variants are used:
 // BLS12381G1_XMD:SHA-256_SSWU_RO_ and  BLS12381G2_XMD:SHA-256_SSWU_RO_

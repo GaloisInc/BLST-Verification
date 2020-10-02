@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
 let IKM_len = 129;
 let info_len = 67;
 // sizes fixed in keygen.c:

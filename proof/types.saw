@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
 let vec256_type = (llvm_array 4 (llvm_int 64));
 let vec512_type = (llvm_array 8 (llvm_int 64));
 let vec384_type = (llvm_array 6 (llvm_int 64));

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
 // Pairing for tyhe BLS curves, from draft-irtf-cfrg-pairing-friendly-curves-07
 
 module Pairing where
