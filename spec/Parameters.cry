@@ -50,7 +50,6 @@ from_Fp x = x
 
 
 //       F_p^2 = F_p[u] / (u^2 + 1)
-// Fp_2 = extension_field Fp [0,`p-1] // [Fp.field_zero, Fp.neg Fp.field_unit] // [0,-1]
 Fp_2 = extension_field Fp [Fp.field_zero, Fp.neg Fp.field_unit] // [0,-1]
 type t_Fp_2 = [2]t_Fp
 

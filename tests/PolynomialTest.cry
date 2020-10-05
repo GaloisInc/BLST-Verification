@@ -16,7 +16,8 @@ poly_mul_0:  {t,k} (fin k, k>=1) => FieldRep t -> [k]t ->Bool
 poly_mul_0 F x = poly_equal F (poly_mul F x (poly_0 F), poly_0 F)
 
 poly_mul_1:  {t,k} (fin k, k>=1) => FieldRep t -> [k]t ->Bool
-poly_mul_1 F x = poly_equal F (poly_mul F x (poly_1 F), x)
+poly_mul_1 F x =
+   is_OK F x ==> poly_equal F (poly_mul F x (poly_1 F), x)
 
 poly_mul_commutes:  {t,k} (fin k, k>=1) => FieldRep t -> [k]t -> [k]t ->Bool
 poly_mul_commutes F x y =
@@ -34,7 +35,7 @@ poly_div_mod_prop F x y =
 poly_inverse_mod_prop: {k,t} (fin k, k >= 1) => FieldRep t -> [k]t -> [k]t -> Bool
 // only when q represents an irreducible polynomial
 poly_inverse_mod_prop F q p =
-    (is_OK F q) /\ is_OK F p /\ ~ (poly_equal F (p, poly_0 F)) ==>
+    (is_OK F q) /\ is_OK F p /\ ~ (poly_equal F (p, poly_0 F)) ==> 
     poly_equal F (poly_mul_mod F p (poly_inverse_mod F p q) q, poly_1 F)
 
 
@@ -51,8 +52,9 @@ property mul_mod_commutes_F7 = poly_mul_mod_commutes`{k=4} F7
 property div_mod_F7 = poly_div_mod_prop`{k=3} F7
 property div_mod_F7' = poly_div_mod_prop`{k=8} F7
 
-property inverse_mod_F7  p = poly_inverse_mod_prop`{k=3} F7 p [1,1,3] // q=x^2+x+3 is irreducible in F7
-property inverse_mod_F7' p = poly_inverse_mod_prop`{k=4} F7 p [1,1,2,3] // x^3+x^2+2x+3 is irreducible in F7
+// for the inverse_mod property, take care to recall the unusual representatin of the modulus.
+property inverse_mod_F7 = poly_inverse_mod_prop`{k=3} F7 [1,1,3] // q=x^3-x^2-x-3 is irreducible in F7
+property inverse_mod_F7' = poly_inverse_mod_prop`{k=4} F7 [2,0,1,1] // x^4-2*x^3-x-1 is irreducible in F7
 
 property mul_0_F29 = poly_mul_0`{k=4} F29
 property mul_1_F29 = poly_mul_1`{k=4} F29
@@ -61,5 +63,5 @@ property mul_mod_commutes_F29 = poly_mul_mod_commutes`{k=4} F29
 
 property div_mod_F29 = poly_div_mod_prop`{k=3} F29
 
-property inverse_mod_F29 p = poly_inverse_mod_prop`{k=3} F29 p [2,3,5]
-property inverse_mod_F29' p = poly_inverse_mod_prop`{k=4} F29 p [1,0,1,4]
+property inverse_mod_F29 = poly_inverse_mod_prop`{k=3} F29 [2,3,5] // x^3-2x^2-3y-5 is irreducible in F29
+property inverse_mod_F29' = poly_inverse_mod_prop`{k=4} F29 [27,1,1,6] // x^4-27x^3-x^2-x-6, also irreducible
