@@ -28,8 +28,4 @@ cryptol <<EOF
 :check
 :l tests/HashToCurveE2Tests.cry
 :check
-:l tests/FrobeniusTests.cry
-:set tests=10
-:check
-:set tests=100
 EOF
