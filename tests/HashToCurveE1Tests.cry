@@ -4,6 +4,7 @@
 */
 // Tests for hashing to curve E1, from draft-irtf-cfrg-hash-to-curve-09
 
+import ExpandMessage
 import HashToCurveE1
 import ShortWeierstrassCurve as EC
 import Parameters as P
@@ -13,15 +14,15 @@ import Parameters as P
 dst_1 = "QUUX-V01-CS02-with-expander"
 
 property expand_test_1 =
-    expand_msg ("", dst_1) ==
+    expand_msg "" dst_1 ==
     split 0xf659819a6473c1835b25ea59e3d38914c98b374f0970b7e4c92181df928fca88
 
 property expand_test_2 =
-    expand_msg ("abc", dst_1) ==
+    expand_msg  "abc" dst_1 ==
     split 0x1c38f7c211ef233367b2420d04798fa4698080a8901021a795a1151775fe4da7
 
 property expand_test_3 =
-    expand_msg ("abcdef0123456789", dst_1) ==
+    expand_msg "abcdef0123456789" dst_1 ==
     split 0x8f7e7b66791f0da0dbb5ec7c22ec637f79758c0a48170bfb7c4611bd304ece89
 
 msg_q128 = "q128_qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" #
@@ -29,14 +30,14 @@ msg_q128 = "q128_qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" #
            "qqqqqqqqqqqqqqqqqqqqqqqqq"
 
 property expand_test_4 =
-    expand_msg (msg_q128, dst_1) ==
+    expand_msg msg_q128 dst_1 ==
     split 0x72d5aa5ec810370d1f0013c0df2f1d65699494ee2a39f72e1716b1b964e1c642
 
 
 msg_a512 = "a512_"  # ['a' | _ <- [0..511]]
 
 property expand_test_5 =
-    expand_msg (msg_a512, dst_1) ==
+    expand_msg msg_a512 dst_1 ==
     split 0x3b8e704fc48336aca4c2a12195b720882f2162a4b7b13a9c350db46f429b771b
 
 // From Section H.9.1, BLS12381G1_XMD:SHA-256_SSWU_RO_
