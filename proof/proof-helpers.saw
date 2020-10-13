@@ -1,0 +1,107 @@
+/* ================================================================
+
+For proof development it is convenient to have some cover functions
+that call the prover commands.  We provide a SAW boolean `do_prove`;
+if set `true`, then all the `verify` type commands below actually do
+proofs, and if set `false`, they merely assume the theorem or code
+specification.
+
+The `really_` functions run proofs regardless of the value of `do_prove`.
+
+Thus, in proof development, we will set `do_prove = false`, and use
+the `really_` prefix on the proofs we are working on, so when running
+SAW we get immediately to the proof of interest.  Once those proofs
+work, the `really_` prefix is removed, and we go on the the next
+proof.
+
+Finally, we need to periodically run the scripts with `do_prove =
+true` to make sure all the proofs are still working.
+
+These functions assume that the LLVM code of interest has been loaded
+to variable `m`, so it does not appear in the verify commands.
+
+The `do_prove` variable must be set before loading this file, as well
+as `m`.
+
+
+*/
+
+let prover = w4_unint_z3;
+
+///////////////////////////////////////////////////////////////////////////////
+// Proof commands for use in production
+
+// ... for code proofs
+
+let verify_unint func overrides unints spec =  
+  if do_prove
+  then crucible_llvm_verify m func overrides false spec (prover unints) 
+  else crucible_llvm_unsafe_assume_spec m func spec;
+
+let verify func overrides spec =
+  verify_unint func overrides [] spec; 
+
+let test func overrides spec =
+  if do_prove
+  then crucible_llvm_verify m func overrides false spec (quickcheck 100)
+  else crucible_llvm_unsafe_assume_spec m func spec;
+
+let custom_verify func overrides spec custom_tactic = 
+  if do_prove
+  then crucible_llvm_verify m func overrides false spec custom_tactic 
+  else crucible_llvm_unsafe_assume_spec m func spec;
+
+let admit func overrides spec =
+  crucible_llvm_unsafe_assume_spec m func spec;
+
+// ... and for Cryptol theorems
+
+let admit_cryptol thm =
+  prove_print assume_unsat thm;
+
+let prove_cryptol thm unints =
+  if do_prove
+  then prove_print (prover unints) thm
+  else admit_cryptol thm;
+
+let custom_prove_cryptol thm script =
+  if do_prove
+  then prove_print script thm
+  else admit_cryptol thm;
+
+///////////////////////////////////////////////////////////////////////////////
+// Proof commands for use in development
+
+// ... for code proofs
+
+let really_verify_unint func overrides unints spec =
+    crucible_llvm_verify m func overrides false spec (prover unints);
+
+let really_verify func overrides spec =
+    really_verify_unint func overrides [] spec;
+
+let really_test func overrides spec =
+    crucible_llvm_verify m func overrides false spec (quickcheck 100); 
+
+let really_custom_verify func overrides spec custom_tactic = 
+  crucible_llvm_verify m func overrides false spec custom_tactic;
+
+let show_admit func overrides spec =
+   crucible_llvm_verify m func overrides false spec
+     (do { simplify basic_ss; simplify (cryptol_ss()); print_goal; assume_unsat; });
+
+let show_goal func overrides unints spec transformations =
+    crucible_llvm_verify m func overrides false spec do {
+        transformations;
+        print_goal;
+        prover unints;
+   };
+
+// ... and for Cryptol theorems
+
+let really_prove_cryptol thm unints =
+  prove_print (prover unints) thm;
+
+let really_custom_prove_cryptol thm script =
+  prove_print script thm;
+ 
