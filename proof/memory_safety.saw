@@ -23,7 +23,7 @@ include "ec_opts.saw";
 ///////////////////////////////////////////////////////////////////////////////
 
 let blst_keygen_spec IKM_len info_len = do {
-  SK_ptr <- crucible_alloc vec256_type;
+  SK_ptr <- crucible_alloc pow256_type;
 
   IKM <- crucible_fresh_var "IKM" (llvm_array IKM_len (llvm_int 8));
   IKM_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array IKM_len (llvm_int 8));
@@ -34,7 +34,7 @@ let blst_keygen_spec IKM_len info_len = do {
   crucible_points_to info_ptr (crucible_term info);
 
   crucible_execute_func [SK_ptr, IKM_ptr, crucible_term {{ `IKM_len:[64]}}, info_ptr, crucible_term {{ `info_len:[64]}}];
-  new_SK <- crucible_fresh_var "new_SK" vec256_type;
+  new_SK <- crucible_fresh_var "new_SK" pow256_type;
   crucible_points_to SK_ptr (crucible_term new_SK);
 };
 
