@@ -7,9 +7,11 @@ import ShortWeierstrassCurve
 
 // representation of field elements:
 
-property Fp_to_octets_to_Fp x = octets_to_Fp (Fp_to_octets x) == x
+property Fp_to_octets_to_Fp x =
+  Fp.is_val x ==> octets_to_Fp (Fp_to_octets x) == x
 
-property Fp_12_to_octets_to_Fp_12 x = octets_to_Fp_12 (Fp_12_to_octets x) == x
+property Fp_12_to_octets_to_Fp_12 x =
+  Fp_12.is_val x ==> octets_to_Fp_12 (Fp_12_to_octets x) == x
 
 // Sanity checks on the curve parameters
 
