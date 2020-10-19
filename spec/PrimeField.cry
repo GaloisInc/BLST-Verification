@@ -5,9 +5,9 @@
 // Three representation of a finite field with p elements, where p is prime.
 //
 // The first uses Integers, the second the modular type `Z n`, and 
-// while the third uses bit vectors.
+// the third uses bit vectors.
 //
-// In the second, then, "p" is a type parameter, while in the otehr two it
+// In the second, then, "p" is a type parameter, while in the other two it
 // is a value parameter.
 
 module PrimeField where
@@ -57,6 +57,7 @@ mod_div_Z (p,x,y) = egcd(p,0,y,x)
       else
         egcd(b, rb, (a - b) / 2, mod_half_Z (p, (ra-rb)%p))
 
+
 /**
  * A finite field with a prime number of elements, represented
  * using modular types: `prime_field`k is represented with type `Z k`.
@@ -78,6 +79,7 @@ prime_field =
     , field_unit = 1
     , is_equal (x, y) = x==y
     }
+
 
 /**
  * A finite field with a prime number of elements, represented using
