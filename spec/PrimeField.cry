@@ -2,11 +2,12 @@
  * Copyright (c) 2020 Galois, Inc.
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
-// Two representation of a finite field with p elements, where p is prime.
+// Three representation of a finite field with p elements, where p is prime.
 //
-// The first uses the modular type "Z n", while the second uses bit vectors.
+// The first uses Integers, the second the modular type `Z n`, and 
+// while the third uses bit vectors.
 //
-// In the first, then, "p" is a type parameter, while in the second it
+// In the second, then, "p" is a type parameter, while in the otehr two it
 // is a value parameter.
 
 module PrimeField where
@@ -14,6 +15,47 @@ module PrimeField where
 import Common::Field
 import Common::ModDivZ
 import Common::mod_arith
+
+/**
+ * A finite field with a prime number of elements, represented
+ * using Integers
+ *
+ * The constructor does not check that `p` is prime, so the caller should.
+ */
+prime_field_integer: Integer -> FieldRep Integer
+prime_field_integer p =
+    { is_val x = 0 <= x /\ x < p
+    , normalize x = x % p
+    , add (x, y) = (x + y) % p
+    , sub (x, y) = (x - y) % p
+    , neg x = p-x
+    , mul (x,y) = (x*y) % p
+    , sq x = (x*x) % p
+    , half x = mod_half_Z (p,x)
+    , div (x,y) = mod_div_Z (p,x,y)
+    , field_zero = 0
+    , field_unit = 1
+    , is_equal (x, y) = x==y
+    }
+
+mod_half_Z: (Integer,Integer)-> Integer
+mod_half_Z (p, x) = if (x%2==0) then x/2 else (x+p)/2
+
+/* Returns x/y in F_p using Euler's binary gcd algorithm. */
+/* Taken from [HMV] */
+mod_div_Z : (Integer,Integer,Integer) -> Integer
+mod_div_Z (p,x,y) = egcd(p,0,y,x)
+  where
+    /* In code below, a is always odd. */
+    egcd(a,ra,b,rb) =
+      if b == 0 then
+        ra
+      else if (b % 2) == 0 then /* b is even. */
+        egcd(a, ra, b / 2, mod_half_Z(p, rb))
+      else if a < b then
+        egcd(a, ra, (b - a) / 2, mod_half_Z (p, (rb-ra)%p))
+      else
+        egcd(b, rb, (a - b) / 2, mod_half_Z (p, (ra-rb)%p))
 
 /**
  * A finite field with a prime number of elements, represented
