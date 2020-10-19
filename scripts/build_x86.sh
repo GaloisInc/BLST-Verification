@@ -9,4 +9,4 @@ cd build/x86
 export CFLAGS='-g -fPIC -Wall -Wextra -Werror'
 export CC=clang
 sed -i'' 's/^trap/# trap/' build.sh
-./build.sh
+./build.sh -shared

@@ -58,4 +58,4 @@ let len_in_bytes = eval_size {| nelems * L |};
 
 expand_message_ov <- verify_expand_message_for len_in_bytes aug_len msg_len dst_len;
 
-include "assembly_overrides.saw";
+include "x86.saw";

@@ -6,9 +6,9 @@ rm -r build/llvm
 cp -r blst build/llvm
 cd build/llvm
 
-for p in `ls /workdir/patches`
+for p in ../../patches/*
 do
-  patch -p1 -t < /workdir/patches/"$p"
+  patch -p1 -t < "$p"
 done
 
 export CFLAGS='-g -fPIC -Wall -Wextra -Werror'

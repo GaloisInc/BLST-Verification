@@ -1,0 +1,39 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+enable_experimental;
+
+let x86_tactic = do {
+  print_goal;
+  w4;
+};
+
+let do_prove_x86 = true;
+let verify_x86 name spec =
+  if do_prove_x86
+  then
+  crucible_llvm_verify_x86 m "../../build/x86/libblst.so" name
+    []
+    false
+    spec
+    x86_tactic
+  else
+  crucible_llvm_unsafe_assume_spec m name spec;
+
+include "x86/add_mod_256.saw";
+include "x86/add_mod_384.saw";
+include "x86/add_mod_384x384.saw";
+include "x86/inverse_mod_384.saw";
+include "x86/mulx_mont_256.saw";
+include "x86/mulx_mont_384.saw";
+
+let assembly_overrides = concat_all
+  [ add_mod_256_overrides
+  , add_mod_384_overrides
+  , add_mod_384x384_overrides
+  , inverse_mod_384_overrides
+  , mulx_mont_256_overrides
+  , mulx_mont_384_overrides
+  ];

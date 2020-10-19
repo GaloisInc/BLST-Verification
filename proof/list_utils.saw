@@ -42,3 +42,5 @@ let map f =
     then []
     else concat [f (head xs)] (m (tail xs)))
   in m;
+
+let concat_all xs = foldr concat xs [];
