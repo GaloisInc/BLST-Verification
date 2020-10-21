@@ -1,0 +1,214 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+// Overrides needed for the elliptic curve arithmetic operarations
+// These are the basic field operations for Fp or Fp2.
+// Here, we assume the specs, but eventually we will prove them 
+//
+
+/* for X in {fp, fp2}:
+  add_X, sub_X, sqr_X, mul_X, mul_by_3_X, mul_by_8_X
+*/
+
+// There are three approaches to writing the postconditions, either
+// - (abs result) = fn (abs arg)
+// - result = rep (fn (abs arg)) --- OK, if we have a rewrite (abs (rep x)) == x
+// - result = fn' arg --- OK, but need implementation_specific definition for fn',
+//                        and then a proof abs (fn' arg) == fn (abs arg).
+
+let use_abs_method = true;
+let use_rep_method = false;
+
+include "helpers.saw";
+include "list_utils.saw";
+include "types.saw";
+
+import "../spec/Parameters.cry";
+import "../spec/PrimeField.cry";
+import "../spec/implementation/Field.cry";
+
+m <- llvm_load_module "../build/llvm/libblst.a.bc";
+
+// generic unary operation specification, pass-by-reference, no aliasing
+let unop_spec name llvm_type inv rep abs op = do {
+  ret_ptr <- crucible_alloc llvm_type;
+  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
+  crucible_precond {{ inv x }};
+  crucible_execute_func [ret_ptr, x_ptr];
+  if use_abs_method
+  then do {
+    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
+    crucible_points_to ret_ptr (crucible_term ret);
+    crucible_postcond {{inv ret }};
+    crucible_postcond {{ abs ret == op (abs x) }};
+    }
+  else if use_rep_method
+  then crucible_points_to ret_ptr (crucible_term {{ rep (op (abs x)) }})
+  else crucible_points_to ret_ptr (crucible_term {{ op x }});
+};
+
+// generic unary operation specification, pass-by-reference, aliasing
+let unop_alias_1_2_spec name llvm_type inv rep abs op = do {
+  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
+  crucible_precond {{ inv x }};
+  crucible_execute_func [x_ptr, x_ptr];
+  if use_abs_method
+  then do {
+    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
+    crucible_points_to x_ptr (crucible_term ret);
+    crucible_postcond {{inv ret }};
+    crucible_postcond {{ abs ret == op (abs x) }};
+    }
+  else if use_rep_method
+  then crucible_points_to x_ptr (crucible_term {{ rep (op (abs x)) }})
+  else crucible_points_to x_ptr (crucible_term {{ op x }});
+};
+
+// generic binary operation specification, pass-by-reference, no aliasing
+let binop_spec name llvm_type inv rep abs op = do {
+  ret_ptr <- crucible_alloc llvm_type;
+  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
+  (y, y_ptr) <- ptr_to_fresh_readonly "y" llvm_type;
+  crucible_precond {{ inv x /\ inv y }};
+  crucible_execute_func [ret_ptr, x_ptr, y_ptr];
+  if use_abs_method
+  then do {
+    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
+    crucible_points_to ret_ptr (crucible_term ret);
+    crucible_postcond {{inv ret }};
+    crucible_postcond {{ abs ret == op (abs x, abs y) }};
+    }
+  else if use_rep_method
+  then crucible_points_to ret_ptr (crucible_term {{ rep (op (abs x, abs y)) }})
+  else crucible_points_to ret_ptr (crucible_term {{ op x y }});
+};
+
+// generic binary operation specification, pass-by-reference, aliasing return with first arg
+let binop_alias_1_2_spec name llvm_type inv rep abs op = do {
+  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
+  (y, y_ptr) <- ptr_to_fresh_readonly "y" llvm_type;
+  crucible_precond {{ inv x /\ inv y }};
+  crucible_execute_func [x_ptr, x_ptr, y_ptr];
+  if use_abs_method
+  then do {
+    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
+    crucible_points_to x_ptr (crucible_term ret);
+    crucible_postcond {{inv ret }};
+    crucible_postcond {{ abs ret == op (abs x, abs y) }};
+    }
+  else if use_rep_method
+  then crucible_points_to x_ptr (crucible_term {{ rep (op (abs x, abs y)) }})
+  else crucible_points_to x_ptr (crucible_term {{ op x y }});
+};
+
+////////////////////////////////////////////////////////////////
+//
+// Fp operations
+//
+
+// .. theorems (useful rewrites?)
+
+// we sometimes need to undo SAW's rip-and-restitching of vectors.  It is a bit tricky 
+let at0 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 0";
+let at1 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 1";
+let at2 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 2";
+let at3 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 3";
+let at4 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 4";
+let at5 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 5";
+
+unrip_thm <- prove_print z3 (rewrite (cryptol_ss ()) {{ \(x:[6][64]) -> [at0 x, at1 x, at2 x, at3 x, at4 x, at5 x] == x }});
+
+// ... and sometimes the rip-and-restitch has if-then-else pushed inside, so here we hoist out
+seq_ite_thm <-
+  prove_print z3
+  (rewrite (cryptol_ss ()) {{ \x (y0:[64]) y1 y2 y3 y4 y5 z0 z1 z2 z3 z4 z5 ->
+                                  [ if x then y0 else z0
+                                  , if x then y1 else z1
+                                  , if x then y2 else z2
+                                  , if x then y3 else z3
+                                  , if x then y4 else z4
+                                  , if x then y5 else z5]
+                            == if x then [y0,y1,y2,y3,y4,y5] else [z0,z1,z2,z3,z4,z5] }});
+
+
+// ... we also sometimes want to hoist `if`-terms out of function arguments, so that
+//     rewrite rules can apply (e.g, if `f y` might match a rewrite)
+
+let hoist f unints =
+  prove_print (w4_unint_z3 unints) {{\x y z -> f (if x then y else z) == if x then f y else f z}};
+
+abs_ite_thm <- hoist {{fp_abs}} ["fp_abs"] ;
+invariant_ite_thm <- hoist {{fp_invariant}} [] ; 
+
+print "abs_ite_thm";
+print abs_ite_thm;
+
+// ... we will probably also need some algebraic rewrites
+// associate mul to the right
+// mul_assoc_thm <- prove_print z3 {{ \x y z -> xmul`{p} (xmul (x,y), z) == xmul (x, xmul (y,z)) }};
+// mul_assoc_thm <- prove_print z3 {{ \ (x:t_Fp) y z -> xmul (xmul x y) z == xmul x (xmul y z) }};
+
+let fp_simpset = addsimps [abs_ite_thm, seq_ite_thm, invariant_ite_thm] (cryptol_ss ());
+
+let apply_fp_rewrites = simplify fp_simpset;
+
+////////////////////////////////////////////////////////////////
+//
+// Overrides for the fp_operations
+
+// ... binary ops
+
+let fp_binop_ovs name op = do {
+  let plain_spec = binop_spec name vec384_type {{fp_invariant}} {{fp_rep}} {{fp_abs}} op;
+  plain_ov <- crucible_llvm_unsafe_assume_spec m name plain_spec;
+
+  let alias_1_2_spec = binop_alias_1_2_spec name vec384_type {{fp_invariant}} {{fp_rep}} {{fp_abs}} op;
+  alias_1_2_ov <- crucible_llvm_unsafe_assume_spec m name alias_1_2_spec;
+
+  return [plain_ov, alias_1_2_ov];
+  };
+
+add_fp_ovs <- fp_binop_ovs "add_fp" {{Fp.add}} ;
+sub_fp_ovs <- fp_binop_ovs "sub_fp" {{Fp.sub}} ;
+mul_fp_ovs <- fp_binop_ovs "mul_fp" {{Fp.mul}} ;
+
+// ... unary ops
+
+let sqr_fp_spec =
+  unop_spec "sqr_fp" vec384_type {{ fp_invariant }} {{fp_rep}} {{fp_abs}} {{Fp.sq}};
+
+sqr_fp_ov <- crucible_llvm_unsafe_assume_spec m "sqr_fp" sqr_fp_spec;
+
+let sqr_fp_alias_1_2_spec =
+  unop_alias_1_2_spec "sqr_fp" vec384_type {{ fp_invariant }} {{fp_rep}} {{fp_abs}} {{Fp.sq}};
+
+sqr_fp_alias_1_2_ov <- crucible_llvm_unsafe_assume_spec m "sqr_fp" sqr_fp_alias_1_2_spec;
+
+let mul_by_3_fp_alias_1_2_spec =
+  unop_alias_1_2_spec "mul_by_3_fp" vec384_type {{ fp_invariant }} {{fp_rep}} {{fp_abs}} {{ mul_by_3 Fp }};
+
+mul_by_3_fp_alias_1_2_ov <- crucible_llvm_unsafe_assume_spec m "mul_by_3_fp" mul_by_3_fp_alias_1_2_spec;
+
+let mul_by_8_fp_alias_1_2_spec =
+  unop_alias_1_2_spec "mul_by_8_fp" vec384_type {{ fp_invariant }} {{fp_rep}} {{fp_abs}} {{ mul_by_8 Fp }};
+
+mul_by_8_fp_alias_1_2_ov <- crucible_llvm_unsafe_assume_spec m "mul_by_8_fp" mul_by_8_fp_alias_1_2_spec;
+
+// ... variables useful for proof scripts:
+
+let fp_overrides = foldr concat [add_fp_ovs, sub_fp_ovs, mul_fp_ovs]
+                     [sqr_fp_ov, sqr_fp_alias_1_2_ov
+                     , mul_by_3_fp_alias_1_2_ov, mul_by_8_fp_alias_1_2_ov];
+
+let fp_unints = ["fp_abs", "fp_invariant"
+                // , "mul_by_3", ,"mul_by_8" -- CANNOT include these as they are polymorphic
+                , "mod_add", "mod_sub", "mod_neg", "mod_mul", "mod_half", "mod_div"];
+
+////////////////////////////////////////////////////////////////
+//
+// Fp_2 operations
+//
+
+// TODO.  after we see the Fp operations work.

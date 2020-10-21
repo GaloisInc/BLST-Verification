@@ -1,0 +1,71 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+//
+// Finite field representations in blst
+//
+
+module implementation::Field where
+
+import Common::Field
+import implementation::Types
+import Parameters ( p, Fp, t_Fp, to_Fp, from_Fp, t_Fp_2, Fp_2)
+
+mul_by_3: {t} FieldRep t -> t -> t
+mul_by_3 F x = F.add (x, F.add (x, x))
+
+mul_by_8: {t} FieldRep t -> t -> t
+mul_by_8 F x = x8 where
+  x2 = F.add (x, x)
+  x4 = F.add (x2, x2)
+  x8 = F.add (x4, x4)
+  
+////////////////////////////////////////////////////////////////
+//
+// Fp
+
+montgomery_factor_p: t_Fp
+// montgomery_factor_p = (2^^384) // NOT portable between Fp implementations.
+montgomery_factor_p = Fp.mul (2^^4, 2^^380)
+
+montgomery_factor_inverse_p: t_Fp
+montgomery_factor_inverse_p = Fp.div(Fp.field_unit, montgomery_factor_p)
+
+from_mont: t_Fp -> t_Fp
+from_mont x = Fp.mul (x, montgomery_factor_inverse_p)
+
+to_mont: t_Fp -> t_Fp
+to_mont x = Fp.mul(x, montgomery_factor_p)
+
+type Fp_rep_t = Vec384
+
+fp_abs: Fp_rep_t -> t_Fp
+fp_abs v = from_mont (to_Fp (vec384_abs v))
+
+fp_rep: t_Fp -> Fp_rep_t
+fp_rep x = vec384_rep (from_Fp (to_mont x))
+
+fp_invariant: Fp_rep_t -> Bool
+fp_invariant v = vec384_abs v < `p // TODO: check!
+
+
+////////////////////////////////////////////////////////////////
+//
+// Fp2
+
+type Fp_2_rep_t = [2]Fp_rep_t
+
+fp2_abs: Fp_2_rep_t -> t_Fp_2
+fp2_abs [a,b] = [fp_abs b, fp_abs a]
+
+fp2_rep: t_Fp_2 -> Fp_2_rep_t
+fp2_rep [a,b] = [fp_rep b, fp_rep a]
+
+fp2_invariant: Fp_2_rep_t -> Bool
+fp2_invariant v = all fp_invariant v
+
+// fp6 - TODO
+
+// fp12 - TODO
