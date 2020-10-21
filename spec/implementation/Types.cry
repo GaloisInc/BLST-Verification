@@ -1,0 +1,39 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+
+// Implementation types for blst
+//
+
+module implementation::Types where
+
+type Vec256 = [4][64]
+type Vec384 = [6][64]
+type Vec512 = [8][64]
+type Vec768 = [12][64]
+type Pow256 = [32][8]
+type Limb = [64]
+type Size_t = [64]
+
+// Vectors represent numbers, using a little-endian representation
+
+/**
+ * The integer (bitvector) represented by a vector (Vec256, Vec384, ...)
+ */
+vec_abs: {n} (fin n) => [n]Limb -> [n*64]
+vec_abs limbs = join (reverse limbs)
+
+vec256_abs = vec_abs`{256/64}
+vec384_abs = vec_abs`{384/64}
+vec512_abs = vec_abs`{512/64}
+
+/**
+ * A vector representing a given (bitvector) integer.  The integer should be non-negative.
+ */
+vec_rep:  {n} (fin n) => [n*64] -> [n]Limb
+vec_rep x = reverse (split x)
+
+vec256_rep = vec_rep`{256/64}
+vec384_rep = vec_rep`{384/64}

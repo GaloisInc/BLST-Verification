@@ -1,0 +1,266 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+module implementation::CurveOperation where
+
+import Common::Field
+import FieldExtras
+import Parameters (t_Fp, to_Fp, t_Fp_2, Fp, Fp_2, E, E')
+import ShortWeierstrassCurve
+import ProjectiveCurveOperations
+import implementation::Types
+import implementation::Field
+
+select: {t} t -> t-> Bit -> t
+select a b c = if c then a else b
+
+type POINTonE1_t = (Vec384, Vec384, Vec384)
+type POINTonE1_affine_t = (Vec384, Vec384)
+
+// monomorphic instances of `select` that can be used uninterpreted in proofs.
+select_POINTonE1_rep a = select`{POINTonE1_t} a
+select_POINTonE1 a = select`{ProjectivePoint t_Fp} a
+select_Fp a = select`{t_Fp} a
+
+POINTonE1_invariant: POINTonE1_t -> Bool
+POINTonE1_invariant (x,y,z) = fp_invariant x /\ fp_invariant y /\ fp_invariant z
+   // Should we also insist the point in on the curve?
+
+POINTonE1_abs: POINTonE1_t -> ProjectivePoint t_Fp
+POINTonE1_abs (x,y,z) = (fp_abs x, fp_abs y, fp_abs z)
+
+POINTonE1_rep: ProjectivePoint t_Fp -> POINTonE1_t
+POINTonE1_rep (x,y,z) = (fp_rep x, fp_rep y, fp_rep z)
+
+
+POINTonE1_affine_invariant: POINTonE1_affine_t -> Bool
+POINTonE1_affine_invariant (x,y) = fp_invariant x /\ fp_invariant y
+   // Should we also insist the point in on the curve?
+
+POINTonE1_affine_abs: POINTonE1_affine_t -> AffinePoint t_Fp
+POINTonE1_affine_abs (x,y) = (fp_abs x, fp_abs y)
+
+POINTonE1_affine_rep: AffinePoint t_Fp -> POINTonE1_affine_t
+POINTonE1_affine_rep (x,y) = (fp_rep x, fp_rep y)
+
+// e1_op f x y = POINTonE1_rep (f E (POINTonE1_abs x) (POINTonE1_abs y))
+
+// algorithms from transcription of the C code
+// assignments in straight-line code are transcribed to definitions in a `where` block
+// NOTE: where variables are assigned to multiple times, we name each with a suffix,
+// _1, _2, etc.  Some care is needed to be sure to refer to the correct name.
+
+// If cryptol had "where*" or "let*" this would be easier.
+
+// TODO: Use a "maybe" type for a4, when the Maybe module is merged into the main code base
+point_dadd: {t} FieldRep t -> ProjectivePoint t -> ProjectivePoint t -> t -> Bit -> ProjectivePoint t 
+point_dadd F (x1, y1, z1) (x2, y2, z2) a4 a4_is_null = out where
+    dbl_h = F.add (y1, y1) // add_##field(dbl.H, p1->Y, p1->Y);
+    dbl_r = F.sq x1
+    dbl_sx = F.add (x1, x1)
+    dbl_r_1 = mul_by_3 F dbl_r
+
+    add_h = F.sq z1
+    x3 = F.sq z2
+    z3 = F.mul (z1, z2) // mul_##field(p3.Z, p1->Z, p2->Z);    /* Z1*Z2 */
+
+    dbl_r_2 = if a4_is_null
+              then dbl_r_1
+              else F.add (dbl_r_1, F.mul (F.sq add_h, a4)) /* R = 3*X1^2+a*Z1^4 */
+
+    y3 = F.mul (y1, z2) //  mul_##field(p3.Y, p1->Y, p2->Z); 
+    add_r = F.mul (y2, z1)
+    y3_1 = F.mul (y3, x3)
+    add_r_1 = F.mul (add_r, add_h)
+
+    x3_1 = F.mul (x3, x1) // mul_##field(p3.X, p3.X, p1->X);     /* U1 = X1*Z2^2 */
+    add_h_1 = F.mul (add_h, x2)
+
+    add_r_2 = F.sub (add_r_1, y3_1) // sub_##field(add.R, add.R, p3.Y);    /* R = S2-S1 */
+    add_sx = F.add (add_h_1, x3_1)
+    add_h_2 = F.sub (add_h_1, x3_1)
+
+    /* make the choice between addition and doubling */
+    is_dbl = F_is_zero F add_h_2 /\ F_is_zero F add_r_2
+    //(x3_2, y3_2, z3_1) = // first vec_select
+    //     if is_dbl 
+    //     then (x1, y1,z1) // p1
+    //     else (x3_1, y3_1, z3) // p3
+    x3_2 = if is_dbl then x1 else x3_1
+    y3_2 = if is_dbl then y1 else y3_1
+    z3_1 = if is_dbl then z1 else z3
+    
+    //(add_h_3, add_r_3, add_sx_1) = // second vec_select
+    //     if is_dbl
+    //     then (dbl_h, dbl_r_2, dbl_sx)
+    //     else (add_h_2, add_r_2, add_sx)
+    add_h_3 = if is_dbl then dbl_h else add_h_2
+    add_r_3 = if is_dbl then dbl_r_2 else add_r_2
+    add_sx_1 = if is_dbl then dbl_sx else add_sx
+
+    dbl_h_1 = F.sq add_h_2 // sqr_##field(dbl.H, add.H);          /* H^2 */
+    dbl_r_3 = F.mul (add_h_2, y3_2)
+    y3_3 = F.mul (dbl_h_1, x3_2)
+    dbl_r_4 = F.mul (dbl_r_3, dbl_h_1)
+
+    dbl_h_2 = F.mul (dbl_h_1, add_sx_1) // mul_##field(dbl.H, dbl.H, add.sx);  /* H^2*sx */
+    x3_3 = F.sq add_r_3          // sqr_##field(p3.X, add.R);           /* R^2 */
+    x3_4 = F.sub (x3_3, dbl_h_2) // sub_##field(p3.X, p3.X, dbl.H);     /* X3 = R^2-H^2*sx */
+
+    y3_4 = F.sub(y3_3, x3_4)     // sub_##field(p3.Y, p3.Y, p3.X);      /* H^2*U1-X3 */
+    y3_5 = F.mul (y3_4, add_r_3) // mul_##field(p3.Y, p3.Y, add.R);     /* R*(H^2*U1-X3) */
+    y3_6 = F.sub (y3_5, dbl_r_4) // sub_##field(p3.Y, p3.Y, dbl.R);     /* Y3 = R*(H^2*U1-X3)-H^3*S1 */
+
+    z3_2 = F.mul (z3_1, add_h_3) // mul_##field(p3.Z, p3.Z, add.H);     /* Z3 = H*Z1*Z2 */
+
+    //p3 = if F_is_zero F z2
+    //     then (x1, y1, z1) // p1
+    //     else (x3_4, y3_6,z3_2) // p3
+    x3_5 = if F_is_zero F z2 then x1 else x3_4
+    y3_7 = if F_is_zero F z2 then y1 else y3_6
+    z3_3 = if F_is_zero F z2 then z1 else z3_2
+    //out = if F_is_zero F z1
+    //      then (x2, y2, z2) // p2
+    //      else p3
+    x3_6 = if F_is_zero F z1 then x2 else x3_5
+    y3_8 = if F_is_zero F z1 then y2 else y3_7
+    z3_4 = if F_is_zero F z1 then z2 else z3_3
+    out = (x3_6, y3_8, z3_4)
+
+
+// TODO:
+//point_dadd_affine: {t} FieldRep t -> ProjectivePoint t -> AffinePoint t  -> ProjectivePoint t 
+// point_dadd F (x1, y1, z1) (x2, y2) = out where
+
+point_add: {t} FieldRep t -> ProjectivePoint t -> ProjectivePoint t -> ProjectivePoint t 
+point_add F (x1,y1,z1) (x2,y2,z2) = out where
+    z1z1 = F.sq z1 
+    z2z2 = F.sq z2
+    u1 = F.mul (x1, z2z2)
+    h = F.mul(x2,z1z1)
+    s1 = F.mul(F.mul(y1,z2), z2z2)
+    // s2 = F.mul(F.mul(y2,z1), z1z1)
+    r = F.mul(F.mul(y2,z1), z1z1)
+    h_1 = F.sub(h, u1)
+    i = F.sq (F.add (h_1,h_1))
+    j = F.mul (h_1, i)
+    r_1 = F.sub(r, s1)
+    r_2 = F.add(r_1, r_1)
+    v = F.mul(u1, i)
+
+    x3 = F.sub(F.sub(F.sub(F.sq(r_2),j),v), v)
+
+    y3 = F.sub(v, x3)
+    y3_1 = F.mul(y3, r_2)
+    s1_1 = F.mul(s1, j)
+    y3_2 = F.sub(F.sub(y3_1, s1_1),s1_1)
+
+    z3 = F.add(z1,z2)
+    z3_1 = F.sq z3
+    z3_2 = F.sub (z3_1, z1z1)
+    z3_3 = F.sub (z3_2, z2z2)
+    z3_4 = F.mul (z3_3, h_1)
+
+    p3 = select (x1,y1,z1) (x3, y3_2, z3_4) (F.is_equal (z2, F.field_zero))
+    out = select (x2,y2,z2) p3 (F.is_equal (z1, F.field_zero))
+
+
+point_add_affine: {t} FieldRep t -> ProjectivePoint t -> AffinePoint t -> ProjectivePoint t 
+point_add_affine F (x1,y1,z1) (x2,y2) = out where
+    z1z1 = F.sq z1 
+    h = F.mul(x2,z1z1)
+    r = F.mul(F.mul(y2,z1), z1z1)
+
+    h_1 = F.sub(h, x1)
+    hh = F.sq h_1
+    i = (F.add (hh,hh))
+    i_1 = F.add (i,i)
+
+    j = F.mul (h_1, i_1)
+
+    r_1 = F.sub(r, y1)
+    r_2 = F.add(r_1, r_1)
+
+    v = F.mul(x1, i_1)
+
+    x3 = F.sub(F.sub(F.sub(F.sq r_2, j), v), v)
+
+    j_1 = F.mul(j, y1)
+    y3 = F.sub(v, x3)
+    y3_1 = F.mul(y3, r_2)
+    y3_2 = F.sub(F.sub(y3_1, j_1), j_1)
+
+    z3 = F.add(z1,h_1)
+    z3_1 = F.sq z3
+    z3_2 = F.sub (z3_1, z1z1)
+    z3_3 = F.sub (z3_2, hh)
+
+    p3 = (x3, y3_2, z3_3)
+    out = select (x2,y2,F.field_unit) p3 (F.is_equal (z1, F.field_zero))
+
+
+point_double: {t} FieldRep t -> ProjectivePoint t -> ProjectivePoint t 
+point_double F (x1,y1,z1) = (x3_2, y3_2, z3_1) where
+    a = F.sq x1
+    b = F.sq y1
+    c = F.sq b
+
+    d = F.add(x1, b)
+    d_1 = F.sq d
+    d_2 = F.sub (d_1, a)
+    d_3 = F.sub (d_2, c)
+    d_4 = F.add (d_3,d_3)
+
+    a_1 = mul_by_3 F a
+
+    x3 = F.sq a_1
+    x3_1 = F.sub (x3, d_4)
+    x3_2 = F.sub (x3_1, d_4)
+
+    z3 = F.add (z1, z1)
+    z3_1 = F.mul (z3, y1)
+
+    c_1 = mul_by_8 F c
+    y3 = F.sub (d_4, x3_2)
+    y3_1 = F.mul (y3, a_1)
+    y3_2 = F.sub (y3_1, c_1)
+
+// TODO: drop these:
+
+p_add_cc: {t} FieldRep t -> ProjectivePoint t -> ProjectivePoint t -> ProjectivePoint t 
+p_add_cc F (X1,Y1,Z1) (X2,Y2,Z2) = (X3, Y3, Z3) where
+  // add-1986-cc normal (not 3-operand) formula
+  U1 = F.mul(X1, F.sq Z2)  // U1 = X1*Z2^2
+  U2 = F.mul(X2, F.sq Z1)  // U2 = X2*Z1^2
+  S1 = F.mul(Y1, F.mul (Z2, F.sq Z2)) // S1 = Y1*Z2^3
+  S2 = F.mul(Y2, F.mul (Z1, F.sq Z1)) // S2 = Y2*Z1^33
+  P = F.sub (U2, U1) // P = U2-U1
+  R = F.sub (S2, S1) // R = S2-S1
+  P2 = F.sq P // P^2
+  P3 = F.mul(P, P2) // P^3
+  
+  X3 = F.sub(F.sq R, F.mul(F.add (U1, U2), P2)) // X3 = R^2-(U1+U2)*P^2
+  Y3 = F.sub(F.mul(R, F.sub(F.mul(U1, P2), X3)), // Y3 = R*(U1*P^2-X3)-S1*P^3
+             F.mul(S1, P3))
+  Z3 = F.mul(Z1, F.mul(Z2, P)) // Z3 = Z1*Z2*P
+
+p_add_bl: {t} FieldRep t -> ProjectivePoint t -> ProjectivePoint t -> ProjectivePoint t 
+p_add_bl F (X1,Y1,Z1) (X2,Y2,Z2) = (X3, Y3, Z3) where
+    // add-1986-bl normal (not 3-operand) formula
+    Z1Z1 = F.sq Z1                     // Z1Z1 = Z1^2
+    Z2Z2 = F.sq Z2                     // Z2Z2 = Z2^2
+    U1 = F.mul (X1, Z2Z2)              // U1 = X1*Z2Z2
+    U2 = F.mul (X2, Z1Z1)              // U2 = X2*Z1Z1
+    S1 = F.mul (Y1, F.mul (Z2, Z2Z2))  // S1 = Y1*Z2*Z2Z2
+    S2 = F.mul (Y2, F.mul (Z1, Z1Z1))  // S2 = Y2*Z1*Z1Z1
+    H = F.sub (U2, U1)                 // H = U2-U1
+    I = F.sq (F.add (H, H))        // I = (2*H)^2
+    J = F.mul (H, I)                   // J = H*I
+    r = F.add (F.sub (S2, S1), F.sub (S2, S1))  // r = 2*(S2-S1)
+    V = F.mul (U1, I)                  // V = U1*I
+    X3 = F.sub (F.sub (F.sq r, J), F.add (V, V))                   // X3 = r^2-J-2*V
+    Y3 = F.sub (F.mul (r, F.sub (V, X3)), F.mul (F.add(S1, S1), J)) // Y3 = r*(V-X3)-2*S1*J
+    Z3 = F.mul (F.sub (F.sub (F.sq (F.add (Z1, Z2)), Z1Z1), Z2Z2), H)  // Z3 = ((Z1+Z2)^2-Z1Z1-Z2Z2)*H
+
