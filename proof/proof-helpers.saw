@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
 /* ================================================================
 
 For proof development it is convenient to have some cover functions
