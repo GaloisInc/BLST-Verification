@@ -250,12 +250,6 @@ mulx_382x_ov <- verify_x86 "mulx_382x" mulx_382x_spec;
 // sqrx_382x
 sqrx_382x_ov <- verify_x86 "sqrx_382x" sqrx_382x_spec;
 
-// mulx_384
-// mulx_384_ov <- verify_x86 "mulx_384" mulx_384_spec;
-
-// sqrx_384
-// sqrx_384_ov <- verify_x86 "sqrx_384" sqrx_384_spec;
-
 // redcx_mont_384
 redcx_mont_384_ov <- verify_x86 "redcx_mont_384" redcx_mont_384_spec;
 
@@ -280,9 +274,6 @@ sqrx_mont_384_ov <- verify_x86 "sqrx_mont_384" sqrx_mont_384_spec;
 sqrx_mont_384_alias_ov <- verify_x86 "sqrx_mont_384" sqrx_mont_384_alias_spec;
 let do_prove_x86 = true;
 
-// sqrx_n_mul_mont_384
-// sqrx_n_mul_mont_384_ov <- verify_x86 "sqrx_n_mul_mont_384" sqrx_n_mul_mont_384_spec;
-
 // sqrx_n_mul_mont_383 - performance issue
 let do_prove_x86 = false;
 sqrx_n_mul_mont_383_ov <- verify_x86 "sqrx_n_mul_mont_383" sqrx_n_mul_mont_383_spec;
@@ -306,10 +297,6 @@ let mulx_mont_384_overrides =
 
   , sqrx_382x_ov
 
-  // , mulx_384_ov
-
-  // , sqrx_384_ov
-
   , redcx_mont_384_ov
 
   , fromx_mont_384_ov
@@ -323,8 +310,6 @@ let mulx_mont_384_overrides =
 
   , sqrx_mont_384_ov
   , sqrx_mont_384_alias_ov
-
-  // , sqrx_n_mul_mont_384_ov
 
   , sqrx_n_mul_mont_383_ov
   , sqrx_n_mul_mont_383_alias_1_2_ov

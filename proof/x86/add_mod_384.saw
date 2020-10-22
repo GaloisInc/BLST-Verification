@@ -439,12 +439,6 @@ mul_by_b_onE1_ov <- verify_x86 "mul_by_b_onE1" mul_by_b_onE1_spec;
 mul_by_b_onE1_alias_out_in_ov <- verify_x86 "mul_by_b_onE1" mul_by_b_onE1_alias_out_in_spec;
 let do_prove_x86 = true;
 
-// mul_by_4b_onE1
-// let do_prove_x86 = false;
-// mul_by_4b_onE1_ov <- verify_x86 "mul_by_4b_onE1" mul_by_4b_onE1_spec;
-// mul_by_4b_onE1_alias_out_in_ov <- verify_x86 "mul_by_4b_onE1" mul_by_4b_onE1_alias_out_in_spec;
-// let do_prove_x86 = true;
-
 // mul_by_3_mod_384x
 mul_by_3_mod_384x_ov <- verify_x86 "mul_by_3_mod_384x" mul_by_3_mod_384x_spec;
 mul_by_3_mod_384x_alias_ret_a_ov <- verify_x86 "mul_by_3_mod_384x" mul_by_3_mod_384x_alias_ret_a_spec;
@@ -458,12 +452,6 @@ let do_prove_x86 = false;
 mul_by_b_onE2_ov <- verify_x86 "mul_by_b_onE2" mul_by_b_onE2_spec;
 mul_by_b_onE2_alias_out_in_ov <- verify_x86 "mul_by_b_onE2" mul_by_b_onE2_alias_out_in_spec;
 let do_prove_x86 = true;
-
-// mul_by_4b_onE2
-// let do_prove_x86 = false;
-// mul_by_4b_onE2_ov <- verify_x86 "mul_by_4b_onE2" mul_by_4b_onE2_spec;
-// mul_by_4b_onE2_alias_out_in_ov <- verify_x86 "mul_by_4b_onE2" mul_by_4b_onE2_alias_out_in_spec;
-// let do_prove_x86 = true;
 
 // cneg_mod_384
 cneg_mod_384_ov <- verify_x86 "cneg_mod_384" cneg_mod_384_spec;
@@ -530,9 +518,6 @@ let add_mod_384_overrides = concat
   , mul_by_b_onE1_ov
   , mul_by_b_onE1_alias_out_in_ov
 
-  // , mul_by_4b_onE1_ov
-  // , mul_by_4b_onE1_alias_out_in_ov
-
   , mul_by_3_mod_384x_ov
   , mul_by_3_mod_384x_alias_ret_a_ov
 
@@ -541,9 +526,6 @@ let add_mod_384_overrides = concat
 
   , mul_by_b_onE2_ov
   , mul_by_b_onE2_alias_out_in_ov
-
-  // , mul_by_4b_onE2_ov
-  // , mul_by_4b_onE2_alias_out_in_ov
 
   , cneg_mod_384_ov
   , cneg_mod_384_alias_ret_a_ov
