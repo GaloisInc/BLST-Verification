@@ -16,7 +16,7 @@ if [ $# -ne 0 ] && [ "$1" = "--latest" ]; then
   CRYPTOL_NIGHTLY=$(curl -s https://cryptol.net/builds/nightly/ | grep -oP "cryptol.*?${CRYPTOL_DATE}-Ubuntu.*?\.tar\.gz"  | head -n 1) # `curl -s` means silent; `grep -o` says print only the matched substring; `grep -P` says Perl syntax, which we use to get a lazy match (shortest) with .*?
   CRYPTOL_URL="https://cryptol.net/builds/nightly/${CRYPTOL_NIGHTLY}"
 else
-  SAW_URL="https://github.com/GaloisInc/saw-script/releases/download/v0.6/saw-0.6-Linux-x86_64.tar.gz"
+  SAW_URL="https://saw.galois.com/builds/nightly/saw-0.6.0.99-2020-10-12-Ubuntu14.04-64.tar.gz"
   CRYPTOL_URL="https://github.com/GaloisInc/cryptol/releases/download/2.9.1/cryptol-2.9.1-Linux-x86_64.tar.gz"
 
 fi

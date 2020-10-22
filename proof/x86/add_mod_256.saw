@@ -1,0 +1,226 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+///////////////////////////////////////////////////////////////////////////////
+// Specifications
+///////////////////////////////////////////////////////////////////////////////
+
+// add_mod_256
+let add_mod_256_spec = do {
+  ret_ptr <- crucible_alloc vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+let add_mod_256_alias_ret_a_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+let add_mod_256_alias_ret_b_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, a_ptr, ret_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+let add_mod_256_alias_a_b_spec = do {
+  ret_ptr <- crucible_alloc vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, a_ptr, a_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+let add_mod_256_alias_ret_a_b_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, ret_ptr, ret_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+// mul_by_3_mod_256
+let mul_by_3_mod_256_spec = do {
+  ret_ptr <- crucible_alloc vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+let mul_by_3_mod_256_alias_ret_a_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, ret_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+// lshift_mod_256
+let lshift_mod_256_spec count = do {
+  ret_ptr <- crucible_alloc vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, a_ptr, crucible_term count, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+let lshift_mod_256_alias_ret_a_spec count = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, ret_ptr, crucible_term count, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+// rshift_mod_256
+let rshift_mod_256_spec count = do {
+  ret_ptr <- crucible_alloc vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, a_ptr, crucible_term count, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+let rshift_mod_256_alias_ret_a_spec count = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, ret_ptr, crucible_term count, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+// cneg_mod_256
+let cneg_mod_256_spec = do {
+  ret_ptr <- crucible_alloc vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  flag <- crucible_fresh_var "flag" limb_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, a_ptr, crucible_term flag, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+let cneg_mod_256_alias_ret_a_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  flag <- crucible_fresh_var "flag" limb_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, ret_ptr, crucible_term flag, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+// sub_mod_256
+let sub_mod_256_spec = do {
+  ret_ptr <- crucible_alloc vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+let sub_mod_256_alias_ret_a_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+let sub_mod_256_alias_ret_b_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, a_ptr, ret_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+let sub_mod_256_alias_a_b_spec = do {
+  ret_ptr <- crucible_alloc vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, a_ptr, a_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+let sub_mod_256_alias_ret_a_b_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  crucible_execute_func [ret_ptr, ret_ptr, ret_ptr, p_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Proofs
+///////////////////////////////////////////////////////////////////////////////
+
+// add_mod_256
+add_mod_256_ov <- verify_x86 "add_mod_256" add_mod_256_spec;
+add_mod_256_alias_ret_a_ov <- verify_x86 "add_mod_256" add_mod_256_alias_ret_a_spec;
+add_mod_256_alias_ret_b_ov <- verify_x86 "add_mod_256" add_mod_256_alias_ret_b_spec;
+add_mod_256_alias_a_b_ov <- verify_x86 "add_mod_256" add_mod_256_alias_a_b_spec;
+add_mod_256_alias_ret_a_b_ov <- verify_x86 "add_mod_256" add_mod_256_alias_ret_a_b_spec;
+
+// mul_by_3_mod_256 - sbb in __lshift_mod_256 used to crab cf?
+let do_prove_x86 = false;
+mul_by_3_mod_256_ov <- verify_x86 "mul_by_3_mod_256" mul_by_3_mod_256_spec;
+mul_by_3_mod_256_alias_ret_a_ov <- verify_x86 "mul_by_3_mod_256" mul_by_3_mod_256_alias_ret_a_spec;
+let do_prove_x86 = true;
+
+// lshift_mod_256 - sbb in __lshift_mod_256 used to crab cf?
+let do_prove_x86 = false;
+lshift_mod_256_ov <- verify_x86 "lshift_mod_256" (lshift_mod_256_spec {{ 5 : [64] }});
+lshift_mod_256_alias_ret_a_ov <- verify_x86 "lshift_mod_256" (lshift_mod_256_alias_ret_a_spec {{ 5 : [64] }});
+let do_prove_x86 = true;
+
+// rshift_mod_256
+rshift_mod_256_ov <- verify_x86 "rshift_mod_256" (rshift_mod_256_spec {{ 5 : [64] }});
+rshift_mod_256_alias_ret_a_ov <- verify_x86 "rshift_mod_256" (rshift_mod_256_alias_ret_a_spec {{ 5 : [64] }});
+
+// cneg_mod_256
+cneg_mod_256_ov <- verify_x86 "cneg_mod_256" cneg_mod_256_spec;
+cneg_mod_256_alias_ret_a_ov <- verify_x86 "cneg_mod_256" cneg_mod_256_alias_ret_a_spec;
+
+// sub_mod_256
+sub_mod_256_ov <- verify_x86 "sub_mod_256" sub_mod_256_spec;
+sub_mod_256_alias_ret_a_ov <- verify_x86 "sub_mod_256" sub_mod_256_alias_ret_a_spec;
+sub_mod_256_alias_ret_b_ov <- verify_x86 "sub_mod_256" sub_mod_256_alias_ret_b_spec;
+sub_mod_256_alias_a_b_ov <- verify_x86 "sub_mod_256" sub_mod_256_alias_a_b_spec;
+sub_mod_256_alias_ret_a_b_ov <- verify_x86 "sub_mod_256" sub_mod_256_alias_ret_a_b_spec;
+
+let add_mod_256_overrides =
+  [ add_mod_256_ov
+  , add_mod_256_alias_ret_a_ov
+  , add_mod_256_alias_ret_b_ov
+  , add_mod_256_alias_a_b_ov
+  , add_mod_256_alias_ret_a_b_ov
+
+  , mul_by_3_mod_256_ov
+  , mul_by_3_mod_256_alias_ret_a_ov
+
+  , lshift_mod_256_ov
+  , lshift_mod_256_alias_ret_a_ov
+
+  , rshift_mod_256_ov
+  , rshift_mod_256_alias_ret_a_ov
+
+  , cneg_mod_256_ov
+  , cneg_mod_256_alias_ret_a_ov
+
+  , sub_mod_256_ov
+  , sub_mod_256_alias_ret_a_ov
+  , sub_mod_256_alias_ret_b_ov
+  , sub_mod_256_alias_a_b_ov
+  , sub_mod_256_alias_ret_a_b_ov
+  ];

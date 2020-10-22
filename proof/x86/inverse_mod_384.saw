@@ -1,0 +1,42 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+///////////////////////////////////////////////////////////////////////////////
+// Specifications
+///////////////////////////////////////////////////////////////////////////////
+
+// eucl_inverse_mod_384
+let eucl_inverse_mod_384_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  (_, one_ptr) <- ptr_to_fresh_readonly "one" vec384_type;
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr, one_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+let eucl_inverse_mod_384_alias_ret_a_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  (_, one_ptr) <- ptr_to_fresh_readonly "one" vec384_type;
+  crucible_execute_func [ret_ptr, ret_ptr, p_ptr, one_ptr];
+  new_ret <- crucible_fresh_var "new_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Proofs
+///////////////////////////////////////////////////////////////////////////////
+
+// eucl_inverse_mod_384 - runs out of memory
+let do_prove_x86 = false;
+eucl_inverse_mod_384_ov <- verify_x86 "eucl_inverse_mod_384" eucl_inverse_mod_384_spec;
+eucl_inverse_mod_384_alias_ret_a_ov <- verify_x86 "eucl_inverse_mod_384" eucl_inverse_mod_384_alias_ret_a_spec;
+let do_prove_x86 = true;
+
+let inverse_mod_384_overrides =
+  [ eucl_inverse_mod_384_ov
+  , eucl_inverse_mod_384_alias_ret_a_ov
+  ];
