@@ -5,9 +5,9 @@
 
 include "fp_overrides.saw";
 
-include "helpers.saw";
-include "list_utils.saw";
-include "types.saw";
+//include "helpers.saw";
+//include "list_utils.saw";
+//include "types.saw";
 
 let POINTonE1_type = (llvm_struct "struct.POINTonE1");
 let POINTonE1_affine_type = (llvm_struct "struct.POINTonE1_affine");
@@ -15,6 +15,9 @@ let POINTonE1_affine_type = (llvm_struct "struct.POINTonE1_affine");
 import "../spec/ProjectiveCurveOperations.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/CurveOperation.cry";
+
+let do_prove = false;
+include "proof-helpers.saw";
 
 ////////////////////////////////////////////////////////////////
 //
@@ -77,36 +80,17 @@ let vec_select_alias_1_3_spec bytes ty = do {
   crucible_points_to ret_ptr (crucible_term {{ select a ret (sel_a != 0)}});
 };
 
-vec_select_POINTonE1_ov <- crucible_llvm_verify m "vec_select"
-                      vec_select_asm_ovs
-                      false
-                      (vec_select_spec 144 POINTonE1_type) z3;
+vec_select_POINTonE1_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_spec 144 POINTonE1_type);
 
-vec_select_alias_1_3_POINTonE1_ov <- crucible_llvm_verify m "vec_select"
-                      vec_select_asm_ovs
-                      false
-                      (vec_select_alias_1_3_spec 144 POINTonE1_type) z3;
+vec_select_alias_1_3_POINTonE1_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_alias_1_3_spec 144 POINTonE1_type);
 
-vec_select_Fp_ov <- crucible_llvm_verify m "vec_select"
-                      vec_select_asm_ovs
-                      false
-                      (vec_select_spec 48 vec384_type) z3;
+vec_select_Fp_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_spec 48 vec384_type);
 
-vec_select_Fp_alias_1_3_ov <- crucible_llvm_verify m "vec_select"
-                      vec_select_asm_ovs
-                      false
-                      (vec_select_alias_1_3_spec 48 vec384_type) z3;
+vec_select_Fp_alias_1_3_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_alias_1_3_spec 48 vec384_type);
 
-vec_select_2Fp_ov <- crucible_llvm_verify m "vec_select"
-                      vec_select_asm_ovs
-                      false
-                      (vec_select_spec 96 (llvm_array 2 vec384_type)) z3;
+vec_select_2Fp_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_spec 96 (llvm_array 2 vec384_type));
 
-vec_select_2Fp_alias_1_3_ov <- crucible_llvm_verify m "vec_select"
-                      vec_select_asm_ovs
-                      false
-                      (vec_select_alias_1_3_spec 96 (llvm_array 2 vec384_type)) z3;
-
+vec_select_2Fp_alias_1_3_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_alias_1_3_spec 96 (llvm_array 2 vec384_type));
 
 let vec_select_overrides = [vec_select_POINTonE1_ov, vec_select_alias_1_3_POINTonE1_ov
                            , vec_select_Fp_ov, vec_select_Fp_alias_1_3_ov
@@ -147,9 +131,8 @@ let vec_is_zero_fp_rep_spec = do {
   };
 */
 
-vec_is_zero_fp_ov <- crucible_llvm_verify m "vec_is_zero" [] false vec_is_zero_fp_spec
-    (quickcheck 100); // or 1000?
-//   do { unfolding ["fp_invariant", "fp_abs", "vec384_abs" ]; beta_reduce_goal; print_goal; quickcheck 100; };
+vec_is_zero_fp_ov <- test "vec_is_zero" [] vec_is_zero_fp_spec;
+//  do { unfolding ["fp_invariant", "fp_abs", "vec384_abs" ]; beta_reduce_goal; print_goal; quickcheck 100; };
 //  do { unfolding ["fp_invariant", "fp_abs", "vec384_abs" ]; beta_reduce_goal; print_goal; z3; };
 
 // vec_is_zero_fp_rep_ov <- crucible_llvm_verify m "vec_is_zero" [] false vec_is_zero_fp_rep_spec z3;
@@ -170,14 +153,16 @@ let vec_is_zero_2fp_rep_spec = do {
   crucible_return (crucible_term {{ if fp_is_zero_rep (a@0) /\ fp_is_zero_rep (a@1)  then 1 else (0:Limb) }});
   };
 */
-vec_is_zero_2fp_ov <- crucible_llvm_verify m "vec_is_zero" [] false vec_is_zero_2fp_spec
-    (quickcheck 100); // or 1000?
+// TODO: prove
+vec_is_zero_2fp_ov <- test "vec_is_zero" []  vec_is_zero_2fp_spec;
 
 // vec_is_zero_2fp_rep_ov <- crucible_llvm_verify m "vec_is_zero" [] false vec_is_zero_2fp_rep_spec
  z3;
 
 let vec_overrides = concat [vec_is_zero_fp_ov, vec_is_zero_2fp_ov] vec_select_overrides;
 // let vec_rep_overrides = concat [vec_is_zero_fp_rep_ov, vec_is_zero_2fp_rep_ov] vec_select_overrides;
+
+
 
 ////////////////////////////////////////////////////////////////
 //
@@ -196,9 +181,8 @@ let POINTonE1_add_spec = do {
 };
 
 
-POINTonE1_add_ov <- crucible_llvm_verify m "POINTonE1_add"
+POINTonE1_add_ov <- custom_verify "POINTonE1_add"
                       (concat vec_overrides fp_overrides)
-                      false
                       POINTonE1_add_spec
                       // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
                       (do {apply_fp_rewrites; goal_eval_unint fp_unints;
@@ -235,26 +219,22 @@ let POINTonE1_add_affine_spec = do {
 //               , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
 //  }};
 
-//print "one_mont_p theorems:";
-
 one_mont_p_invariant_thm <-
-  prove_print z3 (rewrite (cryptol_ss ()) {{fp_invariant [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
-                                , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
-                    == True}});
-
-// print one_mont_p_invariant_thm;
-// Needs the rewrite, or it will not apply to the generated SAWcore
+  prove_cryptol (rewrite (cryptol_ss ())
+    {{fp_invariant [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+                   , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
+       == True}}) [];
 
 one_mont_p_abs_thm <-
-  prove_print z3 (rewrite (cryptol_ss ()) {{fp_abs [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
-                          , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
-                    == Fp.field_unit }});
+  prove_cryptol (rewrite (cryptol_ss ())
+       {{fp_abs [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+                , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
+          == Fp.field_unit }}) [];
 
 // need to show: fp_invariant of `one` (in this case, BLS12_381_Rx.p, == ONE_MONT_P
 // This incidentally shows that fp_abs (ONE_MONT_P) is OK
-POINTonE1_add_affine_ov <- crucible_llvm_verify m "POINTonE1_add_affine"
+POINTonE1_add_affine_ov <- custom_verify "POINTonE1_add_affine"
                       (concat vec_overrides fp_overrides)
-                      false
                       POINTonE1_add_affine_spec
                       // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
                       do {apply_fp_rewrites;
@@ -280,9 +260,8 @@ let POINTonE1_double_spec = do {
   // crucible_postcond {{ (POINTonE1_abs out).0 == (point_double Fp (POINTonE1_abs p1)).0 }};
 };
 
-POINTonE1_double_ov <- crucible_llvm_verify m "POINTonE1_double"
+POINTonE1_double_ov <- custom_verify "POINTonE1_double"
                       (concat vec_overrides fp_overrides)
-                      false
                       POINTonE1_double_spec
                       // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
                       (do {apply_fp_rewrites; goal_eval_unint fp_unints;
@@ -293,7 +272,7 @@ POINTonE1_double_ov <- crucible_llvm_verify m "POINTonE1_double"
                       w4_unint_z3 fp_unints;});
 
 
-// possible null pointer argument, so 2 specs.
+// dadd has a possible null pointer argument, so we use 2 specs.
 
 let POINTonE1_dadd_null_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
@@ -307,10 +286,8 @@ let POINTonE1_dadd_null_spec = do {
   crucible_postcond {{ POINTonE1_abs out == point_dadd Fp (POINTonE1_abs p1) (POINTonE1_abs p2) Fp.field_zero True }};
 };
 
-// TODO: the dadd_null code proof
-POINTonE1_dadd_null_ov <- crucible_llvm_verify m "POINTonE1_dadd"
+POINTonE1_dadd_null_ov <- custom_verify "POINTonE1_dadd"
                       (concat vec_overrides fp_overrides)
-                      false
                       POINTonE1_dadd_null_spec
                       // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
                       (do {
@@ -368,9 +345,8 @@ let POINTonE1_dadd_nonnull_spec = do {
 };
 
 
-POINTonE1_dadd_nonnull_ov <- crucible_llvm_verify m "POINTonE1_dadd"
+POINTonE1_dadd_nonnull_ov <- custom_verify "POINTonE1_dadd"
                       (concat vec_overrides fp_overrides)
-                      false
                       POINTonE1_dadd_nonnull_spec
                       // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
                       (do {
@@ -403,15 +379,4 @@ let POINTonE1_dadd_affine_spec = do {
   crucible_postcond {{ POINTonE1_abs out == point_dadd_affine Fp (POINTonE1_abs p1) (POINTonE1_affine_abs p2) }};
 };
 
-POINTonE1_dadd_ov <- crucible_llvm_verify m "POINTonE1_dadd"
-                      (concat vec_overrides fp_overrides)
-                      false
-                      POINTonE1_dadd_spec
-                      // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
-                      (do {apply_fp_rewrites; goal_eval_unint fp_unints;
-                      simplify (add_prelude_defs ["bitvector"] (addsimp unrip_thm (cryptol_ss ())));
-                      apply_fp_rewrites;
-                      // simplify (addsimp unrip_thm (cryptol_ss ()));
-                      print_goal;
-                      w4_unint_z3 fp_unints;});
 */
