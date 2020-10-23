@@ -142,9 +142,6 @@ let hoist f unints =
 abs_ite_thm <- hoist {{fp_abs}} ["fp_abs"] ;
 invariant_ite_thm <- hoist {{fp_invariant}} [] ; 
 
-print "abs_ite_thm";
-print abs_ite_thm;
-
 // ... we will probably also need some algebraic rewrites
 // associate mul to the right
 // mul_assoc_thm <- prove_print z3 {{ \x y z -> xmul`{p} (xmul (x,y), z) == xmul (x, xmul (y,z)) }};
@@ -204,7 +201,9 @@ let fp_overrides = foldr concat [add_fp_ovs, sub_fp_ovs, mul_fp_ovs]
 
 let fp_unints = ["fp_abs", "fp_invariant"
                 // , "mul_by_3", ,"mul_by_8" -- CANNOT include these as they are polymorphic
-                , "mod_add", "mod_sub", "mod_neg", "mod_mul", "mod_half", "mod_div"];
+                , "mod_add", "mod_sub", "mod_neg", "mod_mul", "mod_half", "mod_div"
+                , "mod_add_Z", "mod_sub_Z", "mod_neg_Z", "mod_mul_Z", "mod_half_Z", "mod_div_Z"
+];
 
 ////////////////////////////////////////////////////////////////
 //

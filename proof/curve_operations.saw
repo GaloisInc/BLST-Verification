@@ -137,6 +137,7 @@ let vec_is_zero_fp_spec = do {
   crucible_return (crucible_term {{ if (fp_abs a) ==  Fp.field_zero then 1 else (0:Limb) }});
   };
 
+/*
 let {{ fp_is_zero_rep x = (x == (zero:[6][64])) }};
 
 let vec_is_zero_fp_rep_spec = do {
@@ -144,13 +145,14 @@ let vec_is_zero_fp_rep_spec = do {
   crucible_execute_func [a_ptr, crucible_term {{ (48:Size_t) }}]; // Non-portable
   crucible_return (crucible_term {{ if fp_is_zero_rep a  then 1 else (0:Limb) }});
   };
+*/
 
 vec_is_zero_fp_ov <- crucible_llvm_verify m "vec_is_zero" [] false vec_is_zero_fp_spec
-//    (quickcheck 100); // or 1000?
-   do { unfolding ["fp_invariant", "fp_abs", "vec384_abs" ]; beta_reduce_goal; print_goal; quickcheck 100; };
+    (quickcheck 100); // or 1000?
+//   do { unfolding ["fp_invariant", "fp_abs", "vec384_abs" ]; beta_reduce_goal; print_goal; quickcheck 100; };
 //  do { unfolding ["fp_invariant", "fp_abs", "vec384_abs" ]; beta_reduce_goal; print_goal; z3; };
 
-vec_is_zero_fp_rep_ov <- crucible_llvm_verify m "vec_is_zero" [] false vec_is_zero_fp_rep_spec z3;
+// vec_is_zero_fp_rep_ov <- crucible_llvm_verify m "vec_is_zero" [] false vec_is_zero_fp_rep_spec z3;
 
 // dadd needs a 2*Fp version of is_zero
 
@@ -161,20 +163,21 @@ let vec_is_zero_2fp_spec = do {
   crucible_return (crucible_term {{ if fp_abs (a@0) ==  Fp.field_zero /\ fp_abs (a@1) == Fp.field_zero then 1 else (0:Limb) }});
   };
 
+/*
 let vec_is_zero_2fp_rep_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 2 vec384_type);
   crucible_execute_func [a_ptr, crucible_term {{ (96:Size_t) }}]; // Non-portable
   crucible_return (crucible_term {{ if fp_is_zero_rep (a@0) /\ fp_is_zero_rep (a@1)  then 1 else (0:Limb) }});
   };
-
+*/
 vec_is_zero_2fp_ov <- crucible_llvm_verify m "vec_is_zero" [] false vec_is_zero_2fp_spec
     (quickcheck 100); // or 1000?
 
-vec_is_zero_2fp_rep_ov <- crucible_llvm_verify m "vec_is_zero" [] false vec_is_zero_2fp_rep_spec
+// vec_is_zero_2fp_rep_ov <- crucible_llvm_verify m "vec_is_zero" [] false vec_is_zero_2fp_rep_spec
  z3;
 
 let vec_overrides = concat [vec_is_zero_fp_ov, vec_is_zero_2fp_ov] vec_select_overrides;
-let vec_rep_overrides = concat [vec_is_zero_fp_rep_ov, vec_is_zero_2fp_rep_ov] vec_select_overrides;
+// let vec_rep_overrides = concat [vec_is_zero_fp_rep_ov, vec_is_zero_2fp_rep_ov] vec_select_overrides;
 
 ////////////////////////////////////////////////////////////////
 //
@@ -192,9 +195,6 @@ let POINTonE1_add_spec = do {
   crucible_postcond {{ POINTonE1_abs out == point_add Fp (POINTonE1_abs p1) (POINTonE1_abs p2)}};
 };
 
-
-// print "Enabling hash consing!";
-// enable_what4_hash_consing;
 
 POINTonE1_add_ov <- crucible_llvm_verify m "POINTonE1_add"
                       (concat vec_overrides fp_overrides)
@@ -326,7 +326,7 @@ POINTonE1_dadd_null_ov <- crucible_llvm_verify m "POINTonE1_dadd"
                           apply_fp_rewrites;
                           simplify (addsimp unrip_thm (cryptol_ss ()));
                           apply_fp_rewrites;
-                          print_goal;
+                          //print_goal;
                           w4_unint_z3 fp_unints;});
 
 // DEBUGGING:
