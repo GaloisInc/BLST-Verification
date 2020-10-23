@@ -24,7 +24,6 @@ type p = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabf
 
 // Choice of base representation for GF(p) is made here:
 
-/*
 // For the Integer version:
 Fp = prime_field_integer `p
 type t_Fp = Integer
@@ -34,7 +33,7 @@ to_Fp bits = toInteger (zext`{m=384} bits)
 
 from_Fp: t_Fp -> [384]
 from_Fp x = fromInteger x
-*/
+
 /*
 // For the Z p version:
 Fp = prime_field`{p}
@@ -47,7 +46,7 @@ from_Fp: t_Fp -> [384]
 from_Fp x = fromInteger (fromZ x)
 */
 
-
+/*
 // For the bivector version:
 Fp = prime_field_bv`{384} `p  // representation of F_p
 type t_Fp = [384]  // ... and the underlying Cryptol type
@@ -57,6 +56,7 @@ to_Fp bits = (zext bits) // mod something?
 
 from_Fp: t_Fp -> [384]
 from_Fp x = x
+*/
 
 // Nothing else should need to change depending on the version of base representation chosen above.
 
