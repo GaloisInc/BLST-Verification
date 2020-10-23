@@ -26,17 +26,32 @@ prime_field_integer: Integer -> FieldRep Integer
 prime_field_integer p =
     { is_val x = 0 <= x /\ x < p
     , normalize x = x % p
-    , add (x, y) = (x + y) % p
-    , sub (x, y) = (x - y) % p
-    , neg x = p-x
-    , mul (x,y) = (x*y) % p
-    , sq x = (x*x) % p
+    , add (x, y) =  mod_add_Z (p,x,y)
+    , sub (x, y) = mod_sub_Z (p,x,y)
+    , neg x = mod_neg_Z (p,x)
+    , mul (x,y) = mod_mul_Z (p,x,y)
+    , sq x = mod_sq_Z (p, x)
     , half x = mod_half_Z (p,x)
     , div (x,y) = mod_div_Z (p,x,y)
     , field_zero = 0
     , field_unit = 1
     , is_equal (x, y) = x==y
     }
+
+mod_add_Z: (Integer,Integer,Integer) -> Integer
+mod_add_Z (p,x,y) = (x + y) % p
+
+mod_sub_Z: (Integer,Integer,Integer) -> Integer
+mod_sub_Z (p,x,y) = (x - y) % p
+
+mod_mul_Z: (Integer,Integer,Integer) -> Integer
+mod_mul_Z (p,x,y) = (x * y) % p
+
+mod_neg_Z: (Integer,Integer) -> Integer
+mod_neg_Z (p, x) = (-x)%p
+
+mod_sq_Z: (Integer,Integer) -> Integer
+mod_sq_Z (p,x) = mod_mul_Z (p, x, x)
 
 mod_half_Z: (Integer,Integer)-> Integer
 mod_half_Z (p, x) = if (x%2==0) then x/2 else (x+p)/2
