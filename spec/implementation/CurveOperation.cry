@@ -88,20 +88,22 @@ point_dadd F (x1, y1, z1) (x2, y2, z2) a4 a4_is_null = out where
     //     if is_dbl 
     //     then (x1, y1,z1) // p1
     //     else (x3_1, y3_1, z3) // p3
-    x3_2 = if is_dbl then x1 else x3_1
-    y3_2 = if is_dbl then y1 else y3_1
-    z3_1 = if is_dbl then z1 else z3
+    //x3_2 = if is_dbl then x1 else x3_1
+    //y3_2 = if is_dbl then y1 else y3_1
+    //z3_1 = if is_dbl then z1 else z3
+    (x3_2, y3_2, z3_1) = select (x1, y1,z1) (x3_1, y3_1, z3) is_dbl
     
     //(add_h_3, add_r_3, add_sx_1) = // second vec_select
     //     if is_dbl
     //     then (dbl_h, dbl_r_2, dbl_sx)
     //     else (add_h_2, add_r_2, add_sx)
-    add_h_3 = if is_dbl then dbl_h else add_h_2
-    add_r_3 = if is_dbl then dbl_r_2 else add_r_2
-    add_sx_1 = if is_dbl then dbl_sx else add_sx
-
-    dbl_h_1 = F.sq add_h_2 // sqr_##field(dbl.H, add.H);          /* H^2 */
-    dbl_r_3 = F.mul (add_h_2, y3_2)
+    //add_h_3 = if is_dbl then dbl_h else add_h_2
+    //add_r_3 = if is_dbl then dbl_r_2 else add_r_2
+    //add_sx_1 = if is_dbl then dbl_sx else add_sx
+    (add_h_3, add_r_3, add_sx_1) = select (dbl_h, dbl_r_2, dbl_sx) (add_h_2, add_r_2, add_sx) is_dbl
+    
+    dbl_h_1 = F.sq add_h_3 // sqr_##field(dbl.H, add.H);          /* H^2 */
+    dbl_r_3 = F.mul (add_h_3, y3_2)
     y3_3 = F.mul (dbl_h_1, x3_2)
     dbl_r_4 = F.mul (dbl_r_3, dbl_h_1)
 
@@ -118,16 +120,19 @@ point_dadd F (x1, y1, z1) (x2, y2, z2) a4 a4_is_null = out where
     //p3 = if F_is_zero F z2
     //     then (x1, y1, z1) // p1
     //     else (x3_4, y3_6,z3_2) // p3
-    x3_5 = if F_is_zero F z2 then x1 else x3_4
-    y3_7 = if F_is_zero F z2 then y1 else y3_6
-    z3_3 = if F_is_zero F z2 then z1 else z3_2
+    //x3_5 = if F_is_zero F z2 then x1 else x3_4
+    //y3_7 = if F_is_zero F z2 then y1 else y3_6
+    //z3_3 = if F_is_zero F z2 then z1 else z3_2
+    p3 = select (x1, y1, z1) (x3_4, y3_6,z3_2) (F_is_zero F z2)
+    
     //out = if F_is_zero F z1
     //      then (x2, y2, z2) // p2
     //      else p3
-    x3_6 = if F_is_zero F z1 then x2 else x3_5
-    y3_8 = if F_is_zero F z1 then y2 else y3_7
-    z3_4 = if F_is_zero F z1 then z2 else z3_3
-    out = (x3_6, y3_8, z3_4)
+    //x3_6 = if F_is_zero F z1 then x2 else x3_5
+    //y3_8 = if F_is_zero F z1 then y2 else y3_7
+    //z3_4 = if F_is_zero F z1 then z2 else z3_3
+    //out = (x3_6, y3_8, z3_4)
+    out = select (x2, y2, z2) p3 (F_is_zero F z1)
 
 
 // TODO:
