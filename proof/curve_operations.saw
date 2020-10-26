@@ -16,7 +16,7 @@ import "../spec/ProjectiveCurveOperations.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/CurveOperation.cry";
 
-let do_prove = false;
+let do_prove = true;
 include "proof-helpers.saw";
 
 ////////////////////////////////////////////////////////////////
@@ -131,6 +131,7 @@ let vec_is_zero_fp_rep_spec = do {
   };
 */
 
+// TODO: Prove
 vec_is_zero_fp_ov <- test "vec_is_zero" [] vec_is_zero_fp_spec;
 //  do { unfolding ["fp_invariant", "fp_abs", "vec384_abs" ]; beta_reduce_goal; print_goal; quickcheck 100; };
 //  do { unfolding ["fp_invariant", "fp_abs", "vec384_abs" ]; beta_reduce_goal; print_goal; z3; };
@@ -156,8 +157,7 @@ let vec_is_zero_2fp_rep_spec = do {
 // TODO: prove
 vec_is_zero_2fp_ov <- test "vec_is_zero" []  vec_is_zero_2fp_spec;
 
-// vec_is_zero_2fp_rep_ov <- crucible_llvm_verify m "vec_is_zero" [] false vec_is_zero_2fp_rep_spec
- z3;
+// vec_is_zero_2fp_rep_ov <- crucible_llvm_verify m "vec_is_zero" [] false vec_is_zero_2fp_rep_spec z3;
 
 let vec_overrides = concat [vec_is_zero_fp_ov, vec_is_zero_2fp_ov] vec_select_overrides;
 // let vec_rep_overrides = concat [vec_is_zero_fp_rep_ov, vec_is_zero_2fp_rep_ov] vec_select_overrides;
@@ -167,6 +167,65 @@ let vec_overrides = concat [vec_is_zero_fp_ov, vec_is_zero_2fp_ov] vec_select_ov
 ////////////////////////////////////////////////////////////////
 //
 // Now the point operations:
+
+enable_what4_hash_consing;
+
+// ... POINTonE1_add
+
+/* This hangs:
+POINTonE1_add_equiv_thm <-
+  really_prove_cryptol
+  // {{ \p1 p2 -> p_add_generic E p1 p2 == point_add Fp p1 p2 }}
+  // {{ \p1 p2 -> p_add_bl Fp p1 p2 == point_add Fp p1 p2 }}
+  {{ \p1 p2 -> point_add Fp p1 p2 == if Fp.is_equal (p1.2, Fp.field_zero) 
+                                     then p2
+                                     else if Fp.is_equal (p2.2, Fp.field_zero) 
+                                     then p1
+                                     else p_add_bl Fp p1 p2 }}
+  [] ;
+*/
+
+mul_assoc_thm <- prove_cryptol
+  {{ \ x y z -> Fp.mul (Fp.mul (x, y), z) == Fp.mul (x, Fp.mul (y, z)) }}
+  [];
+add_assoc_thm <- prove_cryptol {{ \ x y z -> Fp.add (Fp.add (x, y), z) == Fp.add (x, Fp.add (y, z)) }} [];
+sub_elim_thm <- prove_cryptol {{ \ x y -> Fp.sub (x, y) == Fp.add (x, Fp.neg y) }} [];
+neg_neg_thm <- prove_cryptol {{ \ x -> Fp.neg (Fp.neg x) == Fp.normalize x }} [];
+neg_add_thm <- prove_cryptol {{ \ x y -> Fp.neg (Fp.add (x, y)) == Fp.add (Fp.neg x, Fp.neg y) }} [];
+distr_left_thm <- prove_cryptol
+  {{ \ x y z -> Fp.mul (Fp.add (x, y), z) == Fp.add (Fp.mul (x,z), Fp.mul(y,z)) }} [];
+distr_right_thm <- prove_cryptol
+  {{ \ x y z -> Fp.mul (z, Fp.add (x, y)) == Fp.add (Fp.mul (z,x), Fp.mul(z,y)) }} [];
+mul_0_left_thm <- prove_cryptol {{ \x -> Fp.mul (x, Fp.field_zero) == Fp.field_zero }} [];
+mul_0_right_thm <- prove_cryptol {{ \x -> Fp.mul (Fp.field_zero, x) == Fp.field_zero }} [];
+mul_1_left_thm <- prove_cryptol {{ \x -> Fp.mul (x, Fp.field_unit) == Fp.normalize x }} [];
+mul_1_right_thm <- prove_cryptol {{ \x -> Fp.mul (Fp.field_unit, x) == Fp.normalize x }} [];
+add_0_left_thm <- prove_cryptol {{ \x -> Fp.add (x, Fp.field_zero) == Fp.normalize x }} [];
+add_0_right_thm <- prove_cryptol {{ \x -> Fp.add (Fp.field_zero, x) == Fp.normalize x }} [];
+neg_0_thm <- prove_cryptol {{ Fp.neg Fp.field_zero == Fp.field_zero }} [];
+
+let fp_alg_thms = [ mul_assoc_thm, add_assoc_thm, sub_elim_thm, neg_neg_thm, neg_add_thm
+                  , mul_0_left_thm, mul_0_right_thm, mul_1_left_thm, mul_1_right_thm
+                  , add_0_left_thm, add_0_right_thm
+                  ]; // , distr_left_thm, distr_right_thm];
+
+// fp_sub_sub_thm <- prove_cryptol {{\x y -> Fp.sub(x, Fp.add (y,y)) == Fp.sub (Fp.sub (x,y), y) }} [];
+
+
+// prover hangs unless we do some rewwrites!
+POINTonE1_add_equiv_thm <-
+  custom_prove_cryptol
+  // {{ \p1 p2 -> p1.2 != 0 /\ p2.2 != 0 ==> point_add Fp p1 p2 == p_add_bl Fp p1 p2 }}
+  {{ \p1 p2 -> point_add Fp p1 p2 == if  p1.2 == 0 then p2
+                                     else if p2.2 == 0 then p1
+                                     else p_add_bl Fp p1 p2 }}
+  do {
+    unfolding ["point_add", "p_add_bl"]; beta_reduce_goal;
+    simplify (addsimps fp_alg_thms (cryptol_ss ()));
+    // w4_unint_z3 fp_unints; ...fails with unints, need to commute a product
+    z3; 
+    } ;
+
 
 let POINTonE1_add_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
@@ -193,7 +252,22 @@ POINTonE1_add_ov <- custom_verify "POINTonE1_add"
                       // print_goal;
                       w4_unint_z3 fp_unints;});
 
+// ... POINTonE1_add_affine
 
+/*
+POINTonE1_add_affine_equiv_thm <-
+  custom_prove_cryptol
+  // {{ \p1 p2 -> p1.2 != 0 /\ p2.2 != 0 ==> point_add Fp p1 p2 == p_add_bl Fp p1 p2 }}
+  {{ \p1 p2 -> point_add Fp p1 p2 == if  p1.2 == 0 then p2
+                                     else if p2.2 == 0 then p1
+                                     else p_add_bl Fp p1 p2 }}
+  do {
+    unfolding ["point_add", "p_add_bl"]; beta_reduce_goal;
+    simplify (addsimps fp_alg_thms (cryptol_ss ()));
+    // w4_unint_z3 fp_unints; ...fails with unints, need to commute a product
+    z3; 
+    } ;
+*/
 /*
 select_thm <- prove_print z3 {{ \a b c -> select a b c == select_POINTonE1_rep a b c }};
 //print select_thm;
@@ -248,6 +322,25 @@ POINTonE1_add_affine_ov <- custom_verify "POINTonE1_add_affine"
                           w4_unint_z3 fp_unints; };
 
 
+// ...  POINTonE1_double
+
+
+POINTonE1_double_eqv_thm <-
+  custom_prove_cryptol
+  {{ \p1 -> point_double Fp p1 == p_double_a0_l Fp p1 }}
+  do {
+       z3;
+       //unfolding ["point_double", "p_double"]; beta_reduce_goal;
+       //simplify (addsimp fp_sub_sub_thm (cryptol_ss ()));
+       //print_goal;
+       //unfolding ["point_double", "p_double", "E", "Fp", "F_double", "F_by4", "F_by8"
+       //          , "mul_by_3", "mul_by_8", "two", "three", "prime_field_integer"];
+       //beta_reduce_goal;
+       //simplify (cryptol_ss()); beta_reduce_goal;
+       //print_goal;
+       // w4_unint_z3 fp_unints;
+       };
+       
 let POINTonE1_double_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
   (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE1_type;
@@ -257,7 +350,6 @@ let POINTonE1_double_spec = do {
   crucible_points_to out_ptr (crucible_term out);
   crucible_postcond {{ POINTonE1_invariant out }};
   crucible_postcond {{ POINTonE1_abs out == point_double Fp (POINTonE1_abs p1)}};
-  // crucible_postcond {{ (POINTonE1_abs out).0 == (point_double Fp (POINTonE1_abs p1)).0 }};
 };
 
 POINTonE1_double_ov <- custom_verify "POINTonE1_double"
@@ -380,3 +472,16 @@ let POINTonE1_dadd_affine_spec = do {
 };
 
 */
+
+////////////////////////////////////////////////////////////////
+/// Other functions from ec1.c
+///
+
+//  POINTonE1_affine_on_curve
+
+let POINTonE1_affine_on_curve_spec = do {
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE1_type;
+  crucible_precond {{ POINTonE1_invariant p1 }};
+  crucible_execute_func [p1_ptr];
+  crucible_return (crucible_term {{ if is_point_affine E (POINTonE1_abs p1) then (1:Limb_t) else 0 }});
+};
