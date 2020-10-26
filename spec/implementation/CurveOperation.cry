@@ -137,7 +137,7 @@ point_dadd F (x1, y1, z1) (x2, y2, z2) a4 a4_is_null = out where
 
 // TODO:
 //point_dadd_affine: {t} FieldRep t -> ProjectivePoint t -> AffinePoint t  -> ProjectivePoint t 
-// point_dadd F (x1, y1, z1) (x2, y2) = out where
+// point_dadd_affine F (x1, y1, z1) (x2, y2) = out where
 
 point_add: {t} FieldRep t -> ProjectivePoint t -> ProjectivePoint t -> ProjectivePoint t 
 point_add F (x1,y1,z1) (x2,y2,z2) = out where
@@ -146,7 +146,6 @@ point_add F (x1,y1,z1) (x2,y2,z2) = out where
     u1 = F.mul (x1, z2z2)
     h = F.mul(x2,z1z1)
     s1 = F.mul(F.mul(y1,z2), z2z2)
-    // s2 = F.mul(F.mul(y2,z1), z1z1)
     r = F.mul(F.mul(y2,z1), z1z1)
     h_1 = F.sub(h, u1)
     i = F.sq (F.add (h_1,h_1))
@@ -158,7 +157,7 @@ point_add F (x1,y1,z1) (x2,y2,z2) = out where
     x3 = F.sub(F.sub(F.sub(F.sq(r_2),j),v), v)
 
     y3 = F.sub(v, x3)
-    y3_1 = F.mul(y3, r_2)
+    y3_1 = F.mul(y3, r_2) // NOTE: p_add_bl swaps the order of this product.
     s1_1 = F.mul(s1, j)
     y3_2 = F.sub(F.sub(y3_1, s1_1),s1_1)
 
@@ -232,7 +231,24 @@ point_double F (x1,y1,z1) = (x3_2, y3_2, z3_1) where
     y3_1 = F.mul (y3, a_1)
     y3_2 = F.sub (y3_1, c_1)
 
-// TODO: drop these:
+
+
+// TODO: drop these?:
+
+p_double_a0_l: {t} FieldRep t -> ProjectivePoint t -> ProjectivePoint t
+p_double_a0_l F  (x1,y1,z1) = (x3, y3, z3) where
+    a = F.sq x1 //  A = X1^2
+    b = F.sq y1 //  B = Y1^2
+    c = F.sq b //  C = B^2
+    t0 = F.sub(F.sub (F.sq (F.add (x1, b)), a), c) // (X1+B)^2-A-C
+    d = F.add (t0,t0) //   D = 2*((X1+B)^2-A-C)
+    e = mul_by_3 F a //  E = 3*A
+    f = F.sq e //   F = E^2
+    x3 = F.sub (F.sub (f, d), d)  // X3 = F-2*D
+    y3 = F.sub (F.mul (e, F.sub (d, x3)), mul_by_8 F c) //  Y3 = E*(D-X3)-8*C
+    t1 = F.add (z1,z1)
+    z3 = F.mul (t1, y1) // Z3 = 2*Y1*Z1
+
 
 p_add_cc: {t} FieldRep t -> ProjectivePoint t -> ProjectivePoint t -> ProjectivePoint t 
 p_add_cc F (X1,Y1,Z1) (X2,Y2,Z2) = (X3, Y3, Z3) where
@@ -240,7 +256,7 @@ p_add_cc F (X1,Y1,Z1) (X2,Y2,Z2) = (X3, Y3, Z3) where
   U1 = F.mul(X1, F.sq Z2)  // U1 = X1*Z2^2
   U2 = F.mul(X2, F.sq Z1)  // U2 = X2*Z1^2
   S1 = F.mul(Y1, F.mul (Z2, F.sq Z2)) // S1 = Y1*Z2^3
-  S2 = F.mul(Y2, F.mul (Z1, F.sq Z1)) // S2 = Y2*Z1^33
+  S2 = F.mul(Y2, F.mul (Z1, F.sq Z1)) // S2 = Y2*Z1^3
   P = F.sub (U2, U1) // P = U2-U1
   R = F.sub (S2, S1) // R = S2-S1
   P2 = F.sq P // P^2
@@ -269,3 +285,26 @@ p_add_bl F (X1,Y1,Z1) (X2,Y2,Z2) = (X3, Y3, Z3) where
     Y3 = F.sub (F.mul (r, F.sub (V, X3)), F.mul (F.add(S1, S1), J)) // Y3 = r*(V-X3)-2*S1*J
     Z3 = F.mul (F.sub (F.sub (F.sq (F.add (Z1, Z2)), Z1Z1), Z2Z2), H)  // Z3 = ((Z1+Z2)^2-Z1Z1-Z2Z2)*H
 
+// Copied from ProjectiveCurveOperationsA0.cry:
+/*
+The "madd-2007-bl" addition formulas https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html
+is a simple algebraic simplification of the "add-2007-bl" formula when Z2 = 1.
+*/
+p_add_madd_2007_bl: {t} EllipticCurve t -> ProjectivePoint t -> AffinePoint t -> ProjectivePoint t
+p_add_madd_2007_bl C (X1,Y1,Z1) (X2,Y2) = (X3, Y3, Z3) where
+    F = C.base_field
+    // using the  "madd-2007-bl" addition formula
+    Z1Z1 = F.sq Z1                     // Z1Z1 = Z1^2
+    U2 = F.mul (X2, Z1Z1)              // U2 = X2*Z1Z1
+    S2 = F.mul (Y2, F.mul (Z1, Z1Z1))  // S2 = Y2*Z1*Z1Z1
+    H = F.sub (U2, X1)                 // H = U2-X1
+    HH = F.sq H                        // HH = H^2
+    t0 = F.add(HH,HH)
+    I = F.add (t0, t0)                 // I = 4*HH
+    J = F.mul (H, I)                   // J = H*I
+    t1 = F.sub(S2, Y1)
+    r = F.add (t1, t1)                 // r = 2*(S2-Y1)
+    V = F.mul (X1, I)                  // V = X1*I
+    X3 = F.sub (F.sub (F.sq r, J), F.add (V, V))                   // X3 = r^2-J-2*V
+    Y3 = F.sub (F.mul (r, F.sub (V, X3)), F.mul (F.add(Y1, Y1), J)) // Y3 = r*(V-X3)-2*Y1*J
+    Z3 = F.sub (F.sub (F.sq (F.add (Z1, H)), Z1Z1), HH)                // Z3 = (Z1+H)^2-Z1Z1-HH
