@@ -1,0 +1,420 @@
+# LLVM Functions Analyzed
+
+* blst_sign_pk_in_g1
+    * assumed
+* blst_sign_pk_in_g2
+    * assumed
+* blst_p2_deserialize
+    * verified
+* blst_p1_deserialize
+    * verified
+* blst_p2_affine_in_g2
+    * assumed
+* blst_p1_affine_in_g1
+    * assumed
+* blst_sk_to_pk_in_g2
+    * assumed
+* blst_sk_to_pk_in_g1
+    * assumed
+* hash_to_field
+    * verified
+* blst_keygen
+    * verified
+* blst_sha256_block_data_order
+    * assumed
+* blst_sha256_block_data_order
+    * assumed
+* blst_sha256_block_data_order
+    * assumed
+* POINTonE2_is_equal
+    * assumed
+* POINTonE1_is_equal
+    * assumed
+* POINTonE2_double
+    * assumed
+* POINTonE2_double
+    * assumed
+* POINTonE1_double
+    * assumed
+* POINTonE1_double
+    * assumed
+* POINTonE2_add_affine
+    * assumed
+* POINTonE2_add_affine
+    * assumed
+* POINTonE1_add_affine
+    * assumed
+* POINTonE1_add_affine
+    * assumed
+* POINTonE2_add
+    * assumed
+* POINTonE2_add
+    * assumed
+* POINTonE1_add
+    * assumed
+* POINTonE1_add
+    * assumed
+* POINTonE1_add
+    * assumed
+* POINTonE2_dadd_affine
+    * assumed
+* POINTonE1_dadd_affine
+    * assumed
+* POINTonE2_dadd
+    * assumed
+* POINTonE1_dadd
+    * assumed
+* blst_sha256_hcopy
+    * assumed
+* blst_sha256_emit
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* blst_sha256_bcopy
+    * assumed
+* sqrx_mont_382x
+    * assumed
+* sqrx_mont_382x
+    * assumed
+* sqrx_n_mul_mont_383
+    * assumed
+* sqrx_n_mul_mont_383
+    * assumed
+* sqrx_mont_384
+    * assumed
+* sqrx_mont_384
+    * assumed
+* mulx_mont_384
+    * assumed
+* mulx_mont_384
+    * assumed
+* sgn0x_pty_mont_384x
+    * assumed
+* sgn0x_pty_mont_384
+    * assumed
+* fromx_mont_384
+    * assumed
+* redcx_mont_384
+    * assumed
+* sqrx_382x
+    * assumed
+* mulx_382x
+    * assumed
+* sqrx_mont_384x
+    * assumed
+* sqrx_mont_384x
+    * assumed
+* mulx_mont_384x
+    * assumed
+* mulx_mont_384x
+    * assumed
+* redcx_mont_256
+    * assumed
+* redcx_mont_256
+    * assumed
+* fromx_mont_256
+    * assumed
+* sqrx_mont_sparse_256
+    * assumed
+* mulx_mont_sparse_256
+    * assumed
+* mulx_mont_sparse_256
+    * assumed
+* eucl_inverse_mod_384
+    * assumed
+* eucl_inverse_mod_384
+    * assumed
+* sub_mod_384x384
+    * assumed
+* sub_mod_384x384
+    * assumed
+* sub_mod_384x384
+    * assumed
+* sub_mod_384x384
+    * assumed
+* sub_mod_384x384
+    * assumed
+* add_mod_384x384
+    * assumed
+* add_mod_384x384
+    * assumed
+* add_mod_384x384
+    * assumed
+* add_mod_384x384
+    * assumed
+* add_mod_384x384
+    * assumed
+* vec_select_288
+    * assumed
+* vec_select_192
+    * assumed
+* vec_select_144
+    * assumed
+* vec_select_96
+    * assumed
+* vec_select_48
+    * assumed
+* vec_select_288
+    * assumed
+* vec_select_192
+    * assumed
+* vec_select_144
+    * assumed
+* vec_select_96
+    * assumed
+* vec_select_48
+    * assumed
+* vec_select_288
+    * assumed
+* vec_select_192
+    * assumed
+* vec_select_144
+    * assumed
+* vec_select_96
+    * assumed
+* vec_select_48
+    * assumed
+* sgn0_pty_mod_384x
+    * assumed
+* sgn0_pty_mod_384
+    * assumed
+* mul_by_1_plus_i_mod_384x
+    * assumed
+* mul_by_1_plus_i_mod_384x
+    * assumed
+* sub_mod_384x
+    * assumed
+* sub_mod_384x
+    * assumed
+* sub_mod_384x
+    * assumed
+* sub_mod_384x
+    * assumed
+* sub_mod_384x
+    * assumed
+* sub_mod_384
+    * assumed
+* sub_mod_384
+    * assumed
+* sub_mod_384
+    * assumed
+* sub_mod_384
+    * assumed
+* sub_mod_384
+    * assumed
+* cneg_mod_384
+    * assumed
+* cneg_mod_384
+    * assumed
+* mul_by_b_onE2
+    * assumed
+* mul_by_b_onE2
+    * assumed
+* mul_by_8_mod_384x
+    * assumed
+* mul_by_8_mod_384x
+    * assumed
+* mul_by_3_mod_384x
+    * assumed
+* mul_by_3_mod_384x
+    * assumed
+* mul_by_b_onE1
+    * assumed
+* mul_by_b_onE1
+    * assumed
+* mul_by_8_mod_384
+    * assumed
+* mul_by_8_mod_384
+    * assumed
+* mul_by_3_mod_384
+    * assumed
+* mul_by_3_mod_384
+    * assumed
+* lshift_mod_384
+    * assumed
+* lshift_mod_384
+    * assumed
+* add_mod_384x
+    * assumed
+* add_mod_384x
+    * assumed
+* add_mod_384x
+    * assumed
+* add_mod_384x
+    * assumed
+* add_mod_384x
+    * assumed
+* add_mod_384
+    * assumed
+* add_mod_384
+    * assumed
+* add_mod_384
+    * assumed
+* add_mod_384
+    * assumed
+* add_mod_384
+    * assumed
+* sub_mod_256
+    * assumed
+* sub_mod_256
+    * assumed
+* sub_mod_256
+    * assumed
+* sub_mod_256
+    * assumed
+* sub_mod_256
+    * assumed
+* cneg_mod_256
+    * assumed
+* cneg_mod_256
+    * assumed
+* rshift_mod_256
+    * assumed
+* rshift_mod_256
+    * assumed
+* lshift_mod_256
+    * assumed
+* lshift_mod_256
+    * assumed
+* mul_by_3_mod_256
+    * assumed
+* mul_by_3_mod_256
+    * assumed
+* add_mod_256
+    * assumed
+* add_mod_256
+    * assumed
+* add_mod_256
+    * assumed
+* add_mod_256
+    * assumed
+* add_mod_256
+    * assumed
+
+# Solvers Used
+
+* ABC
