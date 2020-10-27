@@ -232,6 +232,15 @@ point_double F (x1,y1,z1) = (x3_2, y3_2, z3_1) where
     y3_2 = F.sub (y3_1, c_1)
 
 
+////////////////////////////////////////////////////////////////
+
+POINTonE1_affine_on_curve: AffinePoint t_Fp -> Bool
+POINTonE1_affine_on_curve p = XXX==YY \/ (x==0 /\ y==0) where
+  (x,y) = p
+  XXX = Fp.add (Fp.mul (Fp.sq x, x), E.b)
+  YY = Fp.sq y
+
+
 
 // TODO: drop these?:
 
