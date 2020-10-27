@@ -23,7 +23,7 @@ include "ec_opts.saw";
 ///////////////////////////////////////////////////////////////////////////////
 
 let blst_keygen_spec IKM_len info_len = do {
-  SK_ptr <- crucible_alloc vec256_type;
+  SK_ptr <- crucible_alloc pow256_type;
 
   IKM <- crucible_fresh_var "IKM" (llvm_array IKM_len (llvm_int 8));
   IKM_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array IKM_len (llvm_int 8));
@@ -34,7 +34,7 @@ let blst_keygen_spec IKM_len info_len = do {
   crucible_points_to info_ptr (crucible_term info);
 
   crucible_execute_func [SK_ptr, IKM_ptr, crucible_term {{ `IKM_len:[64]}}, info_ptr, crucible_term {{ `info_len:[64]}}];
-  new_SK <- crucible_fresh_var "new_SK" vec256_type;
+  new_SK <- crucible_fresh_var "new_SK" pow256_type;
   crucible_points_to SK_ptr (crucible_term new_SK);
 };
 
@@ -94,6 +94,24 @@ let blst_p2_deserialize_spec = do { // TODO: out is left invalid if there is an 
   crucible_return (crucible_term ret);
 };
 
+let blst_sign_pk_in_g2_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1");
+  (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_struct "struct.POINTonE1");
+  (_, sk_ptr) <- ptr_to_fresh_readonly "SK" pow256_type;
+  crucible_execute_func [out_ptr, msg_ptr, sk_ptr];
+  new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
+  crucible_points_to out_ptr (crucible_term new_out);
+};
+
+let blst_sign_pk_in_g1_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2");
+  (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_struct "struct.POINTonE2");
+  (_, sk_ptr) <- ptr_to_fresh_readonly "SK" pow256_type;
+  crucible_execute_func [out_ptr, msg_ptr, sk_ptr];
+  new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE2");
+  crucible_points_to out_ptr (crucible_term new_out);
+};
+
 // NOTE in keygen, something of size `info_len+3` is hashed
 block_data_order_ovs <- make_block_data_order_ovs [IKM_len, (eval_size {|info_len+3|}), aug_len, msg_len, dst_len];
 
@@ -111,3 +129,6 @@ blst_p1_affine_in_g1_ov <- crucible_llvm_verify m "blst_p1_affine_in_g1" (concat
 blst_p2_affine_in_g2_ov <- crucible_llvm_verify m "blst_p2_affine_in_g2" (concat ec_ops_overrides assembly_overrides) false blst_p2_affine_in_g2_spec abc;
 blst_p1_deserialize_ov <- crucible_llvm_verify m "blst_p1_deserialize" (concat ec_ops_overrides assembly_overrides) false blst_p1_deserialize_spec abc;
 blst_p2_deserialize_ov <- crucible_llvm_verify m "blst_p2_deserialize" (concat ec_ops_overrides assembly_overrides) false blst_p2_deserialize_spec abc;
+sign_pk_in_g2_ov <- crucible_llvm_verify m "blst_sign_pk_in_g2" (concat ec_ops_overrides assembly_overrides) false (blst_sign_pk_in_g2_spec) abc;
+sign_pk_in_g1_ov <- crucible_llvm_verify m "blst_sign_pk_in_g1" (concat ec_ops_overrides assembly_overrides) false (blst_sign_pk_in_g1_spec) abc;
+
