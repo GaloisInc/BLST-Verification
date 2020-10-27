@@ -142,12 +142,16 @@ let hoist f unints =
 abs_ite_thm <- hoist {{fp_abs}} ["fp_abs"] ;
 invariant_ite_thm <- hoist {{fp_invariant}} [] ; 
 
+fp_abstract_invariant_thm <- prove_print z3 {{ \x -> Fp.is_val (fp_abs x) == True }};
+
 // ... we will probably also need some algebraic rewrites
 // associate mul to the right
 // mul_assoc_thm <- prove_print z3 {{ \x y z -> xmul`{p} (xmul (x,y), z) == xmul (x, xmul (y,z)) }};
 // mul_assoc_thm <- prove_print z3 {{ \ (x:t_Fp) y z -> xmul (xmul x y) z == xmul x (xmul y z) }};
 
-let fp_simpset = addsimps [abs_ite_thm, seq_ite_thm, invariant_ite_thm] (cryptol_ss ());
+let fp_simpset = addsimps [abs_ite_thm, seq_ite_thm, invariant_ite_thm
+                          , fp_abstract_invariant_thm
+                          ] (cryptol_ss ());
 
 let apply_fp_rewrites = simplify fp_simpset;
 

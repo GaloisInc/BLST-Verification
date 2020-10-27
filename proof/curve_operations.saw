@@ -12,12 +12,39 @@ include "fp_overrides.saw";
 let POINTonE1_type = (llvm_struct "struct.POINTonE1");
 let POINTonE1_affine_type = (llvm_struct "struct.POINTonE1_affine");
 
+import "../spec/ShortWeierstrassCurve.cry";
 import "../spec/ProjectiveCurveOperations.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/CurveOperation.cry";
 
-let do_prove = true;
+let do_prove = false;
 include "proof-helpers.saw";
+
+let ss0 = cryptol_ss ();
+let ss1 = add_prelude_eqs // "borrowed" from ecdsa example
+  [ "ite_not"
+  , "ite_nest1"
+  , "ite_nest2"
+  , "ite_fold_not"
+  , "ite_eq"
+  , "ite_bit"
+  , "ite_bit_false_1"
+  , "ite_bit_true_1"
+  , "ite_eq_cong_1"
+  , "ite_eq_cong_2"
+  , "ite_split_cong"
+  , "ite_join_cong"
+  , "eq_refl"
+  , "at_single"
+  , "and_True1", "and_True2", "and_False1", "and_False2", "and_idem"
+  , "or_True1", "or_True2", "or_False1", "or_False2"
+  , "implies_True1", "implies_False1"
+  , "not_True", "not_False"
+  ] ss0;
+
+// let ss2 = add_cryptol_defs ["/\\", "\\/", "==>"] ss1; // FAILS
+let ss2=ss1;
+
 
 ////////////////////////////////////////////////////////////////
 //
@@ -159,7 +186,33 @@ vec_is_zero_2fp_ov <- test "vec_is_zero" []  vec_is_zero_2fp_spec;
 
 // vec_is_zero_2fp_rep_ov <- crucible_llvm_verify m "vec_is_zero" [] false vec_is_zero_2fp_rep_spec z3;
 
-let vec_overrides = concat [vec_is_zero_fp_ov, vec_is_zero_2fp_ov] vec_select_overrides;
+// ... continuing with vec_is_equal
+
+let vec_is_equal_fp_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  crucible_precond {{ fp_invariant a /\  fp_invariant b }};
+  crucible_execute_func [a_ptr, b_ptr, crucible_term {{ (48:Size_t) }}]; // Non-portable
+  crucible_return (crucible_term {{ if fp_abs a ==  fp_abs b then 1 else (0:Limb) }});
+  };
+
+vec_is_equal_fp_ov <- test "vec_is_equal" []  vec_is_equal_fp_spec;
+
+let vec_is_equal_2fp_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 2 vec384_type);
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" (llvm_array 2 vec384_type);
+  crucible_precond {{     fp_invariant (a@0) /\ fp_invariant (a@1)
+                      /\  fp_invariant (b@0) /\ fp_invariant (b@1) }};
+  crucible_execute_func [a_ptr, b_ptr, crucible_term {{ (96:Size_t) }}]; // Non-portable
+  crucible_return (crucible_term {{ if fp_abs (a@0) ==  fp_abs (b@0) /\ fp_abs (a@1) ==  fp_abs (b@1) 
+                                    then 1 else (0:Limb) }});
+  };
+
+vec_is_equal_2fp_ov <- test "vec_is_equal" []  vec_is_equal_2fp_spec;
+
+let vec_overrides = concat [ vec_is_zero_fp_ov, vec_is_zero_2fp_ov
+                           , vec_is_equal_fp_ov, vec_is_equal_2fp_ov
+                           ] vec_select_overrides;
 // let vec_rep_overrides = concat [vec_is_zero_fp_rep_ov, vec_is_zero_2fp_rep_ov] vec_select_overrides;
 
 
@@ -185,6 +238,7 @@ POINTonE1_add_equiv_thm <-
   [] ;
 */
 
+/*
 mul_assoc_thm <- prove_cryptol
   {{ \ x y z -> Fp.mul (Fp.mul (x, y), z) == Fp.mul (x, Fp.mul (y, z)) }}
   [];
@@ -208,6 +262,28 @@ let fp_alg_thms = [ mul_assoc_thm, add_assoc_thm, sub_elim_thm, neg_neg_thm, neg
                   , mul_0_left_thm, mul_0_right_thm, mul_1_left_thm, mul_1_right_thm
                   , add_0_left_thm, add_0_right_thm
                   ]; // , distr_left_thm, distr_right_thm];
+*/
+
+fp_alg_thms <- for
+  [ {{ \ x y z -> Fp.mul (Fp.mul (x, y), z) == Fp.mul (x, Fp.mul (y, z)) }} // mul associates
+  , {{ \x -> Fp.mul (x, Fp.field_zero) == Fp.field_zero }} // x*0 = x
+  , {{ \x -> Fp.mul (Fp.field_zero, x) == Fp.field_zero }} // 0*x = 0
+  , {{ \x -> Fp.mul (x, Fp.field_unit) == Fp.normalize x }} // x*1 = x
+  , {{ \x -> Fp.mul (Fp.field_unit, x) == Fp.normalize x }} // 1*x = x
+
+  , {{ \x -> Fp.sq x == Fp.mul (x,x) }} // eliminate squaring.  Not always a good idea
+
+  , {{ \ x y z -> Fp.add (Fp.add (x, y), z) == Fp.add (x, Fp.add (y, z)) }} // add associates
+  , {{ \x -> Fp.add (x, Fp.field_zero) == Fp.normalize x }} // x+0 = x
+  , {{ \x -> Fp.add (Fp.field_zero, x) == Fp.normalize x }}//  0+x = x
+
+  , {{ \ x y -> Fp.sub (x, y) == Fp.add (x, Fp.neg y) }} // eliminate sub in favour of neg
+
+  , {{ \ x -> Fp.neg (Fp.neg x) == Fp.normalize x }} // double negative
+  , {{ \ x y -> Fp.neg (Fp.add (x, y)) == Fp.add (Fp.neg x, Fp.neg y) }} // push neg inside a sum
+  , {{ Fp.neg Fp.field_zero == Fp.field_zero }} // -0 = 0
+  ] (\ t -> prove_cryptol t []);
+
 
 // fp_sub_sub_thm <- prove_cryptol {{\x y -> Fp.sub(x, Fp.add (y,y)) == Fp.sub (Fp.sub (x,y), y) }} [];
 
@@ -254,20 +330,18 @@ POINTonE1_add_ov <- custom_verify "POINTonE1_add"
 
 // ... POINTonE1_add_affine
 
-/*
 POINTonE1_add_affine_equiv_thm <-
   custom_prove_cryptol
-  // {{ \p1 p2 -> p1.2 != 0 /\ p2.2 != 0 ==> point_add Fp p1 p2 == p_add_bl Fp p1 p2 }}
-  {{ \p1 p2 -> point_add Fp p1 p2 == if  p1.2 == 0 then p2
-                                     else if p2.2 == 0 then p1
-                                     else p_add_bl Fp p1 p2 }}
+  {{ \p1 p2 -> point_add_affine Fp p1 p2 == if  p1.2 == 0 then projectify E p2
+                                     else p_add_madd_2007_bl E p1 p2 }}
   do {
-    unfolding ["point_add", "p_add_bl"]; beta_reduce_goal;
+    unfolding ["point_add_affine", "p_add_madd_2007_bl", "projecify", "E"]; beta_reduce_goal;
     simplify (addsimps fp_alg_thms (cryptol_ss ()));
-    // w4_unint_z3 fp_unints; ...fails with unints, need to commute a product
+    print_goal;
+    // w4_unint_z3 fp_unints; ... fails
     z3; 
     } ;
-*/
+
 /*
 select_thm <- prove_print z3 {{ \a b c -> select a b c == select_POINTonE1_rep a b c }};
 //print select_thm;
@@ -355,16 +429,15 @@ let POINTonE1_double_spec = do {
 POINTonE1_double_ov <- custom_verify "POINTonE1_double"
                       (concat vec_overrides fp_overrides)
                       POINTonE1_double_spec
-                      // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
                       (do {apply_fp_rewrites; goal_eval_unint fp_unints;
                       simplify (add_prelude_defs ["bitvector"] (addsimp unrip_thm (cryptol_ss ())));
                       apply_fp_rewrites;
-                      //simplify (addsimp unrip_thm (cryptol_ss ()));
-                      //print_goal;
                       w4_unint_z3 fp_unints;});
 
 
-// dadd has a possible null pointer argument, so we use 2 specs.
+// ... POINTonE1_dadd
+//
+//     dadd has a possible null pointer argument, so we use 2 specs.
 
 let POINTonE1_dadd_null_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
@@ -398,30 +471,6 @@ POINTonE1_dadd_null_ov <- custom_verify "POINTonE1_dadd"
                           //print_goal;
                           w4_unint_z3 fp_unints;});
 
-// DEBUGGING:
-let POINTonE1_dadd_nonnull_spec' = do {
-  out_ptr <- crucible_alloc POINTonE1_type;
-  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE1_type;
-  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE1_type;
-  (a4, a4_ptr) <- ptr_to_fresh_readonly "a4" vec384_type;
-  crucible_precond {{ POINTonE1_invariant p1 /\ POINTonE1_invariant p2 /\ fp_invariant a4 }};
-  crucible_execute_func [out_ptr, p1_ptr, p2_ptr, a4_ptr];
-  out <- crucible_fresh_var "new_POINTonE1_dadd_out" POINTonE1_type;
-  crucible_points_to out_ptr (crucible_term out);
-  crucible_postcond {{ out == point_dadd Fp_rep p1 p2 a4 False }};
-  // crucible_postcond {{ out == (zero:POINTonE1_t) }};
-};
-
-/*
-crucible_llvm_verify m "POINTonE1_dadd"
-                      (concat vec_rep_overrides fp_rep_overrides)
-                      false
-                      POINTonE1_dadd_nonnull_spec'
-                      do {
-                      unfolding ["/\\", "point_dadd", "Fp_rep"];
-                      simplify (add_prelude_defs ["bitvector"] (addsimp unrip_thm fp_simpset));
-                      print_goal; w4_unint_z3 fp_unints; };
-*/
 
 let POINTonE1_dadd_nonnull_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
@@ -478,10 +527,97 @@ let POINTonE1_dadd_affine_spec = do {
 ///
 
 //  POINTonE1_affine_on_curve
+normalize_b_thm <- prove_cryptol {{ Fp.normalize b == b }} [];
+
+POINTonE1_affine_on_curve_eqv_thm <- really_custom_prove_cryptol
+   {{ \p -> is_point_affine E p == (Fp.is_val p.0 /\ Fp.is_val p.1 /\ POINTonE1_affine_on_curve p) }}
+   z3;
+/*
+   do { unfolding ["is_point_affine", "POINTonE1_affine_on_curve"];
+        beta_reduce_goal;
+                          unfolding ["is_point_affine", "POINTonE1_affine_abs"
+                                    , "POINTonE1_affine_invariant"
+                                    // , "select"
+                                    , "/\\", "\\/"
+                                    , "E", "is_point_O", "same_point_affine", "point_O"
+                                    , "cubed"
+                                    // , "Fp.is_val"
+                                    , "Fp.is_equal"
+                                    //, "Fp", "prime_field_bv", "prime_field_integer", "prime_field"
+                                    //, "mod_sq_Z"
+                                    , "F_is_zero"];
+        simplify (addsimps (concat [unrip_thm, normalize_b_thm] fp_alg_thms) fp_simpset);
+        print_goal;
+        // eliminate terms like `Fp.2.2.2.2.1` 
+        unfolding ["Fp", "prime_field_bv", "prime_field_integer", "prime_field"
+                  , "\\/", "/\\"];
+        beta_reduce_goal; simplify ss2;
+        print_goal;
+        z3; //  w4_unint_z3 fp_unints;
+         };
+*/
 
 let POINTonE1_affine_on_curve_spec = do {
-  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE1_type;
-  crucible_precond {{ POINTonE1_invariant p1 }};
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE1_affine_type;
+  crucible_precond {{ POINTonE1_affine_invariant p1 }};
   crucible_execute_func [p1_ptr];
-  crucible_return (crucible_term {{ if is_point_affine E (POINTonE1_abs p1) then (1:Limb_t) else 0 }});
+  crucible_return (crucible_term {{ if is_point_affine E (POINTonE1_affine_abs p1) then (1:Limb) else 0 }});
 };
+
+//let {{
+//  B_E1 = [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+//         , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
+//  }};
+B_E1_invariant_thm <-
+  prove_cryptol (rewrite (cryptol_ss ())
+    {{fp_invariant [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+                   , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
+       == True}}) [];
+
+B_E1_abs_thm <-
+  prove_cryptol (rewrite (cryptol_ss ())
+    {{fp_abs       [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+                   , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
+       == b }}) [];
+
+// TODO:
+// Needs: fp_invariant(B_E1) etc. (DONE: defined above)
+// CHECK: treatment of point_O (DONE, same)
+// overrides for vec_equal? (DONE)
+POINTonE1_affine_on_curve_ov <- really_custom_verify "POINTonE1_affine_on_curve"
+                      (concat vec_overrides fp_overrides)
+                      POINTonE1_affine_on_curve_spec
+                      // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
+                      (do {
+                          // replace the post as written with the implementation-specific post
+                          simplify (addsimp POINTonE1_affine_on_curve_eqv_thm basic_ss);
+                          // see what we've got
+                          unfolding ["is_point_affine", "POINTonE1_affine_abs"
+                                    , "POINTonE1_affine_invariant"
+                                    , "POINTonE1_affine_on_curve"
+                                    , "/\\", "\\/"
+                                    , "E", "is_point_O", "same_point_affine", "point_O"
+                                    , "cubed"
+                                    // , "Fp.is_val"
+                                    , "Fp.is_equal"
+                                    // , "Fp", "prime_field_bv", "prime_field_integer", "prime_field"
+                                    , "F_is_zero"];
+                          beta_reduce_goal;
+                          simplify basic_ss; print_goal;
+                          // apply_fp_rewrites; goal_eval_unint fp_unints;
+                          // unfolding ["Fp.is_equal"];
+
+                          simplify (add_prelude_defs ["bitvector"] (addsimps [unrip_thm, seq_ite_thm
+                             , B_E1_abs_thm, B_E1_invariant_thm
+                             , invariant_ite_thm, abs_ite_thm] (cryptol_ss ())));
+                          // simplify (add_prelude_defs ["bitvector"] (addsimp unrip_thm (cryptol_ss ())));
+                          // simplify (addsimps (concat [unrip_thm] fp_alg_thms) fp_simpset);
+                          simplify fp_simpset;
+
+                          unfolding ["Fp", "prime_field_bv", "prime_field_integer", "prime_field"];
+                          beta_reduce_goal;
+                          simplify basic_ss;
+
+                          print_goal;
+                          z3; // w4_unint_z3 fp_unints;
+                          });
