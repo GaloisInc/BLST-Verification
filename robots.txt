@@ -1,0 +1,2 @@
+User-agent: *
+Sitemap: https://galoisinc.github.io/blst-verification/sitemap.xml
