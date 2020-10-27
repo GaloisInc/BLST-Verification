@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/bin/sh
 
 # There are two sorts of validation checks in the tests directory: property checks
 # and test vectors from the specifications.
-# 
+#
 # Most of the validation properties are not easily provable with SMT solvers
 # as they rely on some difficult algebraic properties, and the base types involved
 # are far too large for the SMT solver to handle effectively.  So they are just tested
@@ -14,7 +14,20 @@
 
 # Some long-running or memory-intensive checks are in a separate file.
 
-cryptol <<EOF
+if [ "$#" -ne 0 ]; then
+  t="$1"
+  shift
+
+  cryptol << EOF
+:set tests=100
+:l tests/$t.cry
+:check
+EOF
+
+  exit
+fi
+
+cryptol << EOF
 :set tests=100
 :l tests/PolynomialTest.cry
 :check

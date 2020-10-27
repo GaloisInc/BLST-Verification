@@ -312,3 +312,7 @@ do_keygen_proofs_for 32 0;
 do_keygen_proofs_for 32 4;
 do_keygen_proofs_for 33 7;
 do_keygen_proofs_for 80 16;
+
+
+enable_experimental;
+summarize_verification;
