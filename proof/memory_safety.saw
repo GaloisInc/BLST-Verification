@@ -97,15 +97,6 @@ let blst_p2_deserialize_spec = do { // TODO: out is left invalid if there is an 
 let blst_sign_pk_in_g2_spec = do {
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1");
   (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_struct "struct.POINTonE1");
-  SK <- crucible_fresh_var "SK" pow256_type;
-  crucible_execute_func [out_ptr, msg_ptr, crucible_term SK];
-  new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
-  crucible_points_to out_ptr (crucible_term new_out);
-};
-
-let blst_sign_pk_in_g2_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1");
-  (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_struct "struct.POINTonE1");
   (_, sk_ptr) <- ptr_to_fresh_readonly "SK" pow256_type;
   crucible_execute_func [out_ptr, msg_ptr, sk_ptr];
   new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
