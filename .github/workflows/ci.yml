@@ -16,11 +16,11 @@ jobs:
           tar -xzf zola.tar.gz
           printf '\nY\nY\nY\n' | ./zola init -f pages
           sed -i '1s/^/theme = "docsascode"\ntitle = "Proof Summaries"\n/' pages/config.toml
-          cp build/*_output pages
+          git clone --depth 1 "https://github.com/codeandmedia/zola_docsascode_theme" pages/themes/docsascode
           for p in build/*_output; do
-            cat <(printf '+++\n%s\n%s\n+++\n' "title = \"$p\"" "date = $(date -I)") $p > pages/content/$(basename $p).md
+            cat <(printf '+++\n%s\n%s\n+++\n' "title = \"$(basename $p)\"" "date = $(date -I)") $p > pages/content/$(basename $p).md
           done
-          cd pages && ./zola build -u "https://galoisinc.github.io/blst-verification"
+          cd pages && ../zola build -u "https://galoisinc.github.io/blst-verification"
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
