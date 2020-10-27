@@ -119,7 +119,7 @@ let msg_len = 32;
 let dst_len = 8;
 
 // NOTE: the following 3 overrides are not necessary and were created while debugging; they could nevertheless be useful in the future.
-let make_add_n_dbl_n_ov k = verify "add_n_dbl_n" (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (add_n_dbl_n_spec 1 k); // TODO: how to iterate on both n and k?
+let make_add_n_dbl_n_ov k = verify "add_n_dbl_n" (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (add_n_dbl_n_spec 1 k);
 add_n_dbl_n_ovs <- for [2,3,9,32,16] make_add_n_dbl_n_ov; // sizes come from C source code
 
 let make_start_dbl_n_ov n = verify "start_dbl_n" (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (start_dbl_n_spec n);
@@ -133,7 +133,7 @@ miller_loop_n_ovs <- for (from_to 1 1) make_miller_loop_n_ov; // TODO: what is a
 //block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, dst_len];
 //let sha_assembly_overrides = concat [blst_sha256_emit_ov, blst_sha256_hcopy_ov] block_data_order_ovs;
 
-let make_hash_to_field_ov n = verify "hash_to_field" [] (hash_to_field_spec n aug_len msg_len dst_len); // TODO: verify for real
+let make_hash_to_field_ov n = verify "hash_to_field" [] (hash_to_field_spec n aug_len msg_len dst_len);
 hash_to_field_ovs <- for [1,2,4] make_hash_to_field_ov; // NOTE: how to do this with a lambda?
 
 map_to_g2_ov <- verify "map_to_g2" (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) map_to_g2_spec;
