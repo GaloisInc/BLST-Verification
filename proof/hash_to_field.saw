@@ -7,6 +7,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 include "helpers.saw";
+include "proof-helpers.saw";
 include "list_utils.saw";
 include "types.saw";
 

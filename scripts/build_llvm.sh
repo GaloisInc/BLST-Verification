@@ -6,9 +6,9 @@ rm -r build/llvm
 cp -r blst build/llvm
 cd build/llvm
 
-for p in ../../patches/*
+for p in /workdir/patches/*
 do
-  patch -f -p1 -t < /workdir/patches/"$p" # -f to prevent patch from automatically enabling option -R when it things it should
+  patch -f -p1 -t < "$p" # -f to prevent patch from automatically enabling option -R when it things it should
 done
 
 export CFLAGS='-g -fPIC -Wall -Wextra -Werror'

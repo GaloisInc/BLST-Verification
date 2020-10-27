@@ -1,0 +1,79 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+///////////////////////////////////////////////////////////////////////////////
+// Specifications
+///////////////////////////////////////////////////////////////////////////////
+
+
+
+let map_to_g2_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2");
+  (_, u_ptr) <- ptr_to_fresh_readonly "u" vec384x_type;
+  (_, v_ptr) <- ptr_to_fresh_readonly "v" vec384x_type;
+  crucible_execute_func [out_ptr, u_ptr, v_ptr];
+  new_map_to_g2_out <- crucible_fresh_var "new_map_to_g2_out" (llvm_struct "struct.POINTonE2");
+  crucible_points_to out_ptr (crucible_term new_map_to_g2_out);
+};
+
+let map_to_g2_v_null_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2");
+  (_, u_ptr) <- ptr_to_fresh_readonly "u" vec384x_type;
+  crucible_execute_func [out_ptr, u_ptr, crucible_null];
+  new_map_to_g2_out <- crucible_fresh_var "new_map_to_g2_out" (llvm_struct "struct.POINTonE2");
+  crucible_points_to out_ptr (crucible_term new_map_to_g2_out);
+};
+
+let miller_loop_n_spec n = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (_, Q_ptr) <- ptr_to_fresh_readonly "Q" (llvm_array n (llvm_struct "struct.POINTonE2_affine"));
+  (_, P_ptr) <- ptr_to_fresh_readonly "P" (llvm_array n (llvm_struct "struct.POINTonE1_affine"));
+  crucible_execute_func [ret_ptr, Q_ptr, P_ptr, crucible_term {{ `n:[64] }}];
+  new_miller_loop_n_ret <- crucible_fresh_var "new_miller_loop_n_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_miller_loop_n_ret);
+};
+
+let start_dbl_n_spec n = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  //(_, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
+  //T_ptr <- crucible_alloc (llvm_array n (llvm_struct "struct.POINTonE2"));
+  (_, T_ptr) <- ptr_to_fresh "T" (llvm_array n (llvm_struct "struct.POINTonE2"));
+  (_, Px2_ptr) <- ptr_to_fresh_readonly "Px2" (llvm_array n (llvm_struct "struct.POINTonE1_affine"));
+  crucible_execute_func [ret_ptr, T_ptr, Px2_ptr, crucible_term {{ `n:[64] }}];
+  new_start_dbl_n_ret <- crucible_fresh_var "new_start_dbl_n_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_start_dbl_n_ret);
+  new_start_dbl_n_T <- crucible_fresh_var "new_start_dbl_n_T" (llvm_array n (llvm_struct "struct.POINTonE2"));
+  crucible_points_to T_ptr (crucible_term new_start_dbl_n_T);
+};
+
+let add_n_dbl_n_spec n k = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
+  //T_ptr <- crucible_alloc (llvm_array n (llvm_struct "struct.POINTonE2"));
+  (_, T_ptr) <- ptr_to_fresh "T" (llvm_array n (llvm_struct "struct.POINTonE2"));
+  (_, Q_ptr) <- ptr_to_fresh_readonly "Q" (llvm_array n (llvm_struct "struct.POINTonE2_affine"));
+  (_, Px2_ptr) <- ptr_to_fresh_readonly "Px2" (llvm_array n (llvm_struct "struct.POINTonE1_affine"));
+  crucible_execute_func [ret_ptr, T_ptr, Q_ptr, Px2_ptr, crucible_term {{ `n:[64] }}, crucible_term {{ `k:[64] }}];
+  new_start_dbl_n_ret <- crucible_fresh_var "new_start_dbl_n_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_start_dbl_n_ret);
+  new_start_dbl_n_T <- crucible_fresh_var "new_start_dbl_n_T" (llvm_array n (llvm_struct "struct.POINTonE2"));
+  crucible_points_to T_ptr (crucible_term new_start_dbl_n_T);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Proofs
+///////////////////////////////////////////////////////////////////////////////
+
+// NOTE: the following 3 overrides are not necessary and were created while debugging; they could nevertheless be useful in the future.
+let make_add_n_dbl_n_ov k = verify "add_n_dbl_n" (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (add_n_dbl_n_spec 1 k);
+add_n_dbl_n_ovs <- for [2,3,9,32,16] make_add_n_dbl_n_ov; // sizes come from C source code
+
+let make_start_dbl_n_ov n = verify "start_dbl_n" (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (start_dbl_n_spec n);
+start_dbl_n_ovs <- for (from_to 1 1) make_start_dbl_n_ov;
+
+let make_miller_loop_n_ov n = verify "miller_loop_n" (foldr concat [add_n_dbl_n_ovs, start_dbl_n_ovs, ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (miller_loop_n_spec n);
+miller_loop_n_ovs <- for (from_to 1 1) make_miller_loop_n_ov;
+
+map_to_g2_ov <- verify "map_to_g2" (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) map_to_g2_spec;
+map_to_g2_v_null_ov <- verify "map_to_g2" (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) map_to_g2_v_null_spec;
