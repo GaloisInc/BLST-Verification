@@ -14,7 +14,7 @@ jobs:
       - run: |
           curl -sSLo zola.tar.gz "https://github.com/getzola/zola/releases/download/v0.12.2/zola-v0.12.2-x86_64-unknown-linux-gnu.tar.gz"
           tar -xzf zola.tar.gz
-          printf '\nY\nY\nY\n' | zola init -f pages
+          printf '\nY\nY\nY\n' | ./zola init -f pages
           sed -i '1s/^/theme = "docsascode"\ntitle = "Proof Summaries"\n/' pages/config.toml
           cp build/*_output pages
           for p in build/*_output; do
