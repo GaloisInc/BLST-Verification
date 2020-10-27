@@ -20,9 +20,10 @@ jobs:
           for p in build/*_output; do
             cat <(printf '+++\n%s\n%s\n+++\n' "title = \"$p\"" "date = $(date -I)") $p > pages/content/$(basename $p).md
           done
+          cd pages && ./zola build -u "https://galoisinc.github.io/blst-verification"
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./pages
+          publish_dir: ./pages/public
