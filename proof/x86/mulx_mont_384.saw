@@ -19,7 +19,7 @@ let mulx_mont_384x_spec = do {
   crucible_points_to ret_ptr (crucible_term new_mul_mont_384x_ret);
 };
 
-let mulx_mont_384x_alias_spec = do {
+let mulx_mont_384x_alias_ret_ret_spec = do {
   (_, ret_ptr) <- ptr_to_fresh "ret" vec384x_type;
   (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384x_type;
   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
@@ -28,6 +28,17 @@ let mulx_mont_384x_alias_spec = do {
   new_mul_mont_384x_alias_ret <- crucible_fresh_var "new_mul_mont_384x_alias_ret" vec384x_type;
   crucible_points_to ret_ptr (crucible_term new_mul_mont_384x_alias_ret);
 };
+
+let mulx_mont_384x_alias_ret_a_ret_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec384x_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, ret_ptr, p_ptr, crucible_term n0];
+  new_mul_mont_384x_alias_ret <- crucible_fresh_var "new_mul_mont_384x_alias_ret" vec384x_type;
+  crucible_points_to ret_ptr (crucible_term new_mul_mont_384x_alias_ret);
+};
+
 
 // sqrx_mont_384x
 let sqrx_mont_384x_spec = do {
@@ -236,7 +247,8 @@ let sqrx_mont_382x_alias_spec = do {
 
 // mulx_mont_384x
 mulx_mont_384x_ov <- verify_x86 "mulx_mont_384x" mulx_mont_384x_spec;
-mulx_mont_384x_alias_ov <- verify_x86 "mulx_mont_384x" mulx_mont_384x_alias_spec;
+mulx_mont_384x_alias_ret_ret_ov <- verify_x86 "mulx_mont_384x" mulx_mont_384x_alias_ret_ret_spec;
+mulx_mont_384x_alias_ret_a_ret_ov <- verify_x86 "mulx_mont_384x" mulx_mont_384x_alias_ret_a_ret_spec;
 
 // sqrx_mont_384x - counterexample for internal var
 let do_prove_x86 = false;
@@ -288,7 +300,8 @@ let do_prove_x86 = true;
 
 let mulx_mont_384_overrides =
   [ mulx_mont_384x_ov
-  , mulx_mont_384x_alias_ov
+  , mulx_mont_384x_alias_ret_ret_ov
+  , mulx_mont_384x_alias_ret_a_ret_ov
 
   , sqrx_mont_384x_ov
   , sqrx_mont_384x_alias_ov

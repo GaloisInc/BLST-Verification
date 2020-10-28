@@ -15,7 +15,6 @@ let do_prove = true;
 include "proof-helpers.saw";
 
 include "x86.saw";
-include "assembly_overrides.saw";
 include "fp12_tower.saw";
 include "keygen_defs.saw";
 include "hash_to_field_defs.saw";
