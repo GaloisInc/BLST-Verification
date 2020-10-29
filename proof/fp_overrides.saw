@@ -18,8 +18,8 @@
 // - result = fn' arg --- OK, but need implementation_specific definition for fn',
 //                        and then a proof abs (fn' arg) == fn (abs arg).
 
-let use_abs_method = true;
-let use_rep_method = false;
+let use_abs_method = false; // was true;
+let use_rep_method = true; // was false;
 
 include "helpers.saw";
 include "list_utils.saw";
@@ -110,6 +110,20 @@ let binop_alias_1_2_spec name llvm_type inv rep abs op = do {
 
 // .. theorems (useful rewrites?)
 
+// unconditional theorems, good rewrites, will hold in the `prime_field` model but not the others
+fp_rep_thms <- for
+  [ {{ \x -> fp_invariant (fp_rep x) == True }}
+  , {{ \x -> fp_abs (fp_rep x) == x }}
+  , {{ \x -> fp_rep (fp_abs x) == x }} // Should be conditional on fp_invariant x
+  ] (prove_print assume_unsat); 
+
+/* TODO 
+fp_rep_conditional_thms <- for
+  [ {{ \x -> fp_invariant (fp_rep x) == Fp.is_val x }}
+  , {{ \x -> fp_abs (fp_rep x) == x }}
+  ] (prove_print assume_unsat); 
+*/
+
 // we sometimes need to undo SAW's rip-and-restitching of vectors.  It is a bit tricky 
 let at0 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 0";
 let at1 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 1";
@@ -141,6 +155,7 @@ let hoist f unints =
 
 abs_ite_thm <- hoist {{fp_abs}} ["fp_abs"] ;
 invariant_ite_thm <- hoist {{fp_invariant}} [] ; 
+rep_ite_thm <- hoist {{fp_rep}} ["fp_rep"] ;
 
 fp_abstract_invariant_thm <- prove_print z3 {{ \x -> Fp.is_val (fp_abs x) == True }};
 
@@ -149,9 +164,10 @@ fp_abstract_invariant_thm <- prove_print z3 {{ \x -> Fp.is_val (fp_abs x) == Tru
 // mul_assoc_thm <- prove_print z3 {{ \x y z -> xmul`{p} (xmul (x,y), z) == xmul (x, xmul (y,z)) }};
 // mul_assoc_thm <- prove_print z3 {{ \ (x:t_Fp) y z -> xmul (xmul x y) z == xmul x (xmul y z) }};
 
-let fp_simpset = addsimps [abs_ite_thm, seq_ite_thm, invariant_ite_thm
-                          , fp_abstract_invariant_thm
-                          ] (cryptol_ss ());
+let fp_simpset = addsimps (concat fp_rep_thms
+                           [abs_ite_thm, seq_ite_thm, invariant_ite_thm, rep_ite_thm
+                           , fp_abstract_invariant_thm
+                           ])  (cryptol_ss ());
 
 let apply_fp_rewrites = simplify fp_simpset;
 
@@ -203,7 +219,7 @@ let fp_overrides = foldr concat [add_fp_ovs, sub_fp_ovs, mul_fp_ovs]
                      [sqr_fp_ov, sqr_fp_alias_1_2_ov
                      , mul_by_3_fp_alias_1_2_ov, mul_by_8_fp_alias_1_2_ov];
 
-let fp_unints = ["fp_abs", "fp_invariant"
+let fp_unints = ["fp_abs", "fp_invariant", "fp_rep"
                 // , "mul_by_3", ,"mul_by_8" -- CANNOT include these as they are polymorphic
                 , "mod_add", "mod_sub", "mod_neg", "mod_mul", "mod_half", "mod_div"
                 , "mod_add_Z", "mod_sub_Z", "mod_neg_Z", "mod_mul_Z", "mod_half_Z", "mod_div_Z"
