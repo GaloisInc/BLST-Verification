@@ -13,13 +13,13 @@
 */
 
 // There are three approaches to writing the postconditions, either
-// - (abs result) = fn (abs arg)
-// - result = rep (fn (abs arg)) --- OK, if we have a rewrite (abs (rep x)) == x
-// - result = fn' arg --- OK, but need implementation_specific definition for fn',
+// abs method: - (abs result) = fn (abs arg)
+// concrete method: - result = rep (fn (abs arg)) --- OK, if we have a rewrite (abs (rep x)) == x
+// direct method: - result = fn' arg --- OK, but need implementation_specific definition for fn',
 //                        and then a proof abs (fn' arg) == fn (abs arg).
 
-let use_abs_method = false; // was true;
-let use_rep_method = true; // was false;
+let use_abs_method = false;
+let use_concrete_method = true;
 
 include "helpers.saw";
 include "list_utils.saw";
@@ -44,7 +44,7 @@ let unop_spec name llvm_type inv rep abs op = do {
     crucible_postcond {{inv ret }};
     crucible_postcond {{ abs ret == op (abs x) }};
     }
-  else if use_rep_method
+  else if use_concrete_method
   then crucible_points_to ret_ptr (crucible_term {{ rep (op (abs x)) }})
   else crucible_points_to ret_ptr (crucible_term {{ op x }});
 };
@@ -61,7 +61,7 @@ let unop_alias_1_2_spec name llvm_type inv rep abs op = do {
     crucible_postcond {{inv ret }};
     crucible_postcond {{ abs ret == op (abs x) }};
     }
-  else if use_rep_method
+  else if use_concrete_method
   then crucible_points_to x_ptr (crucible_term {{ rep (op (abs x)) }})
   else crucible_points_to x_ptr (crucible_term {{ op x }});
 };
@@ -80,7 +80,7 @@ let binop_spec name llvm_type inv rep abs op = do {
     crucible_postcond {{inv ret }};
     crucible_postcond {{ abs ret == op (abs x, abs y) }};
     }
-  else if use_rep_method
+  else if use_concrete_method
   then crucible_points_to ret_ptr (crucible_term {{ rep (op (abs x, abs y)) }})
   else crucible_points_to ret_ptr (crucible_term {{ op x y }});
 };
@@ -98,7 +98,7 @@ let binop_alias_1_2_spec name llvm_type inv rep abs op = do {
     crucible_postcond {{inv ret }};
     crucible_postcond {{ abs ret == op (abs x, abs y) }};
     }
-  else if use_rep_method
+  else if use_concrete_method
   then crucible_points_to x_ptr (crucible_term {{ rep (op (abs x, abs y)) }})
   else crucible_points_to x_ptr (crucible_term {{ op x y }});
 };

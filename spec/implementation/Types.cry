@@ -42,3 +42,10 @@ vec_rep x = reverse (split x)
 
 vec256_rep = vec_rep`{256/64}
 vec384_rep = vec_rep`{384/64}
+
+/**
+ * Represent a Boolean as a limb, with value 1 for true, 0 for false
+ */
+bool_to_limb: Bool -> Limb
+bool_to_limb b = if b then (1:Limb) else 0
+
