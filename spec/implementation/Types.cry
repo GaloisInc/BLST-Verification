@@ -49,3 +49,5 @@ vec384_rep = vec_rep`{384/64}
 bool_to_limb: Bool -> Limb
 bool_to_limb b = if b then (1:Limb) else 0
 
+select: {t} t -> t-> Bit -> t
+select a b c = if c then a else b
