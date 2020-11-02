@@ -13,16 +13,14 @@ import ProjectiveCurveOperations
 import implementation::Types
 import implementation::Field
 
-select: {t} t -> t-> Bit -> t
-select a b c = if c then a else b
 
 type POINTonE1_t = (Vec384, Vec384, Vec384)
 type POINTonE1_affine_t = (Vec384, Vec384)
 
 // monomorphic instances of `select` that can be used uninterpreted in proofs.
-select_POINTonE1_rep a = select`{POINTonE1_t} a
-select_POINTonE1 a = select`{ProjectivePoint t_Fp} a
-select_Fp a = select`{t_Fp} a
+//select_POINTonE1_rep a = select`{POINTonE1_t} a
+//select_POINTonE1 a = select`{ProjectivePoint t_Fp} a
+//select_Fp a = select`{t_Fp} a
 
 POINTonE1_invariant: POINTonE1_t -> Bool
 POINTonE1_invariant (x,y,z) = fp_invariant x /\ fp_invariant y /\ fp_invariant z
