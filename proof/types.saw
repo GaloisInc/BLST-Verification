@@ -14,3 +14,8 @@ let limb_type = (llvm_int 64);
 let size_type = (llvm_int 64);
 
 let pow256_type = llvm_array 32 (llvm_int 8);
+
+//let POINTonE1_type = llvm_type "{i384, i384, i384}" ;
+//let POINTonE1_affine_type = llvm_type "{i384, i384}";
+let POINTonE1_type = llvm_struct "struct.POINTonE1";
+let POINTonE1_affine_type = llvm_struct "struct.POINTonE1_affine";
