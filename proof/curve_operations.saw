@@ -71,54 +71,6 @@ enable_what4_hash_consing;
 // ... POINTonE1_add
 
 
-/*
-mul_assoc_thm <- prove_cryptol
-  {{ \ x y z -> Fp.mul (Fp.mul (x, y), z) == Fp.mul (x, Fp.mul (y, z)) }}
-  [];
-add_assoc_thm <- prove_cryptol {{ \ x y z -> Fp.add (Fp.add (x, y), z) == Fp.add (x, Fp.add (y, z)) }} [];
-sub_elim_thm <- prove_cryptol {{ \ x y -> Fp.sub (x, y) == Fp.add (x, Fp.neg y) }} [];
-neg_neg_thm <- prove_cryptol {{ \ x -> Fp.neg (Fp.neg x) == Fp.normalize x }} [];
-neg_add_thm <- prove_cryptol {{ \ x y -> Fp.neg (Fp.add (x, y)) == Fp.add (Fp.neg x, Fp.neg y) }} [];
-distr_left_thm <- prove_cryptol
-  {{ \ x y z -> Fp.mul (Fp.add (x, y), z) == Fp.add (Fp.mul (x,z), Fp.mul(y,z)) }} [];
-distr_right_thm <- prove_cryptol
-  {{ \ x y z -> Fp.mul (z, Fp.add (x, y)) == Fp.add (Fp.mul (z,x), Fp.mul(z,y)) }} [];
-mul_0_left_thm <- prove_cryptol {{ \x -> Fp.mul (x, Fp.field_zero) == Fp.field_zero }} [];
-mul_0_right_thm <- prove_cryptol {{ \x -> Fp.mul (Fp.field_zero, x) == Fp.field_zero }} [];
-mul_1_left_thm <- prove_cryptol {{ \x -> Fp.mul (x, Fp.field_unit) == Fp.normalize x }} [];
-mul_1_right_thm <- prove_cryptol {{ \x -> Fp.mul (Fp.field_unit, x) == Fp.normalize x }} [];
-add_0_left_thm <- prove_cryptol {{ \x -> Fp.add (x, Fp.field_zero) == Fp.normalize x }} [];
-add_0_right_thm <- prove_cryptol {{ \x -> Fp.add (Fp.field_zero, x) == Fp.normalize x }} [];
-neg_0_thm <- prove_cryptol {{ Fp.neg Fp.field_zero == Fp.field_zero }} [];
-
-let fp_alg_thms = [ mul_assoc_thm, add_assoc_thm, sub_elim_thm, neg_neg_thm, neg_add_thm
-                  , mul_0_left_thm, mul_0_right_thm, mul_1_left_thm, mul_1_right_thm
-                  , add_0_left_thm, add_0_right_thm
-                  ]; // , distr_left_thm, distr_right_thm];
-*/
-
-fp_alg_thms <- for
-  [ {{ \ x y z -> Fp.mul (Fp.mul (x, y), z) == Fp.mul (x, Fp.mul (y, z)) }} // mul associates
-  , {{ \x -> Fp.mul (x, Fp.field_zero) == Fp.field_zero }} // x*0 = 0
-  , {{ \x -> Fp.mul (Fp.field_zero, x) == Fp.field_zero }} // 0*x = 0
-  , {{ \x -> Fp.mul (x, Fp.field_unit) == Fp.normalize x }} // x*1 = x ish
-  // , {{ \x -> Fp.mul (x, Fp.field_unit) == x }} // x*1 = x TODO
-  , {{ \x -> Fp.mul (Fp.field_unit, x) == Fp.normalize x }} // 1*x = x ish
-  // , {{ \x -> Fp.mul (Fp.field_unit, x) == x }} // 1*x = x TODO
-
-  , {{ \x -> Fp.sq x == Fp.mul (x,x) }} // eliminate squaring.  Not always a good idea
-
-  , {{ \ x y z -> Fp.add (Fp.add (x, y), z) == Fp.add (x, Fp.add (y, z)) }} // add associates
-  , {{ \x -> Fp.add (x, Fp.field_zero) == Fp.normalize x }} // x+0 = x ish
-  , {{ \x -> Fp.add (Fp.field_zero, x) == Fp.normalize x }}//  0+x = x ish
-
-  , {{ \ x y -> Fp.sub (x, y) == Fp.add (x, Fp.neg y) }} // eliminate sub in favour of neg
-
-  , {{ \ x -> Fp.neg (Fp.neg x) == Fp.normalize x }} // double negative
-  , {{ \ x y -> Fp.neg (Fp.add (x, y)) == Fp.add (Fp.neg x, Fp.neg y) }} // push neg inside a sum
-  , {{ Fp.neg Fp.field_zero == Fp.field_zero }} // -0 = 0
-  ] (\ t -> prove_cryptol t []);
-
 
 POINTonE1_add_equiv_thm <-
   custom_prove_cryptol
@@ -159,6 +111,7 @@ POINTonE1_add_ov <- custom_verify "POINTonE1_add"
                       (do {apply_fp_rewrites; goal_eval_unint fp_unints;
                       unfolding ["Fp.is_equal"];
                       apply_fp_rewrites;
+                      unfolding ["Fp"];
                       w4_unint_z3 fp_unints;});
 
 // ... POINTonE1_add_affine
@@ -234,6 +187,7 @@ POINTonE1_add_affine_ov <- custom_verify "POINTonE1_add_affine"
                              (addsimps structural_rewrites
                                     (addsimps [one_mont_p_abs_thm, one_mont_p_invariant_thm
                                               , one_mont_p_rep_thm] fp_simpset));
+                          unfolding ["Fp"];
                           w4_unint_z3 fp_unints;
                           };
 
@@ -393,6 +347,7 @@ POINTonE1_dadd_affine_ov <- custom_verify "POINTonE1_dadd_affine"
                                                              fp_alg_thms)
                                                      structural_rewrites)
                                              fp_simpset);
+                          unfolding ["Fp"];
                           w4_unint_z3 fp_unints;
                           });
 
@@ -417,6 +372,7 @@ POINTonE1_is_equal_ov <- custom_verify "POINTonE1_is_equal"
                    , "E", "cubed", "/\\"
                    ];
          simplify (addsimps (concat fp_alg_thms structural_rewrites) fp_simpset);
+         unfolding ["Fp"];
          w4_unint_z3 fp_unints;
          };
 
@@ -471,6 +427,7 @@ POINTonE1_affine_on_curve_ov <- custom_verify "POINTonE1_affine_on_curve"
                                     ];
                           simplify (addsimps structural_rewrites
                                     (addsimps [B_E1_abs_thm, B_E1_invariant_thm] fp_simpset));
+                          unfolding ["Fp"];
                           w4_unint_z3 fp_unints;
                           });
 
@@ -533,6 +490,7 @@ let POINTonE1_cneg_spec = do {
   cbit <- crucible_frsesh_variable limb_type;
   crucible_precond {{ POINTonE1_invariant p }};
   crucible_execute_func [p1_ptr, crucible_term cbit];
-  crucible_points_to p_ptr (crucible_term {{ if (cbit 
+  crucible_points_to p_ptr (crucible_term {{ if cbit != 0 then POINTonE1_rep (p_neg E (POINTonE1_abs p))
+                                                          else p }})
 };
 */
