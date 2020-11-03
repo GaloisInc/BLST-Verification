@@ -20,7 +20,7 @@ jobs:
           for p in build/*_output; do
             cat <(printf '+++\n%s\n%s\n+++\n' "title = \"$(basename $p)\"" "date = $(date -I)") $p > pages/content/$(basename $p).md
           done
-          cd pages && ../zola build -u "https://galoisinc.github.io/blst-verification"
+          cd pages && ../zola build -u "https://galoisinc.github.io/BLST-Verification"
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
