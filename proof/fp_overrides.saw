@@ -155,17 +155,66 @@ rep_ite_thm <- hoist {{fp_rep}} ["fp_rep"] ;
 
 fp_abstract_invariant_thm <- prove_cryptol {{ \x -> Fp.is_val (fp_abs x) == True }} [];
 
-// ... we will probably also need some algebraic rewrites
-// associate mul to the right
-// mul_assoc_thm <- prove_print z3 {{ \x y z -> xmul`{p} (xmul (x,y), z) == xmul (x, xmul (y,z)) }};
-// mul_assoc_thm <- prove_print z3 {{ \ (x:t_Fp) y z -> xmul (xmul x y) z == xmul x (xmul y z) }};
-
 let fp_simpset = addsimps (concat fp_rep_thms
                            [abs_ite_thm, seq_ite_thm, invariant_ite_thm, rep_ite_thm
                            , unrip_thm, fp_abstract_invariant_thm
                            ])  (cryptol_ss ());
 
 let apply_fp_rewrites = simplify fp_simpset;
+
+
+// ... we also need some algebraic rewrites
+
+/* This would be the way to go if we need to refer to individual rules:
+mul_assoc_thm <- prove_cryptol
+  {{ \ x y z -> Fp.mul (Fp.mul (x, y), z) == Fp.mul (x, Fp.mul (y, z)) }}
+  [];
+add_assoc_thm <- prove_cryptol {{ \ x y z -> Fp.add (Fp.add (x, y), z) == Fp.add (x, Fp.add (y, z)) }} [];
+sub_elim_thm <- prove_cryptol {{ \ x y -> Fp.sub (x, y) == Fp.add (x, Fp.neg y) }} [];
+neg_neg_thm <- prove_cryptol {{ \ x -> Fp.neg (Fp.neg x) == Fp.normalize x }} [];
+neg_add_thm <- prove_cryptol {{ \ x y -> Fp.neg (Fp.add (x, y)) == Fp.add (Fp.neg x, Fp.neg y) }} [];
+distr_left_thm <- prove_cryptol
+  {{ \ x y z -> Fp.mul (Fp.add (x, y), z) == Fp.add (Fp.mul (x,z), Fp.mul(y,z)) }} [];
+distr_right_thm <- prove_cryptol
+  {{ \ x y z -> Fp.mul (z, Fp.add (x, y)) == Fp.add (Fp.mul (z,x), Fp.mul(z,y)) }} [];
+mul_0_left_thm <- prove_cryptol {{ \x -> Fp.mul (x, Fp.field_zero) == Fp.field_zero }} [];
+mul_0_right_thm <- prove_cryptol {{ \x -> Fp.mul (Fp.field_zero, x) == Fp.field_zero }} [];
+mul_1_left_thm <- prove_cryptol {{ \x -> Fp.mul (x, Fp.field_unit) == Fp.normalize x }} [];
+mul_1_right_thm <- prove_cryptol {{ \x -> Fp.mul (Fp.field_unit, x) == Fp.normalize x }} [];
+add_0_left_thm <- prove_cryptol {{ \x -> Fp.add (x, Fp.field_zero) == Fp.normalize x }} [];
+add_0_right_thm <- prove_cryptol {{ \x -> Fp.add (Fp.field_zero, x) == Fp.normalize x }} [];
+neg_0_thm <- prove_cryptol {{ Fp.neg Fp.field_zero == Fp.field_zero }} [];
+
+let fp_alg_thms = [ mul_assoc_thm, add_assoc_thm, sub_elim_thm, neg_neg_thm, neg_add_thm
+                  , mul_0_left_thm, mul_0_right_thm, mul_1_left_thm, mul_1_right_thm
+                  , add_0_left_thm, add_0_right_thm
+                  ]; // , distr_left_thm, distr_right_thm];
+
+... but it is more concise to defined them as follows:
+*/
+
+fp_alg_thms <- for
+  [ {{ \ x y z -> Fp.mul (Fp.mul (x, y), z) == Fp.mul (x, Fp.mul (y, z)) }} // mul associates
+  , {{ \x -> Fp.mul (x, Fp.field_zero) == Fp.field_zero }} // x*0 = 0
+  , {{ \x -> Fp.mul (Fp.field_zero, x) == Fp.field_zero }} // 0*x = 0
+  , {{ \x -> Fp.mul (x, Fp.field_unit) == Fp.normalize x }} // x*1 = x ish
+  // , {{ \x -> Fp.mul (x, Fp.field_unit) == x }} // x*1 = x TODO
+  , {{ \x -> Fp.mul (Fp.field_unit, x) == Fp.normalize x }} // 1*x = x ish
+  // , {{ \x -> Fp.mul (Fp.field_unit, x) == x }} // 1*x = x TODO
+
+  , {{ \x -> Fp.sq x == Fp.mul (x,x) }} // eliminate squaring.  Not always a good idea
+
+  , {{ \ x y z -> Fp.add (Fp.add (x, y), z) == Fp.add (x, Fp.add (y, z)) }} // add associates
+  , {{ \x -> Fp.add (x, Fp.field_zero) == Fp.normalize x }} // x+0 = x ish
+  , {{ \x -> Fp.add (Fp.field_zero, x) == Fp.normalize x }}//  0+x = x ish
+
+  , {{ \ x y -> Fp.sub (x, y) == Fp.add (x, Fp.neg y) }} // eliminate sub in favour of neg
+
+  , {{ \ x -> Fp.neg (Fp.neg x) == Fp.normalize x }} // double negative
+  , {{ \ x y -> Fp.neg (Fp.add (x, y)) == Fp.add (Fp.neg x, Fp.neg y) }} // push neg inside a sum
+  , {{ Fp.neg Fp.field_zero == Fp.field_zero }} // -0 = 0
+  ] (\ t -> prove_cryptol t []);
+
 
 ////////////////////////////////////////////////////////////////
 //
@@ -215,7 +264,7 @@ let fp_overrides = foldr concat [add_fp_ovs, sub_fp_ovs, mul_fp_ovs]
                      [sqr_fp_ov, sqr_fp_alias_1_2_ov
                      , mul_by_3_fp_alias_1_2_ov, mul_by_8_fp_alias_1_2_ov];
 
-let fp_unints = ["fp_abs", "fp_invariant", "fp_rep"
+let fp_unints = ["fp_abs", "fp_invariant", "fp_rep", "Fp"
                 // , "mul_by_3", ,"mul_by_8" -- CANNOT include these as they are polymorphic
                 , "mod_add", "mod_sub", "mod_neg", "mod_mul", "mod_half", "mod_div"
                 , "mod_add_Z", "mod_sub_Z", "mod_neg_Z", "mod_mul_Z", "mod_half_Z", "mod_div_Z"
