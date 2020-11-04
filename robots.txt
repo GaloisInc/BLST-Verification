@@ -1,2 +1,2 @@
 User-agent: *
-Sitemap: https://galoisinc.github.io/BLST-Verification/sitemap.xml
+Sitemap: https://GaloisInc.github.io/BLST-Verification/sitemap.xml
