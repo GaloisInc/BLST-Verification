@@ -61,19 +61,38 @@ let add_n_dbl_n_spec n k = do {
   crucible_points_to T_ptr (crucible_term new_start_dbl_n_T);
 };
 
+let final_exp_spec = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (_, f_ptr) <- ptr_to_fresh_readonly "f" vec384fp12_type;
+  crucible_execute_func [ret_ptr, f_ptr];
+  new_ret <- crucible_fresh_var "new_final_exp_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let final_exp_alias_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "f" vec384fp12_type;
+  crucible_execute_func [ret_ptr, ret_ptr];
+  new_ret <- crucible_fresh_var "new_final_exp_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Proofs
 ///////////////////////////////////////////////////////////////////////////////
 
+let overrides = (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []);
+
 // NOTE: the following 3 overrides are not necessary and were created while debugging; they could nevertheless be useful in the future.
-let make_add_n_dbl_n_ov k = verify "add_n_dbl_n" (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (add_n_dbl_n_spec 1 k);
+let make_add_n_dbl_n_ov k = verify "add_n_dbl_n" overrides (add_n_dbl_n_spec 1 k);
 add_n_dbl_n_ovs <- for [2,3,9,32,16] make_add_n_dbl_n_ov; // sizes come from C source code
 
-let make_start_dbl_n_ov n = verify "start_dbl_n" (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (start_dbl_n_spec n);
+let make_start_dbl_n_ov n = verify "start_dbl_n" overrides (start_dbl_n_spec n);
 start_dbl_n_ovs <- for (from_to 1 1) make_start_dbl_n_ov;
 
 let make_miller_loop_n_ov n = verify "miller_loop_n" (foldr concat [add_n_dbl_n_ovs, start_dbl_n_ovs, ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (miller_loop_n_spec n);
 miller_loop_n_ovs <- for (from_to 1 1) make_miller_loop_n_ov;
 
-map_to_g2_ov <- verify "map_to_g2" (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) map_to_g2_spec;
-map_to_g2_v_null_ov <- verify "map_to_g2" (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) map_to_g2_v_null_spec;
+map_to_g2_ov <- verify "map_to_g2" overrides map_to_g2_spec;
+map_to_g2_v_null_ov <- verify "map_to_g2" overrides map_to_g2_v_null_spec;
+final_exp_ov <- verify "final_exp" overrides final_exp_spec;
+final_exp_alias_ov <- verify "final_exp" overrides final_exp_alias_spec;
