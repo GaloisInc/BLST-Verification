@@ -1,0 +1,12 @@
+module BLSFieldExtras where
+
+import Parameters (p, Fp)
+import FieldExtras
+
+is_square_fp x =  y == 0 \/ y == 1 where
+    y = F_expt`{n=width p} Fp x `((p-1)/2)
+
+sqrt_fp x = F_expt`{n=width p} Fp x `((p+1)/4) // the =3 (mod 4) variant
+
+inverse_fp x = F_expt`{n=width p} Fp x `(p-2) // but also could be F.div (F.field_unit, x)
+
