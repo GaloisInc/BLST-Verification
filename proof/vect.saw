@@ -1,0 +1,164 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+// Functions from `vect.h`
+//
+// While these functions just operate on arrays of limbs, in our proofs we often need to
+// consider their effect in the abstract, not concrete, domain.
+
+import "../spec/implementation/Types.cry";
+
+// ... vec_select 
+let vec_select_asm_spec (bytes:Int) = do {
+  ret_ptr <- crucible_alloc (llvm_array bytes (llvm_int 8));
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array bytes (llvm_int 8));
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" (llvm_array bytes (llvm_int 8));
+  sel_a <- crucible_fresh_var "sel_a" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, crucible_term sel_a];
+  crucible_points_to ret_ptr (crucible_term {{ if (sel_a != 0) then a else b }});
+};
+
+let vec_select_asm_alias_1_3_spec bytes = do {
+  (ret, ret_ptr) <- ptr_to_fresh "ret" (llvm_array bytes (llvm_int 8));
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array bytes (llvm_int 8));
+  sel_a <- crucible_fresh_var "sel_a" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, ret_ptr, crucible_term sel_a];
+  crucible_points_to ret_ptr (crucible_term {{ if (sel_a != 0) then a else ret }});
+};
+
+let mk_vec_select_asm_ov bytes = admit (str_concat "vec_select_" (show bytes)) [] (vec_select_asm_spec bytes);
+
+let mk_vec_select_asm_alias_1_3_ov bytes = admit (str_concat "vec_select_" (show bytes)) [] (vec_select_asm_alias_1_3_spec bytes);
+
+let vec_select_sizes = [48, 96, 144, 192, 288];
+vec_select_asm_ovs <- do {
+  ovs <- (for vec_select_sizes mk_vec_select_asm_ov);
+  // ovs_1_2  <- (for vec_select_sizes mk_vec_select_alias_1_2_ov);
+  ovs_1_3  <- (for vec_select_sizes mk_vec_select_asm_alias_1_3_ov);
+  // return (foldr concat [ovs, ovs_1_2] ovs_1_3);
+  return (concat ovs ovs_1_3);
+  };
+
+let vec_select_spec bytes ty = do {
+  ret_ptr <- crucible_alloc ty;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" ty;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" ty;
+  sel_a <- crucible_fresh_var "sel_a" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, crucible_term {{`bytes:Size_t }}, crucible_term sel_a];
+  crucible_points_to ret_ptr (crucible_term {{ select a b (sel_a != 0)}});
+};
+
+let vec_select_alias_1_3_spec bytes ty = do {
+  (ret, ret_ptr) <- ptr_to_fresh "ret" ty;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" ty;
+  sel_a <- crucible_fresh_var "sel_a" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, ret_ptr, crucible_term {{`bytes:Size_t}}, crucible_term sel_a];
+  crucible_points_to ret_ptr (crucible_term {{ select a ret (sel_a != 0)}});
+};
+
+vec_select_POINTonE1_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_spec 144 POINTonE1_type);
+// vec_select_POINTonE1_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_spec 144 (llvm_array 3 vec384_type));
+
+vec_select_alias_1_3_POINTonE1_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_alias_1_3_spec 144 POINTonE1_type);
+// vec_select_alias_1_3_POINTonE1_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_alias_1_3_spec 144 (llvm_array 3 vec384_type));
+
+vec_select_Fp_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_spec 48 vec384_type);
+
+vec_select_Fp_alias_1_3_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_alias_1_3_spec 48 vec384_type);
+
+vec_select_2Fp_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_spec 96 (llvm_array 2 vec384_type));
+
+vec_select_2Fp_alias_1_3_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_alias_1_3_spec 96 (llvm_array 2 vec384_type));
+
+let vec_select_overrides = [vec_select_POINTonE1_ov, vec_select_alias_1_3_POINTonE1_ov
+                           , vec_select_Fp_ov, vec_select_Fp_alias_1_3_ov
+                           , vec_select_2Fp_ov, vec_select_2Fp_alias_1_3_ov
+                           ];
+
+// ... and continuing with vec_is_zero
+
+/*
+let vec_is_zero_spec n = do { // n is size IN LIMBS; routine takes size in bytes
+  (a, a_ptr) <- ptr_to_fresh "a" (llvm_array n limb_type);
+  crucible_execute_func [a_ptr, crucible_term {{ (8 * (`n:Size_t)) }}]; // Non-portable
+  crucible_return (crucible_term {{ if a == (zero:[n]Limb) then 1 else (0:Limb) }});
+  // crucible_return (crucible_term {{ if fp_equal_rep a Fp_rep.field_zero then 1 else (0:Limb) }});
+  // crucible_return (crucible_term {{ if xeq a (zero:[n]Limb) then 1 else (0:Limb) }});
+  };
+
+// vec_is_zero_48_ov <- crucible_llvm_verify m "vec_is_zero" [] false (vec_is_zero_spec 6) z3;
+*/
+
+// ... we actually want the is-0 test in the abstract domain
+
+let vec_is_zero_fp_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  crucible_precond {{ fp_invariant a }};
+  crucible_execute_func [a_ptr, crucible_term {{ (48:Size_t) }}]; // Non-portable
+  // crucible_return (crucible_term {{ if fp_equal_rep a Fp_rep.field_zero then 1 else (0:Limb) }});
+  crucible_return (crucible_term {{ if (fp_abs a) ==  Fp.field_zero then 1 else (0:Limb) }});
+  };
+
+// TODO: Prove
+vec_is_zero_fp_ov <- test "vec_is_zero" [] vec_is_zero_fp_spec;
+//  do { unfolding ["fp_invariant", "fp_abs", "vec384_abs" ]; beta_reduce_goal; print_goal; quickcheck 100; };
+//  do { unfolding ["fp_invariant", "fp_abs", "vec384_abs" ]; beta_reduce_goal; print_goal; z3; };
+
+// dadd needs a 2*Fp version of is_zero
+
+let vec_is_zero_2fp_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 2 vec384_type);
+  crucible_precond {{ fp_invariant (a@0) /\ fp_invariant (a@1) }};
+  crucible_execute_func [a_ptr, crucible_term {{ (96:Size_t) }}]; // Non-portable
+  crucible_return (crucible_term {{ if fp_abs (a@0) ==  Fp.field_zero /\ fp_abs (a@1) == Fp.field_zero then 1 else (0:Limb) }});
+  };
+
+// TODO: prove
+vec_is_zero_2fp_ov <- test "vec_is_zero" []  vec_is_zero_2fp_spec;
+
+// ... continuing with vec_is_equal
+
+let vec_is_equal_fp_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  crucible_precond {{ fp_invariant a /\  fp_invariant b }};
+  crucible_execute_func [a_ptr, b_ptr, crucible_term {{ (48:Size_t) }}]; // Non-portable
+  crucible_return (crucible_term {{ if fp_abs a ==  fp_abs b then 1 else (0:Limb) }});
+  };
+
+//TODO: prove
+vec_is_equal_fp_ov <- test "vec_is_equal" []  vec_is_equal_fp_spec;
+
+let vec_is_equal_2fp_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 2 vec384_type);
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" (llvm_array 2 vec384_type);
+  crucible_precond {{     fp_invariant (a@0) /\ fp_invariant (a@1)
+                      /\  fp_invariant (b@0) /\ fp_invariant (b@1) }};
+  crucible_execute_func [a_ptr, b_ptr, crucible_term {{ (96:Size_t) }}]; // Non-portable
+  crucible_return (crucible_term {{ if fp_abs (a@0) ==  fp_abs (b@0) /\ fp_abs (a@1) ==  fp_abs (b@1) 
+                                    then 1 else (0:Limb) }});
+  };
+
+// TODO: prove
+vec_is_equal_2fp_ov <- test "vec_is_equal" []  vec_is_equal_2fp_spec;
+
+// .. vec_copy
+
+let vec_copy_spec bytes  ty = do {
+  ret_ptr <- crucible_alloc ty;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" ty;
+  crucible_execute_func [ret_ptr, a_ptr, crucible_term {{`bytes:Size_t }}];
+  crucible_points_to ret_ptr (crucible_term a);
+};
+
+vec_copy_fp_ov <- verify "vec_copy" [] (vec_copy_spec 48 vec384_type);
+
+// all overrides
+
+let vec_overrides = concat [ vec_is_zero_fp_ov, vec_is_zero_2fp_ov
+                           , vec_is_equal_fp_ov, vec_is_equal_2fp_ov
+                           , vec_copy_fp_ov] vec_select_overrides;
+
+
