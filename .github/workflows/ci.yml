@@ -10,7 +10,17 @@ jobs:
           submodules: true
       - run: docker-compose pull
       - run: docker-compose build
+        # will be unnecessary once saw has a commandline flag for this
+      - run: |
+          for p in proof/{hash_to_field,keygen,memory_safety}.saw; do
+            {
+              echo
+              echo "enable_experimental;"
+              echo "summarize_verification;"
+            } > "$p"
+          done
       - run: docker-compose run blst
+      - run: sed -i -n '/^# LLVM Functions Analyzed$/,$p' build/*_output
       - run: |
           curl -sSLo zola.tar.gz "https://github.com/getzola/zola/releases/download/v0.12.2/zola-v0.12.2-x86_64-unknown-linux-gnu.tar.gz"
           tar -xzf zola.tar.gz
@@ -20,10 +30,8 @@ jobs:
           for p in build/*_output; do
             cat <(printf '+++\n%s\n%s\n+++\n' "title = \"$(basename $p)\"" "date = $(date -I)") $p > pages/content/$(basename $p).md
           done
-          cd pages && ../zola build -u "https://galoisinc.github.io/BLST-Verification"
-
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+          cd pages && ../zola build -u "https://${{ github.repository_owner }}.github.io/${GITHUB_REPOSITORY#*/}"
+      - uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./pages/public

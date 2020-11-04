@@ -14,19 +14,6 @@
 
 # Some long-running or memory-intensive checks are in a separate file.
 
-if [ "$#" -ne 0 ]; then
-  t="$1"
-  shift
-
-  cryptol << EOF
-:set tests=100
-:l tests/$t.cry
-:check
-EOF
-
-  exit
-fi
-
 cryptol << EOF
 :set tests=100
 :l tests/PolynomialTest.cry
