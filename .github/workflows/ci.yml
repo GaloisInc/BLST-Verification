@@ -17,10 +17,12 @@ jobs:
               echo
               echo "enable_experimental;"
               echo "summarize_verification;"
-            } > "$p"
+            } >> "$p"
           done
       - run: docker-compose run blst
-      - run: sed -i -n '/^# LLVM Functions Analyzed$/,$p' build/*_output
+      - run: |
+          sudo chown -R $USER:$(id -gn $USER) build
+          sed -i -n '/^# LLVM Functions Analyzed$/,$p' build/*_output
       - run: |
           curl -sSLo zola.tar.gz "https://github.com/getzola/zola/releases/download/v0.12.2/zola-v0.12.2-x86_64-unknown-linux-gnu.tar.gz"
           tar -xzf zola.tar.gz
@@ -41,11 +43,11 @@ jobs:
         with:
           script: |
             const fs = require('fs'), d = `${process.env.GITHUB_WORKSPACE}/build`;
-            const body = fs.readdirSync(d).map(f => f.endsWith('_output')).flatMap(f => fs.readFileSync(`${d}/${f}`).toString());
+            const body = fs.readdirSync(d).filter(f => f.endsWith('_output')).map(f => fs.readFileSync(`${d}/${f}`).toString()).join();
             const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
             github.issues.createComment({ issue_number, owner, repo, body });
 
             const comments = await github.paginate(github.issues.listComments({ owner, repo, issue_number }));
             for (const c of comments) {
-              cosole.log(JSON.stringify(c,null,2));
+              console.log(JSON.stringify(c,null,2));
             }
