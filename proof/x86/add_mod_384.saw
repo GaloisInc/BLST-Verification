@@ -75,14 +75,7 @@ let add_mod_384x_alias_ret_b_spec = do {
   new_ret <- crucible_fresh_var "new_ret" vec384x_type;
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
-let add_mod_384x_alias_a_b_spec = do {
-  ret_ptr <- crucible_alloc vec384x_type;
-  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
-  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  crucible_execute_func [ret_ptr, a_ptr, a_ptr, p_ptr];
-  new_ret <- crucible_fresh_var "new_ret" vec384x_type;
-  crucible_points_to ret_ptr (crucible_term new_ret);
-};
+
 let add_mod_384x_alias_ret_a_b_spec = do {
   (_, ret_ptr) <- ptr_to_fresh "ret" vec384x_type;
   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
@@ -418,12 +411,12 @@ add_mod_384_alias_ret_a_b_ov <- verify_x86 "add_mod_384" add_mod_384_alias_ret_a
 add_mod_384x_ov <- verify_x86 "add_mod_384x" add_mod_384x_spec;
 add_mod_384x_alias_ret_a_ov <- verify_x86 "add_mod_384x" add_mod_384x_alias_ret_a_spec;
 add_mod_384x_alias_ret_b_ov <- verify_x86 "add_mod_384x" add_mod_384x_alias_ret_b_spec;
-add_mod_384x_alias_a_b_ov <- verify_x86 "add_mod_384x" add_mod_384x_alias_a_b_spec;
 add_mod_384x_alias_ret_a_b_ov <- verify_x86 "add_mod_384x" add_mod_384x_alias_ret_a_b_spec;
 
 // lshift_mod_384
-lshift_mod_384_ov <- verify_x86 "lshift_mod_384" (lshift_mod_384_spec {{ 5 : [64] }});
-lshift_mod_384_alias_ret_a_ov <- verify_x86 "lshift_mod_384" (lshift_mod_384_alias_ret_a_spec {{ 5 : [64] }});
+lshift_mod_384_5_ov <- verify_x86 "lshift_mod_384" (lshift_mod_384_spec {{ 5 : [64] }});
+lshift_mod_384_alias_ret_a_5_ov <- verify_x86 "lshift_mod_384" (lshift_mod_384_alias_ret_a_spec {{ 5 : [64] }});
+lshift_mod_384_alias_ret_a_2_ov <- verify_x86 "lshift_mod_384" (lshift_mod_384_alias_ret_a_spec {{ 2 : [64] }});
 
 // mul_by_3_mod_384
 mul_by_3_mod_384_ov <- verify_x86 "mul_by_3_mod_384" mul_by_3_mod_384_spec;
@@ -503,11 +496,11 @@ let add_mod_384_overrides = concat
   , add_mod_384x_ov
   , add_mod_384x_alias_ret_a_ov
   , add_mod_384x_alias_ret_b_ov
-  , add_mod_384x_alias_a_b_ov
   , add_mod_384x_alias_ret_a_b_ov
 
-  , lshift_mod_384_ov
-  , lshift_mod_384_alias_ret_a_ov
+  , lshift_mod_384_5_ov
+  , lshift_mod_384_alias_ret_a_2_ov
+  , lshift_mod_384_alias_ret_a_5_ov
 
   , mul_by_3_mod_384_ov
   , mul_by_3_mod_384_alias_ret_a_ov

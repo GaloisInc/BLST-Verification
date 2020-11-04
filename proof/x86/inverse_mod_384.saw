@@ -16,6 +16,8 @@ let eucl_inverse_mod_384_spec = do {
   crucible_execute_func [ret_ptr, a_ptr, p_ptr, one_ptr];
   new_ret <- crucible_fresh_var "new_ret" vec384_type;
   crucible_points_to ret_ptr (crucible_term new_ret);
+  ret <- crucible_fresh_var "eucl_inverse_mod_384_ret" limb_type;
+  crucible_return (crucible_term ret);
 };
 let eucl_inverse_mod_384_alias_ret_a_spec = do {
   (_, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
@@ -24,6 +26,8 @@ let eucl_inverse_mod_384_alias_ret_a_spec = do {
   crucible_execute_func [ret_ptr, ret_ptr, p_ptr, one_ptr];
   new_ret <- crucible_fresh_var "new_ret" vec384_type;
   crucible_points_to ret_ptr (crucible_term new_ret);
+  ret <- crucible_fresh_var "eucl_inverse_mod_384_ret" limb_type;
+  crucible_return (crucible_term ret);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
