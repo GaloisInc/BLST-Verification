@@ -25,22 +25,6 @@ include "core_verify_aux.saw";
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
 
-let blst_sk_to_pk_in_g1_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1");
-  (_, SK_ptr) <- ptr_to_fresh_readonly "SK" vec256_type;
-  crucible_execute_func [out_ptr, SK_ptr];
-  new_SK <- crucible_fresh_var "new_SK" vec256_type;
-  crucible_points_to SK_ptr (crucible_term new_SK);
-};
-
-let blst_sk_to_pk_in_g2_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2");
-  (_, SK_ptr) <- ptr_to_fresh_readonly "SK" vec256_type;
-  crucible_execute_func [out_ptr, SK_ptr];
-  new_SK <- crucible_fresh_var "new_SK" vec256_type;
-  crucible_points_to SK_ptr (crucible_term new_SK);
-};
-
 let hash_to_field_spec nelems aug_len msg_len DST_len = do {
   elems_ptr <- crucible_alloc (llvm_array nelems vec384_type);
   (_, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
@@ -138,8 +122,6 @@ blst_keygen_ov <- verify "blst_keygen" (concat sha_assembly_overrides assembly_o
 hash_to_field_ov <- verify "hash_to_field" (concat sha_assembly_overrides assembly_overrides) (hash_to_field_spec nelems aug_len msg_len dst_len);
 
 let overrides = foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] [];
-blst_sk_to_pk_in_g1_ov <- verify "blst_sk_to_pk_in_g1" overrides blst_sk_to_pk_in_g1_spec;
-blst_sk_to_pk_in_g2_ov <-verify "blst_sk_to_pk_in_g2" overrides blst_sk_to_pk_in_g2_spec;
 blst_p1_affine_in_g1_ov <- verify "blst_p1_affine_in_g1" overrides blst_p1_affine_in_g1_spec;
 blst_p2_affine_in_g2_ov <- verify "blst_p2_affine_in_g2" overrides blst_p2_affine_in_g2_spec;
 blst_p1_deserialize_ov <- verify "blst_p1_deserialize" overrides blst_p1_deserialize_spec;
