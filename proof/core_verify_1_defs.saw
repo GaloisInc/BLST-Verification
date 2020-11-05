@@ -1,0 +1,7 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+let msg_len = 32;
+let aug_len = 32;
+let DST_len = 8
