@@ -1,0 +1,8 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+let aug_len = 96; // aug_len should be 96 or 48
+let msg_len = 112;
+let DST_len= 32;
