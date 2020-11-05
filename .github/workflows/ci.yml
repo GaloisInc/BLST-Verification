@@ -44,10 +44,14 @@ jobs:
           script: |
             const fs = require('fs'), d = `${process.env.GITHUB_WORKSPACE}/build`;
             const body = fs.readdirSync(d).filter(f => f.endsWith('_output')).map(f => fs.readFileSync(`${d}/${f}`).toString()).join();
-            const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
-            github.issues.createComment({ issue_number, owner, repo, body });
+            await github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
 
-            const comments = await github.paginate(github.issues.listComments({ owner, repo, issue_number }));
-            for (const c of comments) {
+            const opts = github.issues.listComments.endpoints.merge({ owner, repo, issue_number });
+            for await (const c of github.paginate.iterator(opts)) {
               console.log(JSON.stringify(c,null,2));
             }
