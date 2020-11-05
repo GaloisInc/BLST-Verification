@@ -16,7 +16,6 @@ include "proof-helpers.saw";
 
 include "x86.saw";
 include "fp12_tower.saw";
-include "keygen_defs.saw";
 include "hash_to_field_defs.saw";
 include "sha_overrides.saw";
 include "ec_opts.saw";
@@ -25,22 +24,6 @@ include "core_verify_aux.saw";
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
-
-let blst_keygen_spec IKM_len info_len = do {
-  SK_ptr <- crucible_alloc pow256_type;
-
-  IKM <- crucible_fresh_var "IKM" (llvm_array IKM_len (llvm_int 8));
-  IKM_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array IKM_len (llvm_int 8));
-  crucible_points_to IKM_ptr (crucible_term IKM);
-
-  info <- crucible_fresh_var "info" (llvm_array info_len (llvm_int 8));
-  info_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array info_len (llvm_int 8));
-  crucible_points_to info_ptr (crucible_term info);
-
-  crucible_execute_func [SK_ptr, IKM_ptr, crucible_term {{ `IKM_len:[64]}}, info_ptr, crucible_term {{ `info_len:[64]}}];
-  new_SK <- crucible_fresh_var "new_SK" pow256_type;
-  crucible_points_to SK_ptr (crucible_term new_SK);
-};
 
 let blst_sk_to_pk_in_g1_spec = do {
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1");
