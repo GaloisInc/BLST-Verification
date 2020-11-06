@@ -20,12 +20,14 @@ include "fp12_tower.saw";
 include "ec_opts.saw";
 include "sha_overrides.saw";
 
+include "sign.saw";
+include "deserialize.saw";
+include "group_test.saw";
+include "sk_to_pk.saw";
+
 let msg_len = 32;
 let aug_len = 32;
 let DST_len = 8;
 include "hash_to_field.saw";
 include "core_verify.saw"; // needs hash_to_field
 
-include "deserialize.saw";
-include "group_test.saw";
-include "sk_to_pk.saw";
