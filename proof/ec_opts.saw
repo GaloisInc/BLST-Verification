@@ -185,7 +185,14 @@ let POINTonE2_is_equal_spec = do {
   crucible_return (crucible_term ret);
 };
 
-
+let POINTonE1_mult_w5_spec nbits = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1");
+  (_, point_ptr) <- ptr_to_fresh_readonly "point" (llvm_struct "struct.POINTonE1");
+  (_, scalar_ptr) <- ptr_to_fresh_readonly "scalar" (llvm_array (eval_size {| nbits /^ 8 |}) (llvm_int 8));
+  crucible_execute_func [out_ptr, point_ptr, scalar_ptr, crucible_term {{`nbits:[64]}}];
+  new_out <- crucible_fresh_var "new_POINTonE1_mult_w5_out" (llvm_struct "struct.POINTonE1");
+  crucible_points_to out_ptr (crucible_term new_out);
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Proofs
@@ -204,7 +211,7 @@ POINTonE2_add_ov <- verify "POINTonE2_add" assembly_overrides POINTonE2_add_spec
 POINTonE2_add_alias_ov <- verify "POINTonE2_add" assembly_overrides POINTonE2_add_alias_spec;
 POINTonE1_add_affine_ov <- verify "POINTonE1_add_affine" assembly_overrides POINTonE1_add_affine_spec;
 POINTonE1_add_affine_alias_ov <- verify "POINTonE1_add_affine" assembly_overrides POINTonE1_add_affine_alias_spec;
-POINTonE2_add_affine_ov <- crucible_llvm_verify m "POINTonE2_add_affine" assembly_overrides false POINTonE2_add_affine_spec abc;
+POINTonE2_add_affine_ov <- verify "POINTonE2_add_affine" assembly_overrides POINTonE2_add_affine_spec;
 POINTonE2_add_affine_alias_ov <- verify "POINTonE2_add_affine" assembly_overrides POINTonE2_add_affine_alias_spec;
 POINTonE1_double_ov <- verify "POINTonE1_double" assembly_overrides POINTonE1_double_spec;
 POINTonE1_double_alias_ov <- verify "POINTonE1_double" assembly_overrides POINTonE1_double_alias_spec;
@@ -212,5 +219,6 @@ POINTonE2_double_ov <- verify "POINTonE2_double" assembly_overrides POINTonE2_do
 POINTonE2_double_alias_ov <- verify "POINTonE2_double" assembly_overrides POINTonE2_double_alias_spec;
 POINTonE1_is_equal_ov <- verify "POINTonE1_is_equal" assembly_overrides POINTonE1_is_equal_spec;
 POINTonE2_is_equal_ov <- verify "POINTonE2_is_equal" assembly_overrides POINTonE2_is_equal_spec;
+//POINTonE1_mult_w5_ov <- really_verify "POINTonE1_mult_w5" assembly_overrides (POINTonE1_mult_w5_spec 636); // TODO: how many bits?
 
 let ec_ops_overrides = [POINTonE1_is_equal_ov,POINTonE2_double_alias_ov,POINTonE2_double_ov,POINTonE1_double_alias_ov,POINTonE1_double_ov,POINTonE2_add_affine_alias_ov,POINTonE2_add_affine_ov,POINTonE1_add_affine_alias_ov,POINTonE1_add_affine_ov,POINTonE2_add_alias_ov,POINTonE2_add_ov,POINTonE1_add_ov,POINTonE1_add_alias_1_3_ov,POINTonE1_add_alias_ov,POINTonE2_384x_dadd_affine_ov,POINTonE1_384_dadd_affine_ov,POINTonE2_384x_dadd_alias_ov,POINTonE2_384x_dadd_ov,POINTonE1_384_dadd_alias_ov,POINTonE1_384_dadd_ov];

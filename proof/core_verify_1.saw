@@ -16,10 +16,11 @@ include "proof-helpers.saw";
 
 include "x86.saw";
 include "fp12_tower.saw";
-include "sha_overrides.saw";
 include "ec_opts.saw";
-include "core_verify_aux.saw";
+include "sha_overrides.saw";
 
 include "core_verify_1_defs.saw";
+
+include "hash_to_field.saw";
 include "core_verify.saw";
 
