@@ -51,3 +51,15 @@ bool_to_limb b = if b then (1:Limb) else 0
 
 select: {t} t -> t-> Bit -> t
 select a b c = if c then a else b
+
+// "Scalars" represent integers as a sequence of bytes, and allow for the
+// the exact number of used bits to be given
+// The bytes are in little-endian order
+
+scalar_to_integer: {n} (fin n, n >= 1, n <= 2^^60) => [n][8] -> Limb -> Integer
+scalar_to_integer bytes n_bits = vs!0 where
+    bits = join (reverse bytes)
+    vs = [0] # [ if j < n_bits then 2*v + (if b then 1 else 0) else 0
+               | b <- bits // bits from the MSB down
+               | j <- reverse [0 .. 8*n - 1] // bit number
+               | v <- vs ] // accumulated value

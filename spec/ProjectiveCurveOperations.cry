@@ -37,6 +37,12 @@ p_point_O: {t} EllipticCurve t -> ProjectivePoint t
 p_point_O C = (F.field_unit, F.field_unit, F.field_zero) where F = C.base_field
 
 /**
+ * The negative of a point in projective coordinates on a curve.
+ */
+p_neg: {t} EllipticCurve t -> ProjectivePoint t -> ProjectivePoint t
+p_neg C (x,y,z) = (x, C.base_field.neg y, z)
+
+/**
  * p_double P is the sum P+P for P a point on the elliptic curve.
  */
 p_double: {t} EllipticCurve t -> ProjectivePoint t -> ProjectivePoint t
@@ -122,7 +128,7 @@ p_add C S T =
  * Difference of two points in projective coordinates on the elliptic curve.
  */
 p_sub: {t} EllipticCurve t ->  ProjectivePoint t -> ProjectivePoint t -> ProjectivePoint t
-p_sub C S (x,y,z) = p_add C S (x, C.base_field.neg y, z)
+p_sub C S T = p_add C S (p_neg C T)
 
 /**
  * Integer multiple of a point in projective coordinates on the elliptic curve.
