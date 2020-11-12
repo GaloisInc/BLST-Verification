@@ -154,11 +154,12 @@ let vec_copy_spec bytes  ty = do {
 };
 
 vec_copy_fp_ov <- verify "vec_copy" [] (vec_copy_spec 48 vec384_type);
+vec_copy_POINTonE1_ov <- verify "vec_copy" [] (vec_copy_spec 144 POINTonE1_type);
 
 // all overrides
 
 let vec_overrides = concat [ vec_is_zero_fp_ov, vec_is_zero_2fp_ov
                            , vec_is_equal_fp_ov, vec_is_equal_2fp_ov
-                           , vec_copy_fp_ov] vec_select_overrides;
+                           , vec_copy_fp_ov, vec_copy_POINTonE1_ov] vec_select_overrides;
 
 
