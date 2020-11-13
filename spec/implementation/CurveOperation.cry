@@ -14,25 +14,37 @@ import implementation::Types
 import implementation::Field
 
 
+// We have two different  "abstraction" functions for projective points.
+// The first maps concrete representation of points in projective coordinates
+// to abtract representations (as a triple of field elements), still in
+// projective coordinates.  The second takes the concrete representations to
+// affine coordinates.
+//
+// Mapping to affine is useful because there are two different projective addition
+// operations used in the code, which do not give the same projective coordinates
+// for the sum.  They do however agree on the point represented.  So in the affine
+// space, these give the same result.
+
+
 type POINTonE1_t = (Vec384, Vec384, Vec384)
 type POINTonE1_affine_t = (Vec384, Vec384)
-
-// monomorphic instances of `select` that can be used uninterpreted in proofs.
-//select_POINTonE1_rep a = select`{POINTonE1_t} a
-//select_POINTonE1 a = select`{ProjectivePoint t_Fp} a
-//select_Fp a = select`{t_Fp} a
 
 POINTonE1_invariant: POINTonE1_t -> Bool
 POINTonE1_invariant (x,y,z) = fp_invariant x /\ fp_invariant y /\ fp_invariant z
    // Should we also insist the point in on the curve?
 
+// abstraction to projective coordinates
 POINTonE1_abs: POINTonE1_t -> ProjectivePoint t_Fp
 POINTonE1_abs (x,y,z) = (fp_abs x, fp_abs y, fp_abs z)
 
 POINTonE1_rep: ProjectivePoint t_Fp -> POINTonE1_t
 POINTonE1_rep (x,y,z) = (fp_rep x, fp_rep y, fp_rep z)
 
+// abstraction to affine coordinates
+POINTonE1_abs': POINTonE1_t -> AffinePoint t_Fp
+POINTonE1_abs' p = affinify E (POINTonE1_abs p)
 
+// 
 POINTonE1_affine_invariant: POINTonE1_affine_t -> Bool
 POINTonE1_affine_invariant (x,y) = fp_invariant x /\ fp_invariant y
    // Should we also insist the point in on the curve?
@@ -82,22 +94,7 @@ point_dadd F (x1, y1, z1) (x2, y2, z2) a4 a4_is_null = out where
 
     /* make the choice between addition and doubling */
     is_dbl = F_is_zero F add_h_2 /\ F_is_zero F add_r_2
-    //(x3_2, y3_2, z3_1) = // first vec_select
-    //     if is_dbl 
-    //     then (x1, y1,z1) // p1
-    //     else (x3_1, y3_1, z3) // p3
-    //x3_2 = if is_dbl then x1 else x3_1
-    //y3_2 = if is_dbl then y1 else y3_1
-    //z3_1 = if is_dbl then z1 else z3
     (x3_2, y3_2, z3_1) = select (x1, y1,z1) (x3_1, y3_1, z3) is_dbl
-    
-    //(add_h_3, add_r_3, add_sx_1) = // second vec_select
-    //     if is_dbl
-    //     then (dbl_h, dbl_r_2, dbl_sx)
-    //     else (add_h_2, add_r_2, add_sx)
-    //add_h_3 = if is_dbl then dbl_h else add_h_2
-    //add_r_3 = if is_dbl then dbl_r_2 else add_r_2
-    //add_sx_1 = if is_dbl then dbl_sx else add_sx
     (add_h_3, add_r_3, add_sx_1) = select (dbl_h, dbl_r_2, dbl_sx) (add_h_2, add_r_2, add_sx) is_dbl
     
     dbl_h_1 = F.sq add_h_3 // sqr_##field(dbl.H, add.H);          /* H^2 */
@@ -115,21 +112,7 @@ point_dadd F (x1, y1, z1) (x2, y2, z2) a4 a4_is_null = out where
 
     z3_2 = F.mul (z3_1, add_h_3) // mul_##field(p3.Z, p3.Z, add.H);     /* Z3 = H*Z1*Z2 */
 
-    //p3 = if F_is_zero F z2
-    //     then (x1, y1, z1) // p1
-    //     else (x3_4, y3_6,z3_2) // p3
-    //x3_5 = if F_is_zero F z2 then x1 else x3_4
-    //y3_7 = if F_is_zero F z2 then y1 else y3_6
-    //z3_3 = if F_is_zero F z2 then z1 else z3_2
     p3 = select (x1, y1, z1) (x3_4, y3_6,z3_2) (F_is_zero F z2)
-    
-    //out = if F_is_zero F z1
-    //      then (x2, y2, z2) // p2
-    //      else p3
-    //x3_6 = if F_is_zero F z1 then x2 else x3_5
-    //y3_8 = if F_is_zero F z1 then y2 else y3_7
-    //z3_4 = if F_is_zero F z1 then z2 else z3_3
-    //out = (x3_6, y3_8, z3_4)
     out = select (x2, y2, z2) p3 (F_is_zero F z1)
 
 
@@ -175,7 +158,6 @@ point_dadd_affine F (x1, y1, z1) (x2, y2) = out where
     y' = select y2 p3.1 p1inf
     z' = select F.field_unit p3.2 (p1inf && (~ p2inf))
     out = (x',y',z')
-
 
 
 point_add: {t} FieldRep t -> ProjectivePoint t -> ProjectivePoint t -> ProjectivePoint t 
@@ -270,6 +252,9 @@ point_double F (x1,y1,z1) = (x3_2, y3_2, z3_1) where
     y3_1 = F.mul (y3, a_1)
     y3_2 = F.sub (y3_1, c_1)
 
+
+point_neg: {t} FieldRep t -> ProjectivePoint t -> ProjectivePoint t 
+point_neg F (x,y,z) = (x, F.neg y, z)
 
 ////////////////////////////////////////////////////////////////
 
