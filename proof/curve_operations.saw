@@ -4,7 +4,7 @@
 */
 
 import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/ProjectiveCurveOperations.cry";
+// import "../spec/ProjectiveCurveOperations.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/CurveOperation.cry";
 
@@ -62,15 +62,9 @@ let structural_rewrites = concat more_rewrites core_rewrites;
 // Operations on E1, over Fp
 //
 
-////////////////////////////////////////////////////////////////
-//
-// Now the point operations:
-
 enable_what4_hash_consing;
 
 // ... POINTonE1_add
-
-
 
 POINTonE1_add_equiv_thm <-
   custom_prove_cryptol
@@ -84,7 +78,6 @@ POINTonE1_add_equiv_thm <-
     // w4_unint_z3 fp_unints; ...fails with unints, need to commute a product
     z3; 
     } ;
-
 
 let POINTonE1_add_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
@@ -541,14 +534,14 @@ let POINTonE1_cneg_spec = do {
   cbit <- crucible_fresh_var "cbit" limb_type;
   crucible_precond {{ POINTonE1_invariant p }};
   crucible_execute_func [p_ptr, crucible_term cbit];
-  crucible_points_to p_ptr (crucible_term {{ if cbit != 0 then POINTonE1_rep (p_neg E (POINTonE1_abs p))
+  crucible_points_to p_ptr (crucible_term {{ if cbit != 0 then POINTonE1_rep (point_neg Fp (POINTonE1_abs p))
                                                           else p }});
 };
 
 POINTonE1_cneg_ov <- custom_verify "POINTonE1_cneg"
                   (concat vec_overrides fp_overrides)
                    POINTonE1_cneg_spec
-                   do { unfolding ["p_neg", "E", "POINTonE1_abs", "POINTonE1_rep"];
+                   do { unfolding ["point_neg", "E", "POINTonE1_abs", "POINTonE1_rep"];
                         simplify fp_simpset;
                         // print_goal_readably_fp;
                         (w4_unint_z3 fp_unints); } ;
