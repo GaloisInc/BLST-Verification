@@ -30,6 +30,11 @@ and do not carry between blocks.  So a block's value can end up being
 as much as 2^w.  We will see this in the size of the precomputed table
 below.
 
+A second interesting aspect is that we might need an additional block,
+e.g, even with a single window we might want a borrow, e.g.
+  [b]P = [2^w]P - [2^w-b]P
+whenever b > 2^w.
+
 In implementing this method we start with the most significant bits of
 the scalar.  So we need to know whether this `a` part needs to have 1
 added or not (which depends on the value of the next block, if there is one).
@@ -93,9 +98,9 @@ let {{
   booth: {n} (fin n, n >= 1, n /^SZ - 1 >= 1) => [n] -> Integer
   booth e = foldl (\ a v -> shift*a + v) 0 (booth_parts e)
 
-  booth_parts: {n} (fin n, n >= 1, n /^SZ - 1 >= 1) => [n] -> [n /^ SZ]Integer
+  booth_parts: {n} (fin n) => [n] -> [(n+1) /^ SZ]Integer
   booth_parts e = vs where
-    [b0] # blocks = window_blocks e
+    [b0] # blocks = window_blocks ([False] # e) // make sure there room for a borrow
     [s0] # signs = [booth_sign b | b <- blocks] # [False]
     vs = [(block_val b0) + (bitInt s0)] # [(booth_block_val b) + (bitInt s) | b <- blocks | s <- signs]
 }};
@@ -104,18 +109,18 @@ let {{
 // the plain method (when the multiplier has many bits).  But we can prove directly
 // for small sizes
 
+prove_cryptol {{\(e:[2*SZ-1]) -> booth e == toInt e }} [];
 prove_cryptol {{\(e:[2*SZ+1]) -> booth e == toInt e }} [];
 prove_cryptol {{\(e:[3*SZ]) -> booth e == toInt e }} [];
 
 // .... and now indirectly for the larger sizes
 for [17,25,31,39]
  ( \ n_bits -> do {
-   plain_lemma <- custom_prove_cryptol {{ \(e:[n_bits]) -> toInt e == plain e }} window_script;
+   plain_lemma <- custom_prove_cryptol {{ \(e:[n_bits]) -> toInt e == plain ([False] # e) }} window_script;
    custom_prove_cryptol {{ \(e:[n_bits]) -> booth e == toInt e }}
      do { simplify (addsimp plain_lemma empty_ss); // so now we show booth e == plain e
           w4_unint_z3 ["block_val"]; };
    } );       
-
 
 import "../spec/ShortWeierstrassCurve.cry";
 import "../spec/implementation/Types.cry";
@@ -173,12 +178,14 @@ e1_scalar_mult_alg_thms <- for
 
 // abstract effect of the concrete operations
 
+// ... cover function for the effect of point_add, in affine space
+let {{
+  add' C p1 p2 = if p1 == p2 then point_O C else add C p1 p2
+  }};
+
 curve_op_thms <- for
  [ {{ \ p1 -> affinify E (point_double Fp p1) == add E (affinify E p1) (affinify E p1) }}
- , {{ \ p1 p2 -> affinify E (point_add Fp p1 p2) ==
-          if (affinify E p1) == (affinify E p2)
-          then point_O E
-          else add E (affinify E p1) (affinify E p2) }}
+ , {{ \ p1 p2 -> affinify E (point_add Fp p1 p2) == add' E (affinify E p1) (affinify E p2) }}
  , {{ \ p1 -> affinify E (point_neg Fp p1) == neg E (affinify E p1) }}
  // eventually will need more, for dadd, dadd_affine, add_affine
 
@@ -210,6 +217,7 @@ POINTonE1_thms <- for
                   if c then point_neg Fp p1 else point_neg Fp p2 }}
 
  , {{ \(x:POINTonE1_t) -> (x.0, x.1, x.2) == x }}
+ , {{ \(x:POINTonE1_affine_t) -> (x.0, x.1) == x }}
  ]
  (\t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
     do { unfolding ["POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant"];
@@ -224,14 +232,21 @@ let {{
   point_add_fp = point_add Fp
   point_double_fp = point_double Fp
   point_neg_fp = point_neg Fp
+  add_E = add E
+  add'_E = add' E
+  affinify_E = affinify E
   }};
 
 point_add_fp_thm <- prove_cryptol {{  \p1 p2 -> point_add Fp p1 p2 == point_add_fp p1 p2 }} ["Fp"];
 point_double_fp_thm <- prove_cryptol {{  \p1 -> point_double Fp p1 == point_double_fp p1 }} ["Fp"];
 point_neg_fp_thm <- prove_cryptol {{  \p1 -> point_neg Fp p1 == point_neg_fp p1 }} ["Fp"];
+add_E_thm <- prove_cryptol {{  \p1 p2 -> add E p1 p2 == add_E p1 p2 }} ["E"];
+add'_E_thm <- prove_cryptol {{  \p1 p2 -> add' E p1 p2 == add'_E p1 p2 }} ["E"];
+affinify_E_thm <- prove_cryptol {{  \p1 -> affinify E p1 == affinify_E p1 }} ["E"];
 
 let remove_higher_order_function_simpset =
-  addsimps [point_add_fp_thm, point_double_fp_thm, point_neg_fp_thm] empty_ss;
+  addsimps [ point_add_fp_thm, point_double_fp_thm, point_neg_fp_thm
+           , add_E_thm, add'_E_thm, affinify_E_thm] empty_ss;
 
 // more rules to hoist `if`-terms
 
@@ -255,6 +270,7 @@ let ec_mult_unints =
     [ "e1_scalar_mult", "e1_order", "POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant"
     , "point_add", "point_double", "Fp", "point_add_fp", "point_double_fp", "point_neg_fp"
     , "precomputed_table", "is_power_table"
+    , "add_E", "add'_E", "affinify_E"
     ];
 
 ////////////////
@@ -369,7 +385,6 @@ POINTonE1_precompute_w5_ov <-crucible_llvm_compositional_extract m "POINTonE1_pr
           // simplify (addsimp point_add_fp_thm empty_ss);
     w4_unint_z3 ec_mult_unints; } ;
 */
-print "%%%% OK %%%%";
 
 // POINTonE1_gather_booth_w5
 
@@ -491,15 +506,16 @@ enable_experimental;
 // We define here the terms built up by the loop in `mult_w5`
 let {{
   mult_w5_intermediate vs p = foldl step start (tail vs) where
-    step acc v = add E (e1_scalar_mult shift acc) (affinify E (small_mult v p))
-    start = affinify E (small_mult (head vs) p)
+    step acc v = add'_E (e1_scalar_mult shift acc) (affinify_E (small_mult v p))
+    start = affinify_E (small_mult (head vs) p)
 
   // alternative defn.
   mult_w5_intermediate' vs p = accs!0 where
-    accs = [start] # [add E (e1_scalar_mult shift acc) (affinify E (small_mult v p)) | acc <- accs | v <- tail vs]
+    accs = [start] # [add' E (e1_scalar_mult shift acc) (affinify E (small_mult v p)) | acc <- accs | v <- tail vs]
     start = affinify E (small_mult (head vs) p)
     
-  mult_w5_result_term: {n} (fin n, n >= 1, n /^SZ - 1 >= 1) => [n] -> ProjectivePoint t_Fp -> AffinePoint t_Fp
+  // mult_w5_result_term: {n} (fin n, n >= 1, n /^SZ >= 1) => [n] -> ProjectivePoint t_Fp -> AffinePoint t_Fp
+  mult_w5_result_term: {n} (fin n, n >= 1) => [n] -> ProjectivePoint t_Fp -> AffinePoint t_Fp
   mult_w5_result_term e p = mult_w5_intermediate (booth_parts e) p
   }};
   
@@ -520,7 +536,7 @@ let POINTonE1_mult_w5_spec n_bytes bits = do {
                                                     (POINTonE1_abs point) }};
     };
 
-let POINTonE1_mult_script = do {
+let POINTonE1_mult_script noisy = do {
       simplify (addsimps curve_op_thms
                        (addsimps POINTonE1_thms
                                  (addsimps e1_scalar_mult_alg_thms
@@ -529,20 +545,65 @@ let POINTonE1_mult_script = do {
                                                      , booth'_precomputed_table_thm
                                                      ]
                                                      empty_ss))));
-    // print_goal_consts;
-    // unfolding ["/\\", "\\/", "mult_w5_result_term", "mult_w5_intermediate"];
-    simplify cleanup_simpset; print_goal;
+    if noisy
+    then do {
+      // unfolding ["/\\", "\\/"];
+      simplify remove_higher_order_function_simpset; // needed before goal_eval_unint
+      print_goal_consts;
+      goal_eval_unint (concat ["e1_scalar_mult", "small_mult"] ec_mult_unints);
+      simplify (addsimps POINTonE1_thms fp_simpset);
+      unfolding ["Fp", "prime_field_integer"]; // for readability of Fp components
+      simplify cleanup_simpset; print_goal;
+      } else do {
+      return ();
+      };
     simplify remove_higher_order_function_simpset;
     w4_unint_z3 (concat ["e1_scalar_mult", "small_mult"] ec_mult_unints);
     } ;
 
 
- POINTonE1_mult_w5_1_6_spec <- custom_verify "POINTonE1_mult_w5"
+// This works! (one block)
+POINTonE1_mult_w5_1_3_spec <- custom_verify "POINTonE1_mult_w5"
+   (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
+   (POINTonE1_mult_w5_spec 1 3)
+   (POINTonE1_mult_script false);
+
+// and a simple case of SZ divides bits:, takes about 0.5 seconds
+print "%%%%% 1,5";
+POINTonE1_mult_w5_1_5_spec <- custom_verify "POINTonE1_mult_w5"
+   (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
+   (POINTonE1_mult_w5_spec 1 5)
+   (POINTonE1_mult_script false);
+
+// 2 blocks, 1 byte
+
+POINTonE1_mult_w5_1_6_spec <- custom_verify "POINTonE1_mult_w5"
    (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
    (POINTonE1_mult_w5_spec 1 6)
-   POINTonE1_mult_script;
-   
+   (POINTonE1_mult_script false);
 
+// 3 blocks, 2 bytes - about 4 seconds
+
+POINTonE1_mult_w5_2_15_spec <- custom_verify "POINTonE1_mult_w5"
+   (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
+   (POINTonE1_mult_w5_spec 2 15)
+   (POINTonE1_mult_script false);
+
+print "%%%% 4,31";
+// 4 blocks, 31 bits - about 18s
+POINTonE1_mult_w5_4_14_spec <- custom_verify "POINTonE1_mult_w5"
+   (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
+   (POINTonE1_mult_w5_spec 4 31)
+   (POINTonE1_mult_script false);
+
+print "%%%% 8,58";
+// 8 blocks, 58 bits - about 4m 15s
+POINTonE1_mult_w5_8_58_spec <- custom_verify "POINTonE1_mult_w5"
+   (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
+   (POINTonE1_mult_w5_spec 8 58)
+   (POINTonE1_mult_script false);
+
+/*
 
 // For `mult_w5` we use the experimental compositional extraction method to get a Term representing the
 // effect of the function call.  We can then prove theorems directly about this term.
@@ -604,4 +665,5 @@ let xscript =   do {
  let ss = addsimps (concat POINTonE1_thms (concat e1_scalar_mult_alg_thms curve_op_thms)) (cryptol_ss());
  let ss' = addsimp booth'_precomputed_table_thm ss;
  P <- fresh_symbolic "P" {| POINTonE1_t |} ;
- 
+
+*/
