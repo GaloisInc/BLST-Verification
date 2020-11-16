@@ -31,3 +31,4 @@ let DST_len = 8;
 include "hash_to_field.saw";
 include "core_verify.saw"; // needs hash_to_field
 
+// NOTE: running time is pretty long, but no function takes more than 2 minutes

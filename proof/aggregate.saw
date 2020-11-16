@@ -1,0 +1,156 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+///////////////////////////////////////////////////////////////////////////////
+// Imports
+///////////////////////////////////////////////////////////////////////////////
+
+include "helpers.saw";
+include "list_utils.saw";
+include "types.saw";
+
+m <- llvm_load_module "../build/llvm/libblst.a.bc";
+let do_prove = false;
+include "proof-helpers.saw";
+
+include "x86.saw";
+include "fp12_tower.saw";
+//include "keygen_defs.saw";
+include "sha_overrides.saw";
+include "ec_opts.saw";
+include "aggregate_defs.saw";
+include "hash_to_field.saw";
+include "core_verify.saw";
+
+///////////////////////////////////////////////////////////////////////////////
+// Specifications
+///////////////////////////////////////////////////////////////////////////////
+
+
+let blst_pairing_init_spec DST_len = do {
+  ctx_ptr <- crucible_alloc (llvm_struct "struct.PAIRING");
+  hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
+  //(DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8)); // not strictly needed for this function
+  DST_ptr <- crucible_fresh_pointer (llvm_array DST_len (llvm_int 8));
+  crucible_execute_func [ctx_ptr, crucible_term hash_or_encode, DST_ptr, crucible_term {{`DST_len:[64]}}];
+  ctx_ctrl <- crucible_fresh_var "new_pairing_init_ctx_ctrl" (llvm_int 32);
+  crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term ctx_ctrl);
+  crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term {{0:[32]}});
+  crucible_points_to (crucible_field ctx_ptr "DST") DST_ptr;
+  crucible_points_to (crucible_field ctx_ptr "DST_len") (crucible_term {{`DST_len:[64]}});
+};
+
+let AGGR_UNDEFINED = {{ zero:[32] }};
+let AGGR_MIN_SIG = {{ (zext 0x1):[32] }};
+let AGGR_MIN_PK = {{ (zext 0x2):[32] }};
+let AGGR_SIGN_SET = {{ (zext 0x10):[32] }};
+let AGGR_GT_SET = {{ (zext 0x20):[32] }};
+let AGGR_HASH_OR_ENCODE = {{ (zext 0x40):[32] }};
+let N_MAX = 8;
+
+let blst_pairing_aggregate_pk_in_g1_spec DST_len msg_len aug_len nelems = do {
+  crucible_precond {{ `nelems < `N_MAX }};
+
+  ctx_ptr <- crucible_alloc (llvm_struct "struct.PAIRING");
+  ctx_ctrl <- crucible_fresh_var "pairing_aggregate_pk_in_g1_ctx_ctrl" (llvm_int 32);
+  crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term ctx_ctrl);
+  crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term {{ `nelems:[32] }});
+
+  ctx_Q <- crucible_fresh_var "pairing_aggregate_pk_in_g1_ctx_Q" (llvm_array nelems (llvm_struct "struct.POINTonE2_affine"));
+  crucible_points_to_untyped (crucible_field ctx_ptr "Q") (crucible_term ctx_Q);
+  ctx_P <- crucible_fresh_var "pairing_aggregate_pk_in_g1_ctx_P" (llvm_array nelems (llvm_struct "struct.POINTonE1_affine"));
+  crucible_points_to_untyped (crucible_field ctx_ptr "P") (crucible_term ctx_P);
+
+  ctx_GT <- crucible_fresh_var "pairing_aggregate_pk_in_g1_ctx_GT" vec384fp12_type;
+  crucible_conditional_points_to {{ (ctx_ctrl && AGGR_GT_SET) != zero }} (crucible_field ctx_ptr "GT") (crucible_term ctx_GT);
+
+  // TODO: here only the smaller union member needs to be initialized...
+  ctx_AggrSign <- crucible_fresh_var "pairing_aggregate_pk_in_g1_ctx_AggrSign" (llvm_struct "struct.POINTonE2");
+  crucible_conditional_points_to {{ (ctx_ctrl && AGGR_SIGN_SET) != zero }} (crucible_field ctx_ptr "AggrSign") (crucible_term ctx_AggrSign);
+
+  (_, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
+  crucible_points_to (crucible_field ctx_ptr "DST") DST_ptr;
+  crucible_points_to (crucible_field ctx_ptr "DST_len") (crucible_term {{`DST_len:[64]}});
+  // now the other parameters:
+  (_, PK_ptr) <- ptr_to_fresh_readonly "PK" (llvm_struct "struct.POINTonE1_affine");
+  (_, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_struct "struct.POINTonE2_affine");
+  (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  aug <- crucible_fresh_var "aug" (llvm_array aug_len (llvm_int 8));
+  aug_ptr <- crucible_alloc_readonly_aligned aug_len (llvm_array aug_len (llvm_int 8));
+  crucible_points_to aug_ptr (crucible_term aug);
+  // finally the call:
+  crucible_execute_func [ctx_ptr, PK_ptr, signature_ptr, msg_ptr, crucible_term {{`msg_len:[64]}}, aug_ptr, crucible_term {{`aug_len:[64]}}];
+  // TODO: postcondition
+  //new_pairing_aggregate_pk_in_g1_ctx <- crucible_fresh_var "new_pairing_aggregate_pk_in_g1_ctx" (llvm_struct "struct.PAIRING");
+  //crucible_points_to ctx_ptr (crucible_term new_pairing_aggregate_pk_in_g1_ctx);
+  ret <- crucible_fresh_var "ret" (llvm_int 32);
+  crucible_return (crucible_term ret);
+};
+
+// NOTE: only used if __OPTIMIZE_SIZE__ is set
+let exp_mont_384_spec pow_bits = do {
+  out_ptr <- crucible_alloc vec384_type;
+  (_, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384_type;
+  (_, pow_ptr) <- ptr_to_fresh_readonly "pow" (llvm_array (eval_size {|pow_bits/^8|} ) (llvm_int 8));
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [out_ptr, inp_ptr, pow_ptr, crucible_term {{`pow_bits:[64]}}, p_ptr, crucible_term n0];
+  new_out <- crucible_fresh_var "new_exp_mont_384_out" vec384_type;
+  crucible_points_to out_ptr (crucible_term new_out);
+};
+
+let reciprocal_fp_spec = do {
+  out_ptr <- crucible_alloc vec384_type;
+  (_, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384_type;
+  crucible_execute_func [out_ptr, inp_ptr];
+  new_out <- crucible_fresh_var "new_reciprocal_fp_out" vec384_type;
+  crucible_points_to out_ptr (crucible_term new_out);
+};
+
+let blst_pairing_commit_spec = do { // TODO
+  ctx_ptr <- crucible_alloc (llvm_struct "struct.PAIRING");
+  crucible_execute_func [ctx_ptr];
+  new_pairing_commit_ctx <- crucible_fresh_var "new_pairing_commit_ctx" (llvm_struct "struct.PAIRING");
+  crucible_points_to ctx_ptr (crucible_term new_pairing_commit_ctx);
+};
+
+let blst_pairing_finalverify_spec = do { // TODO
+  (_, ctx_ptr) <- ptr_to_fresh_readonly "PAIRING" (llvm_struct "struct.PAIRING");
+  (_, GTsig_ptr) <- ptr_to_fresh_readonly "GTsig" vec384fp12_type;
+  crucible_execute_func [ctx_ptr, GTsig_ptr];
+  ret <- crucible_fresh_var "ret" (llvm_int 64);
+  crucible_return (crucible_term ret);
+};
+
+// TODO: pairing_merge
+
+///////////////////////////////////////////////////////////////////////////////
+// Proofs
+///////////////////////////////////////////////////////////////////////////////
+
+block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, DST_len]; // pass a list with the sizes of all the things hashed
+let sha_assembly_overrides = concat [blst_sha256_emit_ov, blst_sha256_hcopy_ov] block_data_order_ovs;
+
+let make_hash_to_field_ov n = verify "hash_to_field" (concat sha_assembly_overrides assembly_overrides) (hash_to_field_spec n aug_len msg_len DST_len);
+hash_to_field_ovs <- for [1,2,4] make_hash_to_field_ov;
+
+let POINTonE2_in_G2_spec = do {
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" (llvm_struct "struct.POINTonE2_affine");
+  crucible_execute_func [p_ptr];
+  ret <- crucible_fresh_var "ret" limb_type;
+  crucible_return (crucible_term ret);
+};
+
+POINTonE2_in_G2_ov <- verify "POINTonE2_in_G2" (concat ec_ops_overrides assembly_overrides) POINTonE2_in_G2_spec;
+
+let overrides = foldr concat [hash_to_field_ovs, sha_assembly_overrides, ec_ops_overrides, assembly_overrides, fp12_tower_ovs, miller_loop_n_ovs] [final_exp_alias_ov, final_exp_ov, map_to_g2_ov, map_to_g2_v_null_ov, POINTonE2_in_G2_ov];
+
+//exp_mont_384_ov <- really_verify "exp_mont_384" overrides (exp_mont_384_spec pow_bits);
+reciprocal_fp_ov <- verify "reciprocal_fp" overrides reciprocal_fp_spec;
+
+
+pairing_init_ov <- verify "blst_pairing_init" [] (blst_pairing_init_spec 8);
+pairing_aggregate_pk_in_g1_ov <- really_verify "blst_pairing_aggregate_pk_in_g1" overrides (blst_pairing_aggregate_pk_in_g1_spec DST_len msg_len aug_len 7);
+//pairing_commit_ov <- really_verify "blst_pairing_commit" overrides blst_pairing_commit_spec;
+//pairing_finalverify <- really_verify "blst_pairing_finalverify" overrides blst_pairing_finalverify_spec;
