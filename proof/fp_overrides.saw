@@ -21,10 +21,10 @@
 let use_abs_method = false;
 let use_concrete_method = true;
 
-
 import "../spec/Parameters.cry";
 import "../spec/PrimeField.cry";
 import "../spec/implementation/Field.cry";
+import "../spec/implementation/CryptolHelpers.cry";
 
 // generic unary operation specification, pass-by-reference, no aliasing
 let unop_spec name llvm_type inv rep abs op = do {
@@ -103,21 +103,22 @@ let binop_alias_1_2_spec name llvm_type inv rep abs op = do {
 // Fp operations
 //
 
-// .. theorems (useful rewrites?)
+// .. theorems (useful rewrites)
 
-// unconditional theorems, good rewrites, will hold in the `prime_field` model but not the others
+// abs and rep theorems, good rewrites, will hold in the `prime_field` model but not the others
 fp_rep_thms <- for
   [ {{ \x -> fp_invariant (fp_rep x) == True }}
   , {{ \x -> fp_abs (fp_rep x) == x }}
-  , {{ \x -> fp_rep (fp_abs x) == x }} // Should be conditional on fp_invariant x
+  , {{ \x -> fp_rep (fp_abs x) == if fp_invariant x then x else fp_normalize x}}
   ] admit_cryptol;
 
-/* TODO 
-fp_rep_conditional_thms <- for
-  [ {{ \x -> fp_invariant (fp_rep x) == Fp.is_val x }}
-  , {{ \x -> fp_abs (fp_rep x) == x }}
-  ] (prove_print assume_unsat); 
-*/
+// a conditional rewrite for normalization.  This uses "apply" to avoid having
+// "fp_normalize x" in the right-hand side (we have "(apply fp_normalize) x" instead),
+// so that there is no infinite loop when the rewrite is applied.
+
+// This rule is not included in the main fp_simplification rules as it is seldom needed.
+fp_normalize_thm <- admit_cryptol
+  {{ \x -> fp_normalize x == if fp_invariant x then x else apply fp_normalize x }};
 
 // we sometimes need to undo SAW's rip-and-restitching of vectors.  It is a bit tricky 
 let at0 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 0";
@@ -149,15 +150,16 @@ seq_ite_thm <-
 let hoist f unints =
   prove_cryptol {{\x y z -> f (if x then y else z) == if x then f y else f z}} unints;
 
-abs_ite_thm <- hoist {{fp_abs}} ["fp_abs"] ;
-invariant_ite_thm <- hoist {{fp_invariant}} [] ; 
-rep_ite_thm <- hoist {{fp_rep}} ["fp_rep"] ;
+fp_abs_ite_thm <- hoist {{fp_abs}} ["fp_abs"] ;
+fp_invariant_ite_thm <- hoist {{fp_invariant}} [] ; 
+fp_rep_ite_thm <- hoist {{fp_rep}} ["fp_rep"] ;
 
 fp_abstract_invariant_thm <- prove_cryptol {{ \x -> Fp.is_val (fp_abs x) == True }} [];
 
 let fp_simpset = addsimps (concat fp_rep_thms
-                           [abs_ite_thm, seq_ite_thm, invariant_ite_thm, rep_ite_thm
-                           , unrip_thm, fp_abstract_invariant_thm
+                           [ fp_abs_ite_thm, fp_invariant_ite_thm, fp_rep_ite_thm
+                           , fp_abstract_invariant_thm
+                           , unrip_thm, seq_ite_thm
                            ])  (cryptol_ss ());
 
 let apply_fp_rewrites = simplify fp_simpset;
@@ -198,7 +200,7 @@ fp_alg_thms <- for
   , {{ \x -> Fp.mul (x, Fp.field_zero) == Fp.field_zero }} // x*0 = 0
   , {{ \x -> Fp.mul (Fp.field_zero, x) == Fp.field_zero }} // 0*x = 0
   , {{ \x -> Fp.mul (x, Fp.field_unit) == Fp.normalize x }} // x*1 = x ish
-  // , {{ \x -> Fp.mul (x, Fp.field_unit) == x }} // x*1 = x TODO
+  // , {{ \x -> Fp.mul (x, Fp.field_unit) == x }} // x*1 = x TODO: OK in the `Z p` model
   , {{ \x -> Fp.mul (Fp.field_unit, x) == Fp.normalize x }} // 1*x = x ish
   // , {{ \x -> Fp.mul (Fp.field_unit, x) == x }} // 1*x = x TODO
 
@@ -289,11 +291,11 @@ let fp_overrides = foldr concat [add_fp_ovs, sub_fp_ovs, mul_fp_ovs]
                      , mul_by_3_fp_alias_1_2_ov, mul_by_8_fp_alias_1_2_ov
                      , cneg_fp_ov, cneg_fp_alias_1_2_ov];
 
-let fp_unints = ["fp_abs", "fp_invariant", "fp_rep", "Fp"
-                // , "mul_by_3", ,"mul_by_8" -- CANNOT include these as they are polymorphic
+let fp_unints = ["fp_abs", "fp_invariant", "fp_rep", "fp_normalize", "Fp"
+                // these remaining names only come up in proof debugging:
                 , "mod_add", "mod_sub", "mod_neg", "mod_mul", "mod_half", "mod_div"
                 , "mod_add_Z", "mod_sub_Z", "mod_neg_Z", "mod_mul_Z", "mod_half_Z", "mod_div_Z"
-];
+                ];
 
 ////////////////////////////////////////////////////////////////
 //
