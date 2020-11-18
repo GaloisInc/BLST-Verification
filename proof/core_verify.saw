@@ -70,10 +70,10 @@ let add_n_dbl_n_spec n k = do {
   (_, Q_ptr) <- ptr_to_fresh_readonly "Q" (llvm_array n (llvm_struct "struct.POINTonE2_affine"));
   (_, Px2_ptr) <- ptr_to_fresh_readonly "Px2" (llvm_array n (llvm_struct "struct.POINTonE1_affine"));
   crucible_execute_func [ret_ptr, T_ptr, Q_ptr, Px2_ptr, crucible_term {{ `n:[64] }}, crucible_term {{ `k:[64] }}];
-  new_start_dbl_n_ret <- crucible_fresh_var "new_start_dbl_n_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_start_dbl_n_ret);
-  new_start_dbl_n_T <- crucible_fresh_var "new_start_dbl_n_T" (llvm_array n (llvm_struct "struct.POINTonE2"));
-  crucible_points_to T_ptr (crucible_term new_start_dbl_n_T);
+  new_add_n_dbl_n_ret <- crucible_fresh_var "new_add_n_dbl_n_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_add_n_dbl_n_ret);
+  new_add_n_dbl_n_T <- crucible_fresh_var "new_add_n_dbl_n_T" (llvm_array n (llvm_struct "struct.POINTonE2"));
+  crucible_points_to T_ptr (crucible_term new_add_n_dbl_n_T);
 };
 
 let final_exp_spec = do {
@@ -138,7 +138,7 @@ let make_add_n_dbl_n_ov k = verify "add_n_dbl_n" overrides (add_n_dbl_n_spec 1 k
 add_n_dbl_n_ovs <- for [2,3,9,32,16] make_add_n_dbl_n_ov; // sizes come from C source code
 
 let make_start_dbl_n_ov n = verify "start_dbl_n" overrides (start_dbl_n_spec n);
-start_dbl_n_ovs <- for (from_to 1 1) make_start_dbl_n_ov;
+start_dbl_n_ovs <- for (from_to 1 2) make_start_dbl_n_ov;
 
 let make_miller_loop_n_ov n = verify "miller_loop_n" (foldr concat [add_n_dbl_n_ovs, start_dbl_n_ovs, ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (miller_loop_n_spec n);
 miller_loop_n_ovs <- for (from_to 1 1) make_miller_loop_n_ov;
