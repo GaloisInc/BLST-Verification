@@ -1,0 +1,168 @@
+// Point serialization, from draft-irtf-cfrg-pairing-friendly-curves-07 Appendix C
+//
+module Serialization where
+
+import Parameters (p, E, E', t_Fp, to_Fp, t_Fp_2, Fp, Fp_2)
+import ShortWeierstrassCurve as EC
+import rfc8017
+import Maybe
+import FieldExtras (F_expt)
+
+//// Serialization (with compression)
+
+sign_F_p: t_Fp -> Bit
+sign_F_p y = y > `((p - 1)/2)
+
+sign_F_p_2: t_Fp_2 -> Bit
+sign_F_p_2(y') = if y'_1 == 0 then sign_F_p(y'_0) else y'_1 > `((p - 1)/2) where
+    [y'_1, y'_0] = y'
+
+metadata_bits_E1:  EC::AffinePoint t_Fp -> [3]
+metadata_bits_E1 P = [C_bit, I_bit, S_bit] where
+    C_bit = True
+    I_bit = EC::is_point_O E P
+    S_bit = if I_bit then False else sign_F_p y where (_,y) = P
+
+m_byte_E1: EC::AffinePoint t_Fp -> [8]
+m_byte_E1 P = (metadata_bits_E1 P) # zero
+
+x_string_E1: EC::AffinePoint t_Fp -> [48][8]
+x_string_E1 P = if EC::is_point_O E P
+                then I2OSP(0)
+                else I2OSP(x) where (x,_) = P
+
+x_string_E2: EC::AffinePoint t_Fp_2 -> [96][8]
+x_string_E2 P = if EC::is_point_O E' P
+                then I2OSP(0)
+                else I2OSP`{xLen=48}(x_0) # I2OSP(x_1) where ([x_1, x_0],_) = P
+
+serialize_E1: EC::AffinePoint t_Fp -> [48][8]
+serialize_E1 P = x_string_E1 P || ([m_byte_E1 P]# zero)
+
+serialize_E2: EC::AffinePoint t_Fp_2 -> [96][8]
+serialize_E2 P = x_string_E2 P || ([m_byte]# zero) where
+    C_bit = True
+    I_bit = EC::is_point_O E' P
+    S_bit = if I_bit then False else sign_F_p_2 y where (_,y) = P
+    m_byte = [C_bit, I_bit, S_bit] # zero
+
+//// Deserialization
+// Strictly speaking, we should be able to deserialize an uncompressed representation,
+// but the suites we look at all use compression.
+
+// TODO: These definitions are copied from hash-to-curve, but there they are in a parameter definiton
+// and are not in scope for importation here.
+
+is_square_F_p: t_Fp -> Bit
+is_square_F_p x =  y == 0 \/ y == 1 where
+    y = F_expt`{n=width p} Fp x `((p-1)/2)
+
+sqrt_F_p: t_Fp -> t_Fp
+sqrt_F_p x = F_expt`{n=width p} Fp x `((p+1)/4) // the "= 3 (mod 4)" variant
+
+type q = p*p
+
+is_square_F_p_2: t_Fp_2 -> Bit
+is_square_F_p_2 x = Fp_2.is_equal (y, Fp_2.field_zero) \/ Fp_2.is_equal (y, Fp_2.field_unit) where
+    y = F_expt`{n = width q} Fp_2 x `((q-1)/2)
+
+sqrt_F_p_2: t_Fp_2 -> t_Fp_2
+sqrt_F_p_2 x = z where
+    F = Fp_2
+    CMOV (a,b,c) = if c==False then a else b
+    tv1 = F_expt`{n=(width q) - 3} F x `((q+7)/16)
+    tv2 = F.mul (c1, tv1)
+    tv3 = F.mul (c2, tv1)
+    tv4 = F.mul (c3, tv1)
+    e1 =  F.is_equal (F.sq tv2, x)
+    e2 =  F.is_equal (F.sq tv3, x)
+
+    tv1_1 = CMOV (tv1, tv2, e1)
+    tv2_1 = CMOV (tv4, tv3, e2)
+    e3 = F.is_equal (F.sq tv2_1, x)
+    z = CMOV (tv1_1, tv2_1, e3)
+
+    // Need constants c1,c2,c3 with c1^2 = -1, c2^2 = c1, c3^3 = -c1
+    // As Fp_2 = Fp(u) with u^2 +1 = 0, c1 = u does the first
+    c1 = [1,0]
+    // Now pick a particular k (thanks to SageMath) so that 2 k^2 = -1 (mod p)
+    k: t_Fp
+    k = 1028732146235106349975324479215795277384839936929757896155643118032610843298655225875571310552543014690878354869257
+    // Then (k(u+1))^2 = k^2(2u) = -u and
+    //      (k(u-1))^2 = k^2(-2u) = u
+    c2 = [k, `p-k] // k*(u-1)
+    c3 = [k, k] // k*(u+1)
+
+// end TODO section
+
+deserialize_E1: [48][8] -> Maybe (EC::AffinePoint t_Fp)
+deserialize_E1 s_string = ret where
+    // Step 1.
+    m_byte = (s_string@0) && 0xE0
+    C_bit = m_byte @ 0
+    I_bit = m_byte @ 1
+    S_bit = m_byte @ 2
+    // Step 2 deferred (we check that C_bit is 1 later)
+    // Step 3
+    s_string' = [(s_string@0) && 0x1F] # tail s_string
+    // Step 6
+    x = OS2IP(s_string')
+    //Step 7 (on curve E)
+    y2 = Fp.add (Fp.mul (x, Fp.sq x), 4)
+    y = sqrt_F_p y2
+    Y_bit = sign_F_p y
+    // Steps 2, 4, 8
+    ret = if C_bit == False then nothing // Error, from Step 2
+           | I_bit then (if s_string' == zero then just (EC::point_O E) else nothing) // Step 4
+           | ~ (is_square_F_p y2) then nothing // from Step 7
+           | S_bit == Y_bit then just (x,y)
+          else just (x, Fp.neg y)
+
+
+deserialize_E2: [96][8] -> Maybe (EC::AffinePoint t_Fp_2)
+deserialize_E2 s_string = ret where
+    // Step 1.
+    m_byte = (s_string@0) && 0xE0
+    C_bit = m_byte @ 0
+    I_bit = m_byte @ 1
+    S_bit = m_byte @ 2
+    // Step 2 deferred (we check that C_bit is 1 later)
+    // Step 3
+    s_string' = [(s_string@0) && 0x1F] # tail s_string
+    // Step 6
+    x = map to_Fp (reverse (split`{parts=2} (OS2IP`{a=[2*384]}(s_string'))))
+    //Step 7 (on curve E')
+    y2 = Fp_2.add (Fp_2.mul (x, Fp_2.sq x), [4,4]) // TODO: make the constant look nicer
+    y = sqrt_F_p_2 y2
+    Y_bit = sign_F_p_2 y
+    // Steps 2, 4, 8
+    ret = if C_bit == False then nothing // Error, from Step 2
+           | I_bit then (if s_string' == zero then just (EC::point_O E') else nothing) // Step 4
+           | ~ (is_square_F_p_2 y2) then nothing // from Step 7
+           | S_bit == Y_bit then just (x,y)
+          else just (x, Fp_2.neg y)
+
+
+deserialize_E2': [96][8] -> (Maybe (EC::AffinePoint t_Fp_2), Integer)
+deserialize_E2' s_string = ret where
+    // Step 1.
+    m_byte = (s_string@0) && 0xE0
+    C_bit = m_byte @ 0
+    I_bit = m_byte @ 1
+    S_bit = m_byte @ 2
+    // Step 2 deferred (we check that C_bit is 1 later)
+    // Step 3
+    s_string' = [(s_string@0) && 0x1F] # tail s_string
+    // Step 6
+    x = map to_Fp (reverse (split`{parts=2} (OS2IP`{a=[2*384]}(s_string'))))
+    //Step 7 (on curve E')
+    y2 = Fp_2.add (Fp_2.mul (x, Fp_2.sq x), [4,4]) // TODO: make the constant look nicer
+    y = sqrt_F_p_2 y2
+    Y_bit = sign_F_p_2 y
+    // Steps 2, 4, 8
+    ret = if C_bit == False then (nothing,2) // Error, from Step 2
+           | I_bit then (if s_string' == zero then (just (EC::point_O E'),4) else (nothing,4)) // Step 4
+           | ~ (is_square_F_p_2 y2) then (nothing,7) // from Step 7
+           | S_bit == Y_bit then (just (x,y), 8)
+          else (just (x, Fp_2.neg y), 9)
+

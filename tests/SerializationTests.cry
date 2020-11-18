@@ -1,0 +1,10 @@
+import Serialization
+import Parameters
+import ShortWeierstrassCurve as EC
+import Maybe
+
+property ser_des_E1 (m:[16]) =
+  deserialize_E1 (serialize_E1 Q) == just Q where Q = EC::mult E m BP
+
+property ser_des_E2 (m:[16]) =
+  deserialize_E2 (serialize_E2 Q) == just Q where Q = EC::mult E' m BP'

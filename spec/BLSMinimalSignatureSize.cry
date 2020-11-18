@@ -54,7 +54,7 @@ pubkey_to_point S = deserialize_E2 (split S)
 // signature_to_point = octets_to_point_E1
 signature_to_point S = deserialize_E1 (split S)
 
-// Here are the unoptiized versions of the subgroup check
+// Here are the unoptimized versions of the subgroup check
 
 // pubkey_subgroup_check: EC::AffinePoint t_F' -> Bool
 pubkey_subgroup_check S =

@@ -63,37 +63,9 @@ type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + 
 
 // 2.3 KeyGen
 
-// KeyGen now has a loop that iterates until a nonzero secret key is produced.
-// Unfortunately there is no easy way for us to prove termination; that is a
-// very complex property of HKDF (if termination is indeed guaranteed).
-// Here we have artificially cutoff at 4 iterations.
+// ... KeyGen has been moved to its own module, called KeyGen, as it does not depend
+//     on the parameters. 
 
-// Should there be a check that IKM_len >= 32?  The specification says is "MUST" be.
-
-KeyGen: {IKM_len, info_len} ( validHMACSizes 20 (1+IKM_len)
-                            , validHMACSizes 32 (35+info_len)
-                            ) =>
-        ([IKM_len][8], [info_len][8]) -> [256]
-// artificial cutoff at 4 iterations, to avoid an unbounded loop
-KeyGen (IKM, key_info) = (KeyGenLoop (sha (join "BLS-SIG-KEYGEN-SALT-")) IKM key_info) @ 4
-
-KeyGenLoop salt IKM info = keys where
-  salts = [salt] # [sha salt' | salt' <- salts]
-  keys = [zero] #
-         // hang on to a nonzero key, try again with revised salt otherwise
-         [if k == zero then key_gen_step salt' else k | k <- keys | salt' <- salts]
-  key_gen_step s = KeyGenStep s IKM info
-
-KeyGenStep:  {IKM_len, info_len} (
-                              validHMACSizes 20 (1+IKM_len)
-                            , validHMACSizes 32 (35+info_len)
-                            ) =>
-        [256] -> [IKM_len][8] ->[info_len][8] -> [256]
-KeyGenStep salt IKM key_info = SK where
-    type L = (3 * 256) /^ 16 // (ceil lg2 r) = 256, so L = 3*16=48
-    PRK = HKDF_Extract (split salt) (IKM # [0]) // I2OSP`{xLen=1} 0)
-    OKM = HKDF_Expand`{L=L} PRK (key_info # I2OSP`{xLen=2} `L)
-    SK = drop ((OS2IP`{a=[384]} OKM) % (zext P::r))
 
 // 2.4 SkToPk
 
