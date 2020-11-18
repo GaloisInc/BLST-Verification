@@ -50,7 +50,7 @@ let {{
   bitInt b = if b then 1 else 0
 
   toInt: {n} (fin n) => [n] -> Integer
-  toInt = foldl (\ v b -> 2*v + (bitInt b)) 0
+  toInt = foldl (\ acc bit -> 2*acc + (bitInt bit)) 0
   }};
 
 bif_thm <- prove_cryptol {{bitInt False == 0}} [];
@@ -69,7 +69,7 @@ let {{
   shift = (2:Integer)^^`SZ
 
   plain: {n} (fin n) => [n] -> Integer
-  plain e = foldl (\ v b -> shift*v + (block_val b)) 0 (window_blocks e)
+  plain e = foldl (\ acc block -> shift*acc + (block_val block)) 0 (window_blocks e)
   }};
 
 let window_script = do {
@@ -95,7 +95,7 @@ let {{
   booth_block_val: [SZ] -> Integer
   booth_block_val x = if booth_sign x then v-shift else v where v = block_val x
 
-  booth: {n} (fin n, n >= 1, n /^SZ - 1 >= 1) => [n] -> Integer
+  booth: {n} (fin n, n >= 1) => [n] -> Integer
   booth e = foldl (\ a v -> shift*a + v) 0 (booth_parts e)
 
   booth_parts: {n} (fin n) => [n] -> [(n+1) /^ SZ]Integer
@@ -126,6 +126,7 @@ import "../spec/ShortWeierstrassCurve.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/CurveOperation.cry";
 
+/*
 propositional_rewrites <- for
   [ "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a True b) (or a b))"
   , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a b False) (and a b))"
@@ -141,6 +142,7 @@ let prop_simpset = add_prelude_eqs
   (addsimps propositional_rewrites empty_ss);
 
 let cleanup_simpset = add_cryptol_defs ["ecEq", "PEqInteger"] prop_simpset;
+*/
 
 let {{
   e1_scalar_mult: Integer -> AffinePoint t_Fp -> AffinePoint t_Fp
@@ -155,6 +157,14 @@ let {{
 
 //  We use algebraic rules relating addition and doubling to scalar multiples
 
+// ... cover function for the effect of point_add, in affine space
+let {{
+  add' C p1 p2 = if p1 == p2 then point_O C else add C p1 p2
+
+  add_exponents': Integer -> Integer -> Integer -> Integer
+  add_exponents' e1 e2 order = if (e1-e2)%order == 0 then 0 else e1+e2
+  }};
+
 e1_scalar_mult_alg_thms <- for
   [ // {{ \ k p1 -> point_double Fp (e1_scalar_mult k p1) == e1_scalar_mult (2*k) p1 }}
   // , {{ \ p1 -> point_double Fp p1 == e1_scalar_mult 2 p1 }}
@@ -166,6 +176,16 @@ e1_scalar_mult_alg_thms <- for
   // plus two special cases for k==1 or k'==1
   , {{ \ k    p1 -> add E (e1_scalar_mult k p1) p1 == e1_scalar_mult (k + 1) p1 }}
   , {{ \ k    p1 -> add E p1 (e1_scalar_mult k p1) == e1_scalar_mult (k + 1) p1 }}
+
+  // add'
+  , {{ \ k k' p1 -> add' E (e1_scalar_mult k p1) (e1_scalar_mult k' p1) ==
+                    e1_scalar_mult (add_exponents' k k' (e1_order p1)) p1 }}
+  // ... with two special cases
+  , {{ \ k    p1 -> add' E (e1_scalar_mult k p1) p1 ==
+                      e1_scalar_mult (add_exponents' k 1 (e1_order p1)) p1 }}
+  , {{ \ k    p1 -> add' E p1 (e1_scalar_mult k p1) ==
+                      e1_scalar_mult (add_exponents' k 1 (e1_order p1)) p1 }}
+
   // negation
   , {{ \k p1 -> neg E (e1_scalar_mult k p1) == e1_scalar_mult (- k) p1 }}
   // for precomputation, may need to know p == [1]p
@@ -177,11 +197,6 @@ e1_scalar_mult_alg_thms <- for
   ] admit_cryptol;
 
 // abstract effect of the concrete operations
-
-// ... cover function for the effect of point_add, in affine space
-let {{
-  add' C p1 p2 = if p1 == p2 then point_O C else add C p1 p2
-  }};
 
 curve_op_thms <- for
  [ {{ \ p1 -> affinify E (point_double Fp p1) == add E (affinify E p1) (affinify E p1) }}
@@ -204,7 +219,11 @@ curve_op_thms <- for
 POINTonE1_thms <- for
  [ {{ \p1 -> POINTonE1_abs (POINTonE1_rep p1) == p1 }}
  , {{ \p1 -> POINTonE1_invariant (POINTonE1_rep p1) == True }}
- , {{ \p1 -> POINTonE1_rep (POINTonE1_abs p1) == p1 }} // FIX THIS
+ // , {{ \p1 -> POINTonE1_rep (POINTonE1_abs p1) == p1 }} // FIX THIS
+ , {{ \p1 -> POINTonE1_rep (POINTonE1_abs p1) ==
+             if POINTonE1_invariant p1
+             then p1
+             else POINTonE1_normalize p1 }}
  // , {{ POINTonE1_invariant (zero, zero, zero) == True }} // "zero" gives a useless SAWcore term here
  , {{ \c p1 p2 -> POINTonE1_invariant (if c then p1 else p2) ==
          if c then POINTonE1_invariant p1 else POINTonE1_invariant p2 }}
@@ -220,9 +239,10 @@ POINTonE1_thms <- for
  , {{ \(x:POINTonE1_affine_t) -> (x.0, x.1) == x }}
  ]
  (\t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
-    do { unfolding ["POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant"];
+    do { unfolding ["POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant", "POINTonE1_normalize"];
          apply_fp_rewrites;
          // unfolding ["fp_invariant"]; // for the (zero,zero,zero) thm
+         simplify (addsimp fp_normalize_thm empty_ss); // for the rep_abs rule
          w4_unint_z3 fp_unints; }) ;
 
 // We need some non-higher order cover functions; e.g., point_add can not be left uninterpreted but
@@ -267,46 +287,19 @@ let ec_mult_overrides = concat vec_overrides
   ];
 
 let ec_mult_unints =
-    [ "e1_scalar_mult", "e1_order", "POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant"
+    [ "e1_scalar_mult", "e1_order"
+    , "POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant", "POINTonE1_normalize"
     , "point_add", "point_double", "Fp", "point_add_fp", "point_double_fp", "point_neg_fp"
-    , "precomputed_table", "is_power_table"
+    , "precomputed_table"
     , "add_E", "add'_E", "affinify_E"
     ];
 
 ////////////////
 
-/*
-// We use a named formula for get_wval to make it easier to show how we arrive at the
-// "booth_parts" for the scalar multiplication
-
-//let {{
-//  get_wval: {n} (fin n) => [n][8] -> Size -> Size -> Limb
-//  }}
-  
-let get_wval_spec n_bytes bits= do {
-  (d, d_ptr) <- ptr_to_fresh_readonly "d" (llvm_array n_bytes (llvm_int 8));
-  off <- crucible_fresh_var "off" size_type;
-  crucible_precond {{ off  < 8*`n_bytes - `bits }};
-  crucible_execute_func [d_ptr, crucible_term off, crucible_term {{`bits:Size_t}}];
-  r <- crucible_fresh_var "get_wval" limb_type;
-  crucible_return (crucible_term r);
-  // crucible_postcond {{ drop`{back=5} r == drop ((join (reverse d))>> off) }};
-  };
-
-enable_experimental;
-
-get_wval_1_ov <- crucible_llvm_compositional_extract m "get_wval" "get_wval_1" [] false
-   (get_wval_spec 1 6)
-   z3;
-
-// booth_encode <- crucible_llvm_extract m "booth_encode"
-// booth_encode_ov <- crucible_llvm_compositional_extract m "booth_encode" "booth_encode" [] false
-*/  
   
 // precomputed_table
 
 let {{
-  //small_mult: Integer -> POINTonE1_t -> POINTonE1_t
   small_mult: Integer -> ProjectivePoint t_Fp -> ProjectivePoint t_Fp
   small_mult i p1 =
     if i < 0 then point_neg_fp (small_mult (-i) p1)
@@ -317,36 +310,21 @@ let {{
 
   precomputed_table: ProjectivePoint t_Fp -> [16]POINTonE1_t
   precomputed_table p1 = [POINTonE1_rep p1] # [POINTonE1_rep (small_mult i p1) | i <- [2..16] ]
-  }};
 
-/*
-
-  is_power_table: [16]POINTonE1_t -> Bool
-  is_power_table t = t == precomputed_table (POINTonE1_abs (t@0))
-
-  table_abs = map POINTonE1_abs
-  table_rep = map POINTonE1_rep
-  
-  power_table: ProjectivePoint t_Fp -> [16](ProjectivePoint t_Fp)
-  power_table P = [e1_scalar_mult i P | i <- [1..16] ]
+  precomputed_table' p1 = [POINTonE1_rep (small_mult i p1) | i <- [1..16] ]
 }};
-*/
 
 precomputed_table_invariant_thm <- custom_prove_cryptol
   {{ \ p1 -> all POINTonE1_invariant (precomputed_table p1) == True }}
   do { goal_eval_unint ["POINTonE1_invariant", "POINTonE1_rep", "e1_scalar_mult"];
        simplify (addsimps POINTonE1_thms fp_simpset);
        w4_unint_z3 ["POINTonE1_invariant", "POINTonE1_rep", "e1_scalar_mult"]; } ;
-/*
-precomputed_table_is_table_thm <- admit_cryptol
-  {{ \p1 -> is_power_table (precomputed_table p1) == True }};
-*/
+
 
 let POINTonE1_precompute_w5_spec = do {
     row_ptr <- crucible_alloc (llvm_array 16 POINTonE1_type);
     (point, point_ptr) <- ptr_to_fresh_readonly "point" POINTonE1_type;
     crucible_precond {{ POINTonE1_invariant point }};
-    // crucible_precond {{ e1_order (POINTonE1_abs point) > 16 }};
     crucible_execute_func [row_ptr, point_ptr];
     crucible_points_to row_ptr (crucible_term {{ precomputed_table (POINTonE1_abs point) }} );
     };
@@ -354,74 +332,65 @@ let POINTonE1_precompute_w5_spec = do {
  POINTonE1_precompute_w5_ov <-
    custom_verify "POINTonE1_precompute_w5" ec_mult_overrides POINTonE1_precompute_w5_spec
      do { unfolding ["precomputed_table"];
-          //     simplify (addsimps ec_mult_structure_thms
-          //                   (addsimps POINTonE1_thms
-          //                             (addsimps e1_scalar_mult_alg_thms (cryptol_ss ()))));
           simplify (addsimps POINTonE1_thms empty_ss);
           simplify remove_higher_order_function_simpset;
-          // simplify cleanup_simpset; print_goal_consts; print_goal;
           w4_unint_z3 ec_mult_unints; } ;
 
 
-/*
-enable_experimental;
+// This theorem requires a strong induction:
+//  {{ \p1 i -> 0 <= i ==> affinify E (small_mult i p1) == e1_scalar_mult i (affinify E p1) }}
+// There is a base case, i=0:
+small_mult_is_scalar_mult_0_thm <- prove_cryptol
+  {{ \p1 -> affinify E (small_mult 0 p1) == e1_scalar_mult 0 (affinify E p1) }}
+  [];
+// and there is a step for even exponents, that just needs double,
+// and a step for odd exponents, where we need to show that adding [k]P and [k+1]P does not
+// need to double.  That's true, unless P=point_O, and the point_O case also works.
 
-POINTonE1_precompute_w5_ov <-crucible_llvm_compositional_extract m "POINTonE1_precompute_w5"
-   "concrete_precomputed_table"
-   ec_mult_overrides
-   false
-   do {
-    row_ptr <- crucible_alloc (llvm_array 16 POINTonE1_type);
-    (point, point_ptr) <- ptr_to_fresh_readonly "point" POINTonE1_type;
-    crucible_precond {{ POINTonE1_invariant point }};
-    // crucible_precond {{ e1_order (POINTonE1_abs point) > 16 }};
-    crucible_execute_func [row_ptr, point_ptr];
-    row <- crucible_fresh_var "precomputed_table" (llvm_array 16 POINTonE1_type);
-    crucible_points_to row_ptr (crucible_term row);
-    }
-  do {
-    simplify (addsimps ec_mult_structure_thms
-                       (addsimps POINTonE1_thms (addsimps e1_scalar_mult_alg_thms (cryptol_ss ()))));
-          // simplify (addsimp point_add_fp_thm empty_ss);
-    w4_unint_z3 ec_mult_unints; } ;
-*/
+small_mult_is_scalar_mult_thm <- admit_cryptol
+  {{ \p1 i -> affinify_E (small_mult i p1) == e1_scalar_mult i (affinify_E p1) }};
 
 // POINTonE1_gather_booth_w5
 
 let {{
-  booth: [16]POINTonE1_t -> Bit -> [5] -> POINTonE1_t
-  booth table s v = POINTonE1_rep (if s then point_neg Fp w else w) where
-    w = POINTonE1_abs (([zero] # table) @ v)
+  booth_lookup: [16]POINTonE1_t -> Bit -> [SZ] -> POINTonE1_t
+  booth_lookup table s v = POINTonE1_rep (if s then point_neg Fp w else w) where
+    w = POINTonE1_abs (([zero] # table) @ v')
+    v' = if v <= 16 then v else 0
 
-  booth' table (bi:Limb) = booth table (bi!5) (drop bi)
+  booth' table (bi:Limb) = booth_lookup table (bi!`SZ) (drop bi)
   }};
 
 invariant_booth'_thm <-
   custom_prove_cryptol
   {{ \p1 booth_index -> POINTonE1_invariant (booth' (precomputed_table p1) booth_index) == True }}
-  do { unfolding ["booth'", "booth"];
+  do { unfolding ["booth'", "booth_lookup"];
        simplify (addsimp (nth POINTonE1_thms 1) (cryptol_ss ())); // the "invariant_rep" theorem
        w4_unint_z3 ec_mult_unints; } ;
 
 let {{
   booth_exponent: Limb -> Integer
-  booth_exponent bi = if (bi!5) then -e else e where
-    e1 = toInt (drop`{back=5} bi)
+  booth_exponent bi = if (bi!`SZ) then -e else e where
+    e1 = toInt (drop`{back=SZ} bi)
     e = if e1 <= 16 then e1 else 0
   }};
 
-booth'_precomputed_table_thm <- admit_cryptol // custom_prove_cryptol 
+/*
+booth'_precomputed_table_thm <- custom_prove_cryptol 
   {{ \p1 booth_index -> POINTonE1_abs (booth' (precomputed_table p1) booth_index) ==
                         small_mult (booth_exponent booth_index) p1 }}
-  ;
-/*
-  do { unfolding ["booth'", "booth", "precomputed_table"];
+  do { unfolding ["booth'", "booth_lookup", "precomputed_table"];
        // simplify (addsimps ec_mult_structure_thms (addsimps POINTonE1_thms (cryptol_ss ())));
        simplify (addsimps POINTonE1_thms (cryptol_ss ()));
        print_goal;
        w4_unint_z3 ec_mult_unints;
        };
 */
+// We should be able to prove this:
+booth'_precomputed_table_thm <- admit_cryptol 
+  {{ \p1 booth_index -> POINTonE1_abs (booth' (precomputed_table p1) booth_index) ==
+                        small_mult (booth_exponent booth_index) p1 }};
+
 
 let POINTonE1_gather_booth_w5_spec = do {
     p_ptr <- crucible_alloc POINTonE1_type;
@@ -434,91 +403,103 @@ let POINTonE1_gather_booth_w5_spec = do {
     crucible_points_to p_ptr (crucible_term {{ booth' table booth_idx }});
     };
 
-/*
-enable_experimental;
-gather_extract <- crucible_llvm_compositional_extract  m  "POINTonE1_gather_booth_w5" "foo"
-   ec_mult_overrides
-   false
-   do {
-       p_ptr <- crucible_alloc POINTonE1_type;
-    (table, table_ptr) <- ptr_to_fresh "table" (llvm_array 16 POINTonE1_type);
-    booth_idx <- crucible_fresh_var "booth_idx" limb_type;
-    // crucible_precond {{ booth_idx < 16 \/ booth_idx > -16 }}; // NB unsigned comparisons
-    //crucible_precond {{ booth_idx < 16 }}; // DEBUG - non-negative case -- works
-    // pre: that the table is correct? CANNOT STATE THAT HERE; no reference to the underlying point
-    // UNLESS: we use table[0]
-    crucible_precond {{ all POINTonE1_invariant table }};
-    crucible_execute_func [p_ptr, table_ptr, crucible_term {{booth_idx}}];
-    p <- crucible_fresh_var "p" POINTonE1_type;
-    crucible_points_to p_ptr (crucible_term p);
-    }
-    do { unfolding ["select", "all", "foldr", "map", "reverse", "booth'", "booth"]; // can't unfold foldr
-          simplify (addsimps ec_mult_structure_thms (addsimps POINTonE1_thms (cryptol_ss ())));
-          unfolding ["POINTonE1_invariant", "fp_invariant"]; // for the zero
-          w4_unint_z3 ec_mult_unints; } ;
-*/   
 
 POINTonE1_gather_booth_w5_ov <-
    custom_verify "POINTonE1_gather_booth_w5" ec_mult_overrides POINTonE1_gather_booth_w5_spec
-     do { unfolding ["select", "all", "foldr", "map", "reverse", "booth'", "booth"]; // can't unfold foldr
+     do { unfolding ["select", "all", "booth'", "booth_lookup"];
           simplify (addsimps ec_mult_structure_thms (addsimps POINTonE1_thms (cryptol_ss ())));
           unfolding ["POINTonE1_invariant", "fp_invariant"]; // for the zero
           w4_unint_z3 ec_mult_unints; } ;
 
+
 //  POINTonE1_mult_w5
 
-// NOTE: scalar_ptr passed to get_wval, cast to limb, so must be aligned by 8 <= FIX: what if limb_t changes?
-let  POINTonE1_mult_w5_spec bits = do {
-    let n_bytes = eval_int {{ (7+(bits:Limb)) / 8 }};
-    ret_ptr <- crucible_alloc  POINTonE1_type;
-    (point, point_ptr) <- ptr_to_fresh_readonly "point" POINTonE1_type;
-    // needs alignment:
-    scalar_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array n_bytes (llvm_int 8));
-    scalar <- crucible_fresh_var "scalar" (llvm_array n_bytes (llvm_int 8));
-    crucible_points_to scalar_ptr (crucible_term scalar);
-
-    crucible_precond {{ POINTonE1_invariant point }};
-    crucible_precond {{ e1_order (POINTonE1_abs point) > 16 }};
-    crucible_execute_func [ret_ptr, point_ptr, scalar_ptr, crucible_term bits];
-    crucible_points_to ret_ptr (crucible_term
-      {{ POINTonE1_rep (e1_scalar_mult (scalar_to_integer scalar (bits:Limb)) (POINTonE1_abs point)) }} );
-    };
-/*
-custom_verify "POINTonE1_mult_w5"
-              (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
-              (POINTonE1_mult_w5_spec {{4:Limb}})
-     do { simplify (addsimps ec_mult_structure_thms
-                             (addsimps POINTonE1_thms
-                                       (addsimps e1_scalar_mult_alg_thms (cryptol_ss ()))));
-          // simplify (addsimp point_add_fp_thm empty_ss);
-          simplify (addsimps [ point_add_fp_thm
-                             , precomputed_table_invariant_thm
-                             , precomputed_table_is_table_thm]
-                             empty_ss);
-          goal_eval_unint ec_mult_unints; simplify fp_simpset; // simplify cleanup_simpset;
-          print_goal;
-          w4_unint_z3 ec_mult_unints; } ;
-
-*/
-
-enable_experimental;
 
 // We define here the terms built up by the loop in `mult_w5`
 let {{
-  mult_w5_intermediate vs p = foldl step start (tail vs) where
-    step acc v = add'_E (e1_scalar_mult shift acc) (affinify_E (small_mult v p))
-    start = affinify_E (small_mult (head vs) p)
+  mult_w5_intermediate es p = foldl step start (tail es) where
+    step acc e = add'_E (e1_scalar_mult shift acc) (affinify_E (small_mult e p))
+    start = affinify_E (small_mult (head es) p)
 
   // alternative defn.
-  mult_w5_intermediate' vs p = accs!0 where
-    accs = [start] # [add' E (e1_scalar_mult shift acc) (affinify E (small_mult v p)) | acc <- accs | v <- tail vs]
-    start = affinify E (small_mult (head vs) p)
+  mult_w5_intermediate' es p = accs!0 where
+    accs = [start] # [add' E (e1_scalar_mult shift acc) (affinify E (small_mult e p)) | acc <- accs | e <- tail es]
+    start = affinify E (small_mult (head es) p)
     
-  // mult_w5_result_term: {n} (fin n, n >= 1, n /^SZ >= 1) => [n] -> ProjectivePoint t_Fp -> AffinePoint t_Fp
   mult_w5_result_term: {n} (fin n, n >= 1) => [n] -> ProjectivePoint t_Fp -> AffinePoint t_Fp
   mult_w5_result_term e p = mult_w5_intermediate (booth_parts e) p
   }};
   
+
+// We next show that the result term gives a correct result.  
+// this is by rewriting `small_mult` to `e1_scalar_mult`, then the algebraic rules of scalar multiplication
+// The only wrinkle is in the use of `add'`, where we need to make sure we are not adding a point to
+// itself.
+
+let {{ shift_and_add acc e = shift*acc + e
+
+       no_doubles es order = // never need to add a point to itself (inb terms of on exponents)
+         all (\  (acc, val) -> (acc-val)%order != 0)
+             (zip (take (tail (scanl shift_and_add 0 es)))  (tail es))
+
+       has_bounded_partial_sums es low high =
+          all (\x -> low <= x /\ x <= high) (scanl shift_and_add 0 es)
+       intermediate_result_lemma: {n} (fin n, n >= 1) => [n]Integer -> ProjectivePoint t_Fp -> Bool
+       intermediate_result_lemma es p =
+             has_bounded_partial_sums es (-ord) ord
+               ==> mult_w5_intermediate es p == e1_scalar_mult (foldl shift_and_add 0 es) (affinify E p)
+             where ord = e1_order (affinify E p)
+
+       booth_with_add' es order = foldl step (head es) (tail es) where
+         step acc e = add_exponents' (shift * acc) e order
+  }};
+
+print "%%%% Mult_w5_result_term ...";
+
+for [4,5,6,7,12,14, 64, 100] (\ bits ->
+ custom_prove_cryptol
+  {{ \ (e:[bits]) p -> mult_w5_result_term e p == e1_scalar_mult (booth_with_add' (booth_parts e) (e1_order (affinify_E p))) (affinify_E p) }}
+  do { goal_eval_unint [ "e1_order", "e1_scalar_mult", "affinify_E", "booth_parts"
+                       , "add'_E", "small_mult", "add_exponents'"];
+       simplify cleanup_simpset;
+       simplify (addsimps (concat [small_mult_is_scalar_mult_thm] POINTonE1_thms) empty_ss);
+       unfolding ["add'_E"]; // so that the rules can apply
+       simplify (addsimps e1_scalar_mult_alg_thms empty_ss);
+       simplify remove_higher_order_function_simpset; // and fold up again so it can be uninterpreted
+       // print_goal;
+       w4_unint_z3 [ "e1_order", "e1_scalar_mult", "affinify_E", "booth_parts"
+                   , "add'_E", "small_mult", "add_exponents'"];
+     } );
+
+/*
+print "%%% Exponent theorems 1 %%%";
+for [4,5,6,7,8,9,10,11,12,13] // about 2s for 13, up to 6s for 16, 15m for 20.
+  (\ bits -> 
+      prove_cryptol {{ \ (e:[bits]) order -> (order > (toInt e) + shift
+                                 ==> booth_with_add' es order == foldl shift_and_add 0 es
+                                  where es = booth_parts e )}} [] );
+*/
+
+print "%%% Exponent theorems 2 %%%";
+for [4,5,6,7,8,9,10,11,12,13]
+  (\ bits -> 
+      prove_cryptol {{ \ (e:[bits]) order -> order > (toInt e) + shift
+                                 ==> booth_with_add' (booth_parts e) order == booth e }} [] );
+
+// conditional version:
+for [4,5,6,9,13]
+  (\ bits -> 
+      really_prove_cryptol {{ \ (e:[bits]) order ->
+        booth_with_add' (booth_parts e) order ==
+          if order > (toInt e) + shift
+          then booth e
+          else apply booth_with_add' (booth_parts e) order }} [] );
+
+
+// We will only be able to prove things for specific concrete sizes
+
+
+// NOTE: scalar_ptr passed to get_wval, cast to limb, so must be aligned by 8 <= FIX: what if limb_t changes?
 let POINTonE1_mult_w5_spec n_bytes bits = do {
     ret_ptr <- crucible_alloc  POINTonE1_type;
     (point, point_ptr) <- ptr_to_fresh_readonly "point" POINTonE1_type;
@@ -547,7 +528,6 @@ let POINTonE1_mult_script noisy = do {
                                                      empty_ss))));
     if noisy
     then do {
-      // unfolding ["/\\", "\\/"];
       simplify remove_higher_order_function_simpset; // needed before goal_eval_unint
       print_goal_consts;
       goal_eval_unint (concat ["e1_scalar_mult", "small_mult"] ec_mult_unints);
@@ -569,7 +549,7 @@ POINTonE1_mult_w5_1_3_spec <- custom_verify "POINTonE1_mult_w5"
    (POINTonE1_mult_script false);
 
 // and a simple case of SZ divides bits:, takes about 0.5 seconds
-print "%%%%% 1,5";
+
 POINTonE1_mult_w5_1_5_spec <- custom_verify "POINTonE1_mult_w5"
    (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
    (POINTonE1_mult_w5_spec 1 5)
@@ -589,20 +569,20 @@ POINTonE1_mult_w5_2_15_spec <- custom_verify "POINTonE1_mult_w5"
    (POINTonE1_mult_w5_spec 2 15)
    (POINTonE1_mult_script false);
 
-print "%%%% 4,31";
 // 4 blocks, 31 bits - about 18s
 POINTonE1_mult_w5_4_14_spec <- custom_verify "POINTonE1_mult_w5"
    (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
    (POINTonE1_mult_w5_spec 4 31)
    (POINTonE1_mult_script false);
 
+/*
 print "%%%% 8,58";
 // 8 blocks, 58 bits - about 4m 15s
 POINTonE1_mult_w5_8_58_spec <- custom_verify "POINTonE1_mult_w5"
    (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
    (POINTonE1_mult_w5_spec 8 58)
    (POINTonE1_mult_script false);
-
+*/
 /*
 
 // For `mult_w5` we use the experimental compositional extraction method to get a Term representing the

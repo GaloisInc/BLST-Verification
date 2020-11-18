@@ -40,6 +40,9 @@ POINTonE1_abs (x,y,z) = (fp_abs x, fp_abs y, fp_abs z)
 POINTonE1_rep: ProjectivePoint t_Fp -> POINTonE1_t
 POINTonE1_rep (x,y,z) = (fp_rep x, fp_rep y, fp_rep z)
 
+POINTonE1_normalize: POINTonE1_t -> POINTonE1_t
+POINTonE1_normalize (x,y,z) = (fp_normalize x, fp_normalize y, fp_normalize z)
+
 // abstraction to affine coordinates
 POINTonE1_abs': POINTonE1_t -> AffinePoint t_Fp
 POINTonE1_abs' p = affinify E (POINTonE1_abs p)
