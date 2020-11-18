@@ -28,7 +28,7 @@ mul_by_8 F x = x8 where
 
 montgomery_factor_p: t_Fp
 // montgomery_factor_p = (2^^384) // NOT portable between Fp implementations.
-montgomery_factor_p = Fp.mul (2^^4, 2^^380)
+montgomery_factor_p = Fp.mul (2^^4, 2^^380) // but this *is* portable
 
 montgomery_factor_inverse_p: t_Fp
 montgomery_factor_inverse_p = Fp.div(Fp.field_unit, montgomery_factor_p)
@@ -50,7 +50,8 @@ fp_rep x = vec384_rep (from_Fp (to_mont x))
 fp_invariant: Fp_rep_t -> Bool
 fp_invariant v = vec384_abs v < `p // TODO: check!
 
-
+fp_normalize: Fp_rep_t -> Fp_rep_t
+fp_normalize x = vec384_rep (from_Fp (Fp.normalize (to_Fp (vec384_abs x))))
 ////////////////////////////////////////////////////////////////
 //
 // Fp2
