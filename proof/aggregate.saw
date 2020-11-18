@@ -237,9 +237,10 @@ reciprocal_fp_ov <- verify "reciprocal_fp" overrides reciprocal_fp_spec;
 pairing_init_ov <- verify "blst_pairing_init" [] (blst_pairing_init_spec 8);
 
 
+let N_MAX_MINUS_ONE = eval_int {{(`N_MAX-1):[32]}};
 let make_aggregate_pk_in_g1_ov null_sig nelems = really_verify_unint "blst_pairing_aggregate_pk_in_g1" overrides ["is_in_G2"] (blst_pairing_aggregate_pk_in_g1_spec DST_len msg_len aug_len nelems null_sig); // null_sig should be 0 or 1
-aggregate_pk_in_g1_null_sig_ovs <- for (from_to 0 7) (make_aggregate_pk_in_g1_ov 1);
-aggregate_pk_in_g1_non_null_sig_ovs <- for (from_to 0 7) (make_aggregate_pk_in_g1_ov 0);
+aggregate_pk_in_g1_null_sig_ovs <- for (from_to 0 N_MAX_MINUS_ONE) (make_aggregate_pk_in_g1_ov 1);
+aggregate_pk_in_g1_non_null_sig_ovs <- for (from_to 0 N_MAX_MINUS_ONE) (make_aggregate_pk_in_g1_ov 0);
 
 pairing_commit_ov <- verify "blst_pairing_commit" overrides blst_pairing_commit_spec;
 //pairing_finalverify <- really_verify "blst_pairing_finalverify" overrides blst_pairing_finalverify_spec;

@@ -10,7 +10,7 @@ let x86_tactic = do {
   w4;
 };
 
-let do_prove_x86 = true;
+let do_prove_x86 = false;
 let verify_x86 name spec =
   if do_prove_x86
   then
