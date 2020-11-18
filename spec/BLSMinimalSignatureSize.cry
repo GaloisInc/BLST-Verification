@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
 module BLSMinimalSignatureSize = BLSGeneric where
 
 // Suite BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_, as defined in

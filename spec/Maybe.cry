@@ -1,4 +1,9 @@
 /*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+/*
 Similar to Haskell's Maybe type, this gives a way to have optional values.
 
 A value of type `Maybe t` is meant to be either `nothing`, or `just x`

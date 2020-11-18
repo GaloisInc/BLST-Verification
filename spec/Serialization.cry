@@ -1,4 +1,10 @@
-// Point serialization, from draft-irtf-cfrg-pairing-friendly-curves-07 Appendix C
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+// Point serialization, from draft-irtf-cfrg-pairing-friendly-curves-07
+// Appendix C
 //
 module Serialization where
 

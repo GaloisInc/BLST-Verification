@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
 // Definitions from draft-irtf-cfrg-bls-signature-04
 //
 // That specification describes a number of "parameters" that are used in its
