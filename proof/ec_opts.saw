@@ -218,9 +218,9 @@ POINTonE1_384_dadd_ov <- verify "POINTonE1_dadd" assembly_overrides POINTonE1_38
 POINTonE1_384_dadd_alias_ov <- verify "POINTonE1_dadd" assembly_overrides POINTonE1_384_dadd_alias_spec;
 POINTonE2_384x_dadd_ov <- verify "POINTonE2_dadd" assembly_overrides POINTonE2_384x_dadd_spec;
 POINTonE2_384x_dadd_alias_ov <- verify "POINTonE2_dadd" assembly_overrides POINTonE2_384x_dadd_alias_spec;
-POINTonE1_384_dadd_affine_ov <- really_verify "POINTonE1_dadd_affine" assembly_overrides POINTonE1_384_dadd_affine_spec;
-POINTonE2_384x_dadd_affine_ov <- really_verify "POINTonE2_dadd_affine" assembly_overrides POINTonE2_384x_dadd_affine_spec;
-POINTonE2_384x_dadd_affine_alias_ov <- really_verify "POINTonE2_dadd_affine" assembly_overrides POINTonE2_384x_dadd_affine_alias_spec;
+POINTonE1_384_dadd_affine_ov <- verify "POINTonE1_dadd_affine" assembly_overrides POINTonE1_384_dadd_affine_spec;
+POINTonE2_384x_dadd_affine_ov <- verify "POINTonE2_dadd_affine" assembly_overrides POINTonE2_384x_dadd_affine_spec;
+POINTonE2_384x_dadd_affine_alias_ov <- verify "POINTonE2_dadd_affine" assembly_overrides POINTonE2_384x_dadd_affine_alias_spec;
 POINTonE1_add_ov <- verify "POINTonE1_add" assembly_overrides POINTonE1_add_spec;
 POINTonE1_add_alias_ov <- verify "POINTonE1_add" assembly_overrides POINTonE1_add_alias_spec;
 POINTonE1_add_alias_1_3_ov <- verify "POINTonE1_add" assembly_overrides POINTonE1_add_alias_1_3_spec;
