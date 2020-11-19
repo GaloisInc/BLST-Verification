@@ -130,6 +130,78 @@ let blst_pairing_aggregate_pk_in_g1_spec DST_len msg_len aug_len nelems null_sig
   crucible_return (crucible_term ret);
 };
 
+let blst_pairing_aggregate_pk_in_g2_spec DST_len msg_len aug_len nelems null_sig = do {
+  crucible_precond {{ `nelems < `N_MAX }};
+
+  ctx_ptr <- crucible_alloc (llvm_struct "struct.PAIRING");
+  ctx_ctrl <- crucible_fresh_var "pairing_aggregate_pk_in_g2_ctx_ctrl" (llvm_int 32);
+  crucible_precond {{ ctx_ctrl && ~(AGGR_MIN_SIG || AGGR_SIGN_SET || AGGR_MIN_PK || AGGR_GT_SET || AGGR_HASH_OR_ENCODE) == zero }};
+  crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term ctx_ctrl);
+
+  crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term {{ `nelems:[32] }});
+
+  // TODO: strictly speaking, P and Q must be initialized with nelems only if `nelems == N_MAX-1`
+  ctx_Q <- crucible_fresh_var "pairing_aggregate_pk_in_g2_ctx_Q" (llvm_array nelems (llvm_struct "struct.POINTonE2_affine"));
+  crucible_points_to_untyped (crucible_field ctx_ptr "Q") (crucible_term ctx_Q);
+  ctx_P <- crucible_fresh_var "pairing_aggregate_pk_in_g2_ctx_P" (llvm_array nelems (llvm_struct "struct.POINTonE1_affine"));
+  crucible_points_to_untyped (crucible_field ctx_ptr "P") (crucible_term ctx_P);
+
+  ctx_GT <- crucible_fresh_var "pairing_aggregate_pk_in_g2_ctx_GT" vec384fp12_type;
+  crucible_conditional_points_to {{ (ctx_ctrl && AGGR_GT_SET) != zero }} (crucible_field ctx_ptr "GT") (crucible_term ctx_GT);
+
+  ctx_AggrSign <- crucible_fresh_var "pairing_aggregate_pk_in_g2_ctx_AggrSign" (llvm_struct "struct.POINTonE1");
+  crucible_conditional_points_to_untyped {{ (ctx_ctrl && AGGR_SIGN_SET) != zero }} (crucible_field ctx_ptr "AggrSign") (crucible_term ctx_AggrSign);
+
+  (_, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
+  crucible_points_to (crucible_field ctx_ptr "DST") DST_ptr;
+  crucible_points_to (crucible_field ctx_ptr "DST_len") (crucible_term {{`DST_len:[64]}});
+  // now the other parameters:
+  (PK, PK_ptr) <- ptr_to_fresh_readonly "PK" (llvm_struct "struct.POINTonE2_affine");
+  (sig, sig_ptr) <-
+    if (eval_bool {{ (`null_sig:Bit) != False }})
+      then return ({{ zero:([6][64], [6][64]) }},crucible_null)
+      else (ptr_to_fresh_readonly "sig" (llvm_struct "struct.POINTonE1_affine"));
+  (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  aug <- crucible_fresh_var "aug" (llvm_array aug_len (llvm_int 8));
+  aug_ptr <- crucible_alloc_readonly_aligned aug_len (llvm_array aug_len (llvm_int 8));
+  crucible_points_to aug_ptr (crucible_term aug);
+
+  crucible_execute_func [ctx_ptr, PK_ptr, sig_ptr, msg_ptr, crucible_term {{`msg_len:[64]}}, aug_ptr, crucible_term {{`aug_len:[64]}}];
+
+  // postconditions:
+  ret <- crucible_fresh_var "ret" (llvm_int 32);
+  crucible_postcond {{ ret == `BLST_AGGR_TYPE_MISMATCH \/ ret == `BLST_POINT_NOT_IN_GROUP \/ ret == `BLST_PK_IS_INFINITY \/ ret == `BLST_SUCCESS }};
+  crucible_postcond {{ ((ctx_ctrl && AGGR_MIN_PK) != zero) ==> ret == `BLST_AGGR_TYPE_MISMATCH }};
+  crucible_postcond {{ ((ctx_ctrl && AGGR_MIN_PK) == zero) /\ ((`null_sig:Bit) == False) /\ sig != zero /\ (is_in_G1 sig == zero) ==> ret == `BLST_POINT_NOT_IN_GROUP }};
+  crucible_postcond {{ ((ctx_ctrl && AGGR_MIN_PK) == zero) /\ (((`null_sig:Bit) == True) \/ sig == zero \/ (is_in_G1 sig != zero)) /\ PK == zero ==> ret == `BLST_PK_IS_INFINITY }};
+  new_ctx_ctrl <- crucible_fresh_var "new_pairing_aggregate_pk_in_g2_ctx_ctrl" (llvm_int 32);
+  crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term new_ctx_ctrl);
+
+  crucible_postcond {{ ((ctx_ctrl && AGGR_MIN_PK) == zero) ==> new_ctx_ctrl && AGGR_MIN_SIG != zero }};
+
+  new_nelems <- crucible_fresh_var "new_pairing_aggregate_pk_in_g2_ctx_nelems" (llvm_int 32);
+  crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term new_nelems);
+  crucible_postcond {{ ret == `BLST_SUCCESS ==> new_nelems == if (`nelems != `N_MAX-1) then (`nelems+1):[32] else zero }};
+
+  crucible_postcond {{ (((ctx_ctrl && AGGR_MIN_PK) == zero) /\ (((`null_sig:Bit) == True) \/ sig == zero \/ (is_in_G1 sig != zero)) /\ PK != zero) == (ret == `BLST_SUCCESS) }};
+  new_ctx_Q <- crucible_fresh_var "new_pairing_aggregate_pk_in_g2_ctx_Q" (llvm_array (eval_size {| nelems+1 |}) (llvm_struct "struct.POINTonE2_affine"));
+  new_ctx_P <- crucible_fresh_var "new_pairing_aggregate_pk_in_g2_ctx_P" (llvm_array (eval_size {| nelems+1 |}) (llvm_struct "struct.POINTonE1_affine"));
+  crucible_conditional_points_to_untyped {{ ret == `BLST_SUCCESS }} (crucible_field ctx_ptr "Q") (crucible_term new_ctx_Q);
+  crucible_conditional_points_to_untyped {{ ret == `BLST_SUCCESS }} (crucible_field ctx_ptr "P") (crucible_term new_ctx_P);
+
+  crucible_postcond {{ ret == `BLST_SUCCESS /\ `nelems == `N_MAX ==> new_ctx_ctrl && AGGR_GT_SET != zero }};
+  new_ctx_GT <- crucible_fresh_var "new_pairing_aggregate_pk_in_g2_ctx_GT" vec384fp12_type;
+  crucible_conditional_points_to {{ ret == `BLST_SUCCESS /\ `nelems == `N_MAX }} (crucible_field ctx_ptr "GT") (crucible_term new_ctx_GT);
+
+  crucible_postcond {{ (ctx_ctrl && AGGR_SIGN_SET) != zero \/ ((ctx_ctrl && AGGR_MIN_PK) == zero /\ ((`null_sig:Bit) == False) /\ sig != zero /\ (is_in_G1 sig) != zero) ==> new_ctx_ctrl && AGGR_SIGN_SET != zero }};
+  new_ctx_AggrSign <- crucible_fresh_var "new_pairing_aggregate_pk_in_g2_ctx_AggrSign" (llvm_struct "struct.POINTonE2");
+  crucible_conditional_points_to {{ (ctx_ctrl && AGGR_SIGN_SET) != zero \/ ((ctx_ctrl && AGGR_MIN_PK) == zero /\ ((`null_sig:Bit) == False) /\ sig != zero /\ (is_in_G1 sig) != zero) }} (crucible_field ctx_ptr "AggrSign") (crucible_term new_ctx_AggrSign);
+  // TODO: why does the following not work?
+  //crucible_conditional_points_to {{ (new_ctx_ctrl && AGGR_SIGN_SET) != zero }} (crucible_field ctx_ptr "AggrSign") (crucible_term new_ctx_AggrSign);
+
+  crucible_return (crucible_term ret);
+};
+
 // NOTE: only used if __OPTIMIZE_SIZE__ is set
 let exp_mont_384_spec pow_bits = do {
   out_ptr <- crucible_alloc vec384_type;
@@ -210,6 +282,15 @@ let POINTonE1_in_G1_spec = do {
 };
 POINTonE1_in_G1_ov <- admit "POINTonE1_in_G1" POINTonE1_in_G1_spec;
 
+// Also make sure this is memory safe (even if we don't use this override):
+let POINTonE1_in_G1_spec_ = do {
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" (llvm_struct "struct.POINTonE1_affine");
+  crucible_execute_func [p_ptr];
+  ret <- crucible_fresh_var "ret" limb_type;
+  crucible_return (crucible_term ret);
+};
+POINTonE1_in_G1_ov_ <- verify "POINTonE1_in_G1" (concat ec_ops_overrides assembly_overrides) POINTonE1_in_G1_spec_;
+
 let {{ is_in_G2 (p : ([2][6][64], [2][6][64])) = (undefined:[64]) }}; // NOTE: the goal is to leave it uninterpreted
 let POINTonE2_in_G2_spec = do {
   (p, p_ptr) <- ptr_to_fresh_readonly "p" (llvm_struct "struct.POINTonE2_affine");
@@ -220,27 +301,32 @@ let POINTonE2_in_G2_spec = do {
 };
 POINTonE2_in_G2_ov <- admit "POINTonE2_in_G2" POINTonE2_in_G2_spec;
 
-//let POINTonE2_in_G2_spec = do {
-  //(_, p_ptr) <- ptr_to_fresh_readonly "p" (llvm_struct "struct.POINTonE2_affine");
-  //crucible_execute_func [p_ptr];
-  //ret <- crucible_fresh_var "ret" limb_type;
-  //crucible_return (crucible_term ret);
-//};
-//POINTonE2_in_G2_ov <- verify "POINTonE2_in_G2" (concat ec_ops_overrides assembly_overrides) POINTonE2_in_G2_spec;
+// Also make sure this is memory safe (even if we don't use this override):
+let POINTonE2_in_G2_spec_ = do {
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" (llvm_struct "struct.POINTonE2_affine");
+  crucible_execute_func [p_ptr];
+  ret <- crucible_fresh_var "ret" limb_type;
+  crucible_return (crucible_term ret);
+};
+POINTonE2_in_G2_ov_ <- verify "POINTonE2_in_G2" (concat ec_ops_overrides assembly_overrides) POINTonE2_in_G2_spec_;
 
 let overrides = foldr concat [hash_to_field_ovs, sha_assembly_overrides, ec_ops_overrides, assembly_overrides, fp12_tower_ovs, miller_loop_n_ovs] [final_exp_alias_ov, final_exp_ov, map_to_g2_ov, map_to_g2_v_null_ov, POINTonE2_in_G2_ov, POINTonE1_in_G1_ov];
 
 //exp_mont_384_ov <- really_verify "exp_mont_384" overrides (exp_mont_384_spec pow_bits);
-reciprocal_fp_ov <- verify "reciprocal_fp" overrides reciprocal_fp_spec;
-
+//reciprocal_fp_ov <- verify "reciprocal_fp" overrides reciprocal_fp_spec;
 
 pairing_init_ov <- verify "blst_pairing_init" [] (blst_pairing_init_spec 8);
 
-
 let N_MAX_MINUS_ONE = eval_int {{(`N_MAX-1):[32]}};
-let make_aggregate_pk_in_g1_ov null_sig nelems = really_verify_unint "blst_pairing_aggregate_pk_in_g1" overrides ["is_in_G2"] (blst_pairing_aggregate_pk_in_g1_spec DST_len msg_len aug_len nelems null_sig); // null_sig should be 0 or 1
+
+let make_aggregate_pk_in_g1_ov null_sig nelems = verify_unint "blst_pairing_aggregate_pk_in_g1" overrides ["is_in_G2"] (blst_pairing_aggregate_pk_in_g1_spec DST_len msg_len aug_len nelems null_sig); // null_sig should be 0 or 1
 aggregate_pk_in_g1_null_sig_ovs <- for (from_to 0 N_MAX_MINUS_ONE) (make_aggregate_pk_in_g1_ov 1);
 aggregate_pk_in_g1_non_null_sig_ovs <- for (from_to 0 N_MAX_MINUS_ONE) (make_aggregate_pk_in_g1_ov 0);
+
+// TODO: have not tried this:
+let make_aggregate_pk_in_g2_ov null_sig nelems = really_verify_unint "blst_pairing_aggregate_pk_in_g2" overrides ["is_in_G1"] (blst_pairing_aggregate_pk_in_g2_spec DST_len msg_len aug_len nelems null_sig); // null_sig should be 0 or 1
+aggregate_pk_in_g2_null_sig_ovs <- for (from_to 0 N_MAX_MINUS_ONE) (make_aggregate_pk_in_g2_ov 1);
+aggregate_pk_in_g2_non_null_sig_ovs <- for (from_to 0 N_MAX_MINUS_ONE) (make_aggregate_pk_in_g2_ov 0);
 
 pairing_commit_ov <- verify "blst_pairing_commit" overrides blst_pairing_commit_spec;
 //pairing_finalverify <- really_verify "blst_pairing_finalverify" overrides blst_pairing_finalverify_spec;

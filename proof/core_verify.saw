@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
+// TODO: overlap with aggregate.saw
+
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
@@ -143,14 +145,16 @@ let blst_core_verify_pk_in_g2_spec aug_len msg_len DST_len = do {
 
 let overrides = (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []);
 
-// NOTE: the following 3 overrides are not necessary and were created while debugging; they could nevertheless be useful in the future.
-let make_add_n_dbl_n_ov k = verify "add_n_dbl_n" overrides (add_n_dbl_n_spec 1 k);
-add_n_dbl_n_ovs <- for [2,3,9,32,16] make_add_n_dbl_n_ov; // sizes come from C source code
+let make_add_n_dbl_n_ov n k = really_verify "add_n_dbl_n" overrides (add_n_dbl_n_spec n k);
+let make_add_n_dbl_n_ovs_n n = for [2,3,9,32,16] (make_add_n_dbl_n_ov n);
+add_n_dbl_n_ovs_ <- for (from_to 1 8) make_add_n_dbl_n_ovs_n; // NOTE: this takes a while; TODO: 8 is N_MAX
+// TODO: speed this up by overriding the line_* functions? (see add_n_dbl_n in pairing.c)
+let add_n_dbl_n_ovs = foldr concat add_n_dbl_n_ovs_ [];
 
 let make_start_dbl_n_ov n = verify "start_dbl_n" overrides (start_dbl_n_spec n);
-start_dbl_n_ovs <- for (from_to 1 2) make_start_dbl_n_ov;
+start_dbl_n_ovs <- for (from_to 1 8) make_start_dbl_n_ov; // TODO: 8 is N_MAX
 
-let make_miller_loop_n_ov n = verify "miller_loop_n" (foldr concat [add_n_dbl_n_ovs, start_dbl_n_ovs, ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (miller_loop_n_spec n);
+let make_miller_loop_n_ov n = really_verify "miller_loop_n" (foldr concat [add_n_dbl_n_ovs, start_dbl_n_ovs, ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (miller_loop_n_spec n);
 miller_loop_n_ovs <- for (from_to 1 8) make_miller_loop_n_ov; // TODO: 8 is N_MAX
 
 let make_mul_n_sqr_ov n = verify "mul_n_sqr" overrides (mul_n_sqr_spec n);
