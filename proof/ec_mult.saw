@@ -126,24 +126,6 @@ import "../spec/ShortWeierstrassCurve.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/CurveOperation.cry";
 
-/*
-propositional_rewrites <- for
-  [ "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a True b) (or a b))"
-  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a b False) (and a b))"
-  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (and a b)) (or (not a) (not b)))"
-  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (or a b)) (and (not a) (not b)))"
-   ] (prove_core abc);
-
-let prop_simpset = add_prelude_eqs
-  [ "ite_true", "ite_false", "ite_eq"
-  , "not_True", "not_False", "not_not"
-  , "and_True1", "and_True2", "and_False1", "and_False2", "and_idem"
-  , "or_True1", "or_True2", "or_False1", "or_False2", "or_idem"]
-  (addsimps propositional_rewrites empty_ss);
-
-let cleanup_simpset = add_cryptol_defs ["ecEq", "PEqInteger"] prop_simpset;
-*/
-
 let {{
   e1_scalar_mult: Integer -> AffinePoint t_Fp -> AffinePoint t_Fp
   e1_scalar_mult k P = if k < 0 then e1_scalar_mult (-k) (neg E P)
@@ -194,6 +176,9 @@ e1_scalar_mult_alg_thms <- for
   , {{ \p1 -> point_add Fp (0,0,0) p1 == p1 }}
   // , {{ \p1 -> point_add Fp p1 (0,0,0) == ??? }}
   , {{ point_double Fp (0,0,0) == (0,0,0) }}
+  // and arithmetic facts about the curve group
+  , {{ \ p1 -> add E p1 (point_O E) == p1 }}
+  , {{ \ p1 -> add E (point_O E) p1 == p1 }}
   ] admit_cryptol;
 
 // abstract effect of the concrete operations
@@ -347,6 +332,41 @@ small_mult_is_scalar_mult_0_thm <- prove_cryptol
 // and a step for odd exponents, where we need to show that adding [k]P and [k+1]P does not
 // need to double.  That's true, unless P=point_O, and the point_O case also works.
 
+// We can prove it for concrete exponents, and only need up to 16:
+// 0 and 1 require different proofs, 2 through 16 follow a pattern.
+
+e1_scalar_mult_0_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \ p1 -> e1_scalar_mult 0 p1 == point_O E }}) [];
+e1_scalar_mult_1_lemma <- prove_cryptol {{ \ p1 -> e1_scalar_mult 1 p1 == add E p1 (point_O E) }} [];
+e1_scalar_mult_1_thm <- custom_prove_cryptol (rewrite (cryptol_ss()) {{ \ p1 -> e1_scalar_mult 1 p1 == p1 }})
+  do { simplify (addsimps (concat [e1_scalar_mult_1_lemma] e1_scalar_mult_alg_thms) (cryptol_ss())); z3; } ;
+
+// ... i = 0
+custom_prove_cryptol {{ \p1 -> affinify_E (small_mult 0 p1) == e1_scalar_mult 0 (affinify_E p1) }}
+      do { goal_eval_unint ec_mult_unints;
+           simplify (addsimp e1_scalar_mult_0_thm empty_ss);
+           z3;
+         } ;
+
+// ... i = 1
+custom_prove_cryptol {{ \p1 -> affinify_E (small_mult 1 p1) == e1_scalar_mult 1 (affinify_E p1) }}
+      do { goal_eval_unint ec_mult_unints;
+           simplify (addsimp e1_scalar_mult_1_thm empty_ss);
+           w4_unint_z3 ec_mult_unints;
+         } ;
+         
+// .. and 2 .. 16 (assuming e1_order > 1.  But otherwise, was the point at infinity
+for (from_to 2 16)
+  (\ i -> custom_prove_cryptol
+    {{ \p1 -> e1_order (affinify_E p1) > 1 ==> affinify_E (small_mult `i p1) == e1_scalar_mult `i (affinify_E p1) }}
+    do { goal_eval_unint ec_mult_unints;
+    unfolding ["point_add_fp", "point_double_fp", "affinify_E"]; // restore higher-order functions
+    simplify (addsimps (concat curve_op_thms e1_scalar_mult_alg_thms) (addsimps POINTonE1_thms fp_simpset));
+    unfolding ["add_exponents'"];
+    simplify remove_higher_order_function_simpset;
+    w4_unint_z3 ec_mult_unints; } );
+
+
+// so we now assume it it generally
 small_mult_is_scalar_mult_thm <- admit_cryptol
   {{ \p1 i -> affinify_E (small_mult i p1) == e1_scalar_mult i (affinify_E p1) }};
 
@@ -438,18 +458,6 @@ let {{
 
 let {{ shift_and_add acc e = shift*acc + e
 
-       no_doubles es order = // never need to add a point to itself (inb terms of on exponents)
-         all (\  (acc, val) -> (acc-val)%order != 0)
-             (zip (take (tail (scanl shift_and_add 0 es)))  (tail es))
-
-       has_bounded_partial_sums es low high =
-          all (\x -> low <= x /\ x <= high) (scanl shift_and_add 0 es)
-       intermediate_result_lemma: {n} (fin n, n >= 1) => [n]Integer -> ProjectivePoint t_Fp -> Bool
-       intermediate_result_lemma es p =
-             has_bounded_partial_sums es (-ord) ord
-               ==> mult_w5_intermediate es p == e1_scalar_mult (foldl shift_and_add 0 es) (affinify E p)
-             where ord = e1_order (affinify E p)
-
        booth_with_add' es order = foldl step (head es) (tail es) where
          step acc e = add_exponents' (shift * acc) e order
   }};
@@ -495,6 +503,8 @@ for [4,5,6,9,13]
           then booth e
           else apply booth_with_add' (booth_parts e) order }} [] );
 
+// Having proved these for a small number of concrete sizes, we will now assume them for
+// the sizes of interest in the code proofs below
 
 // We will only be able to prove things for specific concrete sizes
 
