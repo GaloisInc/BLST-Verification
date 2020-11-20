@@ -1,0 +1,31 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+///////////////////////////////////////////////////////////////////////////////
+// Specifications
+///////////////////////////////////////////////////////////////////////////////
+
+
+let blst_p1_deserialize_spec = do { // TODO: out is left invalid if there is an error
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
+  (_, in_ptr) <- ptr_to_fresh_readonly "in" (llvm_array 96 (llvm_int 8));
+  crucible_execute_func [out_ptr, in_ptr];
+  //new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE1_affine");
+  //crucible_points_to out_ptr (crucible_term new_out);
+  ret <- crucible_fresh_var "ret" (llvm_int 32);
+  crucible_return (crucible_term ret);
+};
+let blst_p2_deserialize_spec = do { // TODO: out is left invalid if there is an error
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (_, in_ptr) <- ptr_to_fresh_readonly "in" (llvm_array 192 (llvm_int 8));
+  crucible_execute_func [out_ptr, in_ptr];
+  //new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE2_affine");
+  //crucible_points_to out_ptr (crucible_term new_out);
+  ret <- crucible_fresh_var "ret" (llvm_int 32);
+  crucible_return (crucible_term ret);
+};
+
+blst_p1_deserialize_ov <- verify "blst_p1_deserialize" assembly_overrides blst_p1_deserialize_spec;
+blst_p2_deserialize_ov <- verify "blst_p2_deserialize" assembly_overrides blst_p2_deserialize_spec;

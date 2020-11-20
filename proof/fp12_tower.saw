@@ -26,6 +26,13 @@ let cyclotomic_sqr_fp12_spec = do {
   crucible_points_to ret_ptr (crucible_term new_cyclotomic_sqr_fp12_ret);
 };
 
+let cyclotomic_sqr_fp12_alias_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
+  crucible_execute_func [ret_ptr, ret_ptr];
+  new_cyclotomic_sqr_fp12_ret <- crucible_fresh_var "new_cyclotomic_sqr_fp12_alias_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_cyclotomic_sqr_fp12_ret);
+};
+
 
 let mul_fp12_spec = do {
   ret_ptr <- crucible_alloc vec384fp12_type;
@@ -40,8 +47,8 @@ let mul_fp12_alias_spec = do {
   (_, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
   (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384fp12_type;
   crucible_execute_func [ret_ptr, ret_ptr, b_ptr];
-  new_mul_fp12_ret <- crucible_fresh_var "new_mul_fp12_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_mul_fp12_ret);
+  new_ret <- crucible_fresh_var "new_mul_fp12_alias_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
 let mul_by_xy00z0_fp12_spec = do {
@@ -99,6 +106,7 @@ let frobenius_map_fp12_alias_spec n = do {
 sqr_fp12_ov <- verify "sqr_fp12" assembly_overrides sqr_fp12_spec;
 sqr_fp12_alias_ov <- verify "sqr_fp12" assembly_overrides sqr_fp12_alias_spec;
 cyclotomic_sqr_fp12_ov <- verify "cyclotomic_sqr_fp12" assembly_overrides cyclotomic_sqr_fp12_spec;
+cyclotomic_sqr_fp12_alias_ov <- verify "cyclotomic_sqr_fp12" assembly_overrides cyclotomic_sqr_fp12_alias_spec;
 mul_fp12_ov <- verify "mul_fp12" assembly_overrides mul_fp12_spec;
 mul_fp12_alias_ov <- verify "mul_fp12" assembly_overrides mul_fp12_alias_spec;
 mul_by_xy00z0_fp12_ov <- verify "mul_by_xy00z0_fp12" assembly_overrides mul_by_xy00z0_fp12_spec;
@@ -110,4 +118,4 @@ frobenius_map_fp12_ovs <- for [1,2,3] make_frobenius_map_fp12_ov; // NOTE: this 
 let make_frobenius_map_fp12_alias_ov n = verify "frobenius_map_fp12" assembly_overrides (frobenius_map_fp12_alias_spec n);
 frobenius_map_fp12_alias_ovs <- for [1,2,3] make_frobenius_map_fp12_alias_ov; // NOTE: this could be verified for any 0 < n <= 3, but it fails with that precondition in the spec
 
-let fp12_tower_ovs = foldr concat [frobenius_map_fp12_alias_ovs, frobenius_map_fp12_ovs, [sqr_fp12_alias_ov, sqr_fp12_ov, mul_fp12_alias_ov, mul_fp12_ov, mul_by_xy00z0_fp12_alias_ov, mul_by_xy00z0_fp12_ov, mul_by_xy00z0_fp12_ov, conjugate_fp12_ov, inverse_fp12_ov]] [];
+let fp12_tower_ovs = foldr concat [frobenius_map_fp12_alias_ovs, frobenius_map_fp12_ovs, [sqr_fp12_alias_ov, sqr_fp12_ov, mul_fp12_alias_ov, mul_fp12_ov, mul_by_xy00z0_fp12_alias_ov, mul_by_xy00z0_fp12_ov, mul_by_xy00z0_fp12_ov, conjugate_fp12_ov, inverse_fp12_ov, cyclotomic_sqr_fp12_ov, cyclotomic_sqr_fp12_alias_ov]] [];

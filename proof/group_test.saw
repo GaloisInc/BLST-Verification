@@ -1,0 +1,24 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+///////////////////////////////////////////////////////////////////////////////
+// Specifications
+///////////////////////////////////////////////////////////////////////////////
+
+let blst_p1_affine_in_g1_spec = do {
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" (llvm_struct "struct.POINTonE1_affine");
+  crucible_execute_func [p_ptr];
+};
+
+
+let blst_p2_affine_in_g2_spec = do {
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" (llvm_struct "struct.POINTonE2_affine");
+  crucible_execute_func [p_ptr];
+};
+
+let overrides = foldr concat [ec_ops_overrides, assembly_overrides] [];
+
+blst_p1_affine_in_g1_ov <- verify "blst_p1_affine_in_g1" overrides blst_p1_affine_in_g1_spec;
+blst_p2_affine_in_g2_ov <- verify "blst_p2_affine_in_g2" overrides blst_p2_affine_in_g2_spec;

@@ -2,18 +2,6 @@
  * Copyright (c) 2020 Galois, Inc.
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
-///////////////////////////////////////////////////////////////////////////////
-// Imports
-///////////////////////////////////////////////////////////////////////////////
-
-include "helpers.saw";
-include "list_utils.saw";
-include "types.saw";
-
-m <- llvm_load_module "../build/llvm/libblst.a.bc";
-let do_prove = true;
-include "proof-helpers.saw";
-include "sha_overrides.saw";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
@@ -44,19 +32,14 @@ let hash_to_field_spec nelems aug_len msg_len DST_len = do {
 // Proofs
 ///////////////////////////////////////////////////////////////////////////////
 
-let verify_expand_message_for len_in_bytes aug_len msg_len DST_len = do {
-  block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| DST_len+4 |}];
-  r <- crucible_llvm_verify m "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) false (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc;
-  return r;
+let verify_hash_to_field_for aug_len msg_len DST_len nelems = do {
+  let L = 64; // sizeof(vec384) + 128/8 = 48 + 16
+  let len_in_bytes = eval_size {| nelems * L |};
+  block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
+  expand_message_xmd_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever
+  expand_message_xmd_ov <- admit "expand_message_xmd" (expand_message_spec len_in_bytes aug_len msg_len DST_len);
+  hash_to_field_ov <- really_verify "hash_to_field" [expand_message_xmd_ov, redcx_mont_384_ov, mulx_mont_384_ov, mulx_mont_384_ret_ret_ov] (hash_to_field_spec nelems aug_len msg_len DST_len);
+  return hash_to_field_ov;
 };
 
-let aug_len = 96; // aug_len should be 96 or 48
-let msg_len = 65;
-let dst_len= 8;
-let nelems = 2;
-let L = 64; // sizeof(vec384) + 128/8 = 48 + 16
-let len_in_bytes = eval_size {| nelems * L |};
-
-expand_message_ov <- verify_expand_message_for len_in_bytes aug_len msg_len dst_len;
-
-include "x86.saw";
+hash_to_field_ovs <- for [1,2,4] (verify_hash_to_field_for aug_len msg_len DST_len);
