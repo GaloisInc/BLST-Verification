@@ -48,6 +48,7 @@ let AGGR_MIN_PK = {{ (zext 0x2):[32] }};
 let AGGR_SIGN_SET = {{ (zext 0x10):[32] }};
 let AGGR_GT_SET = {{ (zext 0x20):[32] }};
 let AGGR_HASH_OR_ENCODE = {{ (zext 0x40):[32] }};
+let MIN_SIG_OR_PK = {{ AGGR_MIN_SIG || AGGR_MIN_PK }};
 
 // BLST_ERROR enum:
 let BLST_SUCCESS = 0;
@@ -251,15 +252,93 @@ let blst_pairing_commit_spec = do {
 
 };
 
-let blst_pairing_finalverify_spec = do { // TODO
-  (_, ctx_ptr) <- ptr_to_fresh_readonly "PAIRING" (llvm_struct "struct.PAIRING");
-  (_, GTsig_ptr) <- ptr_to_fresh_readonly "GTsig" vec384fp12_type;
+let blst_pairing_finalverify_spec null_GTsig min_sig sign_set = do {
+  ctx_ptr <- crucible_alloc (llvm_struct "struct.PAIRING");
+
+  ctx_ctrl <- crucible_fresh_var "pairing_final_verify_ctx_ctrl" (llvm_int 32);
+  crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term ctx_ctrl);
+
+  (GTsig, GTsig_ptr) <-
+    if null_GTsig
+      then return ({{ zero:[72][64] }},crucible_null)
+      else (ptr_to_fresh_readonly "GTsig" vec384fp12_type);
+
+  if (eval_bool {{ `min_sig:Bit }})
+    then crucible_precond {{ (ctx_ctrl && AGGR_MIN_SIG) != zero /\ (ctx_ctrl && AGGR_MIN_PK) == zero}}
+    else crucible_precond {{ (ctx_ctrl && AGGR_MIN_PK) != zero /\ (ctx_ctrl && AGGR_MIN_SIG) == zero}};
+
+  if (eval_bool {{ `sign_set:Bit }})
+    then crucible_precond {{ (ctx_ctrl && AGGR_SIGN_SET) != zero }}
+    else crucible_precond {{ (ctx_ctrl && AGGR_SIGN_SET) == zero }};
+
+  ctx_AggrSign <- if (eval_bool {{ (`min_sig:Bit) /\ (`sign_set:Bit) }})
+      then (crucible_fresh_var "pairing_finalverify_ctx_AggrSign" (llvm_struct "struct.POINTonE1"))
+      else (crucible_fresh_var "pairing_finalverify_ctx_AggrSign" (llvm_struct "struct.POINTonE2"));
+
+  crucible_conditional_points_to_untyped {{ (ctx_ctrl && AGGR_SIGN_SET) != zero }} (crucible_field ctx_ptr "AggrSign") (crucible_term ctx_AggrSign);
+
+  ctx_GT <- crucible_fresh_var "pairing_finalverify_ctx_GT" vec384fp12_type;
+  crucible_points_to (crucible_field ctx_ptr "GT") (crucible_term ctx_GT);
+
   crucible_execute_func [ctx_ptr, GTsig_ptr];
   ret <- crucible_fresh_var "ret" (llvm_int 64);
+  crucible_postcond {{ ((ctx_ctrl && AGGR_GT_SET) == zero) ==> ret == zero }};
+
   crucible_return (crucible_term ret);
 };
 
-// TODO: pairing_merge
+let blst_pairing_merge_spec min_sig = do {
+  ctx_ptr <- crucible_alloc (llvm_struct "struct.PAIRING");
+  ctx1_ptr <- crucible_alloc (llvm_struct "struct.PAIRING");
+
+  ctx_ctrl <- crucible_fresh_var "pairing_merge_ctx_ctrl" (llvm_int 32);
+  crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term ctx_ctrl);
+  ctx1_ctrl <- crucible_fresh_var "pairing_merge_ctx1_ctrl" (llvm_int 32);
+  crucible_points_to (crucible_field ctx1_ptr "ctrl") (crucible_term ctx1_ctrl);
+
+  nelems <- crucible_fresh_var "pairing_merge_ctx_nelems" (llvm_int 32);
+  crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term nelems);
+  nelems1 <- crucible_fresh_var "pairing_merge_ctx1_nelems" (llvm_int 32);
+  crucible_points_to (crucible_field ctx1_ptr "nelems") (crucible_term nelems1);
+
+  AggrSignE1 <- crucible_fresh_var "pairing_merge_ctx_AggrSignE1" (llvm_struct "struct.POINTonE1");
+  AggrSignE1_1 <- crucible_fresh_var "pairing_merge_ctx_AggrSignE1" (llvm_struct "struct.POINTonE1");
+  AggrSignE2 <- crucible_fresh_var "pairing_merge_ctx_AggrSignE2" (llvm_struct "struct.POINTonE2");
+  AggrSignE2_1 <- crucible_fresh_var "pairing_merge_ctx_AggrSignE2" (llvm_struct "struct.POINTonE2");
+
+  if min_sig
+    then do {
+      crucible_precond {{ ctx_ctrl && AGGR_MIN_SIG != zero }};
+      crucible_conditional_points_to_untyped {{ ctx_ctrl && AGGR_MIN_SIG != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET != zero }} (crucible_field ctx_ptr "AggrSign") (crucible_term AggrSignE1);
+      crucible_conditional_points_to_untyped {{ (ctx_ctrl && AGGR_MIN_SIG != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET != zero) \/ (ctx_ctrl && AGGR_MIN_SIG != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET == zero /\ ctx1_ctrl && AGGR_SIGN_SET != zero) }} (crucible_field ctx1_ptr "AggrSign") (crucible_term AggrSignE1_1);
+    }
+    else do {
+      crucible_precond {{ ctx_ctrl && AGGR_MIN_PK != zero }};
+      crucible_conditional_points_to {{ ctx_ctrl && AGGR_MIN_PK != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET != zero }} (crucible_field ctx_ptr "AggrSign") (crucible_term AggrSignE2);
+      crucible_conditional_points_to {{ (ctx_ctrl && AGGR_MIN_PK != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET != zero) \/ (ctx_ctrl && AGGR_MIN_PK != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET == zero /\ ctx1_ctrl && AGGR_SIGN_SET != zero) }} (crucible_field ctx1_ptr "AggrSign") (crucible_term AggrSignE2_1);
+    };
+
+  ctx_GT <- crucible_fresh_var "pairing_merge_ctx_GT" vec384fp12_type;
+  crucible_conditional_points_to {{ ctx_ctrl && ctx1_ctrl && AGGR_GT_SET }} (crucible_field ctx_ptr "GT") (crucible_term ctx_GT);
+  ctx1_GT <- crucible_fresh_var "pairing_merge_ctx1_GT" vec384fp12_type;
+  crucible_conditional_points_to {{ ctx_ctrl && AGGR_GT_SET }} (crucible_field ctx1_ptr "GT") (crucible_term ctx1_GT);
+
+  crucible_execute_func [ctx_ptr, ctx1_ptr];
+  ret <- crucible_fresh_var "ret" (llvm_int 32);
+
+  crucible_postcond {{
+    ctx_ctrl && MIN_SIG_OR_PK != zero /\ ctx_ctrl && ctx1_ctrl && MIN_SIG_OR_PK == zero
+      ==> ret == `BLST_AGGR_TYPE_MISMATCH }};
+  crucible_postcond {{ (nelems != zero) || (nelems1 != zero) ==> ret == `BLST_AGGR_TYPE_MISMATCH }};
+
+  new_ctx_ctrl <- crucible_fresh_var "new_merge_ctx_ctrl" (llvm_int 32);
+  crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term new_ctx_ctrl);
+  new_ctx1_ctrl <- crucible_fresh_var "new_merge_ctx1_ctrl" (llvm_int 32);
+  crucible_points_to (crucible_field ctx1_ptr "ctrl") (crucible_term new_ctx1_ctrl);
+  crucible_postcond {{ ~(ctx_ctrl && MIN_SIG_OR_PK != zero /\ ctx_ctrl && ctx1_ctrl && MIN_SIG_OR_PK == zero) /\ nelems == zero /\ nelems1 == zero /\ ctx1_ctrl && AGGR_SIGN_SET != zero /\ (ctx_ctrl && MIN_SIG_OR_PK == AGGR_MIN_SIG \/ ctx_ctrl && MIN_SIG_OR_PK == AGGR_MIN_PK) ==> new_ctx_ctrl && AGGR_SIGN_SET != zero }};
+
+  crucible_return (crucible_term ret);
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Proofs
@@ -327,4 +406,15 @@ aggregate_pk_in_g2_null_sig_ovs <- for (from_to 0 N_MAX_MINUS_ONE) (make_aggrega
 aggregate_pk_in_g2_non_null_sig_ovs <- for (from_to 0 N_MAX_MINUS_ONE) (make_aggregate_pk_in_g2_ov 0);
 
 pairing_commit_ov <- verify "blst_pairing_commit" overrides blst_pairing_commit_spec;
-//pairing_finalverify <- really_verify "blst_pairing_finalverify" overrides blst_pairing_finalverify_spec;
+
+pairing_finalverify_1 <- verify "blst_pairing_finalverify" overrides (blst_pairing_finalverify_spec false 0 1);
+pairing_finalverify_2 <- verify "blst_pairing_finalverify" overrides (blst_pairing_finalverify_spec false 0 0);
+pairing_finalverify_3  <- verify "blst_pairing_finalverify" overrides (blst_pairing_finalverify_spec false 1 1);
+pairing_finalverify_4 <- verify "blst_pairing_finalverify" overrides (blst_pairing_finalverify_spec false 1 0);
+pairing_finalverify_5 <- verify "blst_pairing_finalverify" overrides (blst_pairing_finalverify_spec true 0 1);
+pairing_finalverify_6 <- verify "blst_pairing_finalverify" overrides (blst_pairing_finalverify_spec true 0 0);
+pairing_finalverify_7 <- verify "blst_pairing_finalverify" overrides (blst_pairing_finalverify_spec true 1 1);
+pairing_finalverify_8 <- verify "blst_pairing_finalverify" overrides (blst_pairing_finalverify_spec true 1 0);
+
+pairing_merge <- really_verify "blst_pairing_merge" overrides (blst_pairing_merge_spec true);
+pairing_merge <- really_verify "blst_pairing_merge" overrides (blst_pairing_merge_spec false);
