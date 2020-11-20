@@ -319,9 +319,9 @@ let blst_pairing_merge_spec min_sig = do {
     };
 
   ctx_GT <- crucible_fresh_var "pairing_merge_ctx_GT" vec384fp12_type;
-  crucible_conditional_points_to {{ ctx_ctrl && ctx1_ctrl && AGGR_GT_SET }} (crucible_field ctx_ptr "GT") (crucible_term ctx_GT);
+  crucible_conditional_points_to {{ ctx_ctrl && ctx1_ctrl && AGGR_GT_SET != zero }} (crucible_field ctx_ptr "GT") (crucible_term ctx_GT);
   ctx1_GT <- crucible_fresh_var "pairing_merge_ctx1_GT" vec384fp12_type;
-  crucible_conditional_points_to {{ ctx_ctrl && AGGR_GT_SET }} (crucible_field ctx1_ptr "GT") (crucible_term ctx1_GT);
+  crucible_conditional_points_to {{ ctx1_ctrl && AGGR_GT_SET != zero }} (crucible_field ctx1_ptr "GT") (crucible_term ctx1_GT);
 
   crucible_execute_func [ctx_ptr, ctx1_ptr];
   ret <- crucible_fresh_var "ret" (llvm_int 32);
