@@ -145,17 +145,19 @@ let blst_core_verify_pk_in_g2_spec aug_len msg_len DST_len = do {
 
 let overrides = (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []);
 
-let make_add_n_dbl_n_ov n k = really_verify "add_n_dbl_n" overrides (add_n_dbl_n_spec n k);
+let miller_loop_N_MAX = 3; // NOTE: must match C code
+
+let make_add_n_dbl_n_ov n k = verify "add_n_dbl_n" overrides (add_n_dbl_n_spec n k);
 let make_add_n_dbl_n_ovs_n n = for [2,3,9,32,16] (make_add_n_dbl_n_ov n);
-add_n_dbl_n_ovs_ <- for (from_to 1 8) make_add_n_dbl_n_ovs_n; // NOTE: this takes a while; TODO: 8 is N_MAX
+add_n_dbl_n_ovs_ <- for (from_to 1 miller_loop_N_MAX) make_add_n_dbl_n_ovs_n;
 // TODO: speed this up by overriding the line_* functions? (see add_n_dbl_n in pairing.c)
 let add_n_dbl_n_ovs = foldr concat add_n_dbl_n_ovs_ [];
 
 let make_start_dbl_n_ov n = verify "start_dbl_n" overrides (start_dbl_n_spec n);
-start_dbl_n_ovs <- for (from_to 1 8) make_start_dbl_n_ov; // TODO: 8 is N_MAX
+start_dbl_n_ovs <- for (from_to 1 miller_loop_N_MAX) make_start_dbl_n_ov;
 
-let make_miller_loop_n_ov n = really_verify "miller_loop_n" (foldr concat [add_n_dbl_n_ovs, start_dbl_n_ovs, ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (miller_loop_n_spec n);
-miller_loop_n_ovs <- for (from_to 1 8) make_miller_loop_n_ov; // TODO: 8 is N_MAX
+let make_miller_loop_n_ov n = verify "miller_loop_n" (foldr concat [add_n_dbl_n_ovs, start_dbl_n_ovs, ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (miller_loop_n_spec n);
+miller_loop_n_ovs <- for (from_to 1 miller_loop_N_MAX) make_miller_loop_n_ov;
 
 let make_mul_n_sqr_ov n = verify "mul_n_sqr" overrides (mul_n_sqr_spec n);
 mul_n_sqr_ovs <- for [2,3,9,32,15] make_mul_n_sqr_ov;

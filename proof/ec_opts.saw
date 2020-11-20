@@ -53,6 +53,14 @@ let POINTonE1_384_dadd_affine_spec = do {
   crucible_points_to out_ptr (crucible_term new_POINTonE1_384_dadd_affine_out);
 };
 
+let POINTonE1_384_dadd_affine_alias_spec = do {
+  (_, out_ptr) <- ptr_to_fresh "p1" (llvm_struct "struct.POINTonE1");
+  (_, p2_ptr) <- ptr_to_fresh_readonly "p2" (llvm_struct "struct.POINTonE1_affine");
+  crucible_execute_func [out_ptr, out_ptr, p2_ptr];
+  new_POINTonE1_384_dadd_affine_out <- crucible_fresh_var "new_POINTonE1_384_dadd_affine_out" (llvm_struct "struct.POINTonE1");
+  crucible_points_to out_ptr (crucible_term new_POINTonE1_384_dadd_affine_out);
+};
+
 let POINTonE2_384x_dadd_affine_spec = do {
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2");
   (_, p1_ptr) <- ptr_to_fresh_readonly "p1" (llvm_struct "struct.POINTonE2");
@@ -219,6 +227,7 @@ POINTonE1_384_dadd_alias_ov <- verify "POINTonE1_dadd" assembly_overrides POINTo
 POINTonE2_384x_dadd_ov <- verify "POINTonE2_dadd" assembly_overrides POINTonE2_384x_dadd_spec;
 POINTonE2_384x_dadd_alias_ov <- verify "POINTonE2_dadd" assembly_overrides POINTonE2_384x_dadd_alias_spec;
 POINTonE1_384_dadd_affine_ov <- verify "POINTonE1_dadd_affine" assembly_overrides POINTonE1_384_dadd_affine_spec;
+POINTonE1_384_dadd_affine_alias_ov <- verify "POINTonE1_dadd_affine" assembly_overrides POINTonE1_384_dadd_affine_alias_spec;
 POINTonE2_384x_dadd_affine_ov <- verify "POINTonE2_dadd_affine" assembly_overrides POINTonE2_384x_dadd_affine_spec;
 POINTonE2_384x_dadd_affine_alias_ov <- verify "POINTonE2_dadd_affine" assembly_overrides POINTonE2_384x_dadd_affine_alias_spec;
 POINTonE1_add_ov <- verify "POINTonE1_add" assembly_overrides POINTonE1_add_spec;
@@ -240,4 +249,4 @@ POINTonE2_mult_w5_636_ov <- verify "POINTonE2_mult_w5" (concat [POINTonE2_double
 POINTonE2_mult_w5_255_ov <- verify "POINTonE2_mult_w5" (concat [POINTonE2_double_alias_ov,POINTonE2_double_ov,POINTonE2_add_alias_ov, POINTonE2_add_ov] assembly_overrides) (POINTonE2_mult_w5_spec 255);
 POINTonE1_mult_w5_255_ov <- verify "POINTonE1_mult_w5" (concat [POINTonE1_double_ov, POINTonE1_double_alias_ov, POINTonE1_add_alias_ov, POINTonE1_add_ov] assembly_overrides) (POINTonE1_mult_w5_spec 255);
 
-let ec_ops_overrides = [POINTonE1_is_equal_ov,POINTonE2_double_alias_ov,POINTonE2_double_ov,POINTonE1_double_alias_ov,POINTonE1_double_ov,POINTonE2_add_affine_alias_ov,POINTonE2_add_affine_ov,POINTonE1_add_affine_alias_ov,POINTonE1_add_affine_ov,POINTonE2_add_alias_ov,POINTonE2_add_ov,POINTonE1_add_ov,POINTonE1_add_alias_1_3_ov,POINTonE1_add_alias_ov,POINTonE2_384x_dadd_affine_alias_ov,POINTonE2_384x_dadd_affine_ov,POINTonE1_384_dadd_affine_ov,POINTonE2_384x_dadd_alias_ov,POINTonE2_384x_dadd_ov,POINTonE1_384_dadd_alias_ov,POINTonE1_384_dadd_ov, POINTonE1_mult_w5_255_ov, POINTonE2_mult_w5_255_ov, POINTonE2_mult_w5_636_ov];
+let ec_ops_overrides = [POINTonE1_is_equal_ov,POINTonE2_double_alias_ov,POINTonE2_double_ov,POINTonE1_double_alias_ov,POINTonE1_double_ov,POINTonE2_add_affine_alias_ov,POINTonE2_add_affine_ov,POINTonE1_add_affine_alias_ov,POINTonE1_add_affine_ov,POINTonE2_add_alias_ov,POINTonE2_add_ov,POINTonE1_add_ov,POINTonE1_add_alias_1_3_ov,POINTonE1_add_alias_ov,POINTonE2_384x_dadd_affine_alias_ov,POINTonE2_384x_dadd_affine_ov,POINTonE1_384_dadd_affine_alias_ov,POINTonE1_384_dadd_affine_ov,POINTonE2_384x_dadd_alias_ov,POINTonE2_384x_dadd_ov,POINTonE1_384_dadd_alias_ov,POINTonE1_384_dadd_ov, POINTonE1_mult_w5_255_ov, POINTonE2_mult_w5_255_ov, POINTonE2_mult_w5_636_ov];
