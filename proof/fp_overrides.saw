@@ -226,10 +226,10 @@ fp_alg_thms <- for
 
 let fp_binop_ovs name op = do {
   let plain_spec = binop_spec name vec384_type {{fp_invariant}} {{fp_rep}} {{fp_abs}} op;
-  plain_ov <- admit name [] plain_spec;
+  plain_ov <- admit name plain_spec;
 
   let alias_1_2_spec = binop_alias_1_2_spec name vec384_type {{fp_invariant}} {{fp_rep}} {{fp_abs}} op;
-  alias_1_2_ov <- admit name [] alias_1_2_spec;
+  alias_1_2_ov <- admit name alias_1_2_spec;
 
   return [plain_ov, alias_1_2_ov];
   };
@@ -243,22 +243,22 @@ mul_fp_ovs <- fp_binop_ovs "mul_fp" {{Fp.mul}} ;
 let sqr_fp_spec =
   unop_spec "sqr_fp" vec384_type {{ fp_invariant }} {{fp_rep}} {{fp_abs}} {{Fp.sq}};
 
-sqr_fp_ov <- admit "sqr_fp" [] sqr_fp_spec;
+sqr_fp_ov <- admit "sqr_fp" sqr_fp_spec;
 
 let sqr_fp_alias_1_2_spec =
   unop_alias_1_2_spec "sqr_fp" vec384_type {{ fp_invariant }} {{fp_rep}} {{fp_abs}} {{Fp.sq}};
 
-sqr_fp_alias_1_2_ov <- admit "sqr_fp" [] sqr_fp_alias_1_2_spec;
+sqr_fp_alias_1_2_ov <- admit "sqr_fp" sqr_fp_alias_1_2_spec;
 
 let mul_by_3_fp_alias_1_2_spec =
   unop_alias_1_2_spec "mul_by_3_fp" vec384_type {{ fp_invariant }} {{fp_rep}} {{fp_abs}} {{ mul_by_3 Fp }};
 
-mul_by_3_fp_alias_1_2_ov <- admit "mul_by_3_fp" [] mul_by_3_fp_alias_1_2_spec;
+mul_by_3_fp_alias_1_2_ov <- admit "mul_by_3_fp" mul_by_3_fp_alias_1_2_spec;
 
 let mul_by_8_fp_alias_1_2_spec =
   unop_alias_1_2_spec "mul_by_8_fp" vec384_type {{ fp_invariant }} {{fp_rep}} {{fp_abs}} {{ mul_by_8 Fp }};
 
-mul_by_8_fp_alias_1_2_ov <- admit "mul_by_8_fp" [] mul_by_8_fp_alias_1_2_spec;
+mul_by_8_fp_alias_1_2_ov <- admit "mul_by_8_fp" mul_by_8_fp_alias_1_2_spec;
 
 // ... other ops
 
@@ -272,7 +272,7 @@ let cneg_fp_spec = do {
   crucible_points_to ret_ptr (crucible_term {{ if cbit != 0 then fp_rep (Fp.neg (fp_abs a)) else a }});
 };
 
-cneg_fp_ov <- admit "cneg_fp" [] cneg_fp_spec;
+cneg_fp_ov <- admit "cneg_fp" cneg_fp_spec;
 
 let cneg_fp_alias_1_2_spec = do {
   (a, a_ptr) <- ptr_to_fresh "a" vec384_type;
@@ -282,7 +282,7 @@ let cneg_fp_alias_1_2_spec = do {
   crucible_points_to a_ptr (crucible_term {{ if cbit != 0 then fp_rep (Fp.neg (fp_abs a)) else a }});
 };
 
-cneg_fp_alias_1_2_ov <- admit "cneg_fp" [] cneg_fp_alias_1_2_spec;
+cneg_fp_alias_1_2_ov <- admit "cneg_fp" cneg_fp_alias_1_2_spec;
 
 // ... variables useful for proof scripts:
 

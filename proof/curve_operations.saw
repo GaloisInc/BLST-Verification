@@ -485,7 +485,7 @@ let mul_by_b_onE1_alias_1_2_spec =
   unop_alias_1_2_spec "mul_by_b_onE1" vec384_type {{ fp_invariant }} {{fp_rep}} {{fp_abs}}
                                         {{ \x -> Fp.mul (b, x) }};
  mul_by_b_onE1_alias_1_2_ov <-
-   admit "mul_by_b_onE1" []  mul_by_b_onE1_alias_1_2_spec;
+   admit "mul_by_b_onE1"  mul_by_b_onE1_alias_1_2_spec;
 
 
 let {{

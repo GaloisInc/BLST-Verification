@@ -28,9 +28,9 @@ let vec_select_asm_alias_1_3_spec bytes = do {
   crucible_points_to ret_ptr (crucible_term {{ if (sel_a != 0) then a else ret }});
 };
 
-let mk_vec_select_asm_ov bytes = admit (str_concat "vec_select_" (show bytes)) [] (vec_select_asm_spec bytes);
+let mk_vec_select_asm_ov bytes = admit (str_concat "vec_select_" (show bytes)) (vec_select_asm_spec bytes);
 
-let mk_vec_select_asm_alias_1_3_ov bytes = admit (str_concat "vec_select_" (show bytes)) [] (vec_select_asm_alias_1_3_spec bytes);
+let mk_vec_select_asm_alias_1_3_ov bytes = admit (str_concat "vec_select_" (show bytes)) (vec_select_asm_alias_1_3_spec bytes);
 
 let vec_select_sizes = [48, 96, 144, 192, 288];
 vec_select_asm_ovs <- do {
