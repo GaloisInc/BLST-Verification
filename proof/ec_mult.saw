@@ -126,6 +126,9 @@ import "../spec/ShortWeierstrassCurve.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/CurveOperation.cry";
 
+//  We use algebraic rules relating addition and doubling to scalar multiples
+//
+// ... so first we define scalar multiplication with an Integer exponent
 let {{
   e1_scalar_mult: Integer -> AffinePoint t_Fp -> AffinePoint t_Fp
   e1_scalar_mult k P = if k < 0 then e1_scalar_mult (-k) (neg E P)
@@ -137,16 +140,14 @@ let {{
   }};
 
 
-//  We use algebraic rules relating addition and doubling to scalar multiples
-
 // ... cover function for the effect of point_add, in affine space
 let {{
-  add' C p1 p2 = if p1 == p2 then point_O C else add C p1 p2
-
   add_exponents': Integer -> Integer -> Integer -> Integer
   add_exponents' e1 e2 order = if (e1-e2)%order == 0 then 0 else e1+e2
   }};
 
+// .. algebraic rules about scalar multiplication.  These are provable by induction;
+// but in SAW we just assume them
 e1_scalar_mult_alg_thms <- for
   [ // {{ \ k p1 -> point_double Fp (e1_scalar_mult k p1) == e1_scalar_mult (2*k) p1 }}
   // , {{ \ p1 -> point_double Fp p1 == e1_scalar_mult 2 p1 }}
@@ -183,6 +184,7 @@ e1_scalar_mult_alg_thms <- for
 
 // abstract effect of the concrete operations
 
+/*
 curve_op_thms <- for
  [ {{ \ p1 -> affinify E (point_double Fp p1) == add E (affinify E p1) (affinify E p1) }}
  , {{ \ p1 p2 -> affinify E (point_add Fp p1 p2) == add' E (affinify E p1) (affinify E p2) }}
@@ -198,43 +200,10 @@ curve_op_thms <- for
  , {{ \p1 -> affinify E (POINTonE1_abs p1) == POINTonE1_abs' p1 }}
  ] 
  admit_cryptol;
- 
-// and abs_rep rules for points
-
-POINTonE1_thms <- for
- [ {{ \p1 -> POINTonE1_abs (POINTonE1_rep p1) == p1 }}
- , {{ \p1 -> POINTonE1_invariant (POINTonE1_rep p1) == True }}
- // , {{ \p1 -> POINTonE1_rep (POINTonE1_abs p1) == p1 }} // FIX THIS
- , {{ \p1 -> POINTonE1_rep (POINTonE1_abs p1) ==
-             if POINTonE1_invariant p1
-             then p1
-             else POINTonE1_normalize p1 }}
- // , {{ POINTonE1_invariant (zero, zero, zero) == True }} // "zero" gives a useless SAWcore term here
- , {{ \c p1 p2 -> POINTonE1_invariant (if c then p1 else p2) ==
-         if c then POINTonE1_invariant p1 else POINTonE1_invariant p2 }}
- , {{ \c p1 p2 -> POINTonE1_rep (if c then p1 else p2) ==
-         if c then POINTonE1_rep p1 else POINTonE1_rep p2 }}
- , {{ \c p1 p2 -> POINTonE1_abs (if c then p1 else p2) ==
-         if c then POINTonE1_abs p1 else POINTonE1_abs p2 }}
-
- , {{ \c p1 p2 -> point_neg Fp (if c then p1 else p2) ==
-                  if c then point_neg Fp p1 else point_neg Fp p2 }}
-
- , {{ \(x:POINTonE1_t) -> (x.0, x.1, x.2) == x }}
- , {{ \(x:POINTonE1_affine_t) -> (x.0, x.1) == x }}
- , {{ \ c (x1: Vec384) (x2: Vec384) (x3: Vec384) y1 y2 y3 ->
-        (if c then x1 else y1, if c then x2 else y2, if c then x3 else y3) ==
-        if c then (x1,x2,x3) else (y1,y2,y3) }}
- ]
- (\t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
-    do { unfolding ["POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant", "POINTonE1_normalize"];
-         apply_fp_rewrites;
-         // unfolding ["fp_invariant"]; // for the (zero,zero,zero) thm
-         simplify (addsimp fp_normalize_thm empty_ss); // for the rep_abs rule
-         w4_unint_z3 fp_unints; }) ;
+ */
 
 // We need some non-higher order cover functions; e.g., point_add can not be left uninterpreted but
-// point_add_fp can be.
+// point_add_fp can be.  Usually we bring them in just before doign a `goal_eval_unit` or `w4_unint_z3`.
 
 let {{
   point_add_fp = point_add Fp
@@ -286,6 +255,10 @@ let ec_mult_unints =
 
   
 // precomputed_table
+
+// the procomputed table uses a particular way to compute samll scalar multiplies.
+// We define the `small_mult` function to capture this, so that we can use a
+// concrete equality for an override in a compositioal proof.
 
 let {{
   small_mult: Integer -> ProjectivePoint t_Fp -> ProjectivePoint t_Fp
@@ -366,7 +339,7 @@ for (from_to 2 16)
     {{ \p1 -> e1_order (affinify_E p1) > 1 ==> affinify_E (small_mult `i p1) == e1_scalar_mult `i (affinify_E p1) }}
     do { goal_eval_unint ec_mult_unints;
     unfolding ["point_add_fp", "point_double_fp", "affinify_E"]; // restore higher-order functions
-    simplify (addsimps (concat curve_op_thms e1_scalar_mult_alg_thms) (addsimps POINTonE1_thms fp_simpset));
+    simplify (addsimps (concat e1_curve_op_thms e1_scalar_mult_alg_thms) (addsimps POINTonE1_thms fp_simpset));
     unfolding ["add_exponents'"];
     simplify remove_higher_order_function_simpset;
     w4_unint_z3 ec_mult_unints; } );
@@ -375,7 +348,7 @@ for (from_to 2 16)
 small_mult_is_scalar_mult_thm <- admit_cryptol
   {{ \p1 i -> affinify_E (small_mult i p1) == e1_scalar_mult i (affinify_E p1) }};
 
-// POINTonE1_gather_booth_w5
+// Code proof: POINTonE1_gather_booth_w5
 
 let {{
   booth_lookup: [16]POINTonE1_t -> Bit -> [SZ] -> POINTonE1_t
@@ -433,11 +406,6 @@ booth'_precomputed_table_thm <- custom_prove_cryptol
        simplify (addsimps (concat [bpt_lemma5, bpt_lemma4] POINTonE1_thms) fp_simpset);
        w4_unint_z3 (concat ["small_nonnegative_mult"] ec_mult_unints);} ;
 
-// We should be able to prove this:
-//booth'_precomputed_table_thm <- admit_cryptol 
-//  {{ \p1 booth_index -> POINTonE1_abs (booth' (precomputed_table p1) booth_index) ==
-//                        small_mult (booth_exponent booth_index) p1 }};
-
 
 let POINTonE1_gather_booth_w5_spec = do {
     p_ptr <- crucible_alloc POINTonE1_type;
@@ -459,20 +427,20 @@ POINTonE1_gather_booth_w5_ov <-
           w4_unint_z3 ec_mult_unints; } ;
 
 
-//  POINTonE1_mult_w5
+// Code proof:  POINTonE1_mult_w5
+//
+// We want to show that we compute a Projective representation of
+// `e1_scalar_mult (toInt e) (affinify E P)`.  The proof involves first using
+// rewriting to turn that term into something that reflects the Booth-optimized
+// windowed algorithm more closely, then show that the code implments that.
+// 
 
-
-// We define here the terms built up by the loop in `mult_w5`
+// We first define the terms built up by the loop in `mult_w5`
 let {{
   mult_w5_intermediate es p = foldl step start (tail es) where
     step acc e = add'_E (e1_scalar_mult shift acc) (affinify_E (small_mult e p))
     start = affinify_E (small_mult (head es) p)
 
-  // alternative defn.
-  mult_w5_intermediate' es p = accs!0 where
-    accs = [start] # [add' E (e1_scalar_mult shift acc) (affinify E (small_mult e p)) | acc <- accs | e <- tail es]
-    start = affinify E (small_mult (head es) p)
-    
   mult_w5_result_term: {n} (fin n, n >= 1) => [n] -> ProjectivePoint t_Fp -> AffinePoint t_Fp
   mult_w5_result_term e p = mult_w5_intermediate (booth_parts e) p
   }};
@@ -489,8 +457,8 @@ let {{ shift_and_add acc e = shift*acc + e
          step acc e = add_exponents' (shift * acc) e order
   }};
 
-print "%%%% Mult_w5_result_term ...";
 
+// 
 for [4,5,6,7,12,14, 64, 100] (\ bits ->
  custom_prove_cryptol
   {{ \ (e:[bits]) p -> mult_w5_result_term e p == e1_scalar_mult (booth_with_add' (booth_parts e) (e1_order (affinify_E p))) (affinify_E p) }}
@@ -555,7 +523,7 @@ let POINTonE1_mult_w5_spec n_bytes bits = do {
     };
 
 let POINTonE1_mult_script noisy = do {
-      simplify (addsimps curve_op_thms
+      simplify (addsimps e1_curve_op_thms
                        (addsimps POINTonE1_thms
                                  (addsimps e1_scalar_mult_alg_thms
                                            (addsimps [ invariant_booth'_thm
@@ -619,68 +587,4 @@ POINTonE1_mult_w5_8_58_spec <- custom_verify "POINTonE1_mult_w5"
    (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
    (POINTonE1_mult_w5_spec 8 58)
    (POINTonE1_mult_script false);
-*/
-/*
-
-// For `mult_w5` we use the experimental compositional extraction method to get a Term representing the
-// effect of the function call.  We can then prove theorems directly about this term.
-
-// We do this for a small number of values of the `bits` parameter, and corresponding
-// lengths of the scalar.
-mult_extract_ovs <- for [6,8,15,20]
-  (\ bits -> 
-crucible_llvm_compositional_extract  m  "POINTonE1_mult_w5" (str_concat "mult_extract" (show bits))
- (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
- false
- do {
-    // let bits = 8;
-    let n_bytes = eval_int {{ (7+(`bits:Limb)) / 8 }};
-    ret_ptr <- crucible_alloc  POINTonE1_type;
-    (point, point_ptr) <- ptr_to_fresh_readonly "point" POINTonE1_type;
-    // needs alignment
-    scalar_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array n_bytes (llvm_int 8));
-    scalar <- crucible_fresh_var "scalar" (llvm_array n_bytes (llvm_int 8));
-    crucible_points_to scalar_ptr (crucible_term scalar);
-
-    crucible_precond {{ POINTonE1_invariant point }};
-    // crucible_precond {{ e1_order (POINTonE1_abs point) > 16000000 }}; // TODO FIX bound
-    crucible_execute_func [ret_ptr, point_ptr, scalar_ptr, crucible_term {{`bits:Limb}}];
-    ret <- crucible_fresh_var "ret" POINTonE1_type;
-    crucible_points_to ret_ptr (crucible_term ret);
-    }
-
-  do {
-    simplify (addsimps ec_mult_structure_thms
-                       (addsimps POINTonE1_thms
-                                 (addsimps e1_scalar_mult_alg_thms
-                                           (addsimps [ point_add_fp_thm
-                                                     , invariant_booth'_thm
-                                                     , precomputed_table_invariant_thm
-                                                     //, precomputed_table_is_table_thm
-                                                     ]
-                                                     empty_ss))));
-    w4_unint_z3 ec_mult_unints; }) ;
-
-
-// Proof experiments:
-let xscript =   do {
-    simplify (addsimps ec_mult_structure_thms
-                       (addsimps POINTonE1_thms
-                                 (addsimps e1_scalar_mult_alg_thms
-                                           (addsimps [ point_add_fp_thm
-                                                     , invariant_booth'_thm
-                                                     , precomputed_table_invariant_thm
-                                                     , booth'_precomputed_table_thm
-                                                     // , precomputed_table_is_table_thm
-                                                     ]
-                                                     empty_ss))));
-    print_goal;
-    goal_eval_unint ec_mult_unints;
-    print_goal;
-    w4_unint_z3 ec_mult_unints; } ;
-
- let ss = addsimps (concat POINTonE1_thms (concat e1_scalar_mult_alg_thms curve_op_thms)) (cryptol_ss());
- let ss' = addsimp booth'_precomputed_table_thm ss;
- P <- fresh_symbolic "P" {| POINTonE1_t |} ;
-
 */
