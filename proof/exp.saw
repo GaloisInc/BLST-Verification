@@ -83,7 +83,7 @@ let exp_mont_384_spec n_bytes <- do {
 
 // fp_exp is for positive exponents only, avoiding the need for rewriting x*1 to x
 let {{ fp_exp: t_Fp -> Integer -> t_Fp
-       fp_exp b e = if e == 1 then b else Fp.mul (b, fp_exp b (e-1))
+       fp_exp x e = if e == 1 then x else Fp.mul (x, fp_exp x (e-1))
        }};
 
 me_1 <- prove_cryptol {{\x -> Fp.mul (x, x) == fp_exp x 2 }} [] ;
@@ -99,7 +99,7 @@ fp_exp_simps <- addsimps (concat [me_1, me_2, me_3, me_4, me_5, me_6] fp_alg_thm
 
 let {{
   sqr_n_mul: t_Fp -> Size_t -> t_Fp -> t_Fp
-  sqr_n_mul a count b = Fp.mul (fp_exp a (2^^count), b)
+  sqr_n_mul x count y = Fp.mul (fp_exp x (2^^count), y)
   }};
 
 let sqr_n_mul_fp_spec = do {

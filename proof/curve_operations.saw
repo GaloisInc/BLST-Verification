@@ -46,13 +46,13 @@ core_rewrites <- for
    ] (prove_core abc);
 
 more_rewrites <- for
-  [ {{ \ b (x:(Integer,Integer,Integer)) y -> (if b then x else y).0 == (if b then x.0 else y.0) }}
-  , {{ \ b (x:(Integer,Integer,Integer)) y -> (if b then x else y).1 == (if b then x.1 else y.1) }}
-  , {{ \ b (x:(Integer,Integer,Integer)) y -> (if b then x else y).2 == (if b then x.2 else y.2) }}
+  [ {{ \ c (x:(Integer,Integer,Integer)) y -> (if c then x else y).0 == (if c then x.0 else y.0) }}
+  , {{ \ c (x:(Integer,Integer,Integer)) y -> (if c then x else y).1 == (if c then x.1 else y.1) }}
+  , {{ \ c (x:(Integer,Integer,Integer)) y -> (if c then x else y).2 == (if c then x.2 else y.2) }}
 
-  , {{ \ b (x:([6][64], [6][64], [6][64])) y -> (if b then x else y).0 == (if b then x.0 else y.0) }}
-  , {{ \ b (x:([6][64], [6][64], [6][64])) y -> (if b then x else y).1 == (if b then x.1 else y.1) }}
-  , {{ \ b (x:([6][64], [6][64], [6][64])) y -> (if b then x else y).2 == (if b then x.2 else y.2) }}
+  , {{ \ c (x:([6][64], [6][64], [6][64])) y -> (if c then x else y).0 == (if c then x.0 else y.0) }}
+  , {{ \ c (x:([6][64], [6][64], [6][64])) y -> (if c then x else y).1 == (if c then x.1 else y.1) }}
+  , {{ \ c (x:([6][64], [6][64], [6][64])) y -> (if c then x else y).2 == (if c then x.2 else y.2) }}
   ] (\t -> prove_cryptol (rewrite (cryptol_ss()) t) []);
 
 let structural_rewrites = concat more_rewrites core_rewrites;
