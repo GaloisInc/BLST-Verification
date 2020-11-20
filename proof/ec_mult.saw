@@ -222,6 +222,9 @@ POINTonE1_thms <- for
 
  , {{ \(x:POINTonE1_t) -> (x.0, x.1, x.2) == x }}
  , {{ \(x:POINTonE1_affine_t) -> (x.0, x.1) == x }}
+ , {{ \ c (x1: Vec384) (x2: Vec384) (x3: Vec384) y1 y2 y3 ->
+        (if c then x1 else y1, if c then x2 else y2, if c then x3 else y3) ==
+        if c then (x1,x2,x3) else (y1,y2,y3) }}
  ]
  (\t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
     do { unfolding ["POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant", "POINTonE1_normalize"];
@@ -286,17 +289,20 @@ let ec_mult_unints =
 
 let {{
   small_mult: Integer -> ProjectivePoint t_Fp -> ProjectivePoint t_Fp
-  small_mult i p1 =
-    if i < 0 then point_neg_fp (small_mult (-i) p1)
-     | i == 0 then zero
+  small_mult i p = if i < 0 then point_neg_fp (small_nonnegative_mult (-i) p)
+                            else small_nonnegative_mult i p
+
+  small_nonnegative_mult: Integer -> ProjectivePoint t_Fp -> ProjectivePoint t_Fp
+  small_nonnegative_mult i p1 =
+    if i <= 0 then zero
      | i == 1 then p1
-     | (i%2)==0 then point_double_fp (small_mult (i/2) p1)
-    else point_add_fp (small_mult (i/2 + 1) p1) (small_mult (i/2) p1)
+     | (i%2)==0 then point_double_fp (small_nonnegative_mult (i/2) p1)
+    else point_add_fp (small_nonnegative_mult (i/2 + 1) p1) (small_nonnegative_mult (i/2) p1)
 
   precomputed_table: ProjectivePoint t_Fp -> [16]POINTonE1_t
-  precomputed_table p1 = [POINTonE1_rep p1] # [POINTonE1_rep (small_mult i p1) | i <- [2..16] ]
+  precomputed_table p1 = [POINTonE1_rep p1] # [POINTonE1_rep (small_nonnegative_mult i p1) | i <- [2..16] ]
 
-  precomputed_table' p1 = [POINTonE1_rep (small_mult i p1) | i <- [1..16] ]
+  precomputed_table' p1 = [POINTonE1_rep (small_nonnegative_mult i p1) | i <- [1..16] ]
 }};
 
 precomputed_table_invariant_thm <- custom_prove_cryptol
@@ -325,7 +331,7 @@ let POINTonE1_precompute_w5_spec = do {
 // This theorem requires a strong induction:
 //  {{ \p1 i -> 0 <= i ==> affinify E (small_mult i p1) == e1_scalar_mult i (affinify E p1) }}
 // There is a base case, i=0:
-small_mult_is_scalar_mult_0_thm <- prove_cryptol
+small_nonnegative_mult_is_scalar_mult_0_thm <- prove_cryptol
   {{ \p1 -> affinify E (small_mult 0 p1) == e1_scalar_mult 0 (affinify E p1) }}
   [];
 // and there is a step for even exponents, that just needs double,
@@ -365,8 +371,7 @@ for (from_to 2 16)
     simplify remove_higher_order_function_simpset;
     w4_unint_z3 ec_mult_unints; } );
 
-
-// so we now assume it it generally
+// ... so we now assume it it generally
 small_mult_is_scalar_mult_thm <- admit_cryptol
   {{ \p1 i -> affinify_E (small_mult i p1) == e1_scalar_mult i (affinify_E p1) }};
 
@@ -395,21 +400,43 @@ let {{
     e = if e1 <= 16 then e1 else 0
   }};
 
-/*
+// lemmas for theorem "booth'_precomputed_table_thm"
+
+bpt_lemma1 <- prove_cryptol (rewrite (cryptol_ss()) {{ \p1 ->small_nonnegative_mult 1 p1 == p1 }}) [];
+bpt_lemma2 <- prove_cryptol (rewrite (cryptol_ss()) {{ \p1 -> POINTonE1_rep (small_nonnegative_mult 0 p1) == zero }}) [];
+bpt_lemma3 <- custom_prove_cryptol
+  (rewrite (cryptol_ss()) {{\p1 -> [zero] # (precomputed_table p1) ==
+                               [POINTonE1_rep (small_nonnegative_mult i p1) | i <- [0 .. 16]] }} )
+  do {unfolding ["precomputed_table"];
+      goal_eval_unint (concat ["small_nonnegative_mult"] ec_mult_unints);
+      simplify (addsimps POINTonE1_thms (addsimps [bpt_lemma1, bpt_lemma2] fp_simpset));
+      w4_unint_z3 (concat ["small_nonnegative_mult"] ec_mult_unints);
+     };
+
+bpt_lemma4 <- prove_cryptol
+  (rewrite (cryptol_ss()) {{ \ c p1 p2 -> point_neg_fp (if c then p1 else p2)
+                           == if c then (point_neg_fp p1) else (point_neg_fp p2) }})
+   ["point_neg_fp"];
+
+bpt_lemma5 <- prove_cryptol
+  (rewrite (cryptol_ss ()) {{\p -> point_neg_fp (small_nonnegative_mult 0 p) == small_nonnegative_mult 0 p }})
+  [];
+
 booth'_precomputed_table_thm <- custom_prove_cryptol 
   {{ \p1 booth_index -> POINTonE1_abs (booth' (precomputed_table p1) booth_index) ==
                         small_mult (booth_exponent booth_index) p1 }}
-  do { unfolding ["booth'", "booth_lookup", "precomputed_table"];
-       // simplify (addsimps ec_mult_structure_thms (addsimps POINTonE1_thms (cryptol_ss ())));
-       simplify (addsimps POINTonE1_thms (cryptol_ss ()));
-       print_goal;
-       w4_unint_z3 ec_mult_unints;
-       };
-*/
+  do { unfolding ["booth'", "booth_lookup"];
+       simplify (addsimp bpt_lemma3 (cryptol_ss()));
+       unfolding ["booth_exponent", "small_mult"];
+       simplify (addsimp point_neg_fp_thm empty_ss);
+       goal_eval_unint (concat ["small_nonnegative_mult"] ec_mult_unints);
+       simplify (addsimps (concat [bpt_lemma5, bpt_lemma4] POINTonE1_thms) fp_simpset);
+       w4_unint_z3 (concat ["small_nonnegative_mult"] ec_mult_unints);} ;
+
 // We should be able to prove this:
-booth'_precomputed_table_thm <- admit_cryptol 
-  {{ \p1 booth_index -> POINTonE1_abs (booth' (precomputed_table p1) booth_index) ==
-                        small_mult (booth_exponent booth_index) p1 }};
+//booth'_precomputed_table_thm <- admit_cryptol 
+//  {{ \p1 booth_index -> POINTonE1_abs (booth' (precomputed_table p1) booth_index) ==
+//                        small_mult (booth_exponent booth_index) p1 }};
 
 
 let POINTonE1_gather_booth_w5_spec = do {
@@ -468,7 +495,7 @@ for [4,5,6,7,12,14, 64, 100] (\ bits ->
  custom_prove_cryptol
   {{ \ (e:[bits]) p -> mult_w5_result_term e p == e1_scalar_mult (booth_with_add' (booth_parts e) (e1_order (affinify_E p))) (affinify_E p) }}
   do { goal_eval_unint [ "e1_order", "e1_scalar_mult", "affinify_E", "booth_parts"
-                       , "add'_E", "small_mult", "add_exponents'"];
+                       , "add'_E", "small_mult", "small_nonnegative_mult", "add_exponents'"];
        simplify cleanup_simpset;
        simplify (addsimps (concat [small_mult_is_scalar_mult_thm] POINTonE1_thms) empty_ss);
        unfolding ["add'_E"]; // so that the rules can apply
@@ -476,7 +503,7 @@ for [4,5,6,7,12,14, 64, 100] (\ bits ->
        simplify remove_higher_order_function_simpset; // and fold up again so it can be uninterpreted
        // print_goal;
        w4_unint_z3 [ "e1_order", "e1_scalar_mult", "affinify_E", "booth_parts"
-                   , "add'_E", "small_mult", "add_exponents'"];
+                   , "add'_E", "small_mult", "small_nonnegative_mult", "add_exponents'"];
      } );
 
 /*
@@ -497,7 +524,7 @@ for [4,5,6,7,8,9,10,11,12,13]
 // conditional version:
 for [4,5,6,9,13]
   (\ bits -> 
-      really_prove_cryptol {{ \ (e:[bits]) order ->
+      prove_cryptol {{ \ (e:[bits]) order ->
         booth_with_add' (booth_parts e) order ==
           if order > (toInt e) + shift
           then booth e
@@ -540,7 +567,7 @@ let POINTonE1_mult_script noisy = do {
     then do {
       simplify remove_higher_order_function_simpset; // needed before goal_eval_unint
       print_goal_consts;
-      goal_eval_unint (concat ["e1_scalar_mult", "small_mult"] ec_mult_unints);
+      goal_eval_unint (concat ["e1_scalar_mult", "small_nonnegative_mult"] ec_mult_unints);
       simplify (addsimps POINTonE1_thms fp_simpset);
       unfolding ["Fp", "prime_field_integer"]; // for readability of Fp components
       simplify cleanup_simpset; print_goal;
@@ -548,7 +575,7 @@ let POINTonE1_mult_script noisy = do {
       return ();
       };
     simplify remove_higher_order_function_simpset;
-    w4_unint_z3 (concat ["e1_scalar_mult", "small_mult"] ec_mult_unints);
+    w4_unint_z3 (concat ["e1_scalar_mult", "small_nonnegative_mult"] ec_mult_unints);
     } ;
 
 
