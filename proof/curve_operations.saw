@@ -4,9 +4,10 @@
 */
 
 import "../spec/ShortWeierstrassCurve.cry";
-// import "../spec/ProjectiveCurveOperations.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/CurveOperation.cry";
+
+// useful things for proof development, to tidy up the goal formula before printing it.
 
 propositional_rewrites <- for
   [ "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a True b) (or a b))"
@@ -545,3 +546,58 @@ POINTonE1_cneg_ov <- custom_verify "POINTonE1_cneg"
                         simplify fp_simpset;
                         // print_goal_readably_fp;
                         (w4_unint_z3 fp_unints); } ;
+
+////////////////////////////////////////////////////////////////
+//
+// Finally, we end with some theorems useful for other code that calls these C functions
+//
+
+// ... abs_rep rules for points, and some structure rules
+POINTonE1_thms <- for
+ [ {{ \p1 -> POINTonE1_abs (POINTonE1_rep p1) == p1 }}
+ , {{ \p1 -> POINTonE1_invariant (POINTonE1_rep p1) == True }}
+ , {{ \p1 -> POINTonE1_rep (POINTonE1_abs p1) ==
+             if POINTonE1_invariant p1
+             then p1
+             else POINTonE1_normalize p1 }}
+ , {{ \c p1 p2 -> POINTonE1_invariant (if c then p1 else p2) ==
+         if c then POINTonE1_invariant p1 else POINTonE1_invariant p2 }}
+ , {{ \c p1 p2 -> POINTonE1_rep (if c then p1 else p2) ==
+         if c then POINTonE1_rep p1 else POINTonE1_rep p2 }}
+ , {{ \c p1 p2 -> POINTonE1_abs (if c then p1 else p2) ==
+         if c then POINTonE1_abs p1 else POINTonE1_abs p2 }}
+
+ , {{ \c p1 p2 -> point_neg Fp (if c then p1 else p2) ==
+                  if c then point_neg Fp p1 else point_neg Fp p2 }}
+
+ , {{ \(x:POINTonE1_t) -> (x.0, x.1, x.2) == x }}
+ , {{ \(x:POINTonE1_affine_t) -> (x.0, x.1) == x }}
+ , {{ \ c (x1: Vec384) (x2: Vec384) (x3: Vec384) y1 y2 y3 ->
+        (if c then x1 else y1, if c then x2 else y2, if c then x3 else y3) ==
+        if c then (x1,x2,x3) else (y1,y2,y3) }}
+ ]
+ (\t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
+    do { unfolding ["POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant", "POINTonE1_normalize"];
+         apply_fp_rewrites;
+         // unfolding ["fp_invariant"]; // for the (zero,zero,zero) thm
+         simplify (addsimp fp_normalize_thm empty_ss); // for the rep_abs rule
+         w4_unint_z3 fp_unints; }) ;
+
+
+// .. and these theorems, which are admitted for now rather than proven, that
+// assert that the operations in projective coordinates have the right effect in
+// affine coordinates
+
+let {{
+  add' C p1 p2 = if p1 == p2 then point_O C else add C p1 p2
+  }};
+  
+e1_curve_op_thms <- for
+ [ {{ \ p1 -> affinify E (point_double Fp p1) == add E (affinify E p1) (affinify E p1) }}
+ , {{ \ p1 p2 -> affinify E (point_add Fp p1 p2) == add' E (affinify E p1) (affinify E p2) }}
+ , {{ \ p1 p2 -> affinify E (point_add_affine Fp p1 p2) == add' E (affinify E p1) p2 }}
+ , {{ \ p1 -> affinify E (point_neg Fp p1) == neg E (affinify E p1) }}
+ , {{ \ p1 p2 a4 -> affinify E (point_dadd Fp p1 p2 a4 True) == add E (affinify E p1) (affinify E p2) }}
+ , {{ \ p1 p2 -> affinify E (point_dadd_affine Fp p1 p2) == add E (affinify E p1) p2 }}
+ ] 
+ admit_cryptol;
