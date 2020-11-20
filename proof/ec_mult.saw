@@ -47,7 +47,7 @@ of bitvectors to integers.
 // Proofs work better with a custom version of `toInteger`
 let {{
   bitInt: Bit -> Integer
-  bitInt b = if b then 1 else 0
+  bitInt bit = if bit then 1 else 0
 
   toInt: {n} (fin n) => [n] -> Integer
   toInt = foldl (\ acc bit -> 2*acc + (bitInt bit)) 0
@@ -93,19 +93,19 @@ let {{
   booth_sign x = x@0
 
   booth_block_val: [SZ] -> Integer
-  booth_block_val x = if booth_sign x then v-shift else v where v = block_val x
+  booth_block_val x = if booth_sign x then y-shift else y where y = block_val x
 
   booth: {n} (fin n, n >= 1) => [n] -> Integer
-  booth e = foldl (\ a v -> shift*a + v) 0 (booth_parts e)
+  booth e = foldl (\ acc val -> shift*acc + val) 0 (booth_parts e)
 
   booth_parts: {n} (fin n) => [n] -> [(n+1) /^ SZ]Integer
   booth_parts e = vs where
     [b0] # blocks = window_blocks ([False] # e) // make sure there room for a borrow
-    [s0] # signs = [booth_sign b | b <- blocks] # [False]
-    vs = [(block_val b0) + (bitInt s0)] # [(booth_block_val b) + (bitInt s) | b <- blocks | s <- signs]
+    [s0] # signs = [booth_sign block | block <- blocks] # [False]
+    vs = [(block_val b0) + (bitInt s0)] # [(booth_block_val bi) + (bitInt s) | bi <- blocks | s <- signs]
 }};
 
-// It is easiest to show the Booth method gets the righ answer by comparing it to
+// It is easiest to show the Booth method gets the right answer by comparing it to
 // the plain method (when the multiplier has many bits).  But we can prove directly
 // for small sizes
 
@@ -114,13 +114,25 @@ prove_cryptol {{\(e:[2*SZ+1]) -> booth e == toInt e }} [];
 prove_cryptol {{\(e:[3*SZ]) -> booth e == toInt e }} [];
 
 // .... and now indirectly for the larger sizes
-for [17,25,31,39]
+for [17,25,31,39] // gets slow for larger numbers of bits
  ( \ n_bits -> do {
    plain_lemma <- custom_prove_cryptol {{ \(e:[n_bits]) -> toInt e == plain ([False] # e) }} window_script;
    custom_prove_cryptol {{ \(e:[n_bits]) -> booth e == toInt e }}
      do { simplify (addsimp plain_lemma empty_ss); // so now we show booth e == plain e
           w4_unint_z3 ["block_val"]; };
    } );       
+
+// ... and a function to generate the version we need for the code proof below
+let booth_lemma_1 n_bits = do {
+   plain_lemma <- custom_prove_cryptol {{ \(e:[n_bits]) -> toInt e == plain ([False] # e) }} window_script;
+   thm <- custom_prove_cryptol {{ \(e:[n_bits]) -> toInt e == booth e }}
+     do { simplify (addsimp plain_lemma empty_ss); // so now we show booth e == plain e
+          w4_unint_z3 ["block_val"];
+          };
+    return thm;
+    };
+// test  
+booth_lemma_1 4;
 
 import "../spec/ShortWeierstrassCurve.cry";
 import "../spec/implementation/Types.cry";
@@ -352,9 +364,9 @@ small_mult_is_scalar_mult_thm <- admit_cryptol
 
 let {{
   booth_lookup: [16]POINTonE1_t -> Bit -> [SZ] -> POINTonE1_t
-  booth_lookup table s v = POINTonE1_rep (if s then point_neg Fp w else w) where
-    w = POINTonE1_abs (([zero] # table) @ v')
-    v' = if v <= 16 then v else 0
+  booth_lookup table s i = POINTonE1_rep (if s then point_neg Fp p1 else p1) where
+    p1 = POINTonE1_abs (([zero] # table) @ i')
+    i' = if i <= 16 then i else 0
 
   booth' table (bi:Limb) = booth_lookup table (bi!`SZ) (drop bi)
   }};
@@ -461,7 +473,8 @@ let {{ shift_and_add acc e = shift*acc + e
 // 
 for [4,5,6,7,12,14, 64, 100] (\ bits ->
  custom_prove_cryptol
-  {{ \ (e:[bits]) p -> mult_w5_result_term e p == e1_scalar_mult (booth_with_add' (booth_parts e) (e1_order (affinify_E p))) (affinify_E p) }}
+     {{ \ (e:[bits]) p -> mult_w5_result_term e p
+            == e1_scalar_mult (booth_with_add' (booth_parts e) (e1_order (affinify_E p))) (affinify_E p) }}
   do { goal_eval_unint [ "e1_order", "e1_scalar_mult", "affinify_E", "booth_parts"
                        , "add'_E", "small_mult", "small_nonnegative_mult", "add_exponents'"];
        simplify cleanup_simpset;
@@ -473,6 +486,25 @@ for [4,5,6,7,12,14, 64, 100] (\ bits ->
        w4_unint_z3 [ "e1_order", "e1_scalar_mult", "affinify_E", "booth_parts"
                    , "add'_E", "small_mult", "small_nonnegative_mult", "add_exponents'"];
      } );
+
+// version needed for the code proof:
+let booth_lemma_3 n_bits = custom_prove_cryptol
+  {{ \ (e:[n_bits]) p -> e1_scalar_mult (booth_with_add' (booth_parts e) (e1_order (affinify E p))) (affinify E p)
+                       == mult_w5_result_term e p }}
+  do { simplify remove_higher_order_function_simpset; // for goal_eval to work
+       goal_eval_unint [ "e1_order", "e1_scalar_mult", "affinify_E", "booth_parts"
+                       , "add'_E", "small_mult", "small_nonnegative_mult", "add_exponents'"];
+       simplify cleanup_simpset;
+       simplify (addsimps (concat [small_mult_is_scalar_mult_thm] POINTonE1_thms) empty_ss);
+       unfolding ["add'_E"]; // so that the rules can apply
+       simplify (addsimps e1_scalar_mult_alg_thms empty_ss);
+       simplify remove_higher_order_function_simpset; // and fold up again so it can be uninterpreted
+       // print_goal;
+       w4_unint_z3 [ "e1_order", "e1_scalar_mult", "affinify_E", "booth_parts"
+                   , "add'_E", "small_mult", "small_nonnegative_mult", "add_exponents'"];
+     } ;
+// test
+booth_lemma_3 6;
 
 /*
 print "%%% Exponent theorems 1 %%%";
@@ -498,12 +530,97 @@ for [4,5,6,9,13]
           then booth e
           else apply booth_with_add' (booth_parts e) order }} [] );
 
+// and version needed for the code proof:
+// we need to wrap `(booth e)` inside e1_scalar_mult so we can get the order
+let booth_lemma_2 n_bits = prove_cryptol
+    {{ \ (e:[n_bits]) p1 ->
+       e1_scalar_mult (booth e) p1 == 
+          if (e1_order p1) > (toInt e) + shift
+          then e1_scalar_mult (booth_with_add' (booth_parts e) (e1_order p1)) p1
+          else apply e1_scalar_mult (booth e) p1 }}
+      ["e1_scalar_mult", "e1_order"] ;
+
+// test
+booth_lemma_2 4;
+booth_lemma_2 5;
+
 // Having proved these for a small number of concrete sizes, we will now assume them for
 // the sizes of interest in the code proofs below
 
 // We will only be able to prove things for specific concrete sizes
 
+let {{
+  scalar_value: {n_bits, n_bytes} (fin n_bytes, n_bits <= 8*n_bytes) => [n_bytes][8] -> Integer
+  scalar_value bytes = toInt (drop`{back=n_bits} (join (reverse bytes)))
+  }};
 
+let POINTonE1_mult_w5_spec n_bytes bits = do {
+    ret_ptr <- crucible_alloc  POINTonE1_type;
+    (point, point_ptr) <- ptr_to_fresh_readonly "point" POINTonE1_type;
+    // needs alignment
+    scalar_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array n_bytes (llvm_int 8));
+    scalar <- crucible_fresh_var "scalar" (llvm_array n_bytes (llvm_int 8));
+    crucible_points_to scalar_ptr (crucible_term scalar);
+    crucible_precond {{ POINTonE1_invariant point }};
+    crucible_precond {{ e1_order (affinify E (POINTonE1_abs point)) >
+                        scalar_value`{bits,n_bytes} scalar + shift }};
+    crucible_execute_func [ret_ptr, point_ptr, scalar_ptr, crucible_term {{`bits:Limb}}];
+    ret <- crucible_fresh_var "ret" POINTonE1_type;
+    crucible_points_to ret_ptr (crucible_term ret);
+    crucible_postcond {{ affinify E (POINTonE1_abs ret) ==
+                          e1_scalar_mult (scalar_value`{bits,n_bytes} scalar)
+                                         (affinify E (POINTonE1_abs point)) }};
+    };
+
+let POINTonE1_mult_script lemmas noisy = do {
+      // first we massage the postcondition
+      unfolding ["scalar_value"]; // so there's a "toInt"
+      // simplify (addsimps [booth_lemma_1, booth_lemma_2, booth_lemma_3] (cryptol_ss()));
+      simplify (addsimps lemmas empty_ss);
+      if noisy then print_goal else do {return (); };
+      simplify (addsimps e1_curve_op_thms
+                       (addsimps POINTonE1_thms
+                                 (addsimps e1_scalar_mult_alg_thms
+                                           (addsimps [ invariant_booth'_thm
+                                                     , precomputed_table_invariant_thm
+                                                     , booth'_precomputed_table_thm
+                                                     ]
+                                                     empty_ss))));
+    if noisy
+    then do {
+      simplify remove_higher_order_function_simpset; // needed before goal_eval_unint
+      goal_eval_unint (concat ["e1_scalar_mult", "small_nonnegative_mult"] ec_mult_unints);
+      simplify (addsimps POINTonE1_thms fp_simpset);
+      unfolding ["Fp", "prime_field_integer"]; // for readability of Fp components
+      simplify cleanup_simpset; print_goal;
+      } else do {
+      return ();
+      };
+    simplify remove_higher_order_function_simpset;
+    w4_unint_z3 (concat ["e1_scalar_mult", "small_nonnegative_mult"] ec_mult_unints);
+    } ;
+
+let POINTonE1_mult_ov_generator n_bits n_bytes noisy = do {
+  lemma_1 <- booth_lemma_1 n_bits; // to_int e -> booth e
+  lemma_2 <- booth_lemma_2 n_bits; // booth e -> booth_with_add' ...
+  lemma_3 <- booth_lemma_3 n_bits; // 
+  ov <- custom_verify "POINTonE1_mult_w5"
+   (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
+   (POINTonE1_mult_w5_spec n_bytes n_bits)
+   (POINTonE1_mult_script [lemma_1, lemma_2, lemma_3] noisy);
+  return ov;
+  };
+
+print "%%%% 3,1";
+POINTonE1_mult_ov_generator 3 1 false;
+POINTonE1_mult_ov_generator 5 1 false;
+POINTonE1_mult_ov_generator 6 1 false;
+
+POINTonE1_mult_ov_generator 9 2 false;
+POINTonE1_mult_ov_generator 15 2 false;
+
+
+/*
 // NOTE: scalar_ptr passed to get_wval, cast to limb, so must be aligned by 8 <= FIX: what if limb_t changes?
 let POINTonE1_mult_w5_spec n_bytes bits = do {
     ret_ptr <- crucible_alloc  POINTonE1_type;
@@ -513,7 +630,6 @@ let POINTonE1_mult_w5_spec n_bytes bits = do {
     scalar <- crucible_fresh_var "scalar" (llvm_array n_bytes (llvm_int 8));
     crucible_points_to scalar_ptr (crucible_term scalar);
     crucible_precond {{ POINTonE1_invariant point }};
-    // crucible_precond {{ e1_order (POINTonE1_abs point) > 16000000 }}; // TODO FIX bound
     crucible_execute_func [ret_ptr, point_ptr, scalar_ptr, crucible_term {{`bits:Limb}}];
     ret <- crucible_fresh_var "ret" POINTonE1_type;
     crucible_points_to ret_ptr (crucible_term ret);
@@ -548,7 +664,7 @@ let POINTonE1_mult_script noisy = do {
 
 
 // This works! (one block)
-POINTonE1_mult_w5_1_3_spec <- custom_verify "POINTonE1_mult_w5"
+custom_verify "POINTonE1_mult_w5"
    (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
    (POINTonE1_mult_w5_spec 1 3)
    (POINTonE1_mult_script false);
@@ -587,4 +703,6 @@ POINTonE1_mult_w5_8_58_spec <- custom_verify "POINTonE1_mult_w5"
    (concat [POINTonE1_precompute_w5_ov, POINTonE1_gather_booth_w5_ov] ec_mult_overrides)
    (POINTonE1_mult_w5_spec 8 58)
    (POINTonE1_mult_script false);
+*/
+
 */
