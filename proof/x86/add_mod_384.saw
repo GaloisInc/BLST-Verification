@@ -144,6 +144,12 @@ let mul_by_8_mod_384_alias_ret_a_spec = do {
 
 // mul_by_b_onE1
 let mul_by_b_onE1_spec = do {
+  crucible_alloc_global "BLS12_381_P";
+  BLS12_381_P <- crucible_fresh_var "BLS12_381_P" vec384_type;
+  crucible_points_to
+    (crucible_global "BLS12_381_P")
+    (crucible_term BLS12_381_P);
+
   out_ptr <- crucible_alloc vec384_type;
   (_, in_ptr) <- ptr_to_fresh_readonly "in" vec384_type;
   crucible_execute_func [out_ptr, in_ptr];
@@ -151,6 +157,12 @@ let mul_by_b_onE1_spec = do {
   crucible_points_to out_ptr (crucible_term new_out);
 };
 let mul_by_b_onE1_alias_out_in_spec = do {
+  crucible_alloc_global "BLS12_381_P";
+  BLS12_381_P <- crucible_fresh_var "BLS12_381_P" vec384_type;
+  crucible_points_to
+    (crucible_global "BLS12_381_P")
+    (crucible_term BLS12_381_P);
+
   (_, out_ptr) <- ptr_to_fresh "out" vec384_type;
   crucible_execute_func [out_ptr, out_ptr];
   new_out <- crucible_fresh_var "new_out" vec384_type;
@@ -208,6 +220,12 @@ let mul_by_8_mod_384x_alias_ret_a_spec = do {
 
 // mul_by_b_onE2
 let mul_by_b_onE2_spec = do {
+  crucible_alloc_global "BLS12_381_P";
+  BLS12_381_P <- crucible_fresh_var "BLS12_381_P" vec384_type;
+  crucible_points_to
+    (crucible_global "BLS12_381_P")
+    (crucible_term BLS12_381_P);
+
   out_ptr <- crucible_alloc vec384x_type;
   (_, in_ptr) <- ptr_to_fresh_readonly "in" vec384x_type;
   crucible_execute_func [out_ptr, in_ptr];
@@ -215,6 +233,12 @@ let mul_by_b_onE2_spec = do {
   crucible_points_to out_ptr (crucible_term new_out);
 };
 let mul_by_b_onE2_alias_out_in_spec = do {
+  crucible_alloc_global "BLS12_381_P";
+  BLS12_381_P <- crucible_fresh_var "BLS12_381_P" vec384_type;
+  crucible_points_to
+    (crucible_global "BLS12_381_P")
+    (crucible_term BLS12_381_P);
+
   (_, out_ptr) <- ptr_to_fresh "out" vec384x_type;
   crucible_execute_func [out_ptr, out_ptr];
   new_out <- crucible_fresh_var "new_out" vec384x_type;
@@ -434,10 +458,8 @@ mul_by_8_mod_384_ov <- verify_x86 "mul_by_8_mod_384" mul_by_8_mod_384_spec;
 mul_by_8_mod_384_alias_ret_a_ov <- verify_x86 "mul_by_8_mod_384" mul_by_8_mod_384_alias_ret_a_spec;
 
 // mul_by_b_onE1
-let do_prove_x86 = false;
 mul_by_b_onE1_ov <- verify_x86 "mul_by_b_onE1" mul_by_b_onE1_spec;
 mul_by_b_onE1_alias_out_in_ov <- verify_x86 "mul_by_b_onE1" mul_by_b_onE1_alias_out_in_spec;
-let do_prove_x86 = true;
 
 // mul_by_3_mod_384x
 mul_by_3_mod_384x_ov <- verify_x86 "mul_by_3_mod_384x" mul_by_3_mod_384x_spec;
@@ -448,10 +470,8 @@ mul_by_8_mod_384x_ov <- verify_x86 "mul_by_8_mod_384x" mul_by_8_mod_384x_spec;
 mul_by_8_mod_384x_alias_ret_a_ov <- verify_x86 "mul_by_8_mod_384x" mul_by_8_mod_384x_alias_ret_a_spec;
 
 // mul_by_b_onE2
-let do_prove_x86 = false;
 mul_by_b_onE2_ov <- verify_x86 "mul_by_b_onE2" mul_by_b_onE2_spec;
 mul_by_b_onE2_alias_out_in_ov <- verify_x86 "mul_by_b_onE2" mul_by_b_onE2_alias_out_in_spec;
-let do_prove_x86 = true;
 
 // cneg_mod_384
 cneg_mod_384_ov <- verify_x86 "cneg_mod_384" cneg_mod_384_spec;

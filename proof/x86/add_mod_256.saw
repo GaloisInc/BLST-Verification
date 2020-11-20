@@ -172,17 +172,13 @@ add_mod_256_alias_ret_b_ov <- verify_x86 "add_mod_256" add_mod_256_alias_ret_b_s
 add_mod_256_alias_a_b_ov <- verify_x86 "add_mod_256" add_mod_256_alias_a_b_spec;
 add_mod_256_alias_ret_a_b_ov <- verify_x86 "add_mod_256" add_mod_256_alias_ret_a_b_spec;
 
-// mul_by_3_mod_256 - sbb in __lshift_mod_256 used to crab cf?
-let do_prove_x86 = false;
+// mul_by_3_mod_256
 mul_by_3_mod_256_ov <- verify_x86 "mul_by_3_mod_256" mul_by_3_mod_256_spec;
 mul_by_3_mod_256_alias_ret_a_ov <- verify_x86 "mul_by_3_mod_256" mul_by_3_mod_256_alias_ret_a_spec;
-let do_prove_x86 = true;
 
-// lshift_mod_256 - sbb in __lshift_mod_256 used to crab cf?
-let do_prove_x86 = false;
+// lshift_mod_256
 lshift_mod_256_ov <- verify_x86 "lshift_mod_256" (lshift_mod_256_spec {{ 5 : [64] }});
 lshift_mod_256_alias_ret_a_ov <- verify_x86 "lshift_mod_256" (lshift_mod_256_alias_ret_a_spec {{ 5 : [64] }});
-let do_prove_x86 = true;
 
 // rshift_mod_256
 rshift_mod_256_ov <- verify_x86 "rshift_mod_256" (rshift_mod_256_spec {{ 5 : [64] }});
