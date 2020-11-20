@@ -121,8 +121,8 @@ let sqr_n_mul_fp_alias_1_2_spec = do {
     crucible_points_to a_ptr (crucible_term {{ fp_rep (sqr_n_mul (fp_abs a) count (fp_abs b)) }});
     };
 
-sqr_n_mul_fp_ov <- admit "sqr_n_mul_fp" [] sqr_n_mul_fp_spec;
-sqr_n_mul_fp_alias_1_2_ov <- admit "sqr_n_mul_fp" [] sqr_n_mul_fp_alias_1_2_spec;
+sqr_n_mul_fp_ov <- admit "sqr_n_mul_fp" sqr_n_mul_fp_spec;
+sqr_n_mul_fp_alias_1_2_ov <- admit "sqr_n_mul_fp" sqr_n_mul_fp_alias_1_2_spec;
 
 let ovs_for_reciprocal =
   concat [sqr_n_mul_fp_ov, sqr_n_mul_fp_alias_1_2_ov]
