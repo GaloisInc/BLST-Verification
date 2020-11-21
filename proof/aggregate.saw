@@ -339,6 +339,22 @@ let blst_pairing_merge_spec min_sig = do {
   crucible_return (crucible_term ret);
 };
 
+let blst_aggregated_in_g1_spec = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (_, sig_ptr) <- ptr_to_fresh_readonly "aggregated_in_g1_sig" (llvm_struct "struct.POINTonE1_affine");
+  crucible_execute_func [ret_ptr, sig_ptr];
+  new_ret <- crucible_fresh_var "new_aggregated_in_g1_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let blst_aggregated_in_g2_spec = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (_, sig_ptr) <- ptr_to_fresh_readonly "aggregated_in_g2_sig" (llvm_struct "struct.POINTonE2_affine");
+  crucible_execute_func [ret_ptr, sig_ptr];
+  new_ret <- crucible_fresh_var "new_aggregated_in_g2_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Proofs
 ///////////////////////////////////////////////////////////////////////////////
@@ -413,3 +429,6 @@ pairing_finalverify_8 <- verify "blst_pairing_finalverify" overrides (blst_pairi
 
 pairing_merge <- verify "blst_pairing_merge" overrides (blst_pairing_merge_spec true);
 pairing_merge <- verify "blst_pairing_merge" overrides (blst_pairing_merge_spec false);
+
+aggregated_in_g1_ov <- verify "blst_aggregated_in_g1" overrides blst_aggregated_in_g1_spec;
+aggregated_in_g2_ov <- verify "blst_aggregated_in_g2" overrides blst_aggregated_in_g2_spec;
