@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-// TODO: overlap with aggregate.saw
-
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
@@ -104,13 +102,55 @@ let final_exp_alias_spec = do {
 };
 
 let mul_n_sqr_spec n = do {
-  //ret_ptr <- crucible_alloc vec384fp12_type;
-  // must be initialized (see the C code):
   (_, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
   (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
   crucible_execute_func [ret_ptr, a_ptr, crucible_term {{`n:[64]}}];
   new_ret <- crucible_fresh_var "new_mul_n_sqr_ret" vec384fp12_type;
   crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let line_dbl_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  (_, T_ptr) <- ptr_to_fresh "line_dbl_T" (llvm_struct "struct.POINTonE2");
+  (_, Q_ptr) <- ptr_to_fresh_readonly "line_dbl_Q" (llvm_struct "struct.POINTonE2");
+  crucible_execute_func [line_ptr, T_ptr, Q_ptr];
+  new_T <- crucible_fresh_var "new_line_dbl_T" (llvm_struct "struct.POINTonE2");
+  crucible_points_to T_ptr (crucible_term new_T);
+  new_line <- crucible_fresh_var "new_line_dbl_line" vec384fp6_type;
+  crucible_points_to line_ptr (crucible_term new_line);
+};
+
+let line_dbl_alias_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  (_, T_ptr) <- ptr_to_fresh "line_dbl_T" (llvm_struct "struct.POINTonE2");
+  crucible_execute_func [line_ptr, T_ptr, T_ptr];
+  new_T <- crucible_fresh_var "new_line_dbl_T" (llvm_struct "struct.POINTonE2");
+  crucible_points_to T_ptr (crucible_term new_T);
+  new_line <- crucible_fresh_var "new_line_dbl_line" vec384fp6_type;
+  crucible_points_to line_ptr (crucible_term new_line);
+};
+
+let line_add_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  (_, T_ptr) <- ptr_to_fresh "line_add_T" (llvm_struct "struct.POINTonE2");
+  (_, R_ptr) <- ptr_to_fresh_readonly "line_add_R" (llvm_struct "struct.POINTonE2");
+  (_, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" (llvm_struct "struct.POINTonE2_affine");
+  crucible_execute_func [line_ptr, T_ptr, R_ptr, Q_ptr];
+  new_T <- crucible_fresh_var "new_line_add_T" (llvm_struct "struct.POINTonE2");
+  crucible_points_to T_ptr (crucible_term new_T);
+  new_line <- crucible_fresh_var "new_line_add_line" vec384fp6_type;
+  crucible_points_to line_ptr (crucible_term new_line);
+};
+
+let line_add_alias_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  (_, T_ptr) <- ptr_to_fresh "line_add_T" (llvm_struct "struct.POINTonE2");
+  (_, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" (llvm_struct "struct.POINTonE2_affine");
+  crucible_execute_func [line_ptr, T_ptr, T_ptr, Q_ptr];
+  new_T <- crucible_fresh_var "new_line_add_T" (llvm_struct "struct.POINTonE2");
+  crucible_points_to T_ptr (crucible_term new_T);
+  new_line <- crucible_fresh_var "new_line_add_line" vec384fp6_type;
+  crucible_points_to line_ptr (crucible_term new_line);
 };
 
 let blst_core_verify_pk_in_g1_spec aug_len msg_len DST_len = do {
@@ -145,19 +185,22 @@ let blst_core_verify_pk_in_g2_spec aug_len msg_len DST_len = do {
 
 let overrides = (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []);
 
-let miller_loop_N_MAX = 3; // NOTE: must match C code
+let miller_loop_ns = [1,2,8]; // sizes to verify (this is slow!); we need 8 because to verify the aggregate functions witn nelems = 8, which must be verified as it enters a special code path.
 
-let make_add_n_dbl_n_ov n k = verify "add_n_dbl_n" overrides (add_n_dbl_n_spec n k);
+line_dbl_ov <- verify "line_dbl" overrides line_dbl_spec;
+line_dbl_alias_ov <- verify "line_dbl" overrides line_dbl_alias_spec;
+line_add_ov <- verify "line_add" overrides line_add_spec;
+line_add_alias_ov <- verify "line_add" overrides line_add_alias_spec;
+let make_add_n_dbl_n_ov n k = verify "add_n_dbl_n" (concat [line_dbl_ov, line_dbl_alias_ov, line_add_ov, line_add_alias_ov] overrides) (add_n_dbl_n_spec n k);
 let make_add_n_dbl_n_ovs_n n = for [2,3,9,32,16] (make_add_n_dbl_n_ov n);
-add_n_dbl_n_ovs_ <- for (from_to 1 miller_loop_N_MAX) make_add_n_dbl_n_ovs_n;
-// TODO: speed this up by overriding the line_* functions? (see add_n_dbl_n in pairing.c)
+add_n_dbl_n_ovs_ <- for miller_loop_ns make_add_n_dbl_n_ovs_n;
 let add_n_dbl_n_ovs = foldr concat add_n_dbl_n_ovs_ [];
 
 let make_start_dbl_n_ov n = verify "start_dbl_n" overrides (start_dbl_n_spec n);
-start_dbl_n_ovs <- for (from_to 1 miller_loop_N_MAX) make_start_dbl_n_ov;
+start_dbl_n_ovs <- for miller_loop_ns make_start_dbl_n_ov;
 
 let make_miller_loop_n_ov n = verify "miller_loop_n" (foldr concat [add_n_dbl_n_ovs, start_dbl_n_ovs, ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []) (miller_loop_n_spec n);
-miller_loop_n_ovs <- for (from_to 1 miller_loop_N_MAX) make_miller_loop_n_ov;
+miller_loop_n_ovs <- for miller_loop_ns make_miller_loop_n_ov;
 
 let make_mul_n_sqr_ov n = verify "mul_n_sqr" overrides (mul_n_sqr_spec n);
 mul_n_sqr_ovs <- for [2,3,9,32,15] make_mul_n_sqr_ov;

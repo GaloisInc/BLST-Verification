@@ -6,27 +6,26 @@
 // Imports
 ///////////////////////////////////////////////////////////////////////////////
 
-include "helpers.saw";
-include "list_utils.saw";
-include "types.saw";
+//include "helpers.saw";
+//include "list_utils.saw";
+//include "types.saw";
 
-m <- llvm_load_module "../build/llvm/libblst.a.bc";
-let do_prove = false;
-include "proof-helpers.saw";
+//m <- llvm_load_module "../build/llvm/libblst.a.bc";
+//let do_prove = false;
+//include "proof-helpers.saw";
 
-include "x86.saw";
-include "fp12_tower.saw";
-//include "keygen_defs.saw";
-include "sha_overrides.saw";
-include "ec_opts.saw";
-include "aggregate_defs.saw";
-include "hash_to_field.saw";
-include "core_verify.saw";
+//include "x86.saw";
+//include "fp12_tower.saw";
+////include "keygen_defs.saw";
+//include "sha_overrides.saw";
+//include "ec_opts.saw";
+//include "aggregate_defs.saw";
+//include "hash_to_field.saw";
+//include "core_verify.saw";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
-
 
 let blst_pairing_init_spec DST_len = do {
   ctx_ptr <- crucible_alloc (llvm_struct "struct.PAIRING");
@@ -56,7 +55,7 @@ let BLST_AGGR_TYPE_MISMATCH = 4;
 let BLST_PK_IS_INFINITY = 6;
 let BLST_POINT_NOT_IN_GROUP = 3;
 
-let N_MAX = 3; // max number of aggregated sigs; defined in aggregate.c (changing breaks verification)
+let N_MAX = 8; // NOTE: must match N_MAX defined in C code
 
 let blst_pairing_aggregate_pk_in_g1_spec DST_len msg_len aug_len nelems null_sig = do {
   crucible_precond {{ `nelems < `N_MAX }};
@@ -127,7 +126,7 @@ let blst_pairing_aggregate_pk_in_g1_spec DST_len msg_len aug_len nelems null_sig
   crucible_conditional_points_to {{ (ctx_ctrl && AGGR_SIGN_SET) != zero \/ ((ctx_ctrl && AGGR_MIN_SIG) == zero /\ ((`null_sig:Bit) == False) /\ sig != zero /\ (is_in_G2 sig) != zero) }} (crucible_field ctx_ptr "AggrSign") (crucible_term new_ctx_AggrSign);
 
    //TODO: why does the following not work?
-  crucible_conditional_points_to {{ (new_ctx_ctrl && AGGR_SIGN_SET) != zero }} (crucible_field ctx_ptr "AggrSign") (crucible_term new_ctx_AggrSign);
+  //crucible_conditional_points_to {{ (new_ctx_ctrl && AGGR_SIGN_SET) != zero }} (crucible_field ctx_ptr "AggrSign") (crucible_term new_ctx_AggrSign);
 
   crucible_return (crucible_term ret);
 };
@@ -214,6 +213,7 @@ let exp_mont_384_spec pow_bits = do {
   crucible_points_to out_ptr (crucible_term new_out);
 };
 
+// TODO: why is this here?
 let reciprocal_fp_spec = do {
   out_ptr <- crucible_alloc vec384_type;
   (_, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384_type;
@@ -222,15 +222,14 @@ let reciprocal_fp_spec = do {
   crucible_points_to out_ptr (crucible_term new_out);
 };
 
-let blst_pairing_commit_spec = do {
+let blst_pairing_commit_spec nelems = do {
   ctx_ptr <- crucible_alloc (llvm_struct "struct.PAIRING");
 
   ctx_ctrl <- crucible_fresh_var "new_pairing_commit_ctx_ctrl" (llvm_int 32);
   crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term ctx_ctrl);
 
-  nelems <- crucible_fresh_var "pairing_commit_nelems" (llvm_int 32);
-  crucible_precond {{ nelems <= `N_MAX }};
-  crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term nelems);
+  crucible_precond {{ `nelems <= `N_MAX }};
+  crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term {{`nelems:[32]}});
 
   ctx_GT <- crucible_fresh_var "pairing_commit_ctx_GT" vec384fp12_type;
   crucible_conditional_points_to {{ ctx_ctrl && AGGR_GT_SET != zero }} (crucible_field ctx_ptr "GT") (crucible_term ctx_GT);
@@ -247,7 +246,7 @@ let blst_pairing_commit_spec = do {
   crucible_postcond {{ new_nelems == zero }};
 
   new_ctx_GT <- crucible_fresh_var "new_pairing_commit_ctx_GT" vec384fp12_type;
-  crucible_conditional_points_to {{ nelems != zero }} (crucible_field ctx_ptr "GT") (crucible_term new_ctx_GT);
+  crucible_conditional_points_to {{ `nelems != zero }} (crucible_field ctx_ptr "GT") (crucible_term new_ctx_GT);
   crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term {{ zero:[32] }});
 
 };
@@ -344,12 +343,6 @@ let blst_pairing_merge_spec min_sig = do {
 // Proofs
 ///////////////////////////////////////////////////////////////////////////////
 
-block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, DST_len]; // pass a list with the sizes of all the things hashed
-let sha_assembly_overrides = concat [blst_sha256_emit_ov, blst_sha256_hcopy_ov] block_data_order_ovs;
-
-let make_hash_to_field_ov n = verify "hash_to_field" (concat sha_assembly_overrides assembly_overrides) (hash_to_field_spec n aug_len msg_len DST_len);
-hash_to_field_ovs <- for [1,2,4] make_hash_to_field_ov;
-
 let {{ is_in_G1 (p : ([6][64], [6][64])) = (undefined:[64]) }}; // NOTE: the goal is to leave it uninterpreted
 let POINTonE1_in_G1_spec = do {
   (p, p_ptr) <- ptr_to_fresh_readonly "p" (llvm_struct "struct.POINTonE1_affine");
@@ -388,24 +381,26 @@ let POINTonE2_in_G2_spec_ = do {
 };
 POINTonE2_in_G2_ov_ <- verify "POINTonE2_in_G2" (concat ec_ops_overrides assembly_overrides) POINTonE2_in_G2_spec_;
 
-let overrides = foldr concat [hash_to_field_ovs, sha_assembly_overrides, ec_ops_overrides, assembly_overrides, fp12_tower_ovs, miller_loop_n_ovs] [final_exp_alias_ov, final_exp_ov, map_to_g2_ov, map_to_g2_v_null_ov, POINTonE2_in_G2_ov, POINTonE1_in_G1_ov];
+let overrides = foldr concat [hash_to_field_ovs, ec_ops_overrides, assembly_overrides, fp12_tower_ovs, miller_loop_n_ovs] [final_exp_alias_ov, final_exp_ov, map_to_g2_ov, map_to_g2_v_null_ov, POINTonE2_in_G2_ov, POINTonE1_in_G1_ov];
 
-//exp_mont_384_ov <- really_verify "exp_mont_384" overrides (exp_mont_384_spec pow_bits);
 //reciprocal_fp_ov <- verify "reciprocal_fp" overrides reciprocal_fp_spec;
 
 pairing_init_ov <- verify "blst_pairing_init" [] (blst_pairing_init_spec 8);
 
 let N_MAX_MINUS_ONE = eval_int {{(`N_MAX-1):[32]}};
 
+let aggregate_ns = [0,1,7]; // aggregate_... calls miller_loop_n for nelems+1
+
 let make_aggregate_pk_in_g1_ov null_sig nelems = verify_unint "blst_pairing_aggregate_pk_in_g1" overrides ["is_in_G2"] (blst_pairing_aggregate_pk_in_g1_spec DST_len msg_len aug_len nelems null_sig); // null_sig should be 0 or 1
-aggregate_pk_in_g1_null_sig_ovs <- for (from_to 0 N_MAX_MINUS_ONE) (make_aggregate_pk_in_g1_ov 1);
-aggregate_pk_in_g1_non_null_sig_ovs <- for (from_to 0 N_MAX_MINUS_ONE) (make_aggregate_pk_in_g1_ov 0);
+aggregate_pk_in_g1_null_sig_ovs <- for aggregate_ns (make_aggregate_pk_in_g1_ov 1);
+aggregate_pk_in_g1_non_null_sig_ovs <- for aggregate_ns (make_aggregate_pk_in_g1_ov 0);
 
 let make_aggregate_pk_in_g2_ov null_sig nelems = verify_unint "blst_pairing_aggregate_pk_in_g2" overrides ["is_in_G1"] (blst_pairing_aggregate_pk_in_g2_spec DST_len msg_len aug_len nelems null_sig); // null_sig should be 0 or 1
-aggregate_pk_in_g2_null_sig_ovs <- for (from_to 0 N_MAX_MINUS_ONE) (make_aggregate_pk_in_g2_ov 1);
-aggregate_pk_in_g2_non_null_sig_ovs <- for (from_to 0 N_MAX_MINUS_ONE) (make_aggregate_pk_in_g2_ov 0);
+aggregate_pk_in_g2_null_sig_ovs <- for aggregate_ns (make_aggregate_pk_in_g2_ov 1);
+aggregate_pk_in_g2_non_null_sig_ovs <- for aggregate_ns (make_aggregate_pk_in_g2_ov 0);
 
-pairing_commit_ov <- verify "blst_pairing_commit" overrides blst_pairing_commit_spec;
+let mk_pairing_commit_ov n = verify "blst_pairing_commit" overrides (blst_pairing_commit_spec n);
+pairing_commit_ovs <- for miller_loop_ns mk_pairing_commit_ov;
 
 pairing_finalverify_1 <- verify "blst_pairing_finalverify" overrides (blst_pairing_finalverify_spec false 0 1);
 pairing_finalverify_2 <- verify "blst_pairing_finalverify" overrides (blst_pairing_finalverify_spec false 0 0);
@@ -416,5 +411,5 @@ pairing_finalverify_6 <- verify "blst_pairing_finalverify" overrides (blst_pairi
 pairing_finalverify_7 <- verify "blst_pairing_finalverify" overrides (blst_pairing_finalverify_spec true 1 1);
 pairing_finalverify_8 <- verify "blst_pairing_finalverify" overrides (blst_pairing_finalverify_spec true 1 0);
 
-pairing_merge <- really_verify "blst_pairing_merge" overrides (blst_pairing_merge_spec true);
-pairing_merge <- really_verify "blst_pairing_merge" overrides (blst_pairing_merge_spec false);
+pairing_merge <- verify "blst_pairing_merge" overrides (blst_pairing_merge_spec true);
+pairing_merge <- verify "blst_pairing_merge" overrides (blst_pairing_merge_spec false);

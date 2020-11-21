@@ -12,7 +12,7 @@ include "list_utils.saw";
 include "types.saw";
 
 m <- llvm_load_module "../build/llvm/libblst.a.bc";
-let do_prove = false;
+let do_prove = true;
 include "proof-helpers.saw";
 
 include "x86.saw";
@@ -30,5 +30,5 @@ let aug_len = 32;
 let DST_len = 8;
 include "hash_to_field.saw";
 include "core_verify.saw"; // needs hash_to_field
-
-// NOTE: running time is pretty long, but no function takes more than 2 minutes
+include "aggregate_defs.saw";
+include "aggregate.saw"; // needs core_verify and hash_to_field
