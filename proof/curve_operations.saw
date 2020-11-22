@@ -103,7 +103,7 @@ POINTonE1_add_ov <- custom_verify "POINTonE1_add"
                       POINTonE1_add_spec
                       // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
                       (do {apply_fp_rewrites; goal_eval_unint fp_unints;
-                      unfolding ["Fp.is_equal"];
+                      // unfolding ["Fp.is_equal"];
                       apply_fp_rewrites;
                       unfolding ["Fp"];
                       w4_unint_z3 fp_unints;});
@@ -130,7 +130,7 @@ POINTonE1_add_alias_1_2_ov <- custom_verify "POINTonE1_add"
                       (concat vec_overrides fp_overrides)
                       POINTonE1_add_alias_1_2_spec
                       (do {apply_fp_rewrites; goal_eval_unint fp_unints;
-                      unfolding ["Fp.is_equal"];
+                      // unfolding ["Fp.is_equal"];
                       apply_fp_rewrites;
                       unfolding ["Fp"];
                       w4_unint_z3 fp_unints;});
@@ -144,7 +144,7 @@ POINTonE1_add_affine_equiv_thm <-
   {{ \p1 p2 -> point_add_affine Fp p1 p2 == if  p1.2 == 0 then projectify E p2
                                      else p_add_madd_2007_bl E p1 p2 }}
   do {
-    unfolding ["point_add_affine", "p_add_madd_2007_bl", "projecify", "E"];
+    unfolding ["point_add_affine", "p_add_madd_2007_bl", "projectify", "E"];
     simplify (addsimps fp_alg_thms (cryptol_ss ()));
     // w4_unint_z3 fp_unints; ... fails
     z3; 
@@ -205,7 +205,7 @@ POINTonE1_add_affine_ov <- custom_verify "POINTonE1_add_affine"
                           unfolding ["point_add_affine", "POINTonE1_abs", "POINTonE1_affine_abs"
                                     , "POINTonE1_invariant", "POINTonE1_affine_invariant"
                                     , "POINTonE1_rep"
-                                    , "select", "/\\", "Fp.is_equal"];
+                                    , "select", "/\\"]; // , "Fp.is_equal"];
                           simplify
                              (addsimps structural_rewrites
                                     (addsimps [one_mont_p_abs_thm, one_mont_p_invariant_thm
@@ -388,7 +388,7 @@ POINTonE1_dadd_affine_ov <- custom_verify "POINTonE1_dadd_affine"
                                     , "POINTonE1_rep"
                                     , "select"
                                     , "/\\"
-                                    , "F_is_zero", "Fp.is_equal"];
+                                    , "F_is_zero"]; // , "Fp.is_equal"];
                           simplify (addsimps (concat (concat [one_mont_p_rep_thm, one_mont_p_invariant_thm]
                                                              fp_alg_thms)
                                                      structural_rewrites)
@@ -415,7 +415,7 @@ POINTonE1_is_equal_ov <- custom_verify "POINTonE1_is_equal"
      POINTonE1_is_equal_spec
      do {unfolding ["bool_to_limb", "same_point" 
                    , "POINTonE1_abs", "POINTonE1_invariant"
-                   , "E", "cubed", "/\\"
+                   , "E", "ShortWeierstrassCurve::cubed", "/\\"
                    ];
          simplify (addsimps (concat fp_alg_thms structural_rewrites) fp_simpset);
          unfolding ["Fp"];
@@ -469,7 +469,8 @@ POINTonE1_affine_on_curve_ov <- custom_verify "POINTonE1_affine_on_curve"
                                     , "POINTonE1_affine_on_curve"
                                     , "/\\", "\\/"
                                     , "E", "is_point_O", "same_point_affine", "point_O"
-                                    , "cubed", "select", "Fp.is_equal", "F_is_zero"
+                                    , "ShortWeierstrassCurve::cubed", "select" // , "Fp.is_equal"
+                                    , "F_is_zero"
                                     ];
                           simplify (addsimps structural_rewrites
                                     (addsimps [B_E1_abs_thm, B_E1_invariant_thm] fp_simpset));
@@ -521,7 +522,8 @@ POINTonE1_on_curve_ov <- custom_verify "POINTonE1_on_curve"
                                     , "POINTonE1_invariant", "POINTonE1_on_curve"
                                     , "/\\", "\\/"
                                     , "E", "is_point_O", "same_point", "point_O"
-                                    , "cubed", "select", "Fp.is_equal", "F_is_zero"
+                                    , "ShortWeierstrassCurve::cubed", "select" //, "Fp.is_equal"
+                                    , "F_is_zero"
                                     ];
                           simplify (addsimps structural_rewrites
                                      (addsimps [B_E1_abs_thm, B_E1_invariant_thm] fp_simpset));
