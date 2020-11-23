@@ -118,4 +118,4 @@ frobenius_map_fp12_ovs <- for [1,2,3] make_frobenius_map_fp12_ov; // NOTE: this 
 let make_frobenius_map_fp12_alias_ov n = verify "frobenius_map_fp12" assembly_overrides (frobenius_map_fp12_alias_spec n);
 frobenius_map_fp12_alias_ovs <- for [1,2,3] make_frobenius_map_fp12_alias_ov; // NOTE: this could be verified for any 0 < n <= 3, but it fails with that precondition in the spec
 
-let fp12_tower_ovs = foldr concat [frobenius_map_fp12_alias_ovs, frobenius_map_fp12_ovs, [sqr_fp12_alias_ov, sqr_fp12_ov, mul_fp12_alias_ov, mul_fp12_ov, mul_by_xy00z0_fp12_alias_ov, mul_by_xy00z0_fp12_ov, mul_by_xy00z0_fp12_ov, conjugate_fp12_ov, inverse_fp12_ov, cyclotomic_sqr_fp12_ov, cyclotomic_sqr_fp12_alias_ov]] [];
+let fp12_tower_ovs = foldr concat [frobenius_map_fp12_alias_ovs, frobenius_map_fp12_ovs, [sqr_fp12_alias_ov, sqr_fp12_ov, mul_fp12_alias_ov, mul_fp12_ov, mul_by_xy00z0_fp12_alias_ov, mul_by_xy00z0_fp12_ov, conjugate_fp12_ov, inverse_fp12_ov, cyclotomic_sqr_fp12_ov, cyclotomic_sqr_fp12_alias_ov]] [];
