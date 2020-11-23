@@ -216,23 +216,32 @@ curve_op_thms <- for
 
 let {{
   point_add_fp = point_add Fp
+  point_add_affine_fp = point_add_affine Fp
+  point_dadd_fp = point_dadd Fp
+  point_dadd_affine_fp = point_dadd_affine Fp
   point_double_fp = point_double Fp
   point_neg_fp = point_neg Fp
   add_E = add E
   add'_E = add' E
   affinify_E = affinify E
+  projectify_E = projectify E
   }};
 
 point_add_fp_thm <- prove_cryptol {{  \p1 p2 -> point_add Fp p1 p2 == point_add_fp p1 p2 }} ["Fp"];
+point_add_affine_fp_thm <- prove_cryptol {{  \p1 p2 -> point_add_affine Fp p1 p2 == point_add_affine_fp p1 p2 }} ["Fp"];
+point_dadd_fp_thm <- prove_cryptol {{  \p1 p2 a4 c -> point_dadd Fp p1 p2 a4 c == point_dadd_fp p1 p2 a4 c}} ["Fp"];
+point_dadd_affine_fp_thm <- prove_cryptol {{  \p1 p2 -> point_dadd_affine Fp p1 p2 == point_dadd_affine_fp p1 p2 }} ["Fp"];
 point_double_fp_thm <- prove_cryptol {{  \p1 -> point_double Fp p1 == point_double_fp p1 }} ["Fp"];
 point_neg_fp_thm <- prove_cryptol {{  \p1 -> point_neg Fp p1 == point_neg_fp p1 }} ["Fp"];
 add_E_thm <- prove_cryptol {{  \p1 p2 -> add E p1 p2 == add_E p1 p2 }} ["E"];
 add'_E_thm <- prove_cryptol {{  \p1 p2 -> add' E p1 p2 == add'_E p1 p2 }} ["E"];
 affinify_E_thm <- prove_cryptol {{  \p1 -> affinify E p1 == affinify_E p1 }} ["E"];
+projectify_E_thm <- prove_cryptol {{  \p1 -> projectify E p1 == projectify_E p1 }} ["E"];
 
 let remove_higher_order_function_simpset =
-  addsimps [ point_add_fp_thm, point_double_fp_thm, point_neg_fp_thm
-           , add_E_thm, add'_E_thm, affinify_E_thm] empty_ss;
+  addsimps [ point_add_fp_thm, point_dadd_fp_thm, point_double_fp_thm, point_neg_fp_thm
+           , point_add_affine_fp_thm, point_dadd_affine_fp_thm
+           , add_E_thm, add'_E_thm, affinify_E_thm, projectify_E_thm] empty_ss;
 
 // more rules to hoist `if`-terms
 
@@ -255,9 +264,11 @@ let ec_mult_overrides = concat vec_overrides
 let ec_mult_unints =
     [ "e1_scalar_mult", "e1_order"
     , "POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant", "POINTonE1_normalize"
-    , "point_add", "point_double", "Fp", "point_add_fp", "point_double_fp", "point_neg_fp"
+    // , "point_add", "point_double"
+    , "Fp", "point_add_fp", "point_double_fp", "point_neg_fp"
+    , "point_add_affine_fp", "point_dadd_fp", "point_dadd_affine_fp"
     , "precomputed_table"
-    , "add_E", "add'_E", "affinify_E"
+    , "add_E", "add'_E", "affinify_E", "projectify_E"
     ];
 
 ////////////////

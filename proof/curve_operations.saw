@@ -323,6 +323,71 @@ POINTonE1_dadd_null_ov <- custom_verify "POINTonE1_dadd"
                           w4_unint_z3 fp_unints;
                           });
 
+let POINTonE1_dadd_null_alias_1_2_spec = do {
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE1_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE1_type;
+  crucible_precond {{ POINTonE1_invariant p1 /\ POINTonE1_invariant p2 }};
+  crucible_execute_func [p1_ptr, p1_ptr, p2_ptr, crucible_null];
+  if use_abs_method
+  then do {
+    out <- crucible_fresh_var "new_POINTonE1_dadd_out" POINTonE1_type;
+    crucible_points_to p1_ptr (crucible_term out);
+    crucible_postcond {{ POINTonE1_invariant out }};
+    crucible_postcond {{ POINTonE1_abs out == point_dadd Fp (POINTonE1_abs p1) (POINTonE1_abs p2) Fp.field_zero True }};
+    }
+  else
+     crucible_points_to p1_ptr (crucible_term {{ POINTonE1_rep (point_dadd Fp (POINTonE1_abs p1) (POINTonE1_abs p2) Fp.field_zero True) }});
+};
+
+POINTonE1_dadd_null_alias_1_2_ov <- custom_verify "POINTonE1_dadd"
+                      (concat vec_overrides fp_overrides)
+                      POINTonE1_dadd_null_alias_1_2_spec
+                      // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
+                      (do {
+                          unfolding ["point_dadd", "POINTonE1_abs", "POINTonE1_affine_abs"
+                                    , "POINTonE1_invariant", "POINTonE1_affine_invariant"
+                                    , "POINTonE1_rep"
+                                    , "select"
+                                    , "/\\", "Fp", "prime_field_bv", "prime_field_integer", "prime_field"
+                                    , "F_is_zero"];
+                          simplify (addsimps structural_rewrites fp_simpset);
+                          w4_unint_z3 fp_unints;
+                          });
+
+
+
+
+let POINTonE1_dadd_null_alias_1_3_spec = do {
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE1_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE1_type;
+  crucible_precond {{ POINTonE1_invariant p1 /\ POINTonE1_invariant p2 }};
+  crucible_execute_func [p2_ptr, p1_ptr, p2_ptr, crucible_null];
+  if use_abs_method
+  then do {
+    out <- crucible_fresh_var "new_POINTonE1_dadd_out" POINTonE1_type;
+    crucible_points_to p2_ptr (crucible_term out);
+    crucible_postcond {{ POINTonE1_invariant out }};
+    crucible_postcond {{ POINTonE1_abs out == point_dadd Fp (POINTonE1_abs p1) (POINTonE1_abs p2) Fp.field_zero True }};
+    }
+  else
+     crucible_points_to p2_ptr (crucible_term {{ POINTonE1_rep (point_dadd Fp (POINTonE1_abs p1) (POINTonE1_abs p2) Fp.field_zero True) }});
+};
+
+POINTonE1_dadd_null_alias_1_3_ov <- custom_verify "POINTonE1_dadd"
+                      (concat vec_overrides fp_overrides)
+                      POINTonE1_dadd_null_alias_1_3_spec
+                      // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
+                      (do {
+                          unfolding ["point_dadd", "POINTonE1_abs", "POINTonE1_affine_abs"
+                                    , "POINTonE1_invariant", "POINTonE1_affine_invariant"
+                                    , "POINTonE1_rep"
+                                    , "select"
+                                    , "/\\", "Fp", "prime_field_bv", "prime_field_integer", "prime_field"
+                                    , "F_is_zero"];
+                          simplify (addsimps structural_rewrites fp_simpset);
+                          w4_unint_z3 fp_unints;
+                          });
+
 
 let POINTonE1_dadd_nonnull_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
