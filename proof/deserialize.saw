@@ -8,7 +8,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-let blst_p1_deserialize_spec = do { // TODO: out is left invalid if there is an error
+let blst_p1_deserialize_spec = do {
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
   (_, in_ptr) <- ptr_to_fresh_readonly "in" (llvm_array 96 (llvm_int 8));
   crucible_execute_func [out_ptr, in_ptr];
@@ -17,7 +17,7 @@ let blst_p1_deserialize_spec = do { // TODO: out is left invalid if there is an 
   crucible_conditional_points_to {{ ret == zero }} out_ptr (crucible_term new_out);
   crucible_return (crucible_term ret);
 };
-let blst_p2_deserialize_spec = do { // TODO: out is left invalid if there is an error
+let blst_p2_deserialize_spec = do {
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
   (_, in_ptr) <- ptr_to_fresh_readonly "in" (llvm_array 192 (llvm_int 8));
   crucible_execute_func [out_ptr, in_ptr];
