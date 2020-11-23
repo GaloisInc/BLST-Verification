@@ -27,5 +27,5 @@ let blst_p2_deserialize_spec = do {
   crucible_return (crucible_term ret);
 };
 
-blst_p1_deserialize_ov <- really_verify "blst_p1_deserialize" assembly_overrides blst_p1_deserialize_spec;
-blst_p2_deserialize_ov <- really_verify "blst_p2_deserialize" assembly_overrides blst_p2_deserialize_spec;
+blst_p1_deserialize_ov <- verify "blst_p1_deserialize" assembly_overrides blst_p1_deserialize_spec;
+blst_p2_deserialize_ov <- verify "blst_p2_deserialize" assembly_overrides blst_p2_deserialize_spec;
