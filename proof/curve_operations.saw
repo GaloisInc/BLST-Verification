@@ -324,7 +324,7 @@ POINTonE1_dadd_null_ov <- custom_verify "POINTonE1_dadd"
                           });
 
 let POINTonE1_dadd_null_alias_1_2_spec = do {
-  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE1_type;
+  (p1, p1_ptr) <- ptr_to_fresh "p1" POINTonE1_type;
   (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE1_type;
   crucible_precond {{ POINTonE1_invariant p1 /\ POINTonE1_invariant p2 }};
   crucible_execute_func [p1_ptr, p1_ptr, p2_ptr, crucible_null];
@@ -359,7 +359,7 @@ POINTonE1_dadd_null_alias_1_2_ov <- custom_verify "POINTonE1_dadd"
 
 let POINTonE1_dadd_null_alias_1_3_spec = do {
   (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE1_type;
-  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE1_type;
+  (p2, p2_ptr) <- ptr_to_fresh "p2" POINTonE1_type;
   crucible_precond {{ POINTonE1_invariant p1 /\ POINTonE1_invariant p2 }};
   crucible_execute_func [p2_ptr, p1_ptr, p2_ptr, crucible_null];
   if use_abs_method
