@@ -1,0 +1,179 @@
+// Optimized algorithms for curves in Weierstrass short form with a = 0,
+// over an arbitrary field.  That is, with equation y^2 = x^3 + b
+//
+// These algorithms work in Jacobian projective coordinates.
+//
+// Formulas come from https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html
+
+module ProjectiveCurveOperationsA0  where
+
+import Common::Field
+import ShortWeierstrassCurve
+import FieldExtras
+
+private
+
+  two: {t} FieldRep t -> t
+  two F = F.add (F.field_unit, F.field_unit) // TODO: improve injection in integers into a field
+  three: {t} FieldRep t -> t
+  three F = F.add (two F, F.field_unit)
+
+  F_double: {t} FieldRep t -> t -> t
+  F_double F x = F.add (x, x)
+
+  cubed: {t} FieldRep t -> t -> t
+  cubed F x = F.mul(x, F.sq x)
+
+p_point_O: {t} EllipticCurve t -> ProjectivePoint t
+p_point_O C = (F.field_unit, F.field_unit, F.field_zero) where F = C.base_field
+
+/**
+ * p_double P is the sum P+P for P a point on the elliptic curve.
+ */
+p_double: {t} EllipticCurve t -> ProjectivePoint t -> ProjectivePoint t
+p_double C (X1,Y1,Z1) =
+    // Using the "dbl-2009-alnr" doubling formulas, three-operand code version
+    if F_is_zero F Z1 then p_point_O C else (X3, Y3, Z3) where 
+        F = C.base_field
+        A = F.sq X1 // A = X1^2
+        B = F.sq Y1 // B = Y1^2
+        ZZ = F.sq Z1 // ZZ = Z1^2
+        C' = F.sq B    // C = B^2
+        t0 = F.add (X1, B) //t0 = X1+B
+        t1 = F.sq t0 //t1 = t0^2
+        t2 = F.sub (t1, A) // t2 = t1-A
+        t3 = F.sub (t2, C') // t3 = t2-C
+        D = F.mul (two F, t3) //D = 2*t3
+        E = F.mul (three F, A) //E = 3*A
+        F' = F.sq E // F = E^2
+        t4 = F_double F D // F.mul (two F, D) // t4 = 2*D
+        X3 = F.sub (F', t4) // X3 = F-t4
+        t5 = F.sub (D, X3)                    // t5 = D-X3
+        t6 = F_double F (F_double F (F_double F C')) // t6 = 8*C
+        t7 = F.mul (E, t5) // t7 = E*t5
+        Y3 = F.sub (t7, t6) // Y3 = t7-t6
+        t8 = F.add (Y1, Z1) // t8 = Y1+Z1
+        t9 = F.sq t8 // t9 = t8^2
+        t10 = F.sub (t9, B) // t10 = t9-B
+        Z3 = F.sub (t10, ZZ) // Z3 = t10-ZZ
+    
+
+/**
+ * Sum of two distinct points in projective coordinates on the elliptic curve,
+ * provided neither is the zero point.
+ * If the two points are the same, returns (0,0,0)
+ */
+p_add_generic: {t} EllipticCurve t -> ProjectivePoint t -> ProjectivePoint t -> ProjectivePoint t
+p_add_generic C (X1,Y1,Z1) (X2,Y2,Z2) = (X3, Y3, Z3) where
+    F = C.base_field
+    // using the  "add-2007-bl" addition formula
+    Z1Z1 = F.sq Z1                     // Z1Z1 = Z1^2
+    Z2Z2 = F.sq Z2                     // Z2Z2 = Z2^2
+    U1 = F.mul (X1, Z2Z2)              // U1 = X1*Z2Z2
+    U2 = F.mul (X2, Z1Z1)              // U2 = X2*Z1Z1
+    S1 = F.mul (Y1, F.mul (Z2, Z2Z2))  // S1 = Y1*Z2*Z2Z2
+    S2 = F.mul (Y2, F.mul (Z1, Z1Z1))  // S2 = Y2*Z1*Z1Z1
+    H = F.sub (U2, U1)                 // H = U2-U1
+    I = F.sq (F.mul (two F, H))        // I = (2*H)^2
+    J = F.mul (H, I)                   // J = H*I
+    r = F.mul (two F, F.sub (S2, S1))  // r = 2*(S2-S1)
+    V = F.mul (U1, I)                  // V = U1*I
+    X3 = F.sub (F.sub (F.sq r, J), F.mul (two F, V))                   // X3 = r^2-J-2*V
+    Y3 = F.sub (F.mul (r, F.sub (V, X3)), F.mul (F.mul(two F, S1), J)) // Y3 = r*(V-X3)-2*S1*J
+    Z3 = F.mul (F.sub (F.sub (F.sq (F.add (Z1, Z2)), Z1Z1), Z2Z2), H)  // Z3 = ((Z1+Z2)^2-Z1Z1-Z2Z2)*H
+
+
+/*
+The "madd-2007-bl" addition formulas https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-0.html
+is a simple algebraic simplification of the "add-2007-bl" formula when Z2 = 1.
+*/
+p_add_affine: {t} EllipticCurve t -> ProjectivePoint t -> AffinePoint t -> ProjectivePoint t
+p_add_affine C (X1,Y1,Z1) (X2,Y2) = (X3, Y3, Z3) where
+    F = C.base_field
+    // using the  "madd-2007-bl" addition formula
+    Z1Z1 = F.sq Z1                     // Z1Z1 = Z1^2
+    U2 = F.mul (X2, Z1Z1)              // U2 = X2*Z1Z1
+    S2 = F.mul (Y2, F.mul (Z1, Z1Z1))  // S2 = Y2*Z1*Z1Z1
+    H = F.sub (U2, X1)                 // H = U2-X1
+    HH = F.sq H                        // HH = H^2
+    I = F_double F (F_double F HH)     // I = 4*HH
+    J = F.mul (H, I)                   // J = H*I
+    r = F.mul (two F, F.sub (S2, Y1))  // r = 2*(S2-Y1)
+    V = F.mul (X1, I)                  // V = X1*I
+    X3 = F.sub (F.sub (F.sq r, J), F.mul (two F, V))                   // X3 = r^2-J-2*V
+    Y3 = F.sub (F.mul (r, F.sub (V, X3)), F.mul (F.mul(two F, Y1), J)) // Y3 = r*(V-X3)-2*Y1*J
+    Z3 = F.sub (F.sub (F.sq (F.add (Z1, H)), Z1Z1), HH)                // Z3 = (Z1+H)^2-Z1Z1-HH
+
+/**
+ * Sum of two points in projective coordinates on the elliptic curve.
+ */
+p_add: {t} EllipticCurve t ->  ProjectivePoint t -> ProjectivePoint t -> ProjectivePoint t
+p_add C S T = 
+    if F_is_zero F Z1 then T
+     | F_is_zero F Z2 then S
+     | all (F_is_zero F) [X3,Y3,Z3] then p_double C S // FIX: does this still work?
+     else R
+    where
+        F = C.base_field
+        (_,_,Z1) = S
+        (_,_,Z2) = T
+        R = p_add_generic C S T
+        (X3,Y3,Z3) = R
+
+/**
+ * Difference of two points in projective coordinates on the elliptic curve.
+ */
+p_sub: {t} EllipticCurve t ->  ProjectivePoint t -> ProjectivePoint t -> ProjectivePoint t
+p_sub C S (x,y,z) = p_add C S (x, C.base_field.neg y, z)
+
+/**
+ * Integer multiple of a point in projective coordinates on the elliptic curve.
+ * The multiplier, a bitvector, is interpreted as a non-negative integer.
+ */
+p_mult: {k, t} (fin k, k >= 1) => EllipticCurve t -> [k] -> ProjectivePoint t -> ProjectivePoint t
+p_mult C d S = if d == 0 then p_point_O C
+               |  d == 1 then S
+               |  F_is_zero F S.2 then p_point_O C
+               else Rs!1
+    where
+        F = C.base_field
+        k = 0b00 # d // 2 extra top bits, so that h does not overflow
+        h = k + k + k
+        Rs = [p_point_O C] # //Here we start with 1 instead of S because we don't really know where the high-bit is
+             [ if hi && ~ki then p_add C RiDouble S
+                | ~hi && ki then p_sub C RiDouble S
+                else RiDouble
+               where RiDouble = p_double C Ri
+             | ki <- k | hi <- h | Ri <- Rs ]
+
+/**
+ * Integer multiple of a point in affine coordinates  on the elliptic curve.
+ * The multiplier, a bitvector, is interpreted as a non-negative integer.
+ * This definition uses projective operations internally, but should give
+ * the same result as `mult`.
+ */
+p_mult_affine: {k, t} (fin k, k >= 1) => EllipticCurve t -> [k] -> AffinePoint t -> AffinePoint t
+p_mult_affine C d S =
+               if d == 0 then point_O C
+               |  d == 1 then S
+               |  is_point_O C S then S
+               else affinify C (Rs!1)
+    where
+        F = C.base_field
+        negS = ( (x, F.neg y) where (x,y) = S )
+        k = 0b00 # d // 2 extra top bits, so that h does not overflow
+        h = k + k + k
+        Rs = [p_point_O C] # //Here we start with 1 instead of S because we don't really know where the high-bit is
+             [ if hi && ~ki then add' RiDouble S
+                | ~hi && ki then add' RiDouble negS
+                else RiDouble
+               where RiDouble = p_double C Ri
+             | ki <- k | hi <- h | Ri <- Rs ]
+        add': ProjectivePoint t -> AffinePoint t -> ProjectivePoint t // "full" version of p_add_affine
+        add' U V = if F_is_zero F Z1 then projectify C V
+                  |  all (F_is_zero F) [X3,Y3,Z3] then p_double C U
+                  else R
+            where
+                (_,_,Z1) = U
+                R = p_add_affine C U V
+                (X3,Y3,Z3) = R

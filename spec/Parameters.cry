@@ -44,8 +44,9 @@ to_Fp bits = fromInteger (toInteger (zext`{m=384} bits))
 
 from_Fp: t_Fp -> [384]
 from_Fp x = fromInteger (fromZ x)
+*/
 
-
+/*
 // For the bivector version:
 Fp = prime_field_bv`{384} `p  // representation of F_p
 type t_Fp = [384]  // ... and the underlying Cryptol type

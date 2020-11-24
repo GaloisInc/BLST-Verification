@@ -1,0 +1,193 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+import "../spec/implementation/Types.cry";
+import "../spec/Parameters.cry";
+import "../spec/FieldExtras.cry";
+import "../spec/BLSFieldExtras.cry";
+
+propositional_rewrites <- for
+  [ "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a True b) (or a b))"
+  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a b False) (and a b))"
+  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (and a b)) (or (not a) (not b)))"
+  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (or a b)) (and (not a) (not b)))"
+   ] (prove_core abc);
+
+let prop_simpset = add_prelude_eqs
+  [ "ite_true", "ite_false", "ite_eq"
+  , "not_True", "not_False", "not_not"
+  , "and_True1", "and_True2", "and_False1", "and_False2", "and_idem"
+  , "or_True1", "or_True2", "or_False1", "or_False2", "or_idem"]
+  (addsimps propositional_rewrites empty_ss);
+
+let cleanup_simpset = add_cryptol_defs ["ecEq", "PEqInteger"] prop_simpset;
+
+
+/* C code exists, but is not used.
+
+// All uses have p_ptr == BLS12_381_p and n0 == p0
+let mul_mont_384_alias_spec = do { // NOTE: first two args are aliases
+  (ret, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  (p, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_precond {{ p ==  BLS12_381_p }} ;
+  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term {{ p0 }} ];
+  crucible_points_to ret_ptr (crucible_term {{fp_rep (Fp.mul (fp_abs ret, fp_abs b))}});
+};
+
+let sqr_mont_384_alias_spec = do { // NOTE: first two args are aliases
+  (ret, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
+  (p, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_precond {{ p ==  BLS12_381_p }} ;
+  crucible_execute_func [ret_ptr, ret_ptr, p_ptr, crucible_term {{ p0 }} ];
+  crucible_points_to ret_ptr (crucible_term {{fp_rep (Fp.sq (fp_abs ret))}});
+};
+
+// "is_bit_set" indexes bytes naturally (v[0], then v[1], etc), and bits from the least significant.
+// in Cryptol, this means `is_bit_set(v, i)` corresponds to (join v)!i
+
+let {{ BLS12_381_p0 = 0x89f3fffcfffcfffd }};
+let {{ BLS12_381_p = [ 0xb9feffffffffaaab, 0x1eabfffeb153ffff, 0x6730d2a0f6b0f624,
+                     , 0x64774b84f38512bf, 0x4b1ba7b6434bacd7, 0x1a0111ea397fe69a] }};
+
+
+let exp_mont_384_spec n_bytes <- do {
+    out_ptr <- crucible_alloc vec384;
+    (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384;
+    (pow, pow_ptr) <- ptr_to_fresh_readonly "inp" (llvm_array n_bytes (llvm_int 8));
+    pow_bits <- crucible_fresh_var "pow_bits" size_t;
+    (p, p_ptr) <- ptr_to_fresh_readonly "p" vec384;
+    crucible_precond {{ p == BLS12_381_p }};
+    crucible_precond {{ fp_invariant inp }};
+    crucible_precond {{ pow_bits < 8*n_bytes }}; // otherwise we get indexing errors
+    crucible_precond {{ (join pow)!pow_bits }}; // pow_bits marks the most significant 1 bit
+    // crucible_precond {{ ... all 0 bits above pow_bit? }};
+    crucible_execute_func [ out_ptr, inp_ptr, pow_ptr, crucible_term pow_bits
+                          , p_ptr, crucible_term {{ p0:Limb }}];
+    crucible_points_to out_ptr
+      (crucible_term {{ fp_rep (F_expt Fp (fp_abs inp) pow) }});
+    };
+
+*/
+
+// reciprocal and recip_sqrt_3_mod_4 are computed using addition chains.
+// We can use rewriting to show that they compute the correctv power.
+
+// We then assume as axioms that these powers compute the appropriate functions.
+
+
+// We can use algebraic rules relating multiplication to exponentiation to show that these chains
+// computes the correct values.
+
+// fp_exp is for positive exponents only, avoiding the need for rewriting x*1 to x
+let {{ fp_exp: t_Fp -> Integer -> t_Fp
+       fp_exp x e = if e == 1 then x else Fp.mul (x, fp_exp x (e-1))
+       }};
+
+me_1 <- prove_cryptol {{\x -> Fp.mul (x, x) == fp_exp x 2 }} [] ;
+me_2 <- admit_cryptol {{ \x k -> Fp.mul (x, fp_exp x k) == fp_exp x (k+1) }};
+me_3 <- admit_cryptol {{ \x k -> Fp.mul (fp_exp x k, x) == fp_exp x (k+1) }};
+me_4 <- admit_cryptol {{ \x n k -> Fp.mul (fp_exp x n, fp_exp x k) == fp_exp x (k+n) }};
+me_5 <- admit_cryptol {{ \x n k -> fp_exp (fp_exp x n) k == fp_exp x (k*n) }};
+me_6 <- admit_cryptol {{ \n -> fp_exp Fp.field_unit n == Fp.field_unit }};
+
+fp_exp_simps <- addsimps (concat [me_1, me_2, me_3, me_4, me_5, me_6] fp_alg_thms) fp_simpset;
+
+// Assumed overrides
+
+let {{
+  sqr_n_mul: t_Fp -> Size_t -> t_Fp -> t_Fp
+  sqr_n_mul x count y = Fp.mul (fp_exp x (2^^count), y)
+  }};
+
+let sqr_n_mul_fp_spec = do {
+    out_ptr <- crucible_alloc vec384_type;
+    (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+    count <- crucible_fresh_var "count" size_type;
+    (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+    crucible_precond {{ count > 0 }};
+    crucible_execute_func [out_ptr, a_ptr, crucible_term count, b_ptr];
+    crucible_points_to out_ptr (crucible_term {{ fp_rep (sqr_n_mul (fp_abs a) count (fp_abs b)) }});
+    };
+
+let sqr_n_mul_fp_alias_1_2_spec = do {
+    (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+    count <- crucible_fresh_var "count" size_type;
+    (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+    crucible_precond {{ count > 0 }};
+    crucible_execute_func [a_ptr, a_ptr, crucible_term count, b_ptr];
+    crucible_points_to a_ptr (crucible_term {{ fp_rep (sqr_n_mul (fp_abs a) count (fp_abs b)) }});
+    };
+
+sqr_n_mul_fp_ov <- admit "sqr_n_mul_fp" sqr_n_mul_fp_spec;
+sqr_n_mul_fp_alias_1_2_ov <- admit "sqr_n_mul_fp" sqr_n_mul_fp_alias_1_2_spec;
+
+let ovs_for_reciprocal =
+  concat [sqr_n_mul_fp_ov, sqr_n_mul_fp_alias_1_2_ov]
+         (concat fp_overrides vec_overrides);
+
+// ... reciprocal_fp
+
+// This computes x^(p-2).  Since for nonzero x we have x^(p-1) = 1, this gives the inverse.
+// And as we have conveneintly defined Fp.div(1,0) = 0, recip will always give Fp.div(1,x)
+
+recip_fp_algebra_thm <- admit_cryptol {{ \x -> Fp.div (Fp.field_unit, x) == fp_exp x (`p-2) }};
+
+let reciprocal_fp_spec = do {
+    out_ptr <- crucible_alloc vec384_type;
+    (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384_type;
+    crucible_precond {{ fp_invariant inp }};
+    crucible_execute_func [out_ptr, inp_ptr];
+    // crucible_points_to out_ptr (crucible_term {{ fp_rep (fp_exp (fp_abs inp) (`p-2)) }});
+    crucible_points_to out_ptr (crucible_term {{ fp_rep (Fp.div (Fp.field_unit, fp_abs inp)) }});
+    };
+
+reciprocal_fp_ov <- custom_verify "reciprocal_fp"
+                    ovs_for_reciprocal
+                    reciprocal_fp_spec
+                    do {
+                      simplify (addsimp recip_fp_algebra_thm empty_ss);
+                      unfolding ["sqr_n_mul"];
+                      simplify fp_exp_simps;
+                      w4_unint_z3 (concat ["fp_exp"] fp_unints);
+                      };
+                      
+
+// this function also computes `inverse_fp`
+
+/* TODO: fails if x is not in Fp.  Will be OK if t_Fp is `Z p` 
+reciprocal_fp_is_inverse_thm <- custom_prove_cryptol
+  {{ \x -> inverse_fp x == Fp.div (Fp.field_unit, x) }}
+  do { goal_eval_unint (concat ["fp_exp"] fp_unints);
+       simplify fp_exp_simps;
+       //unfolding ["Fp", "prime_field_bv", "prime_field_integer", "prime_field"];
+       //simplify cleanup_simpset;
+       //print_goal;
+       w4_unint_z3 (concat ["fp_exp"] fp_unints);
+       };
+*/
+
+// ... recip_sqrt_fp
+
+recip_sqrt_fp_algebra_thm <- admit_cryptol {{ \x -> Fp.div (Fp.field_unit, sqrt_fp x) == fp_exp x ((`p-3)/4) }};
+
+let recip_sqrt_fp_spec = do {
+    out_ptr <- crucible_alloc vec384_type;
+    (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384_type;
+    crucible_precond {{ fp_invariant inp }};
+    crucible_execute_func [out_ptr, inp_ptr];
+    // crucible_points_to out_ptr (crucible_term {{ fp_rep (fp_exp (fp_abs inp) ((`p-3)/4)) }});
+    crucible_points_to out_ptr (crucible_term {{fp_rep (Fp.div (Fp.field_unit, sqrt_fp (fp_abs inp))) }});
+    };
+
+recip_sqrt_fp_ov <- custom_verify "recip_sqrt_fp"
+                    ovs_for_reciprocal
+                    recip_sqrt_fp_spec
+                    do {
+                      simplify (addsimp recip_sqrt_fp_algebra_thm empty_ss);
+                      unfolding ["sqr_n_mul"];
+                      simplify fp_exp_simps;
+                      w4_unint_z3 (concat ["fp_exp"] fp_unints);
+                      };

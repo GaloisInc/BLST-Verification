@@ -1,0 +1,23 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+//
+// A few extra useful functions for Cryptol
+//
+
+module implementation::CryptolHelpers where
+
+// The low-precedence, right-associating "$" operator can make expressions
+// more readable by eliminating a lot of parentheses
+// Compare `f (f (g x))` and `f $ f $ g x`
+
+infixr 1 $
+
+($): {s, t} (s->t) -> s -> t
+f $ x = f x
+
+// 'apply' is the same function: 'apply f x == f x'.  We sometimes use this to
+// make comnditional rewrite rules that do not loop infinitely
+apply = ($)

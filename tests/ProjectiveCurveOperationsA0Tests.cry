@@ -1,0 +1,115 @@
+// Tests of ProjectiveCurveOperationsA0
+//
+// Here we just check that we get results equivalent to the affine versions
+
+import ShortWeierstrassCurve
+import ProjectiveCurveOperationsA0
+import PrimeField
+import FieldExtras
+
+F7 = prime_field`{7}
+C1: EllipticCurve _
+C1 = {base_field = F7, a = 0, b = 2}
+  
+F13 = prime_field_bv (13:[4])
+C2: EllipticCurve _
+C2 = {base_field = F13, a = 0, b = 5}
+
+// FAILS for S = (0,0), because of the special-case representation of point_O
+// Perhaps projectify should recognize this case?
+//is_point_OK_1 C S =
+//  is_point_affine C S == is_point_projective C (projectify C S)
+
+is_point_OK_1 C S =
+  is_point_O C S \/
+  is_point_affine C S == is_point_projective C (projectify C S)
+
+property projectify_preserves_is_point_C1 = is_point_OK_1 C1
+property projectify_preserves_is_point_C2 = is_point_OK_1 C2
+
+// FAILS for S = (0,0,1) because of our representation of point_O as (0,0)
+//is_point_OK_2 C S =
+//  (is_point_projective C S == is_point_affine C (affinify C S))
+is_point_OK_2 C S =
+  is_point_O C (affinify C S) \/
+  is_point_projective C S == is_point_affine C (affinify C S)
+
+property affinify_preserves_is_point_C1 = is_point_OK_2 C1
+property affinify_preserves_is_point_C2 = is_point_OK_2 C2
+
+// doubling
+
+double_stays_on_curve C S =
+   is_point_projective C S ==> is_point_projective C (p_double C S)
+
+property double_stays_on_curve_C1 = double_stays_on_curve C1
+property double_stays_on_curve_C2 = double_stays_on_curve C2
+
+double_agrees C S =
+   is_point_projective C S ==>
+   same_point_affine C (affinify C (p_double C S))
+                       (double C (affinify C S))
+
+property double_agrees_C1 = double_agrees C1
+property double_agrees_C2 = double_agrees C2
+
+// addition
+
+addition_zero C S =
+    is_point_projective C S ==> same_point C S (p_add C S (p_point_O C))
+
+addition_commutes C S T =
+    is_point_projective C S /\  is_point_projective C T ==>
+    same_point C (p_add C S T) (p_add C T S)
+
+property addition_commutes_C1 = addition_commutes C1
+property addition_commutes_C2 = addition_commutes C2
+
+addition_distributes C S T R =
+    is_point_projective C S /\ is_point_projective C T /\ is_point_projective C R ==>
+    same_point C (p_add C S (p_add C T R)) (p_add C (p_add C S T) R)
+
+property addition_distributes_C1 = addition_distributes C1
+property addition_distributes_C2 = addition_distributes C2
+
+addition_agrees C S T =
+    is_point_projective C S /\  is_point_projective C T ==>
+    same_point_affine C (add C (affinify C S) (affinify C T))
+                        (affinify C (p_add C S T))
+
+property addition_agrees_C1 = addition_agrees C1
+property addition_agrees_C2 = addition_agrees C2
+
+// subtraction
+
+subtraction_inverts_addition C S T =
+     is_point_projective C S /\ is_point_projective C T ==>
+     same_point C S (p_sub C (p_add C S T) T)
+
+property subtraction_inverts_addition_C1 = subtraction_inverts_addition C1
+property subtraction_inverts_addition_C2 = subtraction_inverts_addition C2
+
+subtraction_agrees C S T =
+     is_point_projective C S /\  is_point_projective C T ==>
+     same_point_affine C (sub C (affinify C S) (affinify C T))
+                         (affinify C (p_sub C S T))
+
+property subtraction_agrees_C1 = subtraction_agrees C1
+property subtraction_agrees_C2 = subtraction_agrees C2
+
+// integer multiplication
+
+p_mult_agrees: {k, t} (fin k, k >= 1) => EllipticCurve t -> [k] -> ProjectivePoint t -> Bool
+p_mult_agrees C m S =
+    is_point_projective C S ==>
+    same_point_affine C (affinify C (p_mult`{k=k} C m S))
+                        (mult`{k=k} C m (affinify C S))
+
+property p_mult_agrees_C1 = p_mult_agrees`{k=4} C1
+property p_mult_agrees_C2 = p_mult_agrees`{k=3} C2
+
+p_mult_affine_agrees: {k, t} (fin k, k >= 1) => EllipticCurve t -> [k] -> AffinePoint t -> Bool
+p_mult_affine_agrees C m S =
+    is_point_affine C S ==>
+    same_point_affine C (p_mult_affine`{k=k} C m S)
+                        (mult`{k=k} C m S)
