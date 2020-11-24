@@ -25,25 +25,25 @@ private
     H x = split (SHA256::sha (join x))
 
 
-expand_msg = expand_msg_xmd // as per the chosen suites
+expand_message = expand_message_xmd // as per the chosen suites
 // Due to the internal calls to H (SHA-256), there is a length limit on the inputs
 // to this function.  In particular, for computing b_0 we give an argument of length
-// r_in_bytes + len_msg + 2 + 1 + 1 + len_DST = 68 + len_msg + len_DST
+// r_in_bytes + len_message + 2 + 1 + 1 + len_DST = 68 + len_message + len_DST
 //
 // In Cryptol this is a type-checked condition rather than the "abort if" run-time check
 // in the Draft.
 
-type constraint Expandable len_msg len_DST  =  (61 >= width (69 + len_msg + len_DST))
+type constraint Expandable len_message len_DST  =  (61 >= width (69 + len_message + len_DST))
 
-expand_msg_xmd: {len_msg, len_DST, len_in_bytes}
-                (fin len_msg
+expand_message_xmd: {len_message, len_DST, len_in_bytes}
+                (fin len_message
                 , fin len_DST
                 , len_DST <= 255
                 , fin len_in_bytes
                 , len_in_bytes /^ 32 <= 255
-                , Expandable len_msg len_DST
-                ) => [len_msg][8] -> [len_DST][8] -> [len_in_bytes][8]
-expand_msg_xmd msg DST = take uniform_bytes where
+                , Expandable len_message len_DST
+                ) => [len_message][8] -> [len_DST][8] -> [len_in_bytes][8]
+expand_message_xmd msg DST = take uniform_bytes where
     //type b = 256                  // output length of SHA-256, in bits
     //type b_in_bytes = b /^ 8      // = 32
     type r_in_bytes = 64            // input block size of SHA-256
@@ -58,14 +58,14 @@ expand_msg_xmd msg DST = take uniform_bytes where
     bs = [b_1] # [H(strxor(b_0, b_prev) # (I2OSP`{xLen=1} i) # DST_prime) | b_prev <- bs | i:[8] <- [2...]]
     uniform_bytes = join bs
 
-expand_b0: {len_msg, len_DST, len_in_bytes}
-                (fin len_msg
+expand_b0: {len_message, len_DST, len_in_bytes}
+                (fin len_message
                 , fin len_DST
                 , len_DST <= 255
                 , fin len_in_bytes
                 , len_in_bytes /^ 32 <= 255
-                , Expandable len_msg len_DST
-                ) => ([len_msg][8], [len_DST][8]) -> [32][8]
+                , Expandable len_message len_DST
+                ) => ([len_message][8], [len_DST][8]) -> [32][8]
 expand_b0 (msg, DST) = b_0 where
     type r_in_bytes = 64            // input block size of SHA-256
     DST_prime = DST # (I2OSP`{xLen=1} (`len_DST)) # [0x80]

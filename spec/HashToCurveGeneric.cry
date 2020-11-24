@@ -15,6 +15,7 @@ import Parameters (t_Fp, Fp, to_Fp)
 import FieldExtras
 import ShortWeierstrassCurve as EC
 import ExpandMessage
+import Common::bv
 
 parameter
     type p: # // the field characteristic
@@ -64,12 +65,12 @@ hash_to_curve: {msg_len, DST_len}
                , DST_len <= 255
                , Expandable msg_len DST_len
                , 2 * m <= 127 // Needed for expand_message, otherwise output too large
-               // , 2 * m * ((128+lg2 p)/^ 8) <= 255 // output length of expand_msg must be low enough
+               // , 2 * m * ((128+lg2 p)/^ 8) <= 255 // output length of expand_message must be low enough
                , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384 // needed for drop TODO: FIX
                ) =>
                ([msg_len][8], [DST_len][8]) -> EC::AffinePoint t_F
 hash_to_curve (msg,dst) = P where
-    u = hash_to_field`{count=2} (msg, dst) // spec does not mention the dst here
+    u = hash_to_field`{count=2} msg dst // spec does not mention the dst here
     Q0 = map_to_curve_simple_swu_AB0 (u@0)
     Q1 = map_to_curve_simple_swu_AB0 (u@1)
     R = EC::add C Q0 Q1
@@ -83,12 +84,12 @@ hash_to_curve_opt: {msg_len, DST_len}
                , DST_len <= 255
                , Expandable msg_len DST_len
                , 2 * m <= 127 // Needed for expand_message, otherwise output too large
-               // , 2 * m * ((128+lg2 p)/^ 8) <= 255 // output length of expand_msg must be low enough
+               // , 2 * m * ((128+lg2 p)/^ 8) <= 255 // output length of expand_message must be low enough
                , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384 // needed for drop TODO: FIX
                ) =>
                ([msg_len][8], [DST_len][8]) -> EC::AffinePoint t_F
 hash_to_curve_opt (msg,dst) = P where
-    u = hash_to_field`{count=2} (msg, dst) // spec does not mention the dst here
+    u = hash_to_field`{count=2} msg dst // spec does not mention the dst here
     Q0 = map_to_curve_simple_swu (u@0) //, Z, A', B')
     Q1 = map_to_curve_simple_swu (u@1) //, Z, A', B')
     R = EC::add Curve_E' Q0 Q1
@@ -104,13 +105,13 @@ hash_to_field: {msg_len, DST_len, count}
                , count * m <= 127 // Needed for expand_message, otherwise output too large
                , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384 // needed for drop TODO: FIX
                ) =>
-               ([msg_len][8], [DST_len][8]) -> [count]t_F
+               [msg_len][8] -> [DST_len][8] -> [count]t_F
 
-hash_to_field (msg, DST) = us where
+hash_to_field msg DST = us where
       type k = 128 // for BLS12-381
       type L = ((lg2 p) + k) /^ 8
       uniform_bytes: [count * m * L][8]
-      uniform_bytes = expand_msg msg DST
+      uniform_bytes = expand_message msg DST
       // The double loop in the Draft just splits pseduo_random_bytes into
       // "count" parts, each part consisting of m sub_parts,
       // each sub-part consisting of L bytes.
@@ -120,7 +121,20 @@ hash_to_field (msg, DST) = us where
       us = [ make_u_i part | part <- parts ]
       make_u_i: [m][L][8] -> t_F
       // "drop" here takes the 8*L-bit result and drops leading zeros to get to [384]
-      make_u_i part = base_to_F [to_Fp (drop`{back=384} ((OS2IP`{a=[L*8]} bytes) % `p)) | bytes <- part]
+      make_u_i part = base_to_F [to_Fp (drop`{back=384} ((join bytes) % `p)) | bytes <- part]
+
+hash_to_field_1: {msg_len, DST_len}
+               (fin msg_len, fin DST_len
+               , DST_len <= 255
+               , Expandable msg_len DST_len
+               , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384 // needed for drop TODO: FIX
+               ) =>
+               [msg_len][8] -> [DST_len][8] -> [384]
+hash_to_field_1 msg DST = us where
+      type L = 64
+      uniform_bytes: [L][8]
+      uniform_bytes = expand_message msg DST
+      us = drop`{back=384} ((join uniform_bytes) % `p)
 
 // 6.6.2 Simplified SWU
 

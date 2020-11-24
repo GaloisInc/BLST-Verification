@@ -80,7 +80,7 @@ let make_blst_sha256_block_data_order_ov len = admit "blst_sha256_block_data_ord
 let make_blst_sha256_bcopy_ov len = admit "blst_sha256_bcopy" (blst_sha256_bcopy_spec len);
 
 bcopy_ovs <- do {
-  let ss = from_to 1 64; // the SHA buffer is 64 bytes long, so we shouldn't be calling bcopy with more than that.
+  let ss = from_to 1 63; // the SHA buffer is 64 bytes long, so we shouldn't be calling bcopy with more than that.
   ovs <- (for ss make_blst_sha256_bcopy_ov);
   return ovs;
 };
