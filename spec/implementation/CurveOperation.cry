@@ -53,10 +53,10 @@ POINTonE1_affine_invariant (x,y) = fp_invariant x /\ fp_invariant y
    // Should we also insist the point in on the curve?
 
 POINTonE1_affine_abs: POINTonE1_affine_t -> AffinePoint t_Fp
-POINTonE1_affine_abs (x,y) = (fp_abs x, fp_abs y)
+POINTonE1_affine_abs (x,y) = affine_point (fp_abs x, fp_abs y)
 
 POINTonE1_affine_rep: AffinePoint t_Fp -> POINTonE1_affine_t
-POINTonE1_affine_rep (x,y) = (fp_rep x, fp_rep y)
+POINTonE1_affine_rep (_,x,y) = (fp_rep x, fp_rep y)
 
 // e1_op f x y = POINTonE1_rep (f E (POINTonE1_abs x) (POINTonE1_abs y))
 
@@ -120,7 +120,7 @@ point_dadd F (x1, y1, z1) (x2, y2, z2) a4 a4_is_null = out where
 
 
 point_dadd_affine: {t} FieldRep t -> ProjectivePoint t -> AffinePoint t  -> ProjectivePoint t 
-point_dadd_affine F (x1, y1, z1) (x2, y2) = out where
+point_dadd_affine F (x1, y1, z1) (_, x2, y2) = out where
     dbl_h = F.add (y2, y2) // add_##field(dbl.H, p2->Y, p2->Y);
     dbl_sx = F.add (x2, x2)
     dbl_r= mul_by_3 F (F.sq x2)
@@ -196,7 +196,7 @@ point_add F (x1,y1,z1) (x2,y2,z2) = out where
 
 
 point_add_affine: {t} FieldRep t -> ProjectivePoint t -> AffinePoint t -> ProjectivePoint t 
-point_add_affine F (x1,y1,z1) (x2,y2) = out where
+point_add_affine F (x1,y1,z1) (_,x2,y2) = out where
     z1z1 = F.sq z1 
     h = F.mul(x2,z1z1)
     r = F.mul(F.mul(y2,z1), z1z1)
@@ -263,7 +263,7 @@ point_neg F (x,y,z) = (x, F.neg y, z)
 
 POINTonE1_affine_on_curve: AffinePoint t_Fp -> Bool
 POINTonE1_affine_on_curve p = XXX==YY \/ (x==0 /\ y==0) where
-  (x,y) = p
+  (_,x,y) = p
   XXX = Fp.add (Fp.mul (Fp.sq x, x), E.b)
   YY = Fp.sq y
 
@@ -327,7 +327,7 @@ The "madd-2007-bl" addition formulas https://hyperelliptic.org/EFD/g1p/auto-shor
 is a simple algebraic simplification of the "add-2007-bl" formula when Z2 = 1.
 */
 p_add_madd_2007_bl: {t} EllipticCurve t -> ProjectivePoint t -> AffinePoint t -> ProjectivePoint t
-p_add_madd_2007_bl C (X1,Y1,Z1) (X2,Y2) = (X3, Y3, Z3) where
+p_add_madd_2007_bl C (X1,Y1,Z1) (_,X2,Y2) = (X3, Y3, Z3) where
     F = C.base_field
     // using the  "madd-2007-bl" addition formula
     Z1Z1 = F.sq Z1                     // Z1Z1 = Z1^2

@@ -78,20 +78,23 @@ property map_to_curve_test_1_2_b =
 
 property map_to_curve_test_1_3_a =
     EC::same_point_affine P::E (map_to_curve_simple_swu_AB0 (ex1_us@0))
-    (to_Fp 0x11a3cce7e1d90975990066b2f2643b9540fa40d6137780df4e753a8054d07580db3b7f1f03396333d4a359d1fe3766fe,
-     to_Fp 0x0eeaf6d794e479e270da10fdaf768db4c96b650a74518fc67b04b03927754bac66f3ac720404f339ecdcc028afa091b7)
+    (EC::affine_point
+     (to_Fp 0x11a3cce7e1d90975990066b2f2643b9540fa40d6137780df4e753a8054d07580db3b7f1f03396333d4a359d1fe3766fe,
+      to_Fp 0x0eeaf6d794e479e270da10fdaf768db4c96b650a74518fc67b04b03927754bac66f3ac720404f339ecdcc028afa091b7))
 
 property map_to_curve_test_1_3_b =
     EC::same_point_affine P::E (map_to_curve_simple_swu_AB0 (ex1_us@1))
-    (to_Fp 0x160003aaf1632b13396dbad518effa00fff532f604de1a7fc2082ff4cb0afa2d63b2c32da1bef2bf6c5ca62dc6b72f9c,
-     to_Fp 0x0d8bb2d14e20cf9f6036152ed386d79189415b6d015a20133acb4e019139b94e9c146aaad5817f866c95d609a361735e)
+    (EC::affine_point
+     (to_Fp 0x160003aaf1632b13396dbad518effa00fff532f604de1a7fc2082ff4cb0afa2d63b2c32da1bef2bf6c5ca62dc6b72f9c,
+      to_Fp 0x0d8bb2d14e20cf9f6036152ed386d79189415b6d015a20133acb4e019139b94e9c146aaad5817f866c95d609a361735e))
 
 // ... finally, the overall mapping gets us the correct result.
 
 property hash_to_curve_test_1 =
     EC::same_point_affine P::E (hash_to_curve ("", dst))
-    (to_Fp 0x052926add2207b76ca4fa57a8734416c8dc95e24501772c814278700eed6d1e4e8cf62d9c09db0fac349612b759e79a1,
-     to_Fp 0x08ba738453bfed09cb546dbb0783dbb3a5f1f566ed67bb6be0e8c67e2e81a4cc68ee29813bb7994998f3eae0c9c6a265)
+    (EC::affine_point
+     (to_Fp 0x052926add2207b76ca4fa57a8734416c8dc95e24501772c814278700eed6d1e4e8cf62d9c09db0fac349612b759e79a1,
+      to_Fp 0x08ba738453bfed09cb546dbb0783dbb3a5f1f566ed67bb6be0e8c67e2e81a4cc68ee29813bb7994998f3eae0c9c6a265))
 
 // Example 2
 
@@ -108,22 +111,26 @@ property hash_to_field_test_2 =
 
 property hash_to_curve_test_2 =
     EC::same_point_affine P::E (hash_to_curve ("abc", dst))
-    (to_Fp 0x03567bc5ef9c690c2ab2ecdf6a96ef1c139cc0b2f284dca0a9a7943388a49a3aee664ba5379a7655d3c68900be2f6903,
-     to_Fp 0x0b9c15f3fe6e5cf4211f346271d7b01c8f3b28be689c8429c85b67af215533311f0b8dfaaa154fa6b88176c229f2885d)
+    (EC::affine_point
+     (to_Fp 0x03567bc5ef9c690c2ab2ecdf6a96ef1c139cc0b2f284dca0a9a7943388a49a3aee664ba5379a7655d3c68900be2f6903,
+      to_Fp 0x0b9c15f3fe6e5cf4211f346271d7b01c8f3b28be689c8429c85b67af215533311f0b8dfaaa154fa6b88176c229f2885d))
 
 // Examples 3 .. 
 
 property hash_to_curve_test_3 =
     EC::same_point_affine P::E (hash_to_curve ("abcdef0123456789", dst))
+    (EC::affine_point
     (to_Fp 0x11e0b079dea29a68f0383ee94fed1b940995272407e3bb916bbf268c263ddd57a6a27200a784cbc248e84f357ce82d98,
-     to_Fp 0x03a87ae2caf14e8ee52e51fa2ed8eefe80f02457004ba4d486d6aa1f517c0889501dc7413753f9599b099ebcbbd2d709)
+     to_Fp 0x03a87ae2caf14e8ee52e51fa2ed8eefe80f02457004ba4d486d6aa1f517c0889501dc7413753f9599b099ebcbbd2d709))
 
 property hash_to_curve_test_4 =
     EC::same_point_affine P::E (hash_to_curve (msg_q128, dst))
+    (EC::affine_point
     (to_Fp 0x15f68eaa693b95ccb85215dc65fa81038d69629f70aeee0d0f677cf22285e7bf58d7cb86eefe8f2e9bc3f8cb84fac488,
-     to_Fp 0x1807a1d50c29f430b8cafc4f8638dfeeadf51211e1602a5f184443076715f91bb90a48ba1e370edce6ae1062f5e6dd38)
+     to_Fp 0x1807a1d50c29f430b8cafc4f8638dfeeadf51211e1602a5f184443076715f91bb90a48ba1e370edce6ae1062f5e6dd38))
 
 property hash_to_curve_test_5 =
     EC::same_point_affine P::E (hash_to_curve (msg_a512, dst))
+    (EC::affine_point
     (to_Fp 0x082aabae8b7dedb0e78aeb619ad3bfd9277a2f77ba7fad20ef6aabdc6c31d19ba5a6d12283553294c1825c4b3ca2dcfe,
-     to_Fp 0x05b84ae5a942248eea39e1d91030458c40153f3b654ab7872d779ad1e942856a20c438e8d99bc8abfbf74729ce1f7ac8)
+     to_Fp 0x05b84ae5a942248eea39e1d91030458c40153f3b654ab7872d779ad1e942856a20c438e8d99bc8abfbf74729ce1f7ac8))

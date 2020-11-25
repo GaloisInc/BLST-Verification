@@ -7,11 +7,9 @@
 // That is, the curve equation is y^2 = x^3 + ax + b for some a, b in the field.
 //
 // We use affine coordinates, and describe Jacobian projective coordiates.
-// Points are represented as tuples, corresponding to normal math notation.
-//
-// We represent the point at infinity by the affine coordinates (0,0), which is fine so long as
-// b is not 0.  This is the case for all curves of interest in this project.
-//
+// Points are represented as tuples, corresponding to normal math notation,
+// but with an additional Boolean so that we can represent the point at infinity.
+// 
 // The curve operations are in no way optimized; we are only interested in getting the
 // mathematically correct answer here.
 
@@ -25,15 +23,18 @@ type EllipticCurve t =
   , b: t
   } // maybe also add cardinality, order, etc.
 
-type AffinePoint rep = (rep, rep) // (x, y)
+type AffinePoint rep = (Bool, rep, rep) // (is_zero_point, x, y)
 type ProjectivePoint rep = (rep, rep, rep) // (X:Y:Z)
+
+affine_point: {rep} (rep,rep) -> AffinePoint rep
+affine_point (x,y) = (False, x, y)
 
 /**
  * The "point at infinity" on an elliptic curve; the zero for point addition.
  * That's the letter "O" in the name, not the digit "0".
  */
 point_O: {t} EllipticCurve t ->  AffinePoint t
-point_O C = (F.field_zero, F.field_zero) where F = C.base_field
+point_O C = (True, F.field_zero, F.field_zero) where F = C.base_field
 
 /**
  * Is a point the point at infinity for a given curve?
@@ -45,7 +46,10 @@ is_point_O C S = same_point_affine C S (point_O C)
  * The Jacobian projective coordinates of a point in affine coordinates.
  */
 projectify: {t} EllipticCurve t -> AffinePoint t -> ProjectivePoint t
-projectify C (x,y) = (x, y, C.base_field.field_unit)
+projectify C (is_O, x,y) =
+  if is_O
+  then ((z,z,z) where z = C.base_field.field_zero)
+  else (x, y, C.base_field.field_unit)
 
 /**
  * The affine coordinates of a point in Jacobian projective coordinates.
@@ -53,7 +57,7 @@ projectify C (x,y) = (x, y, C.base_field.field_unit)
 affinify: {t} EllipticCurve t -> ProjectivePoint t -> AffinePoint t
 affinify C (x,y,z) = if is_zero F z
                      then point_O C
-                     else (F.mul(lambda2, x), F.mul(lambda3, y))
+                     else (False, F.mul(lambda2, x), F.mul(lambda3, y))
     where
         F = C.base_field
         lambda = F.div (F.field_unit, z)
@@ -95,7 +99,8 @@ same_point C (x,y,z) (x',y',z')  =
  * Are two affine points on a curve equal?
  */
 same_point_affine:  {t} EllipticCurve t -> AffinePoint t ->  AffinePoint t -> Bool
-same_point_affine C (x,y) (x',y') = F.is_equal (x, x') /\ F.is_equal (y, y')
+same_point_affine C (is_O, x,y) (is_O', x',y') =
+    is_O == is_O' /\ F.is_equal (x, x') /\ F.is_equal (y, y')
     where F = C.base_field
 
 /**
@@ -103,10 +108,10 @@ same_point_affine C (x,y) (x',y') = F.is_equal (x, x') /\ F.is_equal (y, y')
  */
 is_point_affine: {t} EllipticCurve t -> AffinePoint t -> Bit
 is_point_affine C S = is_point_O C S \/
-                      (F.is_val x /\ F.is_val y /\
+                      (F.is_val x /\ F.is_val y /\ ~ is_O /\
                        F.is_equal(F.sq y, F.add(cubed F x, F.add (F.mul (C.a, x), C.b))))
     where F = C.base_field
-          (x,y) = S
+          (is_O, x, y) = S
 
 /**
  * Is a given point in Jacobian projective coordinates on a given curve?
@@ -123,16 +128,16 @@ is_point_projective C (x,y,z) = F.is_val x /\ F.is_val y /\ F.is_val z /\ F.is_e
  * The negative of a point in affine coordinates on a curve.
  */
 neg: {t} EllipticCurve t -> AffinePoint t -> AffinePoint t
-neg C (x,y) = (x, C.base_field.neg y)
+neg C (is_O,x,y) = (is_O, x, C.base_field.neg y)
 
 double: {t} EllipticCurve t -> AffinePoint t -> AffinePoint t
 double C P = if is_point_O C P then P
-             | is_zero C.base_field P.1 then point_O C // check this!
+             | is_zero C.base_field P.2 then point_O C // then P == neg P
              else double_non_O C P
 
 private
     double_non_O: {t} EllipticCurve t -> AffinePoint t -> AffinePoint t
-    double_non_O C (x1,y1) = (x3,y3) where
+    double_non_O C (_,x1,y1) = (False, x3,y3) where
         F = C.base_field
         // x3 = (3*x1^2+a)^2/(2*y1)^2-x1-x1
         x3 = F.sub (F.sq R0, twice F x1)
@@ -158,7 +163,7 @@ add C P Q = if same_point_affine C P (point_O C) then Q
 
 private
   raw_add: {t} EllipticCurve t -> AffinePoint t -> AffinePoint t -> AffinePoint t
-  raw_add C (x1,y1) (x2,y2) = (x3,y3) where
+  raw_add C (_,x1,y1) (_,x2,y2) = (False,x3,y3) where
     F = C.base_field
     // x3 = (y2-y1)^2/(x2-x1)^2-x1-x2
     x3 = F.sub (F.sub (F.sq R0, x1), x2)

@@ -60,8 +60,8 @@ B' = to_Fp 0x12e2908d11688030018b12e8753eee3b2016c1f0f24f4070a0b9c14fcef35ef55a2
 h_eff = 0xd201000000010001 // For clearing the cofactor
 clear_cofactor P = EC::mult C h_eff P
 
-iso_map: (t_F, t_F) -> (t_F, t_F)
-iso_map (x', y') = (x, y) where
+iso_map: EC::AffinePoint t_F -> EC::AffinePoint t_F
+iso_map (is_O, x', y') = (is_O, x, y) where
     x_powers = [F.field_unit] # [F.mul(x', xi) | xi <- x_powers]
     x_num = F_sum F [F.mul(ki, xi) | ki <- k1s | xi <- x_powers]
     x_den = F.add (x_powers@10, F_sum F [F.mul(ki, xi) | ki <- k2s | xi <- x_powers])

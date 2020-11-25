@@ -139,6 +139,7 @@ POINTonE1_add_alias_1_2_ov <- custom_verify "POINTonE1_add"
 
 // ... POINTonE1_add_affine
 
+/*
 POINTonE1_add_affine_equiv_thm <-
   custom_prove_cryptol
   {{ \p1 p2 -> point_add_affine Fp p1 p2 == if  p1.2 == 0 then projectify E p2
@@ -149,7 +150,7 @@ POINTonE1_add_affine_equiv_thm <-
     // w4_unint_z3 fp_unints; ... fails
     z3; 
     } ;
-
+*/
 
 let POINTonE1_add_affine_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
@@ -203,6 +204,7 @@ POINTonE1_add_affine_ov <- custom_verify "POINTonE1_add_affine"
                       // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
                       do {// apply_fp_rewrites;
                           unfolding ["point_add_affine", "POINTonE1_abs", "POINTonE1_affine_abs"
+			  	    , "affine_point"
                                     , "POINTonE1_invariant", "POINTonE1_affine_invariant"
                                     , "POINTonE1_rep"
                                     , "select", "/\\"]; // , "Fp.is_equal"];
@@ -386,6 +388,7 @@ POINTonE1_dadd_affine_ov <- custom_verify "POINTonE1_dadd_affine"
                           unfolding ["point_dadd_affine", "POINTonE1_abs", "POINTonE1_affine_abs"
                                     , "POINTonE1_invariant", "POINTonE1_affine_invariant"
                                     , "POINTonE1_rep"
+				    , "affine_point"
                                     , "select"
                                     , "/\\"
                                     , "F_is_zero"]; // , "Fp.is_equal"];
@@ -431,8 +434,12 @@ POINTonE1_is_equal_ov <- custom_verify "POINTonE1_is_equal"
 //  POINTonE1_affine_on_curve
 normalize_b_thm <- prove_cryptol {{ Fp.normalize b == b }} [];
 
+/* Need to fix:
 POINTonE1_affine_on_curve_eqv_thm <- custom_prove_cryptol
-   {{ \p -> is_point_affine E p == (Fp.is_val p.0 /\ Fp.is_val p.1 /\ POINTonE1_affine_on_curve p) }}
+   {{ \p -> is_point_affine E p ==
+             if p.0
+	     then (p.1 == Fp.field_zero /\ p.2 == Fp.field_zero)
+	     else (Fp.is_val p.1 /\ Fp.is_val p.2 /\ POINTonE1_affine_on_curve p) }}
    z3;
 
 let POINTonE1_affine_on_curve_spec = do {
@@ -441,7 +448,7 @@ let POINTonE1_affine_on_curve_spec = do {
   crucible_execute_func [p1_ptr];
   crucible_return (crucible_term {{ if is_point_affine E (POINTonE1_affine_abs p1) then (1:Limb) else 0 }});
 };
-
+*/
 //let {{
 //  B_E1 = [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
 //         , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
@@ -457,7 +464,7 @@ B_E1_abs_thm <-
     {{fp_abs       [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
                    , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
        == b }}) [];
-
+/*
 POINTonE1_affine_on_curve_ov <- custom_verify "POINTonE1_affine_on_curve"
                       (concat vec_overrides fp_overrides)
                       POINTonE1_affine_on_curve_spec
@@ -467,6 +474,7 @@ POINTonE1_affine_on_curve_ov <- custom_verify "POINTonE1_affine_on_curve"
                           unfolding ["is_point_affine", "POINTonE1_affine_abs"
                                     , "POINTonE1_affine_invariant"
                                     , "POINTonE1_affine_on_curve"
+				    , "affine_point"
                                     , "/\\", "\\/"
                                     , "E", "is_point_O", "same_point_affine", "point_O"
                                     , "ShortWeierstrassCurve::cubed", "select" // , "Fp.is_equal"
@@ -477,7 +485,7 @@ POINTonE1_affine_on_curve_ov <- custom_verify "POINTonE1_affine_on_curve"
                           unfolding ["Fp"];
                           w4_unint_z3 fp_unints;
                           });
-
+*/
 // ... POINTonE1_on_curve
 
 //     calls the assembly function `mul_by_b_onE1`, so we assume a spec

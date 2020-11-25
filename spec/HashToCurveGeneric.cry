@@ -40,7 +40,7 @@ parameter
     // The curve (will be E1 or E2)
     C: EC::EllipticCurve t_F
 
-    clear_cofactor: (t_F, t_F) -> (t_F, t_F) // EC::AffinePoint t_F -> EC::AffinePoint t_F
+    clear_cofactor: EC::AffinePoint t_F -> EC::AffinePoint t_F
 
     // additional field operations
     is_square: t_F -> Bool
@@ -52,7 +52,7 @@ parameter
     Z: t_F
     A': t_F
     B': t_F
-    iso_map: (t_F, t_F) -> (t_F, t_F)
+    iso_map: EC::AffinePoint t_F -> EC::AffinePoint t_F // (t_F, t_F) -> (t_F, t_F)
 
 // Section 3
 
@@ -89,7 +89,7 @@ hash_to_curve_opt: {msg_len, DST_len}
                ([msg_len][8], [DST_len][8]) -> EC::AffinePoint t_F
 hash_to_curve_opt (msg,dst) = P where
     u = hash_to_field`{count=2} (msg, dst) // spec does not mention the dst here
-    Q0 = map_to_curve_simple_swu (u@0) //, Z, A', B')
+    Q0 = map_to_curve_simple_swu (u@0) //, Z, A', B'
     Q1 = map_to_curve_simple_swu (u@1) //, Z, A', B')
     R = EC::add Curve_E' Q0 Q1
     P = clear_cofactor (iso_map R)
@@ -124,8 +124,8 @@ hash_to_field (msg, DST) = us where
 
 // 6.6.2 Simplified SWU
 
-map_to_curve_simple_swu: t_F -> (t_F, t_F)
-map_to_curve_simple_swu u = ret where
+map_to_curve_simple_swu: t_F -> EC::AffinePoint t_F //(t_F, t_F)
+map_to_curve_simple_swu u = EC::affine_point ret where
     //1. tv1 = inv0(Z^2 * u^4 + Z * u^2)
     tv1 = inv0 (F.add (F.mul (F.sq Z, F.sq (F.sq u)),
                        F.mul (Z, F.sq u)))
@@ -151,9 +151,9 @@ map_to_curve_simple_swu u = ret where
 
 // 6.6.3, Simplified SWU for AB=0
 
-map_to_curve_simple_swu_AB0(u) = (x, y) where
-    (x', y') = map_to_curve_simple_swu (u) // (x', y') is on E'
-    (x, y) = iso_map(x', y')               // (x, y) is on E
+map_to_curve_simple_swu_AB0(u) =  P where
+    P' = map_to_curve_simple_swu (u) // P' is on E'
+    P = iso_map P' // P is on E
 
 
 Curve_E': EC::EllipticCurve t_F

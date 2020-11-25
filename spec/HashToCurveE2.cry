@@ -91,8 +91,8 @@ h_eff = 0xbc69f08f2ee75b3584c6a0ea91b352888e2a8e9145ad7689986ff031508ffe1329c2f1
 
 clear_cofactor P = EC::mult C h_eff P
 
-iso_map: (t_F, t_F) -> (t_F, t_F)
-iso_map (x', y') = (x, y) where
+iso_map: EC::AffinePoint t_F -> EC::AffinePoint t_F
+iso_map (is_O, x', y') = (is_O, x, y) where
     x_powers = [F.field_unit] # [F.mul(x', xi) | xi <- x_powers]
     x_num = F_sum F [F.mul(ki, xi) | ki <- k1s | xi <- x_powers]
     x_den = F.add (x_powers@2, F_sum F [F.mul(ki, xi) | ki <- k2s | xi <- x_powers])
