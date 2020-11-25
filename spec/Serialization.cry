@@ -58,6 +58,7 @@ serialize_E2 P = x_string_E2 P || ([m_byte]# zero) where
 
 // TODO: These definitions are copied from hash-to-curve, but there they are in a parameter definiton
 // and are not in scope for importation here.
+// TODO: Those also appear in BLSFieldExtras.cry
 
 is_square_F_p: t_Fp -> Bit
 is_square_F_p x =  y == 0 \/ y == 1 where
@@ -101,16 +102,20 @@ sqrt_F_p_2 x = z where
 
 // end TODO section
 
-deserialize_E1: [48][8] -> Maybe (EC::AffinePoint t_Fp)
+// TODO: we need [96][8] because if the infinity bit is set, we must check all 96 bytes (except first 3 bits) are zero. We could also have a separate uncompress function.
+// the C code can take a 96 bytes array whose last 48 are unintialized
+// we deviate from the RFC: the RFC says "if the string has length...", but in the C code there's no concept of length of the string
+// TODO if I_bit is set, the C code additinally checks that the sign bit is not set, which is not required by the spec.
+deserialize_E1: [96][8] -> Maybe (EC::AffinePoint t_Fp)
 deserialize_E1 s_string = ret where
     // Step 1.
-    m_byte = (s_string@0) && 0xE0
+    m_byte = (s_string@0) && 0xE0 // three highest bits
     C_bit = m_byte @ 0
     I_bit = m_byte @ 1
     S_bit = m_byte @ 2
     // Step 2 deferred (we check that C_bit is 1 later)
     // Step 3
-    s_string' = [(s_string@0) && 0x1F] # tail s_string
+    s_string' = take`{front=48} ([(s_string@0) && 0x1F] # tail s_string) // the last 48 bytes may be uninitialized for a compressed point. TODO should we assume they're zero? doesn't seem to make sense (extra work for the caller)
     // Step 6
     x = OS2IP(s_string')
     //Step 7 (on curve E)
@@ -118,12 +123,36 @@ deserialize_E1 s_string = ret where
     y = sqrt_F_p y2
     Y_bit = sign_F_p y
     // Steps 2, 4, 8
-    ret = if C_bit == False then nothing // Error, from Step 2
+    ret = if C_bit == False then nothing // Error, from Step 2; TODO what if I_bit is set? We could still return inf
            | I_bit then (if s_string' == zero then just (EC::point_O E) else nothing) // Step 4
            | ~ (is_square_F_p y2) then nothing // from Step 7
            | S_bit == Y_bit then just (x,y)
           else just (x, Fp.neg y)
 
+// this should be what the C code does:
+uncompress_E1: [48][8] -> Maybe (EC::AffinePoint t_Fp)
+uncompress_E1 s_string = ret where
+    // Step 1.
+    m_byte = (s_string@0) && 0xE0 // three highest bits
+    C_bit = m_byte @ 0
+    I_bit = m_byte @ 1
+    S_bit = m_byte @ 2
+    // Step 2 deferred (we check that C_bit is 1 later)
+    // Step 3
+    s_string' = [(s_string@0) && 0x3F] # tail s_string // NOTE the 3F instead of 1F here
+    // Step 6
+    x = OS2IP(s_string')
+    // TODO here the C implementation checks that x is smaller than the modulus
+    //Step 7 (on curve E)
+    y2 = Fp.add (Fp.mul (x, Fp.sq x), 4)
+    y = sqrt_F_p y2
+    Y_bit = sign_F_p y
+    // Steps 2, 4, 8
+    ret = if C_bit == False then nothing
+           | I_bit then (if s_string' == zero then just (EC::point_O E) else nothing)
+           | ~ (is_square_F_p y2) then nothing
+           | S_bit == Y_bit then just (x,y)
+          else just (x, Fp.neg y)
 
 deserialize_E2: [96][8] -> Maybe (EC::AffinePoint t_Fp_2)
 deserialize_E2 s_string = ret where
