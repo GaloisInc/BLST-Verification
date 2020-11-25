@@ -191,3 +191,27 @@ recip_sqrt_fp_ov <- custom_verify "recip_sqrt_fp"
                       simplify fp_exp_simps;
                       w4_unint_z3 (concat ["fp_exp"] fp_unints);
                       };
+
+let sqrt_fp_spec = do {
+    out_ptr <- crucible_alloc vec384_type;
+    (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384_type;
+    crucible_precond {{ fp_invariant inp }};
+    crucible_execute_func [out_ptr, inp_ptr];
+    crucible_conditional_points_to {{ is_square_fp (fp_abs inp) }} out_ptr (crucible_term {{fp_rep (sqrt_fp (fp_abs inp))}});
+    ret <- crucible_fresh_var "ret" limb_type;
+    crucible_return (crucible_term ret);
+};
+
+let sqrt_fp_alias_spec = do {
+    (out, out_ptr) <- ptr_to_fresh "out" vec384_type;
+    crucible_precond {{ fp_invariant out }};
+    crucible_execute_func [out_ptr, out_ptr];
+    ret <- crucible_fresh_var "ret" limb_type;
+    crucible_conditional_points_to {{ is_square_fp (fp_abs out) }} out_ptr (crucible_term {{fp_rep (sqrt_fp (fp_abs out))}});
+    crucible_postcond {{ is_square_fp (fp_abs out) ==> ret != zero }};
+    crucible_return (crucible_term ret);
+};
+
+sqrt_fp_ov <- admit "sqrt_fp" sqrt_fp_spec;
+sqrt_fp_alias_ov <- admit "sqrt_fp" sqrt_fp_alias_spec;
+let sqrt_fp_ovs = [sqrt_fp_ov, sqrt_fp_alias_ov];

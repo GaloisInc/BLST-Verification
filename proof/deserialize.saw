@@ -3,20 +3,66 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
+include "helpers.saw";
+include "list_utils.saw";
+include "types.saw";
+m <- llvm_load_module "../build/llvm/libblst.a.bc";
+let do_prove = false;
+include "proof-helpers.saw";
+//include "x86.saw";
+
+include "fp_overrides.saw";
+include "vect.saw";
+include "exp.saw";
+
+include "blst_error.saw";
+
+import "../spec/Serialization.cry";
+EC <- cryptol_load "../spec/ShortWeierstrassCurve.cry";
+import "../Parameters.cry";
+import "../spec/implementation/Types.cry";
+import "../spec/Maybe.cry";
+import "../spec/implementation/CurveOperation.cry";
+import "../cryptol-specs/Common/bv.cry";
+
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
 
-
-let blst_p1_deserialize_spec = do {
+// just to try:
+let blst_p1_deserialize_inf_spec = do {
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
-  (_, in_ptr) <- ptr_to_fresh_readonly "in" (llvm_array 96 (llvm_int 8));
+  inp <- crucible_fresh_var "p1_deserialize_in" (llvm_array 96 (llvm_int 8));
+  in_ptr <- crucible_alloc_readonly (llvm_array 96 (llvm_int 8));
+  crucible_points_to_untyped in_ptr (crucible_term inp);
+  crucible_precond {{ inp@0 && 0x80 == zero }}; // not compressed
+  crucible_precond {{ inp@0 && 0x40 != zero }}; // point at infinity
+
   crucible_execute_func [out_ptr, in_ptr];
+
   new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE1_affine");
   ret <- crucible_fresh_var "ret" (llvm_int 32);
-  crucible_conditional_points_to {{ ret == zero }} out_ptr (crucible_term new_out);
+  crucible_conditional_points_to {{ ret == `BLST_SUCCESS }} out_ptr (crucible_term new_out);
+  crucible_postcond {{ inp@0 && 0x40 != zero /\ ([inp@0 && 0x3F]#(tail inp)) == zero ==> ret == `BLST_SUCCESS /\ new_out.0 == vec384_rep (from_Fp (EC::point_O E).0) /\ new_out.1 == vec384_rep (from_Fp (EC::point_O E).1) }}; // TODO spec says 0x1F and not 0x3F
   crucible_return (crucible_term ret);
 };
+
+let POINTonE1_Uncompress_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
+  inp <- crucible_fresh_var "POINTonE1_Uncompress_in" (llvm_array 48 (llvm_int 8));
+  in_ptr <- crucible_alloc_readonly (llvm_array 48 (llvm_int 8));
+  crucible_points_to in_ptr (crucible_term inp);
+  crucible_precond {{ inp@0 && 0xE0 != zero }}; // only dealing with compressed points (TODO specify what happens if not)
+
+  crucible_execute_func [out_ptr, in_ptr];
+
+  new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE1_affine");
+  ret <- crucible_fresh_var "ret" (llvm_int 32);
+  crucible_conditional_points_to {{ ret == `BLST_SUCCESS }} out_ptr (crucible_term new_out);
+  crucible_postcond {{ ret == `BLST_SUCCESS ==> maybe False (\(x,y) -> True) (uncompress_E1 inp) }};
+  crucible_return (crucible_term ret);
+};
+
 let blst_p2_deserialize_spec = do {
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
   (_, in_ptr) <- ptr_to_fresh_readonly "in" (llvm_array 192 (llvm_int 8));
@@ -27,5 +73,39 @@ let blst_p2_deserialize_spec = do {
   crucible_return (crucible_term ret);
 };
 
-blst_p1_deserialize_ov <- verify "blst_p1_deserialize" assembly_overrides blst_p1_deserialize_spec;
-blst_p2_deserialize_ov <- verify "blst_p2_deserialize" assembly_overrides blst_p2_deserialize_spec;
+let add_fp_noabs_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  crucible_precond {{ b == zero }}; // make sure this override is applied only where we want it.
+
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr];
+
+  new_ret <- crucible_fresh_var "new_add_fp_ret" vec384_type;
+  crucible_postcond {{ new_ret == split (safe_mod(`p:[384], safe_add(join a, join b))) }};
+  crucible_postcond {{ fp_invariant new_ret }}; // TODO prove
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let sgn0_pty_mont_384_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  // TODO: p and n0 should be appropriate constants
+  (p, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  n0 <- crucible_fresh_var "sgn0_pty_mont_384_n0" limb_type;
+
+  crucible_execute_func [a_ptr, p_ptr, crucible_term n0];
+  return_value <- crucible_fresh_var "return_value" limb_type;
+  // TODO: Not sure what the return value should be. From what follows in the C code, it seems that the sign bit is the second bit of the return value.
+  crucible_return (crucible_term {{ (if (sign_F_p (fp_abs a)) then (zext 0b10) else zero):[64] }});
+};
+
+add_fp_noabs_ov <- admit "add_fp" add_fp_noabs_spec;
+sgn0_pty_mont_384_ov <- admit "sgn0x_pty_mont_384" sgn0_pty_mont_384_spec;
+
+blst_p1_deserialize_inf_ov <- really_verify "blst_p1_deserialize" [] blst_p1_deserialize_inf_spec;
+
+let do_prove = true;
+POINTonE1_Uncompress_ov <- custom_verify "POINTonE1_Uncompress" (foldr concat [sqrt_fp_ovs, fp_overrides] [sgn0_pty_mont_384_ov, add_fp_noabs_ov]) POINTonE1_Uncompress_spec (do {apply_fp_rewrites; w4;});
+let do_prove = false;
+
+blst_p2_deserialize_ov <- verify "blst_p2_deserialize" [] blst_p2_deserialize_spec;
