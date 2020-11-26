@@ -28,4 +28,6 @@ cryptol <<EOF
 :check
 :l tests/HashToCurveE2Tests.cry
 :check
+:l tests/SerializationTests.cry
+:check
 EOF

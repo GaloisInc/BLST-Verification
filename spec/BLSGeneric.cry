@@ -1,0 +1,123 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+// Definitions from draft-irtf-cfrg-bls-signature-04
+//
+// That specification describes a number of "parameters" that are used in its
+// definitions, and later defines ciphersuites that instantiate those parameters.
+//
+// This module defines the specification in terms ofthe parameters, usig a Cryptol
+// parameterized module.  The instantiations are done in separate Cyytpol files,
+// as required by the language.
+
+module BLSGeneric where
+
+import ShortWeierstrassCurve as EC
+import Parameters as P
+import Maybe
+import Primitive::Keyless::Hash::SHA256
+import Primitive::Symmetric::KDF::HKDF256
+import rfc8017
+
+// Section 2.2, "parameters"
+
+parameter
+    // signature variant: not needed in the formalization
+
+    // a pairing-friendly elliptic curve
+    type t_F: * // representation type for field of the primary curve (signature)
+    type t_F': * // representation type for field of the secondary curve (pubkey)
+    type t_G: * // representation type for field of the pairing result
+
+    // TODO: need equality for t_G  WHY?
+    type constraint Eq t_G
+
+    type pubkey_len: #
+    type signature_len: #
+
+    main_curve: EC::EllipticCurve t_F
+    other_curve: EC::EllipticCurve t_F'
+
+    // H, a hash function, is always HKDF, so not listed here
+
+    // hash_to_point 
+    type DST_len: #
+
+    hash_to_point: {msg_len} (Hashable msg_len) =>
+               [msg_len][8] -> EC::AffinePoint t_F
+
+    // other primitives "determined by the above parameters"
+    
+    P: EC::AffinePoint t_F' // base point
+    // r -- is fixed in both BLS variants  Should we use it here as a parameter anyway??
+
+    pairing: (EC::AffinePoint t_F, EC::AffinePoint t_F') -> t_G
+
+    point_to_pubkey: EC::AffinePoint t_F' -> [pubkey_len]
+    point_to_signature: EC::AffinePoint t_F -> [signature_len]
+
+    pubkey_to_point: [pubkey_len] -> Maybe (EC::AffinePoint t_F') // can fail
+    signature_to_point: [signature_len] -> Maybe (EC::AffinePoint t_F) // can fail
+
+    pubkey_subgroup_check: EC::AffinePoint t_F' -> Bool
+    signature_subgroup_check: EC::AffinePoint t_F -> Bool
+
+type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + DST_len))
+
+// 2.3 KeyGen
+
+// ... KeyGen has been moved to its own module, called KeyGen, as it does not depend
+//     on the parameters. 
+
+
+// 2.4 SkToPk
+
+sk_to_pk: [256] -> [pubkey_len]
+sk_to_pk sk = point_to_pubkey (EC::mult other_curve sk P)
+
+
+// 2.5 KeyValidate
+
+// The spec says to return VALID or INVALID; here we use True for VALID
+KeyValidate: [pubkey_len] -> Bool
+KeyValidate pk = ret where
+    xP = pubkey_to_point pk  // step 1
+    ret = maybe_cases xP
+            False // xP is None, step 2
+            (\y ->   (~ (EC::is_point_O other_curve y)) // Step 3
+                  /\ pubkey_subgroup_check y) // Step 4
+
+// 2.6 CoreSign
+
+CoreSign: {msg_len} (Hashable msg_len) => ([256], [msg_len][8]) -> [signature_len]
+CoreSign (sk, message) = signature where
+    Q = hash_to_point message
+    R = EC::mult main_curve sk Q
+    signature = point_to_signature R
+
+// 2.7 CoreVerify
+
+CoreVerify: {msg_len} (Hashable msg_len) => ([pubkey_len], [msg_len][8], [signature_len]) -> Bool
+/* possible alternate definition
+CoreVerify(PK, message, signature) = maybe False step3 (signature_to_point signature) where // lines 1, 2
+    step3 R = if signature_subgroup_check R == False then False // line 3
+               |  KeyValidate PK == False then False // line 4
+              else maybe False (step5 R) (pubkey_to_point PK) // line 5, but dealing with "maybe-ness"
+    step5 R xP = C1 == C2 where // line 9
+         Q = hash_to_point message // line 6
+         C1 = pairing (Q, xP) // line 7
+         C2 = pairing (R, P) // line 8
+*/
+CoreVerify(PK, message, signature) =
+    maybe_cases (signature_to_point signature)
+        False // lines 1,2
+        (\ R -> if signature_subgroup_check R == False then False  // line 3
+                |  KeyValidate PK == False then False // line 4
+                else maybe_cases (pubkey_to_point PK)
+                    False // line 5
+                    (\ xP -> (C1 == C2 where // line 9
+                              Q = hash_to_point message // line
+                              C1 = pairing (Q, xP) // line 7
+                              C2 = pairing (R, P)))) // line 8
