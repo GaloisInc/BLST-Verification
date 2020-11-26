@@ -20,4 +20,5 @@ f $ x = f x
 
 // 'apply' is the same function: 'apply f x == f x'.  We sometimes use this to
 // make comnditional rewrite rules that do not loop infinitely
-apply = ($)
+apply: {s, t} (s->t) -> s -> t
+apply f x = f x

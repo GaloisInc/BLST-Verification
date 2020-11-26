@@ -225,6 +225,8 @@ let {{
   add'_E = add' E
   affinify_E = affinify E
   projectify_E = projectify E
+  is_point_affine_E = is_point_affine E
+  is_point_projective_E = is_point_projective E
   }};
 
 point_add_fp_thm <- prove_cryptol {{  \p1 p2 -> point_add Fp p1 p2 == point_add_fp p1 p2 }} ["Fp"];
@@ -237,11 +239,15 @@ add_E_thm <- prove_cryptol {{  \p1 p2 -> add E p1 p2 == add_E p1 p2 }} ["E"];
 add'_E_thm <- prove_cryptol {{  \p1 p2 -> add' E p1 p2 == add'_E p1 p2 }} ["E"];
 affinify_E_thm <- prove_cryptol {{  \p1 -> affinify E p1 == affinify_E p1 }} ["E"];
 projectify_E_thm <- prove_cryptol {{  \p1 -> projectify E p1 == projectify_E p1 }} ["E"];
+is_point_affine_E_thm <- prove_cryptol {{  \p1 -> is_point_affine E p1 == is_point_affine_E p1 }} ["E"];
+is_point_projective_E_thm <- prove_cryptol {{  \p1 -> is_point_projective E p1 == is_point_projective_E p1 }} ["E"];
 
 let remove_higher_order_function_simpset =
   addsimps [ point_add_fp_thm, point_dadd_fp_thm, point_double_fp_thm, point_neg_fp_thm
            , point_add_affine_fp_thm, point_dadd_affine_fp_thm
-           , add_E_thm, add'_E_thm, affinify_E_thm, projectify_E_thm] empty_ss;
+           , add_E_thm, add'_E_thm, affinify_E_thm, projectify_E_thm
+           , is_point_affine_E_thm, is_point_projective_E_thm
+           ] empty_ss;
 
 // more rules to hoist `if`-terms
 

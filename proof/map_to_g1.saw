@@ -20,24 +20,6 @@ let {{
   sigma (x, y) = (Fp.mul (x, beta), y)
  }};
 
-// For sigma, need some facts about the constants
-
-/*
-beta_rep_invariant_thm <-
-  prove_cryptol (rewrite (cryptol_ss ())
-    {{fp_invariant [ 0xcd03c9e48671f071, 0x5dab22461fcda5d2, 0x587042afd3851b95
-                   , 0x8eb60ebe01bacb9e, 0x03f97d6e83d050d2, 0x18f0206554638741]
-       == True}}) [];
-
-beta_rep_abs_thm <-
-  prove_cryptol (rewrite (cryptol_ss ())
-    {{fp_abs       [ 0xcd03c9e48671f071, 0x5dab22461fcda5d2, 0x587042afd3851b95
-                   , 0x8eb60ebe01bacb9e, 0x03f97d6e83d050d2, 0x18f0206554638741]
-       == beta }}) [];
-
-let sigma_constant_thms = [ beta_rep_invariant_thm, beta_rep_abs_thm
-                          , one_mont_p_invariant_thm,  one_mont_p_abs_thm];
-*/
 
 let sigma_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
@@ -47,16 +29,12 @@ let sigma_spec = do {
   crucible_points_to out_ptr (crucible_term {{ POINTonE1_rep (projectify E (sigma (POINTonE1_affine_abs x))) }});
   };
 
-
 sigma_ov <- custom_verify "sigma"
-    // (concat vec_overrides (concat fp_overrides  ec_mult_overrides))
     (concat  point_op_overrides fp_overrides)
     sigma_spec
     do {
       unfolding [ "POINTonE1_rep", "POINTonE1_affine_invariant", "POINTonE1_affine_abs"
                 , "projectify", "E", "sigma"];
-      // simplify (addsimps sigma_constant_thms fp_simpset);
-      // print_goal;
       simplify fp_simpset;
       z3;
       };
@@ -177,13 +155,13 @@ crucible_llvm_compositional_extract m "POINTonE1_in_G1" "inG1"
     do { simplify (addsimps [sigma_call_thm, vec_is_zero_call_thm, invariant_POINTonE1_times_c_thm]
                    (addsimps POINTonE1_thms empty_ss));
          simplify remove_higher_order_function_simpset;
-         //print_goal;
          w4_unint_z3 (concat ["sigma"] ec_mult_unints); };
 
-// Not-quite true:
 let peq = parse_core "intEq"; // NOTE. This depends on t_Fp
-is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss()) {{ \p -> peq (fp_abs((POINTonE1_rep p).2)) (Fp.field_zero) == is_point_O E (affinify E p) }});
-// ... as it need the hypothesis that P is on the curve
+// Not-quite true:
+is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \p -> peq (fp_abs((POINTonE1_rep p).2)) (Fp.field_zero) == is_point_O E (affinify E p) }});
+// ... as it need the hypothesis that P is on the curve OR a revised representation of Affine points
 
 // This hoped-for alternative creates a predicate that SAW thinks is not an equation
 //is_point_O_thm'' <- admit_cryptol
@@ -193,9 +171,12 @@ is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss()) {{ \p -> peq (fp_abs((
 // (will be true if the t_Fp is (Z p) rather than Integer or [384]).
 affinify_projectify_thm <- admit_cryptol {{ \P -> affinify E (projectify E P) == P }};
 
-// ... also not quite true
-in_G1_lemma <- admit_cryptol
- {{ \P -> (POINTonE1_affine_abs (x.0, x.1) == P where x = POINTonE1_rep (projectify E P)) }};
+
+in_G1_lemma <- custom_prove_cryptol
+ {{ \P -> (POINTonE1_affine_abs (x.0, x.1) == P where x = POINTonE1_rep (projectify E P)) }}
+ do { unfolding ["projectify", "E", "POINTonE1_rep", "POINTonE1_affine_abs"];
+      simplify fp_simpset;
+      z3; } ;
 
 POINTonE1_in_G1_thm <- custom_prove_cryptol
   {{ \P -> inG1 P == bool_to_limb (is_in_g1_impl (POINTonE1_affine_abs P))}}
@@ -224,3 +205,161 @@ POINTonE1_in_G1_ov <- custom_verify "POINTonE1_in_G1"
      w4_unint_z3 (concat ["sigma"] ec_mult_unints);
      };
 */
+
+// Proper conditional rules
+
+is_point_affine_thms <- for
+  [ {{ \P Q -> is_point_affine E (add E P Q) ==
+               if is_point_affine E P /\ is_point_affine E Q
+               then True
+               else apply is_point_affine E (add E P Q) }}
+  , {{ \ P -> is_point_affine E (neg E P) ==
+              if is_point_affine E P
+              then True
+              else apply is_point_affine E (neg E P) }}
+  // these next two are consequences of the first two
+  , {{ \P Q -> is_point_affine E (sub E P Q) ==
+               if is_point_affine E P /\ is_point_affine E Q
+               then True
+               else apply is_point_affine E (add E P Q) }}
+  , {{ \ m P -> is_point_affine E (e1_scalar_mult m P) ==
+              if is_point_affine E P
+              then True
+              else apply is_point_affine E (e1_scalar_mult m P) }}
+  ]
+  admit_cryptol;
+
+is_point_projective_thms <- for
+  [ {{ \P Q a4 -> is_point_projective E (point_dadd Fp P Q a4 True) ==
+               if is_point_projective E P /\ is_point_projective E Q
+               then True
+               else apply is_point_projective E (point_dadd Fp P Q a4 True) }}
+
+  , {{ \P Q -> is_point_projective E (point_dadd_affine Fp P Q) ==
+               if is_point_projective E P /\ is_point_affine E Q
+               then True
+               else apply is_point_projective E (point_dadd_affine Fp P Q) }}
+
+  , {{ \ P -> is_point_projective E (point_neg Fp P) ==
+              if is_point_projective E P
+              then True
+              else apply is_point_projective E (point_neg Fp P) }}
+
+  , {{ \ P -> is_point_projective E (point_double Fp P) ==
+              if is_point_projective E P
+              then True
+              else apply is_point_projective E (point_double Fp P) }}
+  ]
+  admit_cryptol;
+
+/* Proof experiment: this works 
+prove_print
+do { unfolding ["POINTonE1_times_c"];
+       simplify (addsimps (concat is_point_projective_thms POINTonE1_thms) (cryptol_ss()));
+       simplify remove_higher_order_function_simpset;
+       simplify cleanup_simpset;
+       print_goal;
+       w4_unint_z3 ec_mult_unints;
+     }
+{{ \p ->  is_point_projective E (POINTonE1_abs p) ==>
+          is_point_projective E (POINTonE1_abs (POINTonE1_times_c p)) }};
+
+
+// but this FAILS:
+is_point_projective_POINTonE1_times_c_thm <- custom_prove_cryptol
+  {{ \p -> is_point_projective E (POINTonE1_abs (POINTonE1_times_c p)) ==
+           if is_point_projective E (POINTonE1_abs p)
+           then True
+           else apply is_point_projective E (POINTonE1_abs (POINTonE1_times_c p)) }}
+  do { unfolding ["POINTonE1_times_c"];
+       simplify (addsimps (concat is_point_projective_thms POINTonE1_thms) (cryptol_ss()));
+       simplify remove_higher_order_function_simpset;
+       simplify cleanup_simpset;
+       print_goal;
+       w4_unint_z3 ec_mult_unints;
+     };
+
+// So we can use a lemma to rearrange the form of the goal.
+*/
+
+propositional_lemma <- prove_cryptol {{ \ (x:Bool) c y ->  (x == if c then y else x) == (c ==> x == y) }} [];
+
+is_point_projective_POINTonE1_times_c_thm <- custom_prove_cryptol
+  {{ \p -> is_point_projective E (POINTonE1_abs (POINTonE1_times_c p)) ==
+           if is_point_projective E (POINTonE1_abs p)
+           then True
+           else apply is_point_projective E (POINTonE1_abs (POINTonE1_times_c p)) }}
+  do { unfolding ["apply"];
+       simplify (addsimp propositional_lemma empty_ss);
+       // Now it looks like the earlier version we can prove
+       unfolding ["POINTonE1_times_c"];
+       simplify (addsimps (concat is_point_projective_thms POINTonE1_thms) (cryptol_ss()));
+       simplify remove_higher_order_function_simpset;
+       w4_unint_z3 ec_mult_unints;
+     };
+
+is_point_projective_projectify_thm <- prove_cryptol
+  {{ \P -> is_point_projective E (projectify E P) ==
+           if is_point_affine E P /\ ~ (is_point_O E P)
+           then True
+           else apply is_point_projective E (projectify E P) }}
+           [] ;
+
+is_point_O_sigma_thm <- admit_cryptol
+  {{ \P -> (is_point_O E (sigma P') == 
+            if POINTonE1_affine_invariant P
+            then is_point_O E P'
+            else apply is_point_O E (sigma P')
+            where P' = POINTonE1_affine_abs P) }};
+
+is_point_O_sigma2_thm <- admit_cryptol
+  {{ \P -> (is_point_O E (sigma (sigma P')) == 
+            if POINTonE1_affine_invariant P
+            then is_point_O E P'
+            else apply is_point_O E (sigma (sigma P'))
+            where P' = POINTonE1_affine_abs P) }};
+
+is_point_affine_sigma_thm <- prove_cryptol
+   {{ \ P -> is_point_affine E (sigma P) ==
+             if is_point_affine E P
+             then True
+             else apply is_point_affine E (sigma P) }}
+    [];
+
+/*
+POINTonE1_affine_sigma_thm <- admit_cryptol
+   {{ \ P -> POINTonE1_affine_invariant (sigma P) ==
+             if POINTonE1_affine_invariant P
+             then True
+             else apply POINTonE1_affine_invariant (sigma P) }}
+   ; //    [];
+*/
+
+is_point_O_thm' <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \p -> peq (fp_abs((POINTonE1_rep p).2)) (Fp.field_zero) ==
+           if is_point_projective E p
+           then is_point_O E (affinify E p)
+           else apply peq (fp_abs((POINTonE1_rep p).2)) (Fp.field_zero) }});
+
+// Now retry the proof using the conditional rule:
+
+POINTonE1_in_G1_thm' <- custom_prove_cryptol
+  {{ \P ->      POINTonE1_affine_invariant P
+             /\ is_point_affine E (POINTonE1_affine_abs P)
+             /\ ~ (is_point_O E (POINTonE1_affine_abs P))
+           ==> inG1 P == bool_to_limb (is_in_g1_impl (POINTonE1_affine_abs P))}}
+  do {
+     unfolding ["inG1", "is_in_g1_impl", "bool_to_limb", "sub"];
+     simplify (addsimp is_point_O_thm' (cryptol_ss()));
+     // use the rules and lemmas on is_point_projective
+     simplify (addsimps [ is_point_affine_sigma_thm, is_point_projective_POINTonE1_times_c_thm
+                        , affinify_projectify_thm, affinify_POINTonE1_times_c_thm, in_G1_lemma
+                        , is_point_projective_projectify_thm, is_point_O_sigma_thm, is_point_O_sigma2_thm]
+                        (addsimps (concat is_point_projective_thms is_point_affine_thms)
+                                  big_simpset));
+     //unfolding ["/\\"]; simplify cleanup_simpset;
+     //print_goal;
+     // simplify (addsimps [affinify_projectify_thm, affinify_POINTonE1_times_c_thm, in_G1_lemma] big_simpset);
+     simplify remove_higher_order_function_simpset;
+     w4_unint_z3 (concat ["sigma"] ec_mult_unints);
+  };
