@@ -95,6 +95,11 @@ me_6 <- admit_cryptol {{ \n -> fp_exp Fp.field_unit n == Fp.field_unit }};
 
 fp_exp_simps <- addsimps (concat [me_1, me_2, me_3, me_4, me_5, me_6] fp_alg_thms) fp_simpset;
 
+// We will assume (and should prove in Coq)
+//  (fp_exp_fact)   {{ fp_exp x e == F_expt`{n} x `e }}
+// provided 1 <= e < 2^^n
+
+
 // Assumed overrides
 
 let {{
@@ -133,7 +138,8 @@ let ovs_for_reciprocal =
 // This computes x^(p-2).  Since for nonzero x we have x^(p-1) = 1, this gives the inverse.
 // And as we have conveneintly defined Fp.div(1,0) = 0, recip will always give Fp.div(1,x)
 
-recip_fp_algebra_thm <- admit_cryptol {{ \x -> Fp.div (Fp.field_unit, x) == fp_exp x (`p-2) }};
+// an instance of (fp_exp_fact):
+recip_fp_algebra_thm <- admit_cryptol {{ \x -> inverse_fp x == fp_exp x (`p-2) }};
 
 let reciprocal_fp_spec = do {
     out_ptr <- crucible_alloc vec384_type;
@@ -141,7 +147,8 @@ let reciprocal_fp_spec = do {
     crucible_precond {{ fp_invariant inp }};
     crucible_execute_func [out_ptr, inp_ptr];
     // crucible_points_to out_ptr (crucible_term {{ fp_rep (fp_exp (fp_abs inp) (`p-2)) }});
-    crucible_points_to out_ptr (crucible_term {{ fp_rep (Fp.div (Fp.field_unit, fp_abs inp)) }});
+    // crucible_points_to out_ptr (crucible_term {{ fp_rep (Fp.div (Fp.field_unit, fp_abs inp)) }});
+    crucible_points_to out_ptr (crucible_term {{ fp_rep (inverse_fp (fp_abs inp)) }});
     };
 
 reciprocal_fp_ov <- custom_verify "reciprocal_fp"
@@ -154,24 +161,17 @@ reciprocal_fp_ov <- custom_verify "reciprocal_fp"
                       w4_unint_z3 (concat ["fp_exp"] fp_unints);
                       };
                       
-
-// this function also computes `inverse_fp`
-
-/* TODO: fails if x is not in Fp.  Will be OK if t_Fp is `Z p` 
-reciprocal_fp_is_inverse_thm <- custom_prove_cryptol
-  {{ \x -> inverse_fp x == Fp.div (Fp.field_unit, x) }}
-  do { goal_eval_unint (concat ["fp_exp"] fp_unints);
-       simplify fp_exp_simps;
-       //unfolding ["Fp", "prime_field_bv", "prime_field_integer", "prime_field"];
-       //simplify cleanup_simpset;
-       //print_goal;
-       w4_unint_z3 (concat ["fp_exp"] fp_unints);
-       };
-*/
-
 // ... recip_sqrt_fp
 
+// ... an algebraic fact:
 recip_sqrt_fp_algebra_thm <- admit_cryptol {{ \x -> Fp.div (Fp.field_unit, sqrt_fp x) == fp_exp x ((`p-3)/4) }};
+
+// Another instance of (fp_exp_fact)
+sqrt_fp_alg_thm <- admit_cryptol {{ \x -> sqrt_fp x == fp_exp x ((`p+1)/4) }} ;
+
+// ... and an algebraic fact about is_square_fp
+is_square_fp_thm <- admit_cryptol
+  {{ \x -> is_square_fp x == (x == Fp.sq (sqrt_fp x)) }} ;
 
 let recip_sqrt_fp_spec = do {
     out_ptr <- crucible_alloc vec384_type;
@@ -180,6 +180,7 @@ let recip_sqrt_fp_spec = do {
     crucible_execute_func [out_ptr, inp_ptr];
     // crucible_points_to out_ptr (crucible_term {{ fp_rep (fp_exp (fp_abs inp) ((`p-3)/4)) }});
     crucible_points_to out_ptr (crucible_term {{fp_rep (Fp.div (Fp.field_unit, sqrt_fp (fp_abs inp))) }});
+    crucible_return (crucible_term {{ if is_square_fp (fp_abs inp) then 1:Limb else 0 }});
     };
 
 recip_sqrt_fp_ov <- custom_verify "recip_sqrt_fp"
@@ -188,30 +189,42 @@ recip_sqrt_fp_ov <- custom_verify "recip_sqrt_fp"
                     do {
                       simplify (addsimp recip_sqrt_fp_algebra_thm empty_ss);
                       unfolding ["sqr_n_mul"];
+                      simplify (addsimps [is_square_fp_thm, sqrt_fp_alg_thm] empty_ss);
                       simplify fp_exp_simps;
                       w4_unint_z3 (concat ["fp_exp"] fp_unints);
                       };
+
+// ... sqrt_fp
 
 let sqrt_fp_spec = do {
     out_ptr <- crucible_alloc vec384_type;
     (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384_type;
     crucible_precond {{ fp_invariant inp }};
     crucible_execute_func [out_ptr, inp_ptr];
-    crucible_conditional_points_to {{ is_square_fp (fp_abs inp) }} out_ptr (crucible_term {{fp_rep (sqrt_fp (fp_abs inp))}});
-    ret <- crucible_fresh_var "ret" limb_type;
-    crucible_return (crucible_term ret);
+    // crucible_points_to out_ptr (crucible_term {{ fp_rep (fp_exp (fp_abs inp) ((`p+1)/4)) }});
+    crucible_points_to out_ptr (crucible_term {{ fp_rep (sqrt_fp (fp_abs inp)) }});
+    crucible_return (crucible_term {{ if is_square_fp (fp_abs inp) then 1:Limb else 0 }});
 };
 
 let sqrt_fp_alias_spec = do {
     (out, out_ptr) <- ptr_to_fresh "out" vec384_type;
     crucible_precond {{ fp_invariant out }};
     crucible_execute_func [out_ptr, out_ptr];
-    ret <- crucible_fresh_var "ret" limb_type;
-    crucible_conditional_points_to {{ is_square_fp (fp_abs out) }} out_ptr (crucible_term {{fp_rep (sqrt_fp (fp_abs out))}});
-    crucible_postcond {{ is_square_fp (fp_abs out) ==> ret != zero }};
-    crucible_return (crucible_term ret);
+    crucible_points_to out_ptr (crucible_term {{ fp_rep (sqrt_fp (fp_abs out)) }});
+    crucible_return (crucible_term {{ if is_square_fp (fp_abs out) then 1:Limb else 0 }});
 };
 
-sqrt_fp_ov <- admit "sqrt_fp" sqrt_fp_spec;
-sqrt_fp_alias_ov <- admit "sqrt_fp" sqrt_fp_alias_spec;
+let verify_sqrt_fp spec = custom_verify "sqrt_fp"
+              ovs_for_reciprocal
+              spec
+              do {
+                 simplify (addsimps [is_square_fp_thm, sqrt_fp_alg_thm] empty_ss);
+                 unfolding ["sqr_n_mul"];
+                 simplify fp_exp_simps;
+                 w4_unint_z3 (concat ["fp_exp"] fp_unints);
+                 };
+
+sqrt_fp_ov <- verify_sqrt_fp sqrt_fp_spec;
+sqrt_fp_alias_ov <- verify_sqrt_fp  sqrt_fp_alias_spec;
+
 let sqrt_fp_ovs = [sqrt_fp_ov, sqrt_fp_alias_ov];
