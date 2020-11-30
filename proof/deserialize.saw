@@ -15,7 +15,11 @@ include "fp_overrides.saw";
 include "vect.saw";
 include "exp.saw";
 
-include "blst_error.saw";
+// include "blst_error.saw"; ... missing?
+let BLST_SUCCESS = 0;
+let BLST_BAD_ENCODING = 1;
+let BLST_POINT_NOT_ON_CURVE = 2;
+let BLST_POINT_NOT_IN_GROUP = 3;
 
 import "../spec/Serialization.cry";
 EC <- cryptol_load "../spec/ShortWeierstrassCurve.cry";
@@ -24,10 +28,24 @@ import "../spec/implementation/Types.cry";
 import "../spec/Maybe.cry";
 import "../spec/implementation/CurveOperation.cry";
 import "../cryptol-specs/Common/bv.cry";
+import "../spec/implementation/serialization.cry";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
+
+// Not necessary, but useful when developing a proof, to keep the SAW
+// formulas more readable.
+// This override also appears in keygen.saw: TODO refactor
+let limbs_from_be_bytes_spec48 = do {
+  ret_p <-crucible_alloc (llvm_array 6 limb_type);
+  (inx, in_ptr) <- ptr_to_fresh_readonly "limbs_from_be_bytes_in"
+                   (llvm_array 48 (llvm_int 8)); // "in" is a keyword
+  crucible_execute_func [ret_p, in_ptr, crucible_term {{ 48:[64] }}];
+  // crucible_points_to ret_p (crucible_term {{ reverse (split`{parts=6} (join inx)) }});
+  crucible_points_to ret_p (crucible_term {{ vec384_rep (join inx) }});
+  // ...or limbs_from_be_bytes_rep48 inx ?
+  };
 
 // just to try:
 let blst_p1_deserialize_inf_spec = do {
@@ -47,6 +65,46 @@ let blst_p1_deserialize_inf_spec = do {
   crucible_return (crucible_term ret);
 };
 
+// POINTonE1_Uncompress_BE has two different error conditions, which we deal with by having
+// three different sopecifications and overrides, one for each error and one for success.
+
+// ... the success case
+let POINTonE1_Uncompress_BE_OK_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
+  //inp <- crucible_fresh_var "POINTonE1_Uncompress_in" (llvm_array 48 (llvm_int 8));
+  //in_ptr <- crucible_alloc_readonly (llvm_array 48 (llvm_int 8));
+  //crucible_points_to in_ptr (crucible_term inp);
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE1_Uncompress_in" (llvm_array 48 (llvm_int 8));
+  // crucible_precond {{ fp_invariant (uncompress_E1_x inp) }};
+  crucible_precond {{ uncompress_E1_x inp < `p }};
+  crucible_precond {{ is_square_fp (uncompress_E1_y2 inp) }};
+  crucible_execute_func [out_ptr, in_ptr];
+  crucible_points_to out_ptr (crucible_term {{
+     (fp_rep (uncompress_E1_x inp), fp_rep (sqrt_fp (uncompress_E1_y2 inp))) }}) ;
+  // TODO: return value
+};
+
+// ... first error case, when the given X coordinate is too large
+let POINTonE1_Uncompress_BE_BAD0_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE1_Uncompress_in" (llvm_array 48 (llvm_int 8));
+  crucible_precond {{ uncompress_E1_x inp >= `p }};
+  crucible_execute_func [out_ptr, in_ptr];
+  crucible_return (crucible_term {{ (0:Limb) - `BLST_BAD_ENCODING }} );
+};
+
+// ... second error case, when the X coordinate does not belong to a point on the curve
+let POINTonE1_Uncompress_BE_BAD1_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE1_Uncompress_in" (llvm_array 48 (llvm_int 8));
+  crucible_precond {{ uncompress_E1_x inp < `p }};
+  crucible_precond {{ ~ (is_square_fp (uncompress_E1_y2 inp)) }};
+  crucible_execute_func [out_ptr, in_ptr];
+  crucible_return (crucible_term {{ (0:Limb) - `BLST_POINT_NOT_ON_CURVE }} );
+};
+
+// Uncompress
+
 let POINTonE1_Uncompress_spec = do {
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
   inp <- crucible_fresh_var "POINTonE1_Uncompress_in" (llvm_array 48 (llvm_int 8));
@@ -63,6 +121,21 @@ let POINTonE1_Uncompress_spec = do {
   crucible_return (crucible_term ret);
 };
 
+let POINTonE1_Uncompress_OK_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
+  inp <- crucible_fresh_var "POINTonE1_Uncompress_in" (llvm_array 48 (llvm_int 8));
+  in_ptr <- crucible_alloc_readonly (llvm_array 48 (llvm_int 8));
+  crucible_points_to in_ptr (crucible_term inp);
+  crucible_precond {{ inp@0 && 0xE0 != zero }}; // only dealing with compressed points
+  crucible_precond {{ maybe False (\(x,y) -> True) (uncompress_E1 inp) }}; // well-formed input
+  crucible_execute_func [out_ptr, in_ptr];
+
+  new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE1_affine");
+  crucible_points_to out_ptr (crucible_term new_out);
+  crucible_postcond {{ uncompress_E1 inp == just new_out }};
+  crucible_return (crucible_term {{ `BLST_SUCCESS: [32] }});
+};
+
 let blst_p2_deserialize_spec = do {
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
   (_, in_ptr) <- ptr_to_fresh_readonly "in" (llvm_array 192 (llvm_int 8));
@@ -73,6 +146,10 @@ let blst_p2_deserialize_spec = do {
   crucible_return (crucible_term ret);
 };
 
+let {{
+  add_rep a = if vec384_abs a < `p then a else vec384_rep ((vec384_abs a) - `p)
+  }};
+
 let add_fp_noabs_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
@@ -81,11 +158,26 @@ let add_fp_noabs_spec = do {
 
   crucible_execute_func [ret_ptr, a_ptr, b_ptr];
 
-  new_ret <- crucible_fresh_var "new_add_fp_ret" vec384_type;
-  crucible_postcond {{ new_ret == split (safe_mod(`p:[384], safe_add(join a, join b))) }};
-  crucible_postcond {{ fp_invariant new_ret }}; // TODO prove
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  //new_ret <- crucible_fresh_var "new_add_fp_ret" vec384_type;
+  //crucible_postcond {{ new_ret == split (safe_mod(`p:[384], safe_add(join a, join b))) }};
+  //crucible_postcond {{ fp_invariant new_ret }}; // TODO prove
+  //crucible_points_to ret_ptr (crucible_term new_ret);
+  crucible_points_to ret_ptr (crucible_term {{ add_rep a }});
+  //  {{ if vec384_abs a < `p then a else vec384_rep ((vec384_abs a) - `p) }}) ;
 };
+
+/* ... Better, I think, do do this with rewriting of the normal postcondition 
+// The first call to mul_fp in POINTonE1_Uncompress_BE is intended to move into
+// the Montgomery representation, so the spec is a bit different from normal
+let mul_fp_noabs_spec = do {
+  (a, a_ptr) <- ptr_to_fresh "a" vec384_type;
+  (rr, rr_ptr) <- ptr_to_fresh_readonly "rr" vec384_type;
+  crucible_precond {{ fp_invariant a }};
+  crucible_precond {{ rr ==  fp_rep montgomery_factor_p }}; // expand?
+  crucible_execute_func [a_ptr, a_ptr, rr_ptr];
+  crucible_points_to a_ptr (crucible_term {{ fp_rep (to_Fp (vec384_abs a)) }});
+  };
+*/
 
 let sgn0_pty_mont_384_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
@@ -99,13 +191,59 @@ let sgn0_pty_mont_384_spec = do {
   crucible_return (crucible_term {{ (if (sign_F_p (fp_abs a)) then (zext 0b10) else zero):[64] }});
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// Proofs
+
 add_fp_noabs_ov <- admit "add_fp" add_fp_noabs_spec;
+// mul_fp_noabs_ov <- admit "mul_fp"  mul_fp_noabs_spec;
 sgn0_pty_mont_384_ov <- admit "sgn0x_pty_mont_384" sgn0_pty_mont_384_spec;
 
-blst_p1_deserialize_inf_ov <- really_verify "blst_p1_deserialize" [] blst_p1_deserialize_inf_spec;
+limbs_from_be_bytes_48_ov <- verify "limbs_from_be_bytes" [] limbs_from_be_bytes_spec48;
 
-let do_prove = true;
-POINTonE1_Uncompress_ov <- custom_verify "POINTonE1_Uncompress" (foldr concat [sqrt_fp_ovs, fp_overrides] [sgn0_pty_mont_384_ov, add_fp_noabs_ov]) POINTonE1_Uncompress_spec (do {apply_fp_rewrites; w4;});
-let do_prove = false;
+blst_p1_deserialize_inf_ov <- verify "blst_p1_deserialize" [] blst_p1_deserialize_inf_spec;
+
+print "%%% BAD0 %%%";
+POINTonE1_Uncompress_BE_BAD0_ov <- really_custom_verify "POINTonE1_Uncompress_BE"
+  (foldr concat [sqrt_fp_ovs, fp_overrides]
+         [sgn0_pty_mont_384_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov, vec_is_equal_48_ov])
+         POINTonE1_Uncompress_BE_BAD0_spec
+  (do {apply_fp_rewrites; 
+       unfolding ["fp_invariant", "vec384_abs", "vec_abs"]; // evaluate this for BLS12_381_RR
+       //unfolding ["uncompress_E1_y2", "uncompress_E1_x", "/\\", "Fp", "prime_field_integer", "OS2IP"];
+       // print_clean_goal;
+       w4_unint_z3 fp_unints;});
+
+
+
+print "%%% BAD1 %%%";
+POINTonE1_Uncompress_BE_BAD1_ov <- really_custom_verify "POINTonE1_Uncompress_BE"
+  (foldr concat [sqrt_fp_ovs, fp_overrides]
+         [sgn0_pty_mont_384_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov
+         , vec_is_equal_48_ov, mul_fp_noabs_ov])
+         POINTonE1_Uncompress_BE_BAD1_spec
+  (do {apply_fp_rewrites; 
+       unfolding ["fp_invariant", "vec384_abs", "vec_abs"]; // evaluate this for BLS12_381_RR
+       unfolding ["uncompress_E1_y2", "uncompress_E1_x", "/\\", "Fp", "prime_field_integer"];
+       print_clean_goal;
+       w4_unint_z3 fp_unints;});
+
+// The OK case, proper compressed input
+POINTonE1_Uncompress_BE_OK_ov <- really_custom_verify "POINTonE1_Uncompress_BE"
+  (foldr concat [sqrt_fp_ovs, fp_overrides]
+         [sgn0_pty_mont_384_ov, add_fp_noabs_ov])
+         POINTonE1_Uncompress_BE_OK_spec
+  (do {apply_fp_rewrites; 
+       unfolding ["fp_invariant", "vec384_abs", "vec_abs"]; // evaluate this for BLS12_381_RR
+       simplify (cryptol_ss());
+       print_goal;
+       w4_unint_z3 fp_unints;});
+
+
+POINTonE1_Uncompress_OK_ov <- really_custom_verify "POINTonE1_Uncompress" (foldr concat [sqrt_fp_ovs, fp_overrides] [sgn0_pty_mont_384_ov, add_fp_noabs_ov]) POINTonE1_Uncompress_OK_spec
+(do {apply_fp_rewrites; 
+    unfolding ["fp_invariant", "vec384_abs", "vec_abs"]; // evaluate this for BLS12_381_RR
+    simplify (cryptol_ss());
+    print_goal;
+    w4_unint_z3 fp_unints;});
 
 blst_p2_deserialize_ov <- verify "blst_p2_deserialize" [] blst_p2_deserialize_spec;

@@ -1,0 +1,19 @@
+module implementation::serialization where
+
+import Parameters (p, E, E', t_Fp, to_Fp, t_Fp_2, Fp, Fp_2)
+import ShortWeierstrassCurve as EC
+import rfc8017
+import Maybe
+import FieldExtras (F_expt)
+import BLSFieldExtras
+
+uncompress_E1_x: [48][8] -> [384]
+uncompress_E1_x s_string = x where
+    s_string' = [(s_string@0) && 0x1F] # tail s_string
+    // Step 6
+    x = OS2IP(s_string')
+
+uncompress_E1_y2: [48][8] -> t_Fp
+uncompress_E1_y2 s_string = y2 where
+    x = to_Fp (uncompress_E1_x s_string)
+    y2 = Fp.add (Fp.mul (x, Fp.sq x), 4)
