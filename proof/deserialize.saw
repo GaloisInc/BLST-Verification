@@ -7,13 +7,14 @@ include "helpers.saw";
 include "list_utils.saw";
 include "types.saw";
 m <- llvm_load_module "../build/llvm/libblst.a.bc";
-let do_prove = false;
+let do_prove=false;
 include "proof-helpers.saw";
 //include "x86.saw";
 
 include "fp_overrides.saw";
 include "vect.saw";
 include "exp.saw";
+let do_prove=true;
 
 // include "blst_error.saw"; ... missing?
 let BLST_SUCCESS = 0;
@@ -80,7 +81,7 @@ let POINTonE1_Uncompress_BE_OK_spec = do {
   crucible_precond {{ is_square_fp (uncompress_E1_y2 inp) }};
   crucible_execute_func [out_ptr, in_ptr];
   crucible_points_to out_ptr (crucible_term {{
-     (fp_rep (uncompress_E1_x inp), fp_rep (sqrt_fp (uncompress_E1_y2 inp))) }}) ;
+     (fp_rep (uncompress_E1_x_fp inp), fp_rep (sqrt_fp (uncompress_E1_y2 inp))) }}) ;
   // TODO: return value
 };
 
@@ -208,11 +209,14 @@ add_rep_invariant_thm <- really_prove_cryptol
  {{ \ x -> fp_invariant x == (x == add_rep x) }}
  [];
 
+let POINTonE1_Uncompress_BE_overrides = 
+   foldr concat [sqrt_fp_ovs, fp_overrides]
+         [sgn0_pty_mont_384_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov, vec_is_equal_48_vec_ov];
+         
 print "%%% BAD0 %%%";
-POINTonE1_Uncompress_BE_BAD0_ov <- custom_verify "POINTonE1_Uncompress_BE"
-  (foldr concat [sqrt_fp_ovs, fp_overrides]
-         [sgn0_pty_mont_384_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov, vec_is_equal_48_vec_ov])
-         POINTonE1_Uncompress_BE_BAD0_spec
+POINTonE1_Uncompress_BE_BAD0_ov <- really_custom_verify "POINTonE1_Uncompress_BE"
+  POINTonE1_Uncompress_BE_overrides
+  POINTonE1_Uncompress_BE_BAD0_spec
   (do {apply_fp_rewrites; 
        unfolding ["fp_invariant", "vec384_abs", "vec_abs"]; // evaluate this for BLS12_381_RR
        //unfolding ["uncompress_E1_y2", "uncompress_E1_x", "/\\", "Fp", "prime_field_integer", "OS2IP"];
@@ -267,11 +271,9 @@ fp_invariant_B_E1_thm <- prove_cryptol
       == True }}) [];
 
 print "%%% BAD1 %%%";
-POINTonE1_Uncompress_BE_BAD1_ov <- really_custom_verify "POINTonE1_Uncompress_BE"
-  (foldr concat [sqrt_fp_ovs, fp_overrides]
-         [sgn0_pty_mont_384_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov, vec_is_equal_48_ov])
-         // , mul_fp_noabs_ov -- omit for now
-         POINTonE1_Uncompress_BE_BAD1_spec
+POINTonE1_Uncompress_BE_BAD1_ov <- custom_verify "POINTonE1_Uncompress_BE"
+  POINTonE1_Uncompress_BE_overrides
+  POINTonE1_Uncompress_BE_BAD1_spec
   (do {apply_fp_rewrites; 
        simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm, fp_abs_B_E1_thm, fp_invariant_B_E1_thm] empty_ss);
        simplify (addsimp add_rep_invariant_thm empty_ss); // only after applying fp_inv_RR_thm!
@@ -281,16 +283,17 @@ POINTonE1_Uncompress_BE_BAD1_ov <- really_custom_verify "POINTonE1_Uncompress_BE
        w4_unint_z3 fp_unints;});
 
 // The OK case, proper compressed input
-POINTonE1_Uncompress_BE_OK_ov <- really_custom_verify "POINTonE1_Uncompress_BE"
-  (foldr concat [sqrt_fp_ovs, fp_overrides]
-         [sgn0_pty_mont_384_ov, add_fp_noabs_ov])
-         POINTonE1_Uncompress_BE_OK_spec
-  (do {apply_fp_rewrites; 
-      simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm, fp_abs_B_E1_thm, fp_invariant_B_E1_thm] empty_ss);
+print "%%% OK %%%";
+POINTonE1_Uncompress_BE_OK_ov <- custom_verify "POINTonE1_Uncompress_BE"
+  POINTonE1_Uncompress_BE_overrides
+  POINTonE1_Uncompress_BE_OK_spec
+  do { apply_fp_rewrites; 
+       simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm, fp_abs_B_E1_thm, fp_invariant_B_E1_thm] empty_ss);
        simplify (addsimp add_rep_invariant_thm empty_ss); // only after applying fp_inv_RR_thm!
-       unfolding ["apply", "OS2IP", "uncompress_E1_y2", "uncompress_E1_x", "/\\", "Fp", "prime_field_integer"];
-       print_clean_goal;
-       w4_unint_z3 fp_unints;});
+       //unfolding ["apply", "OS2IP", "uncompress_E1_y2", "uncompress_E1_x", "uncompress_E1_x_fp"
+       //          , "/\\", "Fp", "prime_field_integer"];
+       //print_clean_goal;
+       w4_unint_z3 fp_unints;};
 
 // Now Uncompress
 

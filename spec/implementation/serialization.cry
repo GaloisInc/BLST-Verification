@@ -13,7 +13,11 @@ uncompress_E1_x: [48][8] -> [384]
 uncompress_E1_x s_string = x where
     s_string' = [(s_string@0) && 0x1F] # tail s_string
     // Step 6
-    x = OS2IP(s_string')
+    x = join s_string' // OS2IP(s_string')
+
+uncompress_E1_x_fp: [48][8] -> t_Fp
+uncompress_E1_x_fp s_string =
+    Fp.mul (fp_abs (vec384_rep (uncompress_E1_x s_string)), montgomery_factor_p)
 
 uncompress_E1_y2: [48][8] -> t_Fp
 uncompress_E1_y2 s_string = y2 where
