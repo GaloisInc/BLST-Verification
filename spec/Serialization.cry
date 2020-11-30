@@ -13,6 +13,7 @@ import ShortWeierstrassCurve as EC
 import rfc8017
 import Maybe
 import FieldExtras (F_expt)
+import BLSFieldExtras
 
 //// Serialization (with compression)
 
@@ -59,14 +60,14 @@ serialize_E2 P = x_string_E2 P || ([m_byte]# zero) where
 // TODO: These definitions are copied from hash-to-curve, but there they are in a parameter definiton
 // and are not in scope for importation here.
 // TODO: Those also appear in BLSFieldExtras.cry
-
+/*
 is_square_F_p: t_Fp -> Bit
 is_square_F_p x =  y == 0 \/ y == 1 where
     y = F_expt`{n=width p} Fp x `((p-1)/2)
 
 sqrt_F_p: t_Fp -> t_Fp
 sqrt_F_p x = F_expt`{n=width p} Fp x `((p+1)/4) // the "= 3 (mod 4)" variant
-
+*/
 type q = p*p
 
 is_square_F_p_2: t_Fp_2 -> Bit
@@ -120,12 +121,12 @@ deserialize_E1 s_string = ret where
     x = OS2IP(s_string')
     //Step 7 (on curve E)
     y2 = Fp.add (Fp.mul (x, Fp.sq x), 4)
-    y = sqrt_F_p y2
+    y = sqrt_fp y2
     Y_bit = sign_F_p y
     // Steps 2, 4, 8
     ret = if C_bit == False then nothing // Error, from Step 2; TODO what if I_bit is set? We could still return inf
            | I_bit then (if s_string' == zero then just (EC::point_O E) else nothing) // Step 4
-           | ~ (is_square_F_p y2) then nothing // from Step 7
+           | ~ (is_square_fp y2) then nothing // from Step 7
            | S_bit == Y_bit then just (x,y)
           else just (x, Fp.neg y)
 
@@ -145,12 +146,12 @@ uncompress_E1 s_string = ret where
     // TODO here the C implementation checks that x is smaller than the modulus
     //Step 7 (on curve E)
     y2 = Fp.add (Fp.mul (x, Fp.sq x), 4)
-    y = sqrt_F_p y2
+    y = sqrt_fp y2
     Y_bit = sign_F_p y
     // Steps 2, 4, 8
     ret = if C_bit == False then nothing
            | I_bit then (if s_string' == zero then just (EC::point_O E) else nothing)
-           | ~ (is_square_F_p y2) then nothing
+           | ~ (is_square_fp y2) then nothing
            | S_bit == Y_bit then just (x,y)
           else just (x, Fp.neg y)
 
