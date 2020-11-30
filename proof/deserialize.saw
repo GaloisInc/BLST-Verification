@@ -166,6 +166,7 @@ let add_fp_noabs_spec = do {
   //  {{ if vec384_abs a < `p then a else vec384_rep ((vec384_abs a) - `p) }}) ;
 };
 
+
 /* ... Better, I think, do do this with rewriting of the normal postcondition 
 // The first call to mul_fp in POINTonE1_Uncompress_BE is intended to move into
 // the Montgomery representation, so the spec is a bit different from normal
@@ -202,10 +203,15 @@ limbs_from_be_bytes_48_ov <- verify "limbs_from_be_bytes" [] limbs_from_be_bytes
 
 blst_p1_deserialize_inf_ov <- verify "blst_p1_deserialize" [] blst_p1_deserialize_inf_spec;
 
+add_rep_invariant_thm <- really_prove_cryptol
+//  {{ \ x -> fp_invariant x == if x == add_rep x then True else apply fp_invariant x }}
+ {{ \ x -> fp_invariant x == (x == add_rep x) }}
+ [];
+
 print "%%% BAD0 %%%";
-POINTonE1_Uncompress_BE_BAD0_ov <- really_custom_verify "POINTonE1_Uncompress_BE"
+POINTonE1_Uncompress_BE_BAD0_ov <- custom_verify "POINTonE1_Uncompress_BE"
   (foldr concat [sqrt_fp_ovs, fp_overrides]
-         [sgn0_pty_mont_384_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov, vec_is_equal_48_ov])
+         [sgn0_pty_mont_384_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov, vec_is_equal_48_vec_ov])
          POINTonE1_Uncompress_BE_BAD0_spec
   (do {apply_fp_rewrites; 
        unfolding ["fp_invariant", "vec384_abs", "vec_abs"]; // evaluate this for BLS12_381_RR
@@ -213,18 +219,65 @@ POINTonE1_Uncompress_BE_BAD0_ov <- really_custom_verify "POINTonE1_Uncompress_BE
        // print_clean_goal;
        w4_unint_z3 fp_unints;});
 
+// We have a conditional property
+//  {{ \x -> fp_invariant x ==> Fp.mul (fp_abs x,  montgomery_factor_p) == to_Fp (vec384_abs x) }}
+// expressed as this conditional rewrite rule:
+mul_to_fp_thm <- prove_cryptol
+  {{ \x -> Fp.mul (fp_abs x, montgomery_factor_p) ==
+           if fp_invariant x
+           then to_Fp (vec384_abs x)
+           else apply Fp.mul (fp_abs x,  montgomery_factor_p) }}
+   [] ;
+// print mul_to_fp_thm;
 
+// Cryptol can evaluate:fp_rep (montgomery_factor_p)
+// [0xf4df1f341c341746, 0x0a76e6a609d104f1, 0x8de5476c4c95b6d5,
+//  0x67eb88a9939d83c0, 0x9a793e85b519952d, 0x11988fe592cae3aa]
+
+fp_abs_RR_thm <- prove_cryptol
+ (rewrite (cryptol_ss ())
+  {{ fp_abs [ 0xf4df1f341c341746, 0x0a76e6a609d104f1, 0x8de5476c4c95b6d5
+            , 0x67eb88a9939d83c0, 0x9a793e85b519952d, 0x11988fe592cae3aa]
+      == montgomery_factor_p }})
+  [] ;
+
+fp_inv_RR_thm <- prove_cryptol
+  (rewrite (cryptol_ss ())
+   {{ fp_invariant [ 0xf4df1f341c341746, 0x0a76e6a609d104f1, 0x8de5476c4c95b6d5
+                   , 0x67eb88a9939d83c0, 0x9a793e85b519952d, 0x11988fe592cae3aa]
+       == True }})
+  [] ;
+
+// print fp_inv_RR_thm;
+// Cryptol laso can product the value of `B_E1`:
+//implementation::Field> fp_rep (to_Fp 4)
+//[0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f,
+// 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e]
+
+fp_abs_B_E1_thm <- prove_cryptol
+  (rewrite (cryptol_ss ())
+   {{ fp_abs [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+             , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e]
+      == to_Fp 0x4 }}) [];
+
+fp_invariant_B_E1_thm <- prove_cryptol
+  (rewrite (cryptol_ss ())
+   {{ fp_invariant [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+                   , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e]
+      == True }}) [];
 
 print "%%% BAD1 %%%";
 POINTonE1_Uncompress_BE_BAD1_ov <- really_custom_verify "POINTonE1_Uncompress_BE"
   (foldr concat [sqrt_fp_ovs, fp_overrides]
-         [sgn0_pty_mont_384_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov
-         , vec_is_equal_48_ov, mul_fp_noabs_ov])
+         [sgn0_pty_mont_384_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov, vec_is_equal_48_ov])
+         // , mul_fp_noabs_ov -- omit for now
          POINTonE1_Uncompress_BE_BAD1_spec
   (do {apply_fp_rewrites; 
-       unfolding ["fp_invariant", "vec384_abs", "vec_abs"]; // evaluate this for BLS12_381_RR
-       unfolding ["uncompress_E1_y2", "uncompress_E1_x", "/\\", "Fp", "prime_field_integer"];
-       print_clean_goal;
+       simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm, fp_abs_B_E1_thm, fp_invariant_B_E1_thm] empty_ss);
+       simplify (addsimp add_rep_invariant_thm empty_ss); // only after applying fp_inv_RR_thm!
+       // unfolding ["fp_invariant", "vec384_abs", "vec_abs"]; // evaluate this for BLS12_381_RR
+       // unfolding ["apply", "OS2IP", "uncompress_E1_y2", "uncompress_E1_x", "/\\", "Fp", "prime_field_integer"];
+       //print_clean_goal;
        w4_unint_z3 fp_unints;});
 
 // The OK case, proper compressed input
@@ -233,11 +286,13 @@ POINTonE1_Uncompress_BE_OK_ov <- really_custom_verify "POINTonE1_Uncompress_BE"
          [sgn0_pty_mont_384_ov, add_fp_noabs_ov])
          POINTonE1_Uncompress_BE_OK_spec
   (do {apply_fp_rewrites; 
-       unfolding ["fp_invariant", "vec384_abs", "vec_abs"]; // evaluate this for BLS12_381_RR
-       simplify (cryptol_ss());
-       print_goal;
+      simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm, fp_abs_B_E1_thm, fp_invariant_B_E1_thm] empty_ss);
+       simplify (addsimp add_rep_invariant_thm empty_ss); // only after applying fp_inv_RR_thm!
+       unfolding ["apply", "OS2IP", "uncompress_E1_y2", "uncompress_E1_x", "/\\", "Fp", "prime_field_integer"];
+       print_clean_goal;
        w4_unint_z3 fp_unints;});
 
+// Now Uncompress
 
 POINTonE1_Uncompress_OK_ov <- really_custom_verify "POINTonE1_Uncompress" (foldr concat [sqrt_fp_ovs, fp_overrides] [sgn0_pty_mont_384_ov, add_fp_noabs_ov]) POINTonE1_Uncompress_OK_spec
 (do {apply_fp_rewrites; 
