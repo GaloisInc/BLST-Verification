@@ -6,6 +6,7 @@ import rfc8017
 import Maybe
 import FieldExtras (F_expt)
 import BLSFieldExtras
+import Serialization
 import implementation::Types
 import implementation::Field
 
@@ -25,3 +26,32 @@ uncompress_E1_y2 s_string = y2 where
     x = Fp.mul ( fp_abs (vec384_rep (uncompress_E1_x s_string))
                , montgomery_factor_p) // we will prove this = to_Fp ...
     y2 = Fp.add (Fp.mul (Fp.sq x, x), 4)
+
+uncompress_E1_y: [48][8] -> t_Fp
+uncompress_E1_y s_string = sqrt_fp (uncompress_E1_y2 s_string)
+
+/*
+uncompress_E1_imp: [48][4] -> Maybe (EC::AffinePoint t_Fp)
+uncompress_E1_imp s_string = ret where
+    m_byte = (s_string@0) && 0xE0 // three highest bits
+    C_bit = m_byte @ 0
+    I_bit = m_byte @ 1
+    S_bit = m_byte @ 2
+    x = uncompress_E1_x_fp s_string
+    y2 = uncompress_E1_y2 s_string
+    y = sqrt_fp y2
+    Y_bit = sign_F_p y
+    ret = if (m_byte == 0x20 ) || (m_byte == 0x60) || (m_byte == 0xE0) then nothing
+           | ~ C_bit then nothing
+           | I_bit then (if s_string' == zero then just (EC::point_O E) else nothing)
+           | ~ (is_square_fp y2) then nothing
+           | S_bit == Y_bit then just (x,y)
+          else just (x, Fp.neg y)
+*/
+
+uncompress_E1_OK: [48][8] -> EC::AffinePoint t_Fp
+uncompress_E1_OK s_string = if S_bit == Y_bit then (x,y) else (x, Fp.neg y) where
+    x = uncompress_E1_x_fp s_string
+    y = uncompress_E1_y s_string
+    S_bit = (s_string@0)@2
+    Y_bit = sign_F_p y
