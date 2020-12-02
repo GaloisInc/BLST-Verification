@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-// Overrides needed for the elliptic curve arithmetic operarations
+// Overrides needed for the elliptic curve arithmetic operations
 // These are the basic field operations for Fp or Fp2.
-// Here, we assume the specs, but eventually we will prove them 
+// Here, we assume the specs, but eventually we will prove them
 //
 
 /* for X in {fp, fp2}:
@@ -302,4 +302,43 @@ let fp_unints = ["fp_abs", "fp_invariant", "fp_rep", "fp_normalize", "Fp"
 // Fp_2 operations
 //
 
-// TODO.  after we see the Fp operations work.
+// abs and rep theorems, good rewrites, will hold in the `prime_field` model but not the others
+fp2_rep_thms <- for
+  [ {{ \x -> fp2_invariant (fp2_rep x) == True }}
+  , {{ \x -> fp2_abs (fp2_rep x) == x }}
+  // TODO: fp2 version needed?
+  //, {{ \x -> fp_rep (fp_abs x) == if fp_invariant x then x else fp_normalize x}}
+  ] admit_cryptol;
+
+// TODO: will we need the vector restiching thing?
+
+// TODO: hoisting if for rewrites to match
+
+let fp2_simpset = addsimps fp_rep_thms (cryptol_ss ());
+
+let apply_fp2_rewrites = simplify fp2_simpset;
+
+// TODO: do we need other algebraic rewrite rules?
+
+let fp2_binop_ovs name op = do {
+  let plain_spec = binop_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
+  plain_ov <- admit name plain_spec;
+
+  let alias_1_2_spec = binop_alias_1_2_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
+  alias_1_2_ov <- admit name alias_1_2_spec;
+
+  return [plain_ov, alias_1_2_ov];
+  };
+
+add_fp2_ovs <- fp2_binop_ovs "add_fp2" {{Fp_2.add}} ;
+sub_fp2_ovs <- fp2_binop_ovs "sub_fp2" {{Fp_2.sub}} ;
+mul_fp2_ovs <- fp2_binop_ovs "mul_fp2" {{Fp_2.mul}} ;
+
+let sqr_fp2_spec =
+  unop_spec "sqr_fp2" vec384x_type {{ fp2_invariant }} {{fp2_rep}} {{fp2_abs}} {{Fp_2.sq}};
+sqr_fp2_ov <- admit "sqr_fp2" sqr_fp2_spec;
+let sqr_fp2_alias_1_2_spec =
+  unop_alias_1_2_spec "sqr_fp2" vec384x_type {{ fp2_invariant }} {{fp2_rep}} {{fp2_abs}} {{Fp_2.sq}};
+sqr_fp2_alias_1_2_ov <- admit "sqr_fp2" sqr_fp2_alias_1_2_spec;
+
+let fp2_overrides = foldr concat [add_fp2_ovs, sub_fp2_ovs, mul_fp2_ovs] [sqr_fp2_ov, sqr_fp2_alias_1_2_ov];

@@ -1,0 +1,42 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+import "../spec/ShortWeierstrassCurve.cry";
+import "../spec/implementation/Types.cry";
+import "../spec/implementation/CurveOperation.cry";
+
+let POINTonE2_add_spec = do {
+  out_ptr <- crucible_alloc POINTonE2_type;
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_invariant p2 }};
+  crucible_execute_func [out_ptr, p1_ptr, p2_ptr];
+  if use_abs_method
+  then do {
+    out <- crucible_fresh_var "new_POINTonE2_add_out" POINTonE2_type;
+    crucible_points_to out_ptr (crucible_term out);
+    crucible_postcond {{ POINTonE2_invariant out }};
+    crucible_postcond {{ POINTonE2_abs out == point_add Fp (POINTonE2_abs p1) (POINTonE2_abs p2)}};
+    }
+  else
+    crucible_points_to out_ptr (crucible_term  {{ POINTonE2_rep (point_add Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2)) }} );
+};
+
+POINTonE2_add_ov <- really_custom_verify "POINTonE2_add"
+                      (concat vec_fp2_overrides fp2_overrides)
+                      POINTonE2_add_spec
+                      (do {
+                        apply_fp2_rewrites;
+                        print_goal;
+                        goal_eval_unint fp2_unints;
+                        print_goal;
+                        w4_unint_z3 fp2_unints;
+                      });
+                      // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
+                      //(do {apply_fp_rewrites; goal_eval_unint fp_unints;
+                      //// unfolding ["Fp.is_equal"];
+                      //apply_fp_rewrites;
+                      //unfolding ["Fp"];
+                      //w4_unint_z3 fp_unints;});
