@@ -105,7 +105,6 @@ let vec_is_zero_fp2_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
   crucible_precond {{ fp2_invariant a }};
   crucible_execute_func [a_ptr, crucible_term {{ (96:Size_t) }}]; // Non-portable
-  // crucible_return (crucible_term {{ if fp_equal_rep a Fp_rep.field_zero then 1 else (0:Limb) }});
   crucible_return (crucible_term {{ if (fp2_abs a) ==  Fp_2.field_zero then 1 else (0:Limb) }});
   };
 
@@ -173,4 +172,4 @@ let vec_overrides = concat [ vec_is_zero_fp_ov, vec_is_zero_2fp_ov
 
 vec_select_POINTonE2_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_spec 288 POINTonE2_type);
 vec_select_alias_1_3_POINTonE2_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_alias_1_3_spec 288 POINTonE2_type);
-let vec_fp2_overrides = [vec_is_zero_fp_ov, vec_is_zero_2fp_ov, vec_select_POINTonE2_ov, vec_select_alias_1_3_POINTonE2_ov];
+let vec_fp2_overrides = [vec_is_zero_fp2_ov, vec_select_POINTonE2_ov, vec_select_alias_1_3_POINTonE2_ov];

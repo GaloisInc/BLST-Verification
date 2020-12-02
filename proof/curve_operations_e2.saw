@@ -25,18 +25,15 @@ let POINTonE2_add_spec = do {
 };
 
 POINTonE2_add_ov <- really_custom_verify "POINTonE2_add"
-                      (concat vec_fp2_overrides fp2_overrides)
+                      (foldr concat [vec_fp2_overrides, fp2_overrides] [vec_is_zero_fp2_ov])
                       POINTonE2_add_spec
                       (do {
                         apply_fp2_rewrites; // TODO: what does this do here? goal_eval shouldn't disable any rewrites since stuff is uninterpreted. Yet more goals are discharged.
+                        //unfolding ["point_add"];
+                        print_goal;
                         goal_eval_unint fp2_unints;
                         apply_fp2_rewrites;
-                        print_goal;
+                        print_goal; // TODO: there is some "unripping" to do to understand what is going on here...
+                        unfolding ["Fp_2"];
                         w4_unint_z3 fp2_unints;
                       });
-                      // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
-                      //(do {apply_fp_rewrites; goal_eval_unint fp_unints;
-                      //// unfolding ["Fp.is_equal"];
-                      //apply_fp_rewrites;
-                      //unfolding ["Fp"];
-                      //w4_unint_z3 fp_unints;});
