@@ -310,11 +310,9 @@ fp2_rep_thms <- for
   //, {{ \x -> fp_rep (fp_abs x) == if fp_invariant x then x else fp_normalize x}}
   ] admit_cryptol;
 
-// TODO: will we need the vector restiching thing?
+// TODO: hoisting if for rewrites to match?
 
-// TODO: hoisting if for rewrites to match
-
-let fp2_simpset = addsimps fp_rep_thms (cryptol_ss ());
+let fp2_simpset = addsimps (concat fp2_rep_thms [unrip_thm]) (cryptol_ss ());
 
 let apply_fp2_rewrites = simplify fp2_simpset;
 
@@ -342,3 +340,5 @@ let sqr_fp2_alias_1_2_spec =
 sqr_fp2_alias_1_2_ov <- admit "sqr_fp2" sqr_fp2_alias_1_2_spec;
 
 let fp2_overrides = foldr concat [add_fp2_ovs, sub_fp2_ovs, mul_fp2_ovs] [sqr_fp2_ov, sqr_fp2_alias_1_2_ov];
+
+let fp2_unints = ["fp2_abs", "fp2_invariant", "fp2_rep", "Fp_2"];
