@@ -99,7 +99,7 @@ sqrt_F_p_2 x = z where
 // TODO: we need [96][8] because if the infinity bit is set, we must check all 96 bytes (except first 3 bits) are zero. We could also have a separate uncompress function.
 // the C code can take a 96 bytes array whose last 48 are unintialized
 // we deviate from the RFC: the RFC says "if the string has length...", but in the C code there's no concept of length of the string
-// TODO if I_bit is set, the C code additinally checks that the sign bit is not set, which is not required by the spec.
+
 deserialize_E1: [96][8] -> Maybe (EC::AffinePoint t_Fp)
 deserialize_E1 s_string = ret where
     // Step 1.

@@ -3,21 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-include "helpers.saw";
-include "list_utils.saw";
-include "types.saw";
-m <- llvm_load_module "../build/llvm/libblst.a.bc";
-let do_prove=false;
-include "proof-helpers.saw";
-//include "x86.saw";
-
-include "fp_overrides.saw";
-include "vect.saw";
-include "exp.saw";
-include "curve_operations.saw"; // For POINTonE1_on_curve_ov
-
-//let do_prove=true;
-
 // include "blst_error.saw"; ... missing?
 let BLST_SUCCESS = 0;
 let BLST_BAD_ENCODING = 1;
@@ -30,19 +15,18 @@ import "../Parameters.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/Maybe.cry";
 import "../spec/implementation/CurveOperation.cry";
-// import "../cryptol-specs/Common/bv.cry";
 import "../spec/implementation/serialization.cry";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
 
+// The main specification here is for blst_p1_uncompress
+
 let blst_p1_uncompress_OK_spec = do {
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE1_Uncompress_in" (llvm_array 48 (llvm_int 8));
   crucible_precond {{ uncompress_E1_imp inp != nothing }};
-  // crucible_precond {{ (inp@0)@1 == False }}; // proof debugging
-  // crucible_precond {{ (inp@0)@1 == True }}; // proof debugging
   crucible_execute_func [out_ptr, in_ptr];
 
   ret <- crucible_fresh_var "ret" (llvm_int 32);
@@ -51,26 +35,11 @@ let blst_p1_uncompress_OK_spec = do {
     POINTonE1_affine_rep (if (inp@0)@1 // infinity bit // was uncompress_E1_imp inp == just (point_O E)
                           then point_O E
                           else uncompress_E1_OK inp) }});
-  // new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE1_affine");
-  // crucible_points_to out_ptr (crucible_term new_out );
-  // crucible_postcond {{ uncompress_E1_imp inp == just (POINTonE1_affine_abs new_out) }};
-  
+  // the return still might be BLST_POINT_NOT_IN_GROUP rather than BLST_SUCCESS
 };
 
-
-let blst_p1_uncompress_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
-  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE1_Uncompress_in" (llvm_array 48 (llvm_int 8));
-  crucible_execute_func [out_ptr, in_ptr];
-
-  ret <- crucible_fresh_var "ret" (llvm_int 32);
-  crucible_return (crucible_term ret);
-  // new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE1_affine");
-  // crucible_conditional_points_to {{ ret == `BLST_SUCCESS }} out_ptr (crucible_term new_out);
-  crucible_postcond {{ (ret != `BLST_SUCCESS) ==
-      (uncompress_E1_imp inp == nothing \/ inp == [0x80]#zero \/ inp == [0xa0]#zero) }}; // the (0, +/- 2) cases
-
-};
+// Tyhe proof is a compostional verification, in 3 stages: first proofs about POINTonE1_Uncompress_BE,
+// themn proofs about  POINTonE1_Uncompress, and finally the proof of blst_p1_uncompress.
 
 // POINTonE1_Uncompress_BE has two different error conditions, which we deal with by having
 // three different sopecifications and overrides, one for each error and one for success.
@@ -177,7 +146,8 @@ let POINTonE1_Uncompress_BAD1_spec = do {
   crucible_postcond {{ ret == `BLST_BAD_ENCODING }};
   };
 
-// ... Deserialize
+// ... Deserialize (out of scope; the BLS ciphersuites use compression)
+// but some analysis is included here in case we want to include these functions later.
 
 let POINTonE1_Deserialize_BE_BAD0_spec = do {
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
@@ -231,16 +201,6 @@ let POINTonE1_Deserialize_BE_OK_spec' = do { // For proof debugging
   // {{ w.0 ==  fp_rep (deserialize_E1_x_fp inp) }} ?
   };
 
-// Not necessary, but useful when developing a proof, to keep the SAW
-// formulas more readable.  This override also appears in keygen.saw: TODO refactor
-let limbs_from_be_bytes_spec48 = do {
-  ret_p <-crucible_alloc (llvm_array 6 limb_type);
-  (inx, in_ptr) <- ptr_to_fresh_readonly "limbs_from_be_bytes_in"
-                   (llvm_array 48 (llvm_int 8)); // "in" is a keyword
-  crucible_execute_func [ret_p, in_ptr, crucible_term {{ 48:[64] }}];
-  crucible_points_to ret_p (crucible_term {{ vec384_rep (join inx) }});
-  };
-
 // just to try:
 let blst_p1_deserialize_inf_spec = do {
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1_affine");
@@ -258,6 +218,18 @@ let blst_p1_deserialize_inf_spec = do {
   crucible_postcond {{ inp@0 && 0x40 != zero /\ ([inp@0 && 0x3F]#(tail inp)) == zero ==> ret == `BLST_SUCCESS /\ new_out.0 == vec384_rep (from_Fp (EC::point_O E).0) /\ new_out.1 == vec384_rep (from_Fp (EC::point_O E).1) }}; // TODO spec says 0x1F and not 0x3F
   crucible_return (crucible_term ret);
 };
+
+// ... other overrides used in the proofs:
+
+// Not necessary, but useful when developing a proof, to keep the SAW
+// formulas more readable.  This override also appears in keygen.saw: TODO refactor
+let limbs_from_be_bytes_spec48 = do {
+  ret_p <-crucible_alloc (llvm_array 6 limb_type);
+  (inx, in_ptr) <- ptr_to_fresh_readonly "limbs_from_be_bytes_in"
+                   (llvm_array 48 (llvm_int 8)); // "in" is a keyword
+  crucible_execute_func [ret_p, in_ptr, crucible_term {{ 48:[64] }}];
+  crucible_points_to ret_p (crucible_term {{ vec384_rep (join inx) }});
+  };
 
 let blst_p2_deserialize_spec = do {
   out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
@@ -286,11 +258,9 @@ let add_fp_noabs_spec = do {
 
 let sgn0_pty_mont_384_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  // TODO: p and n0 should be appropriate constants
-  (p, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  n0 <- crucible_fresh_var "sgn0_pty_mont_384_n0" limb_type;
-
-  crucible_execute_func [a_ptr, p_ptr, crucible_term n0];
+  (b, b_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_precond {{ b == vec384_rep `p }};
+  crucible_execute_func [a_ptr, b_ptr, crucible_term {{0x89f3fffcfffcfffd}}];
   return_value <- crucible_fresh_var "return_value" limb_type;
   // TODO: Not sure what the return value should be. From what follows in the C code, it seems that the sign bit is the second bit of the return value.
   crucible_return (crucible_term {{ (if (sign_F_p (fp_abs a)) then (zext 0b10) else zero):[64] }});
@@ -298,6 +268,7 @@ let sgn0_pty_mont_384_spec = do {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Proofs
+////////////////////////////////////////////////////////////////////////////////
 
 // Starting with proofs that the as-implemented algorithm matches the reference specification
 // as-implemented has an additional check
@@ -362,14 +333,14 @@ add_rep_invariant_thm <- prove_cryptol
  {{ \ x -> fp_invariant x == (x == add_rep x) }}
  [];
 
-let overrides_for_POINTonE1_Uncompress_BE = 
+let overrides_for_POINTonE1_Uncompress_BE =
    foldr concat [sqrt_fp_ovs, fp_overrides]
          [sgn0_pty_mont_384_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov, vec_is_equal_48_vec_ov];
-         
+
 POINTonE1_Uncompress_BE_BAD0_ov <- custom_verify "POINTonE1_Uncompress_BE"
   overrides_for_POINTonE1_Uncompress_BE
   POINTonE1_Uncompress_BE_BAD0_spec
-  do { apply_fp_rewrites; 
+  do { apply_fp_rewrites;
        unfolding ["fp_invariant", "vec384_abs", "vec_abs"]; // evaluate this for BLS12_381_RR
        w4_unint_z3 fp_unints;};
 
@@ -412,7 +383,7 @@ fp_invariant_B_E1_thm <- prove_cryptol
 POINTonE1_Uncompress_BE_BAD1_ov <- custom_verify "POINTonE1_Uncompress_BE"
   overrides_for_POINTonE1_Uncompress_BE
   POINTonE1_Uncompress_BE_BAD1_spec
-  do { apply_fp_rewrites; 
+  do { apply_fp_rewrites;
        simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm, fp_abs_B_E1_thm, fp_invariant_B_E1_thm] empty_ss);
        simplify (addsimp add_rep_invariant_thm empty_ss); // only after applying fp_inv_RR_thm!
        w4_unint_z3 fp_unints;};
@@ -421,7 +392,7 @@ POINTonE1_Uncompress_BE_BAD1_ov <- custom_verify "POINTonE1_Uncompress_BE"
 POINTonE1_Uncompress_BE_OK_ov <- custom_verify "POINTonE1_Uncompress_BE"
   overrides_for_POINTonE1_Uncompress_BE
   POINTonE1_Uncompress_BE_OK_spec
-  do { apply_fp_rewrites; 
+  do { apply_fp_rewrites;
        simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm, fp_abs_B_E1_thm, fp_invariant_B_E1_thm] empty_ss);
        simplify (addsimp add_rep_invariant_thm empty_ss); // only after applying fp_inv_RR_thm!
        w4_unint_z3 fp_unints;};
@@ -464,69 +435,27 @@ POINTonE1_Uncompress_BAD1_ov <- custom_verify
                         fp_unints);};
 
 
-// blst_p1_uncompress
+// Main result: blst_p1_uncompress
 
-point_O_expansion <- prove_cryptol
-  {{ point_O E == (zero, zero) }}
-  [];
-
-point_O_rep <- really_prove_cryptol
+point_O_rep <- prove_cryptol
   {{ POINTonE1_affine_rep (point_O E) == zero }}
   [];
 
-hoist_POINTonE1_affine_rep <- really_prove_cryptol
+hoist_POINTonE1_affine_rep <- prove_cryptol
   (rewrite (cryptol_ss())
     {{ \c p1 p2 -> POINTonE1_affine_rep (if c then p1 else p2) ==
                    if c then POINTonE1_affine_rep p1 else POINTonE1_affine_rep p2 }})
   ["POINTonE1_affine_rep"];
 
-/*
-blst_p1_uncompress_OK_ov <- really_custom_verify "blst_p1_uncompress"
-   [POINTonE1_Uncompress_OK_ov, POINTonE1_Uncompress_BAD_ov, POINTonE1_Uncompress_BAD1_ov
-  , POINTonE1_Uncompress_inf_OK_ov,  POINTonE1_Uncompress_inf_BAD_ov]
-  blst_p1_uncompress_OK_spec
-  do {
-    simplify (addsimps (concat [point_O_rep] POINTonE1_thms) empty_ss);
-    unfolding ["uncompress_E1", "uncompress_E1_imp", "uncompress_E1_x"
-              , "uncompress_E1_x_fp", "uncompress_E1_y2"
-              , "uncompress_E1_OK", "POINTonE1_affine_rep"];
-    // simplify (addsimps [point_O_expansion] fp_simpset);
-    simplify fp_simpset;
-    print_clean_goal;
-    w4_unint_z3 (concat ["sign_F_p", "sqrt_fp", "is_square_fp"] fp_unints);
-    };
-*/
-
-blst_p1_uncompress_OK_ov <- really_custom_verify "blst_p1_uncompress"
+blst_p1_uncompress_OK_ov <- custom_verify "blst_p1_uncompress"
   [ POINTonE1_Uncompress_OK_ov //, POINTonE1_Uncompress_BAD_ov, POINTonE1_Uncompress_BAD1_ov
   , POINTonE1_Uncompress_inf_OK_ov] // ,  POINTonE1_Uncompress_inf_BAD_ov]
-  // [POINTonE1_Uncompress_inf_OK_ov]
   blst_p1_uncompress_OK_spec
   do {
     unfolding ["uncompress_E1_imp", "uncompress_E1_x"];
     simplify fp_simpset;
-    //let () = run (print "%%% after unfolding");
-    print_clean_goal;
-    // debug
-    //goal_eval_unint (concat ["sign_F_p", "sqrt_fp", "is_square_fp"] fp_unints);
-    //apply_fp_rewrites;
-    //let () = run (print "%%% after  goal_eval");
-    //print_clean_goal;
     simplify (addsimps [point_O_rep, hoist_POINTonE1_affine_rep]  empty_ss);
-    let () = run (print "%%% after point_O_rep");
-    print_clean_goal;
     w4_unint_z3 (concat ["sign_F_p", "sqrt_fp", "is_square_fp"] fp_unints);
-    };
-
-blst_p1_uncompress_ov <- custom_verify "blst_p1_uncompress"
-   [POINTonE1_Uncompress_OK_ov, POINTonE1_Uncompress_BAD_ov, POINTonE1_Uncompress_BAD1_ov
-  , POINTonE1_Uncompress_inf_OK_ov,  POINTonE1_Uncompress_inf_BAD_ov]
-  blst_p1_uncompress_spec
-  do {
-    unfolding ["uncompress_E1", "uncompress_E1_imp", "uncompress_E1_x"
-              , "uncompress_E1_x_fp", "uncompress_E1_y2"];
-    print_clean_goal;
-    w4_unint_z3 (concat [ "sign_F_p", "sqrt_fp", "is_square_fp"] fp_unints);
     };
 
 // Deserialize
@@ -539,7 +468,7 @@ POINTonE1_Deserialize_BE_BAD0_ov <- custom_verify
   do {apply_fp_rewrites;
       simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm] empty_ss);
       simplify (addsimp add_rep_invariant_thm empty_ss);
-      unfolding ["POINTonE1_affine_invariant"]; // ,"Fp", "prime_field_integer"]; // proof debugging
+      unfolding ["POINTonE1_affine_invariant"];
       apply_fp_rewrites;
       (w4_unint_z3 fp_unints);};
 
@@ -554,44 +483,3 @@ POINTonE1_Deserialize_BE_BAD0a_ov <- custom_verify
       unfolding ["POINTonE1_affine_invariant"];
       apply_fp_rewrites;
       (w4_unint_z3 fp_unints);};
-
-/*
-POINTonE1_Deserialize_BE_BAD1_ov <- really_custom_verify
-  "POINTonE1_Deserialize_BE"
-  (foldr concat [fp_overrides, vec_overrides]
-         [POINTonE1_affine_on_curve_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov, vec_is_equal_48_vec_ov])
-  POINTonE1_Deserialize_BE_BAD1_spec
-  do {apply_fp_rewrites;
-      simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm] empty_ss);
-      simplify (addsimp add_rep_invariant_thm empty_ss);
-      unfolding ["POINTonE1_affine_invariant", "Fp", "prime_field_integer"]; // proof debugging
-      apply_fp_rewrites;
-      print_clean_goal;
-      (w4_unint_z3 fp_unints);};
-*/
-
-/*
-POINTonE1_Deserialize_BE_OK_ov <- custom_verify
-  "POINTonE1_Deserialize_BE"
-  (foldr concat [fp_overrides, vec_overrides]
-         [POINTonE1_affine_on_curve_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov, vec_is_equal_48_vec_ov])
-  POINTonE1_Deserialize_BE_OK_spec'
-  do {apply_fp_rewrites;
-      simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm] empty_ss);
-      simplify (addsimp add_rep_invariant_thm empty_ss);
-      // for the prrecondition on POINTonE1_affine_on_curve:
-      unfolding ["POINTonE1_affine_invariant", "Fp", "prime_field_integer"]; // proof debugging
-      apply_fp_rewrites;
-      //unfolding ["deserialize_E1_x_fp", "deserialize_E1_x", "deserialize_E1_y_fp", "deserialize_E1_y"
-      //          , "Fp", "prime_field_integer"]; 
-      //apply_fp_rewrites;
-      // unfolding ["deserialize_E1_y_fp", "deserialize_E1_y", "Fp", "prime_field_integer"];
-      print_clean_goal;
-      (w4_unint_z3 fp_unints);};
-//   w4_unint_z3 (concat ["deserialize_E1_y_fp", "deserialize_E1_x_fp"
-//                        , "is_square_fp", "deserialize_E1_x"]
-//                        fp_unints);};
-
-*/
-
-// blst_p2_deserialize_ov <- verify "blst_p2_deserialize" [] blst_p2_deserialize_spec;
