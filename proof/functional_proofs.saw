@@ -20,4 +20,4 @@ include "curve_operations.saw";
 include "ec_mult.saw";
 include "map_to_g1.saw";
 include "curve_operations_e2.saw";
-include "deserialize.saw";
+include "deserialize-p1.saw";
