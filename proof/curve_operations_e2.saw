@@ -13,27 +13,58 @@ let POINTonE2_add_spec = do {
   (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_type;
   crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_invariant p2 }};
   crucible_execute_func [out_ptr, p1_ptr, p2_ptr];
-  if use_abs_method
-  then do {
-    out <- crucible_fresh_var "new_POINTonE2_add_out" POINTonE2_type;
-    crucible_points_to out_ptr (crucible_term out);
-    crucible_postcond {{ POINTonE2_invariant out }};
-    crucible_postcond {{ POINTonE2_abs out == point_add Fp (POINTonE2_abs p1) (POINTonE2_abs p2)}};
-    }
-  else
-    crucible_points_to out_ptr (crucible_term  {{ POINTonE2_rep (point_add Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2)) }} );
+  //if use_abs_method
+  //then do {
+    //out <- crucible_fresh_var "new_POINTonE2_add_out" POINTonE2_type;
+    //crucible_points_to out_ptr (crucible_term out);
+    //crucible_postcond {{ POINTonE2_invariant out }};
+    //crucible_postcond {{ POINTonE2_abs out == point_add Fp (POINTonE2_abs p1) (POINTonE2_abs p2)}};
+    //}
+  //else
+    //crucible_points_to out_ptr (crucible_term  {{ POINTonE2_rep (point_add Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2)) }} );
+  new_out <- crucible_fresh_var "new_POINTonE2_add_out" POINTonE2_type;
+  crucible_points_to out_ptr (crucible_term  new_out);
 };
 
-POINTonE2_add_ov <- really_custom_verify "POINTonE2_add"
-                      (foldr concat [vec_fp2_overrides, fp2_overrides] [vec_is_zero_fp2_ov])
-                      POINTonE2_add_spec
-                      (do {
-                        apply_fp2_rewrites; // TODO: what does this do here? goal_eval shouldn't disable any rewrites since stuff is uninterpreted. Yet more goals are discharged.
-                        //unfolding ["point_add"];
-                        print_goal;
-                        goal_eval_unint fp2_unints;
-                        apply_fp2_rewrites;
-                        print_goal; // TODO: there is some "unripping" to do to understand what is going on here...
-                        unfolding ["Fp_2"];
-                        w4_unint_z3 fp2_unints;
-                      });
+enable_experimental;
+
+POINTonE2_add_ov <- crucible_llvm_compositional_extract m
+  "POINTonE2_add"
+  "POINTonE2_add_term"
+  (foldr concat [vec_fp2_overrides, fp2_overrides] [])
+  true // TODO: what is this? path satisfiability checking? if so, what does it do?
+  POINTonE2_add_spec
+              (do {
+                apply_fp2_rewrites; // TODO: what does this do here? goal_eval shouldn't disable any rewrites since stuff is uninterpreted. Yet more goals are discharged.
+                print_goal;
+                goal_eval_unint fp2_unints;
+                apply_fp2_rewrites;
+                unfolding ["Fp_2"];
+                print_goal; // TODO: there is some "unripping" to do to understand what is going on here...
+                w4_unint_z3 fp2_unints;
+              });
+
+let {{ prop p1 p2 = POINTonE2_add_term p2 p1 == (POINTonE2_rep (point_add Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2))) }};
+let add_unfolded = (unfold_term ["POINTonE2_add_term"] {{POINTonE2_add_term}});
+let add_spec_unfolded = (unfold_term ["point_add"] {{point_add Fp_2}});
+let prop_prime = rewrite fp2_simpset (unfold_term ["POINTonE2_rep","POINTonE1_abs","select","prop","POINTonE2_add_term","point_add"] {{prop}});
+let test = (rewrite (addsimps fp2_rep_thms (cryptol_ss ())) (unfold_term ["POINTonE2_rep","POINTonE2_abs","point_add","prop",
+"POINTonE2_add_term"] {{prop}}));
+let test2 = (rewrite (cryptol_ss ()) (unfold_term ["Fp_2","extension_field"] (rewrite (cryptol_ss ()) (unfold_term ["prop"] {{prop}}))));
+let test3 = (rewrite fp2_simpset (unfold_term ["Fp_2","extension_field"] (rewrite (cryptol_ss ()) (unfold_term ["prop","POINTonE2_add_term","point_add"] {{prop}}))));
+let test4 = (rewrite fp2_simpset (unfold_term ["POINTonE2_rep","POINTonE2_abs"] (rewrite (cryptol_ss ()) (unfold_term ["prop","POINTonE2_add_term","point_add"] {{prop}}))));
+let test5 = (rewrite fp2_simpset (unfold_term ["select"] test4));
+
+//POINTonE2_add_ov <- really_custom_verify "POINTonE2_add"
+                      //(foldr concat [vec_fp2_overrides, fp2_overrides] [vec_is_zero_fp2_ov])
+                      //POINTonE2_add_spec
+                      //(do {
+                        //apply_fp2_rewrites; // TODO: what does this do here? goal_eval shouldn't disable any rewrites since stuff is uninterpreted. Yet more goals are discharged.
+                        ////unfolding ["point_add"];
+                        //print_goal;
+                        //goal_eval_unint fp2_unints;
+                        //apply_fp2_rewrites;
+                        //print_goal; // TODO: there is some "unripping" to do to understand what is going on here...
+                        //unfolding ["Fp_2"];
+                        //w4_unint_z3 fp2_unints;
+                      //});

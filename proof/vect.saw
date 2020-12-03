@@ -105,7 +105,7 @@ let vec_is_zero_fp2_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
   crucible_precond {{ fp2_invariant a }};
   crucible_execute_func [a_ptr, crucible_term {{ (96:Size_t) }}]; // Non-portable
-  crucible_return (crucible_term {{ if (fp2_abs a) ==  Fp_2.field_zero then 1 else (0:Limb) }});
+  crucible_return (crucible_term {{ if (Fp_2.is_equal (fp2_abs a, Fp_2.field_zero)) then 1 else (0:Limb) }});
   };
 
 // TODO: Prove

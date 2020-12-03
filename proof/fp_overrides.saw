@@ -306,8 +306,9 @@ let fp_unints = ["fp_abs", "fp_invariant", "fp_rep", "fp_normalize", "Fp"
 fp2_rep_thms <- for
   [ {{ \x -> fp2_invariant (fp2_rep x) == True }}
   , {{ \x -> fp2_abs (fp2_rep x) == x }}
-  // TODO: fp2 version needed? YES
-  //, {{ \x -> fp_rep (fp_abs x) == if fp_invariant x then x else fp_normalize x}}
+  // TODO: fp2 version needed below? YES
+  //, {{ \x -> fp2_rep (fp2_abs x) == if fp2_invariant x then x else ((apply fp2_rep) (fp2_abs x)) }} // else branch should never be used
+  , {{ \x -> fp2_rep (fp2_abs x) == x }} // TODO: temporary shortcut
   ] admit_cryptol;
 
 // hoisting if for rewrites to match
@@ -317,7 +318,15 @@ fp2_rep_ite_thm <- hoist {{fp2_rep}} ["fp2_rep"] ;
 
 fp2_abstract_invariant_thm <- prove_cryptol {{ \x -> Fp_2.is_val (fp2_abs x) == True }} [];
 
-let fp2_simpset = addsimps (concat fp2_rep_thms [unrip_thm, fp2_abs_ite_thm, fp2_invariant_ite_thm, fp2_rep_ite_thm, seq_ite_thm]) (cryptol_ss ());
+hoist_if_1 <- prove_cryptol {{ \x y (z:([2]Integer,[2]Integer,[2]Integer)) -> (if x then y else z).1 == if x then y.1 else z.1 }};
+hoist_if_2 <- prove_cryptol {{ \x y (z:([2]Integer,[2]Integer,[2]Integer)) -> (if x then y else z).2 == if x then y.2 else z.2 }};
+// TODO: does not apply to
+//                 (Prelude.ite x@15 x@31 (x@23,x@24,x@25)
+//                    (Prelude.ite x@15 x@32 (x@30,x@26,x@28)
+//                       (x@41,x@43,x@45))).1,
+// with x@15 of the right type...
+
+let fp2_simpset = addsimps (concat fp2_rep_thms [hoist_if_1, hoist_if_2, fp2_abs_ite_thm, fp2_invariant_ite_thm, fp2_rep_ite_thm, seq_ite_thm]) (cryptol_ss ());
 
 let apply_fp2_rewrites = simplify fp2_simpset;
 
@@ -344,4 +353,10 @@ sqr_fp2_alias_1_2_ov <- admit "sqr_fp2" sqr_fp2_alias_1_2_spec;
 
 let fp2_overrides = foldr concat [add_fp2_ovs, sub_fp2_ovs, mul_fp2_ovs] [sqr_fp2_ov, sqr_fp2_alias_1_2_ov];
 
-let fp2_unints = ["fp2_abs", "fp2_invariant", "fp2_rep", "Fp_2"];
+let fp2_unints = ["fp2_abs", "fp2_invariant", "fp2_rep", "Fp_2"
+// for printing things when unfolding Fp_2 and Fp (TODO: but maybe usefull in the end?):
+                , "mod_add", "mod_sub", "mod_neg", "mod_mul", "mod_half", "mod_div"
+                , "mod_add_Z", "mod_sub_Z", "mod_neg_Z", "mod_mul_Z", "mod_half_Z", "mod_div_Z"
+                // TODO: it seems that this cannot work as they are higher-order functions...
+                //, "poly_0", "poly_1", "poly_sub", "poly_mul_mod", "poly_inverse_mod"
+                ];
