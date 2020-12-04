@@ -32,6 +32,25 @@ fp2_alg_thms <- for
   ] (\ t -> prove_cryptol t []);
 
 
+////////////////////////////////////////////////////////////////////////////////
+// Specifications
+////////////////////////////////////////////////////////////////////////////////
+
+// reciprocal_fp2
+/*
+let reciprocal_fp2_spec = do {
+    out_ptr <- crucible_alloc vec384x_type;
+    (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
+    crucible_precond {{ fp2_invariant inp }};
+    crucible_execute_func [out_ptr, inp_ptr];
+    crucible_points_to out_ptr (crucible_term {{ fp2_rep (inverse_fp2 (fp2_abs inp)) }});
+    };
+*/
+
+let fp2_unop_spec name op = unop_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
+
+let reciprocal_fp2_spec = fp2_unop_spec "reciprocal_fp2" {{ inverse_fp2 }};
+
 // recip_sqrt_fp2_9mod16 is computed using an addition chain.
 // We can use rewriting to show that it computes the correct power.
 
@@ -85,19 +104,37 @@ let sqr_n_mul_fp2_alias_1_2_spec = do {
     crucible_points_to a_ptr (crucible_term {{ fp2_rep (sqr_n_mul_fp2 (fp2_abs a) count (fp2_abs b)) }});
     };
 
+let recip_sqrt_fp2_9mod16_spec = fp2_unop_spec "recip_sqrt_fp2_9mod16" {{ \ x ->  fp2_exp x ((`p^^2-9)/16) }};
+
+////////////////////////////////////////////////////////////////////////////////
+// Proofs
+////////////////////////////////////////////////////////////////////////////////
+
+
+// Some additional algebraic rules for Fp operations:
+// mul_div_fp_thm <- admit_cryptol {{ \x y z -> Fp.mul (x, Fp.div (y,z)) == Fp.div (Fp.mul (x, y), z) }};
+// special case
+mul_div_fp_thm <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \x z -> Fp.mul (x, Fp.div (Fp.field_unit,z)) == Fp.div (x, z) }});
+div_neg_fp_thm <- admit_cryptol {{ \x y  -> Fp.div (Fp.neg x,y) == Fp.neg (Fp.div (x, y)) }};
+// commute add once -- use with caution!
+add_commutes_fp_thm <- prove_cryptol {{ \x y  -> Fp.add (x, y) == apply Fp.add (y,x) }} [];
+
+
+reciprocal_fp2_ov <- custom_verify "reciprocal_fp2"
+   (concat [reciprocal_fp_ov] fp_overrides)
+   (fp2_unop_spec "reciprocal_fp2" {{ inverse_fp2 }})
+   do { // commute Fp.add BEFORE we unfold inverse_fp2; this flips the add used in the code
+       simplify (addsimp add_commutes_fp_thm empty_ss);
+       unfolding ["inverse_fp2", "fp2_rep", "fp2_abs", "fp2_invariant"]; 
+       simplify (addsimps [mul_div_fp_thm, div_neg_fp_thm] (addsimps fp_alg_thms fp_simpset));
+       w4_unint_z3 fp_unints;
+       };
+
 sqr_n_mul_fp2_ov <- admit "sqr_n_mul_fp2" sqr_n_mul_fp2_spec;
 sqr_n_mul_fp2_alias_1_2_ov <- admit "sqr_n_mul_fp2" sqr_n_mul_fp2_alias_1_2_spec;
 
-let recip_sqrt_fp2_9mod16_spec = do {
-    out_ptr <- crucible_alloc vec384x_type;
-    (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
-    crucible_precond {{ fp2_invariant inp }};
-    crucible_execute_func [out_ptr, inp_ptr];
-    crucible_points_to out_ptr (crucible_term {{ fp2_rep (fp2_exp (fp2_abs inp) ((`p^^2-9)/16)) }});
-    // crucible_points_to out_ptr (crucible_term {{ fp2_rep (Fp2_2.div (Fp_2.field_unit, fp2_abs inp)) }});
-    };
-
-recip_sqrt_fp2_9mod16_ov <- really_custom_verify "recip_sqrt_fp2_9mod16"
+recip_sqrt_fp2_9mod16_ov <- custom_verify "recip_sqrt_fp2_9mod16"
   (concat [sqr_n_mul_fp2_ov, sqr_n_mul_fp2_alias_1_2_ov]
           (concat fp2_overrides vec_fp2_overrides))
   recip_sqrt_fp2_9mod16_spec
@@ -108,3 +145,4 @@ recip_sqrt_fp2_9mod16_ov <- really_custom_verify "recip_sqrt_fp2_9mod16"
      w4_unint_z3 (concat ["fp2_exp"] fp2_unints);
      };
   
+// Note Appendix G.3 says to take power (q+7)/16 as step 1 , one more than recip_sqrt_fp2_9mod16 does
