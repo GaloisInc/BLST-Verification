@@ -18,7 +18,7 @@ let POINTonE2_add_spec = do {
     out <- crucible_fresh_var "new_POINTonE2_add_out" POINTonE2_type;
     crucible_points_to out_ptr (crucible_term out);
     crucible_postcond {{ POINTonE2_invariant out }};
-    crucible_postcond {{ POINTonE2_abs out == point_add Fp (POINTonE2_abs p1) (POINTonE2_abs p2)}};
+    crucible_postcond {{ POINTonE2_abs out == point_add Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2)}};
     }
   else
     crucible_points_to out_ptr (crucible_term  {{ POINTonE2_rep (point_add Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2)) }} );
@@ -30,7 +30,6 @@ POINTonE2_add_ov <- custom_verify "POINTonE2_add"
                       (do {
                         unfolding ["POINTonE2_rep","POINTonE2_abs","point_add", "select"];
                         apply_fp2_rewrites;
-                        print_goal;
                         w4_unint_z3 fp2_unints;
                       });
 
@@ -41,11 +40,11 @@ let POINTonE2_add_affine_spec = do {
   crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_affine_invariant p2 }};
   crucible_execute_func [out_ptr, p1_ptr, p2_ptr];
   if use_abs_method
-  then do {
+  then do { // TODO: this fails
     out <- crucible_fresh_var "new_POINTonE2_add_out" POINTonE2_type;
     crucible_points_to out_ptr (crucible_term out);
     crucible_postcond {{ POINTonE2_invariant out }};
-    crucible_postcond {{ POINTonE2_abs out == point_add_affine Fp (POINTonE2_abs p1) (POINTonE2_affine_abs p2)}};
+    crucible_postcond {{ POINTonE2_abs out == point_add_affine Fp_2 (POINTonE2_abs p1) (POINTonE2_affine_abs p2)}};
     }
   else
     crucible_points_to out_ptr (crucible_term  {{ POINTonE2_rep (point_add_affine Fp_2 (POINTonE2_abs p1) (POINTonE2_affine_abs p2)) }} );
@@ -57,6 +56,5 @@ POINTonE2_add_affine_ov <- really_custom_verify "POINTonE2_add_affine"
                       (do {
                         unfolding ["POINTonE2_rep","POINTonE2_abs","POINTonE2_affine_rep","POINTonE2_affine_abs","point_add_affine", "select"];
                         apply_fp2_rewrites;
-                        print_goal;
                         w4_unint_z3 fp2_unints;
                       });

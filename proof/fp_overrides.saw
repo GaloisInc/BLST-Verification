@@ -307,8 +307,7 @@ let fp_unints = ["fp_abs", "fp_invariant", "fp_rep", "fp_normalize", "Fp"
 fp2_rep_thms <- for
   [ {{ \x -> fp2_invariant (fp2_rep x) == True }}
   , {{ \x -> fp2_abs (fp2_rep x) == x }}
-  //, {{ \x -> fp2_rep (fp2_abs x) == if fp2_invariant x then x else ((apply fp2_rep) (fp2_abs x)) }} // else branch should never be used
-  , {{ \x -> fp2_rep (fp2_abs x) == x }} // temporary
+  , {{ \x -> fp2_rep (fp2_abs x) == if fp2_invariant x then x else ((apply fp2_rep) (fp2_abs x)) }} // else branch should never be used
   ] admit_cryptol;
 
 // hoisting if for rewrites to match
@@ -322,7 +321,12 @@ hoist_if_2 <- prove_cryptol {{ \x y (z:([2]Integer,[2]Integer,[2]Integer)) -> (i
 
 fp2_abstract_invariant_thm <- prove_cryptol {{ \x -> Fp_2.is_val (fp2_abs x) == True }} [];
 
-let fp2_simpset = addsimps (concat fp2_rep_thms [hoist_if_2, hoist_if_1, hoist_if_0, fp2_abs_ite_thm, fp2_invariant_ite_thm, fp2_rep_ite_thm, seq_ite_thm]) (cryptol_ss ());
+one_mont_fp2_rep_thm <- prove_cryptol (rewrite (cryptol_ss ())
+  {{ fp2_rep Fp_2.field_unit == [[ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+                             , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493],
+                             [0, 0, 0 , 0, 0, 0 ]] }}) [] ;
+
+let fp2_simpset = addsimps (concat fp2_rep_thms [one_mont_fp2_rep_thm, hoist_if_2, hoist_if_1, hoist_if_0, fp2_abs_ite_thm, fp2_invariant_ite_thm, fp2_rep_ite_thm, seq_ite_thm]) (cryptol_ss ());
 
 let apply_fp2_rewrites = simplify fp2_simpset;
 
@@ -356,3 +360,5 @@ let fp2_unints = ["fp2_abs", "fp2_invariant", "fp2_rep", "Fp_2"
                 // TODO: this cannot work as they are higher-order functions...
                 //, "poly_0", "poly_1", "poly_sub", "poly_mul_mod", "poly_inverse_mod"
                 ];
+
+unrip_thm_2 <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[6][64]) (y:[6][64]) -> [at0 x, at1 x, at2 x, at3 x, at4 x, at5 x, at0 y, at1 y, at2 y, at3 y, at4 y, at5 y] == x#y }}) [];
