@@ -74,6 +74,16 @@ POINTonE2_abs (x,y,z) = (fp2_abs x, fp2_abs y, fp2_abs z)
 POINTonE2_rep: ProjectivePoint t_Fp_2-> POINTonE2_t
 POINTonE2_rep (x,y,z) = (fp2_rep x, fp2_rep y, fp2_rep z)
 
+POINTonE2_affine_invariant: POINTonE2_affine_t -> Bool
+POINTonE2_affine_invariant (x,y) = fp2_invariant x /\ fp2_invariant y
+   // Should we also insist the point in on the curve?
+
+POINTonE2_affine_abs: POINTonE2_affine_t -> AffinePoint t_Fp_2
+POINTonE2_affine_abs (x,y) = (fp2_abs x, fp2_abs y)
+
+POINTonE2_affine_rep: AffinePoint t_Fp_2 -> POINTonE2_affine_t
+POINTonE2_affine_rep (x,y) = (fp2_rep x, fp2_rep y)
+
 // e1_op f x y = POINTonE1_rep (f E (POINTonE1_abs x) (POINTonE1_abs y))
 
 // algorithms from transcription of the C code
