@@ -155,7 +155,16 @@ let sqr_fp2_alias_1_2_spec =
   unop_alias_1_2_spec "sqr_fp2" vec384x_type {{ fp2_invariant }} {{fp2_rep}} {{fp2_abs}} {{Fp_2.sq}};
 sqr_fp2_alias_1_2_ov <- admit "sqr_fp2" sqr_fp2_alias_1_2_spec;
 
-let fp2_overrides = foldr concat [add_fp2_ovs, sub_fp2_ovs, mul_fp2_ovs] [sqr_fp2_ov, sqr_fp2_alias_1_2_ov];
+let mul_by_3_fp2_alias_1_2_spec =
+  unop_alias_1_2_spec "mul_by_3_fp2" vec384x_type {{ fp2_invariant }} {{fp2_rep}} {{fp2_abs}} {{ mul_by_3 Fp_2 }};
+mul_by_3_fp2_alias_1_2_ov <- admit "mul_by_3_fp2" mul_by_3_fp2_alias_1_2_spec;
+
+let mul_by_8_fp2_alias_1_2_spec =
+  unop_alias_1_2_spec "mul_by_8_fp2" vec384x_type {{ fp2_invariant }} {{fp2_rep}} {{fp2_abs}} {{ mul_by_8 Fp_2 }};
+mul_by_8_fp2_alias_1_2_ov <- admit "mul_by_8_fp2" mul_by_8_fp2_alias_1_2_spec;
+
+
+let fp2_overrides = foldr concat [add_fp2_ovs, sub_fp2_ovs, mul_fp2_ovs] [sqr_fp2_ov, sqr_fp2_alias_1_2_ov, mul_by_3_fp2_alias_1_2_ov, mul_by_8_fp2_alias_1_2_ov];
 
 let fp2_unints = ["fp2_abs", "fp2_invariant", "fp2_rep", "Fp_2"
 // for printing things when unfolding Fp_2 and Fp (TODO: but maybe usefull in the end?):
