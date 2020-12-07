@@ -12,9 +12,10 @@ let do_prove = false;
 
 include "proof-helpers.saw";
 
-include "fp_overrides.saw";
+include "fp2_overrides.saw";
 include "vect.saw";
 include "curve_operations_e2.saw";
+//include "fp_overrides.saw";
 //include "exp.saw";
 //include "curve_operations.saw";
 //include "ec_mult.saw";

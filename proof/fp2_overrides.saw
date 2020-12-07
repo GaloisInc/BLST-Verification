@@ -1,0 +1,168 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+// Overrides needed for the elliptic curve arithmetic operations
+// These are the basic field operations for Fp2.
+// Here, we assume the specs, but eventually we will prove them
+//
+
+/*
+  add_fp2, sub_fp2, sqr_fp2, mul_fp2, mul_by_3_fp2, mul_by_8_fp2
+*/
+
+// There are three approaches to writing the postconditions, either
+// abs method: - (abs result) = fn (abs arg)
+// concrete method: - result = rep (fn (abs arg)) --- OK, if we have a rewrite (abs (rep x)) == x
+// direct method: - result = fn' arg --- OK, but need implementation_specific definition for fn',
+//                        and then a proof abs (fn' arg) == fn (abs arg).
+
+let use_abs_method = false;
+let use_concrete_method = true;
+
+import "../spec/Parameters.cry";
+import "../spec/PrimeField.cry";
+import "../spec/implementation/Field.cry";
+import "../spec/implementation/CryptolHelpers.cry";
+
+// generic unary operation specification, pass-by-reference, no aliasing
+let unop_spec name llvm_type inv rep abs op = do {
+  ret_ptr <- crucible_alloc llvm_type;
+  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
+  crucible_precond {{ inv x }};
+  crucible_execute_func [ret_ptr, x_ptr];
+  if use_abs_method
+  then do {
+    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
+    crucible_points_to ret_ptr (crucible_term ret);
+    crucible_postcond {{inv ret }};
+    crucible_postcond {{ abs ret == op (abs x) }};
+    }
+  else if use_concrete_method
+  then crucible_points_to ret_ptr (crucible_term {{ rep (op (abs x)) }})
+  else crucible_points_to ret_ptr (crucible_term {{ op x }});
+};
+
+// generic unary operation specification, pass-by-reference, aliasing
+let unop_alias_1_2_spec name llvm_type inv rep abs op = do {
+  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
+  crucible_precond {{ inv x }};
+  crucible_execute_func [x_ptr, x_ptr];
+  if use_abs_method
+  then do {
+    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
+    crucible_points_to x_ptr (crucible_term ret);
+    crucible_postcond {{inv ret }};
+    crucible_postcond {{ abs ret == op (abs x) }};
+    }
+  else if use_concrete_method
+  then crucible_points_to x_ptr (crucible_term {{ rep (op (abs x)) }})
+  else crucible_points_to x_ptr (crucible_term {{ op x }});
+};
+
+// generic binary operation specification, pass-by-reference, no aliasing
+let binop_spec name llvm_type inv rep abs op = do {
+  ret_ptr <- crucible_alloc llvm_type;
+  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
+  (y, y_ptr) <- ptr_to_fresh_readonly "y" llvm_type;
+  crucible_precond {{ inv x /\ inv y }};
+  crucible_execute_func [ret_ptr, x_ptr, y_ptr];
+  if use_abs_method
+  then do {
+    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
+    crucible_points_to ret_ptr (crucible_term ret);
+    crucible_postcond {{inv ret }};
+    crucible_postcond {{ abs ret == op (abs x, abs y) }};
+    }
+  else if use_concrete_method
+  then crucible_points_to ret_ptr (crucible_term {{ rep (op (abs x, abs y)) }})
+  else crucible_points_to ret_ptr (crucible_term {{ op x y }});
+};
+
+// generic binary operation specification, pass-by-reference, aliasing return with first arg
+let binop_alias_1_2_spec name llvm_type inv rep abs op = do {
+  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
+  (y, y_ptr) <- ptr_to_fresh_readonly "y" llvm_type;
+  crucible_precond {{ inv x /\ inv y }};
+  crucible_execute_func [x_ptr, x_ptr, y_ptr];
+  if use_abs_method
+  then do {
+    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
+    crucible_points_to x_ptr (crucible_term ret);
+    crucible_postcond {{inv ret }};
+    crucible_postcond {{ abs ret == op (abs x, abs y) }};
+    }
+  else if use_concrete_method
+  then crucible_points_to x_ptr (crucible_term {{ rep (op (abs x, abs y)) }})
+  else crucible_points_to x_ptr (crucible_term {{ op x y }});
+};
+
+let hoist f unints =
+  prove_cryptol {{\x y z -> f (if x then y else z) == if x then f y else f z}} unints;
+
+////////////////////////////////////////////////////////////////
+//
+// Fp_2 operations
+//
+
+// abs and rep theorems, good rewrites, will hold in the `prime_field` model but not the others
+// TODO: not sure I understand this comment
+fp2_rep_thms <- for
+  [ {{ \x -> fp2_invariant (fp2_rep x) == True }}
+  , {{ \x -> fp2_abs (fp2_rep x) == x }}
+  , {{ \x -> fp2_rep (fp2_abs x) == if fp2_invariant x then x else ((apply fp2_rep) (fp2_abs x)) }} // else branch should never be used
+  ] admit_cryptol;
+
+// hoisting if for rewrites to match
+fp2_abs_ite_thm <- hoist {{fp2_abs}} ["fp2_abs"] ;
+fp2_invariant_ite_thm <- hoist {{fp2_invariant}} [] ;
+fp2_rep_ite_thm <- hoist {{fp2_rep}} ["fp2_rep"] ;
+// TODO: can we have polymorphic versions of the rewrites below?
+hoist_if_0 <- prove_cryptol {{ \x y (z:([2]Integer,[2]Integer,[2]Integer)) -> (if x then y else z).0 == if x then y.0 else z.0 }} [];
+hoist_if_1 <- prove_cryptol {{ \x y (z:([2]Integer,[2]Integer,[2]Integer)) -> (if x then y else z).1 == if x then y.1 else z.1 }} [];
+hoist_if_2 <- prove_cryptol {{ \x y (z:([2]Integer,[2]Integer,[2]Integer)) -> (if x then y else z).2 == if x then y.2 else z.2 }} [];
+
+fp2_abstract_invariant_thm <- prove_cryptol {{ \x -> Fp_2.is_val (fp2_abs x) == True }} [];
+
+one_mont_fp2_rep_thm <- prove_cryptol (rewrite (cryptol_ss ())
+  {{ fp2_rep Fp_2.field_unit == [[ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+                             , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493],
+                             [0, 0, 0 , 0, 0, 0 ]] }}) [] ;
+
+let fp2_simpset = addsimps (concat fp2_rep_thms [one_mont_fp2_rep_thm, hoist_if_2, hoist_if_1, hoist_if_0, fp2_abs_ite_thm, fp2_invariant_ite_thm, fp2_rep_ite_thm]) (cryptol_ss ());
+
+let apply_fp2_rewrites = simplify fp2_simpset;
+
+let fp2_binop_ovs name op = do {
+  let plain_spec = binop_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
+  plain_ov <- admit name plain_spec;
+
+  let alias_1_2_spec = binop_alias_1_2_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
+  alias_1_2_ov <- admit name alias_1_2_spec;
+
+  return [plain_ov, alias_1_2_ov];
+  };
+
+add_fp2_ovs <- fp2_binop_ovs "add_fp2" {{Fp_2.add}} ;
+sub_fp2_ovs <- fp2_binop_ovs "sub_fp2" {{Fp_2.sub}} ;
+mul_fp2_ovs <- fp2_binop_ovs "mul_fp2" {{Fp_2.mul}} ;
+
+let sqr_fp2_spec =
+  unop_spec "sqr_fp2" vec384x_type {{ fp2_invariant }} {{fp2_rep}} {{fp2_abs}} {{Fp_2.sq}};
+sqr_fp2_ov <- admit "sqr_fp2" sqr_fp2_spec;
+let sqr_fp2_alias_1_2_spec =
+  unop_alias_1_2_spec "sqr_fp2" vec384x_type {{ fp2_invariant }} {{fp2_rep}} {{fp2_abs}} {{Fp_2.sq}};
+sqr_fp2_alias_1_2_ov <- admit "sqr_fp2" sqr_fp2_alias_1_2_spec;
+
+let fp2_overrides = foldr concat [add_fp2_ovs, sub_fp2_ovs, mul_fp2_ovs] [sqr_fp2_ov, sqr_fp2_alias_1_2_ov];
+
+let fp2_unints = ["fp2_abs", "fp2_invariant", "fp2_rep", "Fp_2"
+// for printing things when unfolding Fp_2 and Fp (TODO: but maybe usefull in the end?):
+                //, "mod_add", "mod_sub", "mod_neg", "mod_mul", "mod_half", "mod_div"
+                //, "mod_add_Z", "mod_sub_Z", "mod_neg_Z", "mod_mul_Z", "mod_half_Z", "mod_div_Z"
+                // TODO: this cannot work as they are higher-order functions...
+                //, "poly_0", "poly_1", "poly_sub", "poly_mul_mod", "poly_inverse_mod"
+                ];
+
+//unrip_thm_2 <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[6][64]) (y:[6][64]) -> [at0 x, at1 x, at2 x, at3 x, at4 x, at5 x, at0 y, at1 y, at2 y, at3 y, at4 y, at5 y] == x#y }}) [];
