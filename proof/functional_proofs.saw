@@ -14,7 +14,8 @@ include "proof-helpers.saw";
 
 include "fp2_overrides.saw";
 include "vect.saw";
-include "curve_operations_e2.saw";
+include "e2_dadd_extract.saw";
+//include "curve_operations_e2.saw";
 //include "fp_overrides.saw";
 //include "exp.saw";
 //include "curve_operations.saw";
