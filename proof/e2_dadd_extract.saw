@@ -1,0 +1,66 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+import "../spec/ShortWeierstrassCurve.cry";
+import "../spec/implementation/Types.cry";
+import "../spec/implementation/CurveOperation.cry";
+
+let POINTonE2_dadd_null_spec = do {
+  out_ptr <- crucible_alloc POINTonE2_type;
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_invariant p2 }};
+  crucible_execute_func [out_ptr, p1_ptr, p2_ptr, crucible_null];
+  new_out <- crucible_fresh_var "new_POINTonE2_add_affine_out" POINTonE2_type;
+  crucible_points_to out_ptr (crucible_term  new_out);
+};
+
+enable_experimental;
+
+POINTonE2_dadd_null_ov <- crucible_llvm_compositional_extract m
+  "POINTonE2_dadd"
+  "POINTonE2_dadd_term"
+  (foldr concat [vec_fp2_overrides, fp2_overrides] [])
+  true // TODO: what is this? path satisfiability checking? if so, what does it do?
+  POINTonE2_dadd_null_spec
+              (do {
+                apply_fp2_rewrites;
+                print_goal; // where do the intToNat etc. come from?
+                goal_eval_unint fp2_unints; // get rid of intToNat etc.
+                print_goal; // where do the intToNat etc. come from?
+                apply_fp2_rewrites; // undo the ripping apart of vectors
+                w4_unint_z3 fp2_unints;
+              });
+
+let {{prop p1 p2 = POINTonE2_dadd_term p2 p1 == (POINTonE2_rep (point_dadd Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2) Fp_2.field_zero True)) }};
+let {{ spec_ p1 p2 = (POINTonE2_rep (point_dadd Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2) Fp_2.field_zero True))}};
+
+let {{
+    hoist_if_0 : {a} (Eq a) => Bit -> (a,a,a) -> (a,a,a) -> Bit
+    hoist_if_0 x y z = (if x then y else z).0 == if x then y.0 else z.0
+    hoist_if_1 : {a} (Eq a) => Bit -> (a,a,a) -> (a,a,a) -> Bit
+    hoist_if_1 x y z = (if x then y else z).1 == if x then y.1 else z.1
+    hoist_if_2 : {a} (Eq a) => Bit -> (a,a,a) -> (a,a,a) -> Bit
+    hoist_if_2 x y z = (if x then y else z).2 == if x then y.2 else z.2
+  }};
+
+hoist_if_3_0 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_0"] {{ hoist_if_0`{[2][6][64]} }})) [];
+hoist_if_3_1 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_1"] {{ hoist_if_1`{[2][6][64]} }})) [];
+hoist_if_3_2 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_2"] {{ hoist_if_2`{[2][6][64]} }})) [];
+hoist_if_3_int_0 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_0"] {{ hoist_if_0`{[2]Integer} }})) [];
+hoist_if_3_int_1 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_1"] {{ hoist_if_1`{[2]Integer} }})) [];
+hoist_if_3_int_2 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_2"] {{ hoist_if_2`{[2]Integer} }})) [];
+
+core_rewrites <- for // TODO: why are those needed? which rewrites do they enable?
+  [ "EqTrue (eq Nat (intToNat (natToInt 0)) 0)"
+  , "EqTrue (eq Nat (intToNat (natToInt 1)) 1)"
+  //, "EqTrue (eq Bool (intLe (natToInt 0) (natToInt 0)) True)"
+  //, "EqTrue (eq Bool (intLe (natToInt 0) (natToInt 1)) True)"
+  ] (prove_core abc);
+
+let simpset = addsimps (foldr concat [fp2_rep_thms, core_rewrites] [hoist_if_3_int_0, hoist_if_3_int_1, hoist_if_3_int_2, hoist_if_3_0, hoist_if_3_1, hoist_if_3_2, fp2_abs_ite_thm, fp2_invariant_ite_thm, fp2_rep_ite_thm]) (cryptol_ss ());
+
+let t1 = (rewrite simpset (unfold_term ["F_is_zero","POINTonE2_rep","POINTonE2_abs","select","POINTonE2_dadd_term","prop","point_dadd"] {{prop}}));
+prove (do { w4_unint_z3 fp2_unints ;}) t1;

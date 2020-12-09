@@ -127,7 +127,7 @@ let vec_is_zero_2fp2_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 2 vec384x_type);
   crucible_precond {{ fp2_invariant (a@0) /\ fp2_invariant (a@1) }};
   crucible_execute_func [a_ptr, crucible_term {{ (192:Size_t) }}]; // Non-portable
-  crucible_return (crucible_term {{ if fp2_abs (a@0) ==  Fp_2.field_zero /\ fp2_abs (a@1) == Fp_2.field_zero then 1 else (0:Limb) }});
+  crucible_return (crucible_term {{ if ((Fp_2.is_equal (fp2_abs (a@0), Fp_2.field_zero)) /\ (Fp_2.is_equal (fp2_abs (a@1), Fp_2.field_zero))) then 1 else (0:Limb) }});
   };
 
 // TODO: prove
