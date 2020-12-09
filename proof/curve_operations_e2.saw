@@ -86,7 +86,7 @@ let POINTonE2_double_spec = do {
   crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (point_double Fp_2 (POINTonE2_abs p1)) }});
 };
 
-POINTonE2_double_ov <- really_custom_verify "POINTonE2_double"
+POINTonE2_double_ov <- custom_verify "POINTonE2_double"
                       (foldr concat [vec_fp2_overrides, fp2_overrides] [vec_is_zero_fp2_ov])
                       POINTonE2_double_spec
                       (do {
@@ -102,7 +102,7 @@ let POINTonE2_double_alias_1_2_spec = do {
   crucible_points_to p1_ptr (crucible_term {{ POINTonE2_rep (point_double Fp_2 (POINTonE2_abs p1)) }});
 };
 
-POINTonE2_double_alias_1_2_ov <- really_custom_verify "POINTonE2_double"
+POINTonE2_double_alias_1_2_ov <- custom_verify "POINTonE2_double"
                       (foldr concat [vec_fp2_overrides, fp2_overrides] [vec_is_zero_fp2_ov])
                       POINTonE2_double_alias_1_2_spec
                       (do {
@@ -145,11 +145,32 @@ core_rewrites <- for // TODO: why are those needed? which rewrites do they enabl
 
 let dadd_null_simpset = addsimps (foldr concat [fp2_rep_thms, core_rewrites] [hoist_if_proj_int_0, hoist_if_proj_int_1, hoist_if_proj_int_2, hoist_if_proj_0, hoist_if_proj_1, hoist_if_proj_2, fp2_abs_ite_thm, fp2_invariant_ite_thm, fp2_rep_ite_thm]) (cryptol_ss ());
 
-POINTonE2_dadd_null_ov <- really_custom_verify "POINTonE2_dadd"
+POINTonE2_dadd_null_ov <- custom_verify "POINTonE2_dadd"
                       (concat vec_fp2_overrides fp2_overrides)
                       POINTonE2_dadd_null_spec
                       (do {
                             unfolding ["F_is_zero","POINTonE2_rep","POINTonE2_abs","select","point_dadd"];
                           simplify dadd_null_simpset;
                           w4_unint_z3 fp2_unints;
-                          });
+                          }
+);
+
+let POINTonE2_dadd_nonnull_spec = do {
+  out_ptr <- crucible_alloc POINTonE2_type;
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_type;
+  (a4, a4_ptr) <- ptr_to_fresh_readonly "a4" vec384x_type;
+  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_invariant p2 /\ fp2_invariant a4}};
+  crucible_execute_func [out_ptr, p1_ptr, p2_ptr, a4_ptr];
+  crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (point_dadd Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2) (fp2_abs a4) False) }});
+};
+
+POINTonE2_dadd_nonnull_ov <- really_custom_verify "POINTonE2_dadd"
+                      (concat vec_fp2_overrides fp2_overrides)
+                      POINTonE2_dadd_nonnull_spec
+                      (do {
+                            unfolding ["F_is_zero","POINTonE2_rep","POINTonE2_abs","select","point_dadd"];
+                          simplify dadd_null_simpset;
+                          w4_unint_z3 fp2_unints;
+                          }
+                          );
