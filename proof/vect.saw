@@ -106,7 +106,7 @@ let vec_is_zero_fp2_spec = do {
   crucible_precond {{ fp2_invariant a }};
   crucible_execute_func [a_ptr, crucible_term {{ (96:Size_t) }}]; // Non-portable
   crucible_return (crucible_term {{ if (Fp_2.is_equal (fp2_abs a, Fp_2.field_zero)) then 1 else (0:Limb) }});
-  };
+  }; // TODO: is this specification okay?
 
 // TODO: Prove
 vec_is_zero_fp_ov <- test "vec_is_zero" [] vec_is_zero_fp_spec;
@@ -128,7 +128,7 @@ let vec_is_zero_2fp2_spec = do {
   crucible_precond {{ fp2_invariant (a@0) /\ fp2_invariant (a@1) }};
   crucible_execute_func [a_ptr, crucible_term {{ (192:Size_t) }}]; // Non-portable
   crucible_return (crucible_term {{ if ((Fp_2.is_equal (fp2_abs (a@0), Fp_2.field_zero)) /\ (Fp_2.is_equal (fp2_abs (a@1), Fp_2.field_zero))) then 1 else (0:Limb) }});
-  };
+  }; // TODO: is this specification okay?
 
 // TODO: prove
 vec_is_zero_2fp_ov <- test "vec_is_zero" []  vec_is_zero_2fp_spec;
@@ -157,8 +157,19 @@ let vec_is_equal_2fp_spec = do {
                                     then 1 else (0:Limb) }});
   };
 
+let vec_is_equal_2fp2_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 2 vec384x_type);
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" (llvm_array 2 vec384x_type);
+  crucible_precond {{     fp2_invariant (a@0) /\ fp2_invariant (a@1)
+                      /\  fp2_invariant (b@0) /\ fp2_invariant (b@1) }};
+  crucible_execute_func [a_ptr, b_ptr, crucible_term {{ (192:Size_t) }}]; // Non-portable
+  crucible_return (crucible_term {{ if Fp_2.is_equal(fp2_abs (a@0), fp2_abs (b@0)) /\ Fp_2.is_equal(fp2_abs (a@1), fp2_abs (b@1))
+                                    then 1 else (0:Limb) }}); // TODO: is this specification okay?
+  };
+
 // TODO: prove
 vec_is_equal_2fp_ov <- test "vec_is_equal" []  vec_is_equal_2fp_spec;
+vec_is_equal_2fp2_ov <- test "vec_is_equal" []  vec_is_equal_2fp2_spec;
 
 // .. vec_copy
 
@@ -187,6 +198,8 @@ vec_select_Fp_2_alias_1_3_ov <- verify "vec_select" vec_select_asm_ovs (vec_sele
 vec_select_2Fp_2_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_spec 192 (llvm_array 2 vec768_type));
 vec_select_2Fp_2_alias_1_3_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_alias_1_3_spec 192 (llvm_array 2 vec768_type));
 
-let vec_fp2_overrides = [vec_is_zero_fp2_ov, vec_is_zero_2fp2_ov, vec_select_POINTonE2_ov, vec_select_alias_1_3_POINTonE2_ov
+let vec_fp2_overrides = [vec_is_zero_fp2_ov, vec_is_zero_2fp2_ov
+                         , vec_select_POINTonE2_ov, vec_select_alias_1_3_POINTonE2_ov
                          , vec_select_Fp_2_ov, vec_select_Fp_2_alias_1_3_ov
-                         , vec_select_2Fp_2_ov, vec_select_2Fp_2_alias_1_3_ov];
+                         , vec_select_2Fp_2_ov, vec_select_2Fp_2_alias_1_3_ov
+                         , vec_is_equal_2fp2_ov];
