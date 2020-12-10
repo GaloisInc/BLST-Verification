@@ -223,44 +223,17 @@ let POINTonE2_is_equal_spec = do {
   (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_type;
   crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_invariant p2 }};
   crucible_execute_func [p1_ptr, p2_ptr];
-  //crucible_return (crucible_term
-   //{{ bool_to_limb ((same_point E' (POINTonE2_abs p1) (POINTonE2_abs p2))
-                    ///\ (Fp_2.is_equal(fp2_abs p1.2, Fp_2.field_zero) ^ Fp_2.is_equal(fp2_abs p2.2, Fp_2.field_zero) ^ True))
-    //}} );
-  ret <- crucible_fresh_var "ret" limb_type;
-  crucible_return (crucible_term ret);
+  crucible_return (crucible_term
+   {{ bool_to_limb ((same_point E' (POINTonE2_abs p1) (POINTonE2_abs p2))
+                    /\ (Fp_2.is_equal(fp2_abs p1.2, Fp_2.field_zero) ^ Fp_2.is_equal(fp2_abs p2.2, Fp_2.field_zero) ^ True))
+    }} );
 };
 
-POINTonE2_is_equal_ov <- custom_verify "POINTonE2_is_equal"
+POINTonE2_is_equal_ov <- really_custom_verify "POINTonE2_is_equal"
                       (concat vec_fp2_overrides fp2_overrides)
                       POINTonE2_is_equal_spec
                       (do {
-                            unfolding ["bool_to_limb","POINTonE2_rep","POINTonE2_abs","same_point","E'","ShortWeierstrassCurve::cubed"];
-                          simplify simpset;
-                          w4;
-                          // TODO: need to unfold field_zero?
-                          //w4_unint_z3 fp2_unints;
+                          unfolding ["same_point","bool_to_limb","ShortWeierstrassCurve::cubed","E'","POINTonE2_abs","POINTonE2_rep"];
+                          simplify (addsimps fp2_alg_thms simpset);
+                          w4_unint_z3 fp2_unints;
                           });
-
-enable_experimental;
-
-POINTonE2_is_equal_ov_extract <- crucible_llvm_compositional_extract m
-  "POINTonE2_is_equal"
-  "POINTonE2_is_equal_term"
-  (foldr concat [vec_fp2_overrides, fp2_overrides] [])
-  true // TODO: what is this? path satisfiability checking? if so, what does it do?
-  POINTonE2_is_equal_spec
-              (do {
-                unfolding ["bool_to_limb","POINTonE2_rep","POINTonE2_abs","same_point","E'","ShortWeierstrassCurve::cubed"];
-                simplify simpset;
-                print_goal;
-                //goal_eval_unint fp2_unints; // get rid of intToNat etc.
-                //print_goal;
-                //apply_fp2_rewrites; // undo the ripping apart of vectors
-                w4_unint_z3 fp2_unints;
-              });
-
-let {{prop p1 p2 = POINTonE2_is_equal_term p2 p1 == bool_to_limb ((same_point E' (POINTonE2_abs p1) (POINTonE2_abs p2)) /\ (Fp_2.is_equal(fp2_abs p1.2, Fp_2.field_zero) ^ Fp_2.is_equal(fp2_abs p2.2, Fp_2.field_zero) ^ True))}};
-let t1 = rewrite (cryptol_ss ()) (unfold_term ["POINTonE2_is_equal_term","prop","same_point","bool_to_limb","ShortWeierstrassCurve::cubed","E'","POINTonE2_abs","POINTonE2_rep"] {{prop }});
-let t2 = rewrite (addsimps fp2_alg_thms simpset) t1;
-prove (do {w4_unint_z3 fp2_unints ;}) t2;
