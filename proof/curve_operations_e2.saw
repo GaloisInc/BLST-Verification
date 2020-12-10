@@ -259,3 +259,8 @@ POINTonE2_is_equal_ov_extract <- crucible_llvm_compositional_extract m
                 //apply_fp2_rewrites; // undo the ripping apart of vectors
                 w4_unint_z3 fp2_unints;
               });
+
+let {{prop p1 p2 = POINTonE2_is_equal_term p2 p1 == bool_to_limb ((same_point E' (POINTonE2_abs p1) (POINTonE2_abs p2)) /\ (Fp_2.is_equal(fp2_abs p1.2, Fp_2.field_zero) ^ Fp_2.is_equal(fp2_abs p2.2, Fp_2.field_zero) ^ True))}};
+let t1 = rewrite (cryptol_ss ()) (unfold_term ["POINTonE2_is_equal_term","prop","same_point","bool_to_limb","ShortWeierstrassCurve::cubed","E'","POINTonE2_abs","POINTonE2_rep"] {{prop }});
+let t2 = rewrite (addsimps fp2_alg_thms simpset) t1;
+prove (do {w4_unint_z3 fp2_unints ;}) t2;

@@ -83,3 +83,26 @@ mul_by_8_fp2_alias_1_2_ov <- admit "mul_by_8_fp2" mul_by_8_fp2_alias_1_2_spec;
 let fp2_overrides = foldr concat [add_fp2_ovs, sub_fp2_ovs, mul_fp2_ovs] [sqr_fp2_ov, sqr_fp2_alias_1_2_ov, mul_by_3_fp2_alias_1_2_ov, mul_by_8_fp2_alias_1_2_ov];
 
 let fp2_unints = ["fp2_abs", "fp2_invariant", "fp2_rep", "Fp_2"];
+
+fp2_alg_thms <- for
+  [ {{ \ x y z -> Fp_2.mul (Fp_2.mul (x, y), z) == Fp_2.mul (x, Fp_2.mul (y, z)) }} // mul associates
+  , {{ \x -> Fp_2.mul (x, Fp_2.field_zero) == Fp_2.field_zero }} // x*0 = 0
+  , {{ \x -> Fp_2.mul (Fp_2.field_zero, x) == Fp_2.field_zero }} // 0*x = 0
+  , {{ \x -> Fp_2.mul (x, Fp_2.field_unit) == Fp_2.normalize x }} // x*1 = x ish
+  // , {{ \x -> Fp_2.mul (x, Fp_2.field_unit) == x }} // x*1 = x TODO: OK in the `Z p` model
+  , {{ \x -> Fp_2.mul (Fp_2.field_unit, x) == Fp_2.normalize x }} // 1*x = x ish
+  // , {{ \x -> Fp_2.mul (Fp_2.field_unit, x) == x }} // 1*x = x TODO
+
+  , {{ \x -> Fp_2.sq x == Fp_2.mul (x,x) }} // eliminate squaring.  Not always a good idea
+
+  , {{ \ x y z -> Fp_2.add (Fp_2.add (x, y), z) == Fp_2.add (x, Fp_2.add (y, z)) }} // add associates
+  , {{ \x -> Fp_2.add (x, Fp_2.field_zero) == Fp_2.normalize x }} // x+0 = x ish
+  , {{ \x -> Fp_2.add (Fp_2.field_zero, x) == Fp_2.normalize x }}//  0+x = x ish
+
+  , {{ \ x y -> Fp_2.sub (x, y) == Fp_2.add (x, Fp_2.neg y) }} // eliminate sub in favour of neg
+
+  , {{ \ x -> Fp_2.neg (Fp_2.neg x) == Fp_2.normalize x }} // double negative
+  , {{ \ x y -> Fp_2.neg (Fp_2.add (x, y)) == Fp_2.add (Fp_2.neg x, Fp_2.neg y) }} // push neg inside a sum
+  , {{ Fp_2.neg Fp_2.field_zero == Fp_2.field_zero }} // -0 = 0
+  ] (\ t -> prove_cryptol t []);
+
