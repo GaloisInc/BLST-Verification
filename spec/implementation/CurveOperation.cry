@@ -293,11 +293,17 @@ POINTonE1_affine_on_curve p = XXX==YY \/ (x==0 /\ y==0) where
   XXX = Fp.add (Fp.mul (Fp.sq x, x), E.b)
   YY = Fp.sq y
 
+// TODO: factor with code above
 POINTonE2_affine_on_curve: AffinePoint t_Fp_2 -> Bool
 POINTonE2_affine_on_curve p = XXX==YY \/ (Fp_2.is_equal(x,Fp_2.field_zero) /\ Fp_2.is_equal(y,Fp_2.field_zero)) where
   (x,y) = p
   XXX = Fp_2.add (Fp_2.mul (Fp_2.sq x, x), E'.b)
   YY = Fp_2.sq y
+
+POINTonE2_on_curve: ProjectivePoint t_Fp_2 -> Bool
+POINTonE2_on_curve (x,y,z) = (Fp_2.is_equal(Fp_2.sq y, xxx) \/ Fp_2.is_equal(z, Fp_2.field_zero)) where
+  xxx = Fp_2.add (Fp_2.mul (Fp_2.sq x, x), Fp_2.mul (E'.b, z6))
+  z6 = Fp_2.sq (Fp_2.mul (Fp_2.sq z, z))
 
 // TODO: drop these?:
 

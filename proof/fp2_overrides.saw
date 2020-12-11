@@ -79,8 +79,28 @@ let mul_by_8_fp2_alias_1_2_spec =
   unop_alias_1_2_spec "mul_by_8_fp2" vec384x_type {{ fp2_invariant }} {{fp2_rep}} {{fp2_abs}} {{ mul_by_8 Fp_2 }};
 mul_by_8_fp2_alias_1_2_ov <- admit "mul_by_8_fp2" mul_by_8_fp2_alias_1_2_spec;
 
+let cneg_fp2_spec = do {
+  ret_ptr <- crucible_alloc vec384x_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
+  cbit <- crucible_fresh_var "cbit" limb_type;
+  crucible_precond {{ fp2_invariant a }};
+  crucible_execute_func [ret_ptr, a_ptr, crucible_term cbit];
+  crucible_points_to ret_ptr (crucible_term {{ if cbit != 0 then fp2_rep (Fp_2.neg (fp2_abs a)) else a }});
+};
 
-let fp2_overrides = foldr concat [add_fp2_ovs, sub_fp2_ovs, mul_fp2_ovs] [sqr_fp2_ov, sqr_fp2_alias_1_2_ov, mul_by_3_fp2_alias_1_2_ov, mul_by_8_fp2_alias_1_2_ov];
+cneg_fp2_ov <- admit "cneg_fp2" cneg_fp2_spec;
+
+let cneg_fp2_alias_1_2_spec = do {
+  (a, a_ptr) <- ptr_to_fresh "a" vec384x_type;
+  cbit <- crucible_fresh_var "cbit" limb_type;
+  crucible_precond {{ fp2_invariant a }};
+  crucible_execute_func [a_ptr, a_ptr, crucible_term cbit];
+  crucible_points_to a_ptr (crucible_term {{ if cbit != 0 then fp2_rep (Fp_2.neg (fp2_abs a)) else a }});
+};
+
+cneg_fp2_alias_1_2_ov <- admit "cneg_fp2" cneg_fp2_alias_1_2_spec;
+
+let fp2_overrides = foldr concat [add_fp2_ovs, sub_fp2_ovs, mul_fp2_ovs] [sqr_fp2_ov, sqr_fp2_alias_1_2_ov, mul_by_3_fp2_alias_1_2_ov, mul_by_8_fp2_alias_1_2_ov,cneg_fp2_ov,cneg_fp2_alias_1_2_ov];
 
 let fp2_unints = ["fp2_abs", "fp2_invariant", "fp2_rep", "Fp_2"];
 
