@@ -32,8 +32,8 @@ let hoist f unints =
 fp2_rep_thms <- for
   [ {{ \x -> fp2_invariant (fp2_rep x) == True }}
   , {{ \x -> fp2_abs (fp2_rep x) == x }}
-  //, {{ \x -> fp2_rep (fp2_abs x) == if fp2_invariant x then x else ((apply fp2_rep) (fp2_abs x)) }} // else branch should never be used
-  , {{ \x -> fp2_rep (fp2_abs x) == x }} // TODO: temporary
+  , {{ \x -> fp2_rep (fp2_abs x) == if fp2_invariant x then x else ((apply fp2_rep) (fp2_abs x)) }} // else branch should never be used
+  //, {{ \x -> fp2_rep (fp2_abs x) == x }} // TODO: temporary
   ] admit_cryptol;
 
 // hoisting if for rewrites to match
