@@ -8,14 +8,14 @@ include "list_utils.saw";
 include "types.saw";
 
 m <- llvm_load_module "../build/llvm/libblst.a.bc";
-let do_prove = false;
+let do_prove = true;
 
 include "proof-helpers.saw";
 
 include "fp_overrides.saw";
 include "fp2_overrides.saw";
 include "vect.saw";
+include "exp.saw";
+include "curve_operations.saw";
+include "ec_mult.saw";
 include "curve_operations_e2.saw";
-//include "exp.saw";
-//include "curve_operations.saw";
-//include "ec_mult.saw";
