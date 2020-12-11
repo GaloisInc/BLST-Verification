@@ -229,7 +229,7 @@ let POINTonE2_is_equal_spec = do {
     }} );
 };
 
-POINTonE2_is_equal_ov <- really_custom_verify "POINTonE2_is_equal"
+POINTonE2_is_equal_ov <- custom_verify "POINTonE2_is_equal"
                       (concat vec_fp2_overrides fp2_overrides)
                       POINTonE2_is_equal_spec
                       (do {
@@ -237,3 +237,75 @@ POINTonE2_is_equal_ov <- really_custom_verify "POINTonE2_is_equal"
                           simplify (addsimps fp2_alg_thms simpset);
                           w4_unint_z3 fp2_unints;
                           });
+
+normalize_b_e2_thm <- prove_cryptol {{ Fp_2.normalize b' == b' }} [];
+
+POINTonE2_affine_on_curve_eqv_thm <- really_custom_prove_cryptol
+   {{ \p -> is_point_affine E' p == (Fp_2.is_val p.0 /\ Fp_2.is_val p.1 /\ POINTonE2_affine_on_curve p) }}
+   z3;
+
+let POINTonE2_affine_on_curve_spec = do {
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_affine_type;
+  crucible_precond {{ POINTonE2_affine_invariant p1 }};
+  crucible_execute_func [p1_ptr];
+  ret <- crucible_fresh_var "ret" limb_type;
+  crucible_return (crucible_term ret);
+  //crucible_return (crucible_term {{ if is_point_affine E' (POINTonE2_affine_abs p1) then (1:Limb) else 0 }});
+};
+
+B_E2_invariant_thm <-
+  really_prove_cryptol (rewrite (cryptol_ss ())
+    {{fp2_invariant [[ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+                     , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
+                    ,[ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+                     , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]]
+       == True}}) [];
+
+B_E2_abs_thm <-
+  really_prove_cryptol (rewrite (cryptol_ss ())
+    {{fp2_abs       [[ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+                     , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
+                    ,[ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+                     , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]]
+       == b' }}) [];
+
+enable_experimental;
+
+POINTonE2_affine_on_curve_ov <- crucible_llvm_compositional_extract m
+  "POINTonE2_affine_on_curve"
+  "POINTonE2_affine_on_curve_term"
+  (foldr concat [vec_fp2_overrides, fp2_overrides] [])
+  true // TODO: what is this? path satisfiability checking? if so, what does it do?
+  POINTonE2_affine_on_curve_spec
+  ( do {
+          unfolding ["POINTonE2_affine_invariant","POINTonE2_abs","POINTonE2_rep"];
+          simplify (addsimps [B_E2_invariant_thm] simpset);
+          print_goal;
+          w4_unint_z3 fp2_unints;
+  });
+
+let {{prop p1 = POINTonE2_affine_on_curve_term p1 == if is_point_affine E' (POINTonE2_affine_abs p1) then (1:Limb) else 0 }};
+
+let t1 = (rewrite (addsimps [POINTonE2_affine_on_curve_eqv_thm] (cryptol_ss ())) (unfold_term ["prop"] {{prop}}));
+let t2 = rewrite (addsimps [B_E2_abs_thm] simpset) (unfold_term ["POINTonE2_affine_on_curve","POINTonE2_affine_on_curve_term","POINTonE2_affine_abs"] t1);
+prove (do {goal_eval_unint fp2_unints; print_goal; w4;}) t2;
+
+//POINTonE2_affine_on_curve_ov <- really_custom_verify "POINTonE2_affine_on_curve"
+                      //(concat vec_fp2_overrides fp2_overrides)
+                      //POINTonE2_affine_on_curve_spec
+                      //(do {
+                          //// replace the post as written with the implementation-specific post
+                          //simplify (addsimp POINTonE2_affine_on_curve_eqv_thm basic_ss);
+                          //unfolding ["is_point_affine", "POINTonE2_affine_abs"
+                                    //, "POINTonE2_affine_invariant"
+                                    //, "POINTonE2_affine_on_curve"
+                                    //, "/\\", "\\/"
+                                    //, "E'", "is_point_O", "same_point_affine", "point_O"
+                                    //, "ShortWeierstrassCurve::cubed", "select"
+                                    //, "F_is_zero"
+                                    //];
+                          //simplify (addsimps [B_E2_abs_thm, B_E2_invariant_thm] fp_simpset);
+                          //unfolding ["Fp_2"];
+                          //w4_unint_z3 fp_unints;
+                          //});
+

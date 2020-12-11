@@ -293,7 +293,11 @@ POINTonE1_affine_on_curve p = XXX==YY \/ (x==0 /\ y==0) where
   XXX = Fp.add (Fp.mul (Fp.sq x, x), E.b)
   YY = Fp.sq y
 
-
+POINTonE2_affine_on_curve: AffinePoint t_Fp_2 -> Bool
+POINTonE2_affine_on_curve p = XXX==YY \/ (Fp_2.is_equal(x,Fp_2.field_zero) /\ Fp_2.is_equal(y,Fp_2.field_zero)) where
+  (x,y) = p
+  XXX = Fp_2.add (Fp_2.mul (Fp_2.sq x, x), E'.b)
+  YY = Fp_2.sq y
 
 // TODO: drop these?:
 
