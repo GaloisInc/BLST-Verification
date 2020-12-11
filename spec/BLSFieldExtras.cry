@@ -32,13 +32,24 @@ sqrt_fp2 x = z where
     // Need constants c1,c2,c3 with c1^2 = -1, c2^2 = c1, c3^3 = -c1
     // As Fp_2 = Fp(u) with u^2 +1 = 0, c1 = u does the first
     c1 = [1,0]
-    // Now pick a particular k (thanks to SageMath) so that 2 k^2 = -1 (mod p)
-    k: t_Fp
-    k = 1028732146235106349975324479215795277384839936929757896155643118032610843298655225875571310552543014690878354869257
-    // Then (k(u+1))^2 = k^2(2u) = -u and
-    //      (k(u-1))^2 = k^2(-2u) = u
-    c2 = [k, Fp.neg k] // k*(u-1)
-    c3 = [k, k] // k*(u+1)
+    c2 = sqrt_fp2_c2
+    c3 = sqrt_fp2_c3
+
+// Appendix G.3 asks for `c2` so that `c2^2 == u`, without saying how to get it.  If we find a
+// constant `k` in Fp with `k^^2 == -1/2, then
+//  (k*(u+1))^2 == k^2 * (u-1)^2 == (-1/2) * (u^2 - 2*u + 1) = (-1/2) * (-2*u) == u
+// and
+//  (k*(u-1))^2 = (-1/2)*(u^2 + 2*u + 1) == -u
+// We found this k (thanks to SageMath):
+sqrt_fp2_k: t_Fp
+sqrt_fp2_k = 1028732146235106349975324479215795277384839936929757896155643118032610843298655225875571310552543014690878354869257
+
+sqrt_fp2_c2: t_Fp_2
+sqrt_fp2_c2 = [sqrt_fp2_k, Fp.neg sqrt_fp2_k]
+
+sqrt_fp2_c3: t_Fp_2
+sqrt_fp2_c3 = [sqrt_fp2_k, sqrt_fp2_k]
+
 
 // (a*u + b) inverse is (-a*u + b)/(a^2+b^2), as can be checked by multiplying out
 inverse_fp2: t_Fp_2 -> t_Fp_2

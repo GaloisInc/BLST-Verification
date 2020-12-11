@@ -39,16 +39,54 @@ import Polynomial
  */
 extension_field: {k, t} (fin k, k >= 1) => FieldRep t -> [k]t -> FieldRep ([k]t)
 extension_field F p =
-    { is_val = all F.is_val
-    , normalize = map F.normalize
-    , field_zero = poly_0 F
-    , field_unit = poly_1 F
-    , add (a,b) = poly_add F a b // uncurry
-    , sub (a,b) = poly_sub F a b
-    , neg = map  F.neg
-    , mul (a,b) = poly_mul_mod F a b p
-    , sq a = poly_mul_mod F a a p
-    , half = map F.half
-    , div (a,b) = poly_mul_mod F a bi p where bi = poly_inverse_mod F b p
-    , is_equal (a,b) = all F.is_equal (zip a b)
+    { is_val = ef_is_val F
+    , normalize = ef_normalize F
+    , field_zero = ef_zero F
+    , field_unit = ef_unit F
+    , add = ef_add F
+    , sub = ef_sub F
+    , neg = ef_neg F
+    , mul = ef_mul F p
+    , sq = ef_sq F p
+    , half = ef_half F
+    , div = ef_div F p
+    , is_equal = ef_is_equal F
     }
+
+// We have defined named functions for all the field operations, so facilitate reading
+// formulas in SAW, where we never see `F.mul`, but instead something like `F.2.2.2.2.2.1`.
+// With these definitions, in SAW, after unfolding the defined extension field and also
+// `extension_field`, we will see the readable names.
+
+ef_is_val: {k, t} (fin k, k >= 1) => FieldRep t -> [k]t -> Bool
+ef_is_val F = all F.is_val
+
+ef_normalize: {k, t} (fin k, k >= 1) => FieldRep t -> [k]t -> [k]t
+ef_normalize F = map F.normalize
+
+ef_zero F = poly_0 F
+ef_unit F = poly_1 F
+
+ef_add: {k, t} (fin k, k >= 1) => FieldRep t -> ([k]t,[k]t) -> [k]t
+ef_add F (a,b) = poly_add F a b
+
+ef_sub: {k, t} (fin k, k >= 1) => FieldRep t -> ([k]t,[k]t) -> [k]t
+ef_sub F (a,b) = poly_sub F a b
+
+ef_neg: {k, t} (fin k, k >= 1) => FieldRep t -> [k]t -> [k]t
+ef_neg F = map F.neg
+
+ef_half: {k, t} (fin k, k >= 1) => FieldRep t -> [k]t -> [k]t
+ef_half F = map F.half
+
+ef_mul: {k, t} (fin k, k >= 1) => FieldRep t -> [k]t -> ([k]t,[k]t) -> [k]t
+ef_mul F m (a,b) = poly_mul_mod F a b m
+
+ef_sq: {k, t} (fin k, k >= 1) => FieldRep t -> [k]t -> [k]t -> [k]t
+ef_sq F m a = poly_mul_mod F a a m
+
+ef_div: {k, t} (fin k, k >= 1) => FieldRep t -> [k]t -> ([k]t,[k]t) -> [k]t
+ef_div F m (a,b) = poly_mul_mod F a bi m where bi = poly_inverse_mod F b m
+
+ef_is_equal: {k, t} (fin k, k >= 1) => FieldRep t -> ([k]t,[k]t) -> Bool
+ef_is_equal F (a,b) = all F.is_equal (zip a b)
