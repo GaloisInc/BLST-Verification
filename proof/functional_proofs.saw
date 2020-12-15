@@ -18,4 +18,5 @@ include "vect.saw";
 include "exp.saw";
 include "curve_operations.saw";
 include "ec_mult.saw";
+include "map_to_g1.saw";
 include "curve_operations_e2.saw";
