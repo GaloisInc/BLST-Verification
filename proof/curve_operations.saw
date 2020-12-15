@@ -554,6 +554,7 @@ let mul_by_b_onE1_alias_1_2_spec =
    admit "mul_by_b_onE1"  mul_by_b_onE1_alias_1_2_spec;
 
 
+// TODO: why is this not in CurveOperations.cry?
 let {{
    POINTonE1_on_curve: ProjectivePoint t_Fp -> Bool
    POINTonE1_on_curve (x,y,z) = (Fp.sq y == xxx \/ z == Fp.field_zero) where

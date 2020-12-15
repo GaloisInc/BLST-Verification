@@ -23,3 +23,5 @@ let vec384fp12_type = (llvm_array 2 vec384fp6_type);
 let POINTonE1_type = llvm_struct "struct.POINTonE1";
 let POINTonE1_affine_type = llvm_struct "struct.POINTonE1_affine";
 
+let POINTonE2_type = llvm_struct "struct.POINTonE2";
+let POINTonE2_affine_type = llvm_struct "struct.POINTonE2_affine";

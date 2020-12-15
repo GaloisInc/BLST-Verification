@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-// Overrides needed for the elliptic curve arithmetic operarations
+// Overrides needed for the elliptic curve arithmetic operations
 // These are the basic field operations for Fp or Fp2.
-// Here, we assume the specs, but eventually we will prove them 
+// Here, we assume the specs, but eventually we will prove them
 //
 
 /* for X in {fp, fp2}:
@@ -296,10 +296,3 @@ let fp_unints = ["fp_abs", "fp_invariant", "fp_rep", "fp_normalize", "Fp"
                 , "mod_add", "mod_sub", "mod_neg", "mod_mul", "mod_half", "mod_div"
                 , "mod_add_Z", "mod_sub_Z", "mod_neg_Z", "mod_mul_Z", "mod_half_Z", "mod_div_Z"
                 ];
-
-////////////////////////////////////////////////////////////////
-//
-// Fp_2 operations
-//
-
-// TODO.  after we see the Fp operations work.
