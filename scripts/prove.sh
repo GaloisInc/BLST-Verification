@@ -11,7 +11,7 @@ files="proof/memory_safety.saw proof/keygen.saw proof/functional_proofs.saw"
 
 for f in $files; do
   file=$f
-  saw "$f" 2>&1 | tee "$(printf '%s' "build/${f}_output" | sed 's/\.saw//')"
+  saw "$f" -s "build/${f}_output.json" -f json
 done
 
 echo "All functions under verification were verified successfully"
