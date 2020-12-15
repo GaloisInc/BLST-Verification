@@ -1,0 +1,115 @@
+module G2SubGroupCheck where
+
+import Parameters (p, Fp_2, t_Fp_2, E', BP', r)
+import Frobenius
+import Pairing (alpha) // alpha is 1/(u+1) = (1-u)/2
+import FieldExtras
+import ShortWeierstrassCurve
+
+
+/**
+ * A "projective_pair" `(xn, xd, yn, yd)` represents the affine point (xn/xd, yn/yd)
+ */
+type projective_pair_fp2 = (t_Fp_2, t_Fp_2, t_Fp_2, t_Fp_2)
+
+/**
+ *  Endomorphism "psi" from Appendix E.4 of draft-irtf-cfrg-hash-to-curve-09
+ */
+psi_projective: projective_pair_fp2 -> projective_pair_fp2
+psi_projective (xn, xd, yn, yd) = (qxn, qxd, qyn, qyd) where
+    qxn = Fp_2.mul (psi_c1, f2_frobenius xn)
+    qxd = f2_frobenius xd
+    qyn = Fp_2.mul (psi_c2, f2_frobenius yn)
+    qyd = f2_frobenius yd
+
+psi_c1: t_Fp_2
+psi_c1 = F_expt Fp_2 alpha (((`p-1)/3): [384])
+// == [to_Fp 0x1a0111ea397fe699ec02408663d4de85aa0d857d89759ad4897d29650fb85f9b409427eb4f49fffd8bfd00000000aaad,
+//     0], so also a multiple of u
+
+psi_c2: t_Fp_2
+psi_c2 = F_expt Fp_2 alpha (((`p-1)/2): [384])
+// [to_Fp 0x06af0e0437ff400b6831e36d6bd17ffe48395dabc2d3435e77f76e17009241c5ee67992f72ec05f4c81084fbede3cc09,
+//  to_Fp 0x135203e60180a68ee2e9c448d77a2cd91c3dedd930b1cf60ef396489f61eb45e304466cf3e67fa0af1ee7b04121bdea2]
+
+
+// AppendexE.1 describes the mapping from projective_pairs to Jacobian projective coordinate
+
+projective_pair_to_jacobian: projective_pair_fp2 -> ProjectivePoint t_Fp_2
+projective_pair_to_jacobian (xn, xd, yn, yd) = (X', Y', Z') where
+    X' = Fp_2.mul (xn, Fp_2.mul (xd, Fp_2.sq yd))
+    Y' = Fp_2.mul (yn, Fp_2.mul (Fp_2.sq yd, Fp_2.mul (xd, Fp_2.sq xd)))
+    Z' = Fp_2.mul (xd, yd)
+
+jacobian_to_projective_pair: ProjectivePoint t_Fp_2 -> projective_pair_fp2
+jacobian_to_projective_pair (X ,Y, Z) = (X, xd, Y, yd) where
+    xd = Fp_2.sq Z // Z^2
+    yd = Fp_2.mul (Z, xd) //Z^3
+
+// and also the mapping to affine
+
+projective_pair_to_affine: projective_pair_fp2 -> AffinePoint t_Fp_2
+projective_pair_to_affine (xn, xd, yn, yd) = (X', Y') where
+    X' = Fp_2.div  (xn, xd)
+    Y' = Fp_2.div (yn, yd)
+
+affine_to_projective_pair: AffinePoint t_Fp_2 -> projective_pair_fp2
+affine_to_projective_pair (x, y) = (x,Fp_2.field_unit, y, Fp_2.field_unit)
+
+// We can derive the effect of psi in affine coordinates
+
+psi: AffinePoint t_Fp_2 -> AffinePoint t_Fp_2
+psi (x, y) = (qxn, qyn) where
+    qxn = Fp_2.mul (psi_c1, f2_frobenius x)
+    qyn = Fp_2.mul (psi_c2, f2_frobenius y)
+
+// The subgroup check for G2, from Bowe "Faster Subgroup Checks for BLS12-381"
+
+e2_scalar_mult: Integer -> AffinePoint t_Fp_2 -> AffinePoint t_Fp_2
+e2_scalar_mult k P = if k < 0 then e2_scalar_mult (-k) (neg E' P)
+                              else add E' P (e2_scalar_mult (k-1) P)
+
+is_in_G2: AffinePoint t_Fp_2 -> Bool
+is_in_G2 P = is_point_O E' Q where
+    Q = add E' (sub E' (e2_scalar_mult z P3) P2) P
+    P2 = psi (psi P)
+    P3 = psi P2
+    z = -15132376222941642752 // -0xd201000000010000
+
+is_in_G2': AffinePoint t_Fp_2 -> Bool
+is_in_G2' P = is_point_O E' Q where
+    Q = sub E' P (add E' (mult E' z' P3) P2) // rearranged because we multiply by a positive here
+    P2 = psi (psi P)
+    P3 = psi P2
+    z' = 0xd201000000010000
+
+
+property test_psi_1 = is_point_affine E' (psi BP') // psi takes BP' to a point on the curve
+
+property test_psi_2 (m:[16]) = is_point_affine E' (psi (mult E' m BP')) // and multiples of BP'
+
+property in_G2_1 = is_in_G2' BP'
+
+property in_G2_2 (m:[16]) = is_in_G2' (mult E' m BP')
+
+// psi has order 12, apparently
+
+property test_psi_order =
+  same_point_affine E' (images@12) BP' where
+  images = [BP'] # [psi P | P <- images] // so images @ i == psi^i BP'
+
+property test_psi_order_mult (m:[16])=
+  same_point_affine E' (images@12) Q where
+  images = [Q] # [psi P | P <- images] // so images @ i == psi^i BP'
+  Q = mult E' m BP'
+
+// psi is claimed to map elements of G2 to a multiple, by p.  So
+
+property test_psi_is_mult = same_point_affine E' (psi BP') (mult E' (`p:[384]) BP')
+
+// or as the order of G2 is r, we can use exponent (p mod r)
+
+property test_psi_is_mult_reduced (m:[32]) = same_point_affine E' (psi P) (mult E' e  P)
+  where e = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfe2dfefffeffff0001
+        P = mult E' m BP'
+
