@@ -13,6 +13,7 @@ import Common::Field
 import implementation::Types
 import Parameters ( p, Fp, t_Fp, to_Fp, from_Fp, t_Fp_2, Fp_2)
 
+// TODO is this add or mul? (add if it's seen as a group op?)
 mul_by_3: {t} FieldRep t -> t -> t
 mul_by_3 F x = F.add (x, F.add (x, x))
 
@@ -66,6 +67,10 @@ fp2_rep [a,b] = [fp_rep b, fp_rep a]
 
 fp2_invariant: Fp_2_rep_t -> Bool
 fp2_invariant v = all fp_invariant v
+
+// needed?
+//fp2_normalize: Fp_2_rep_t -> Fp_2_rep_t
+//fp2_normalize x = vec384_rep (from_Fp (Fp.normalize (to_Fp (vec384_abs x))))
 
 // fp6 - TODO
 

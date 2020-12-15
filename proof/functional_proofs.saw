@@ -13,7 +13,9 @@ let do_prove = true;
 include "proof-helpers.saw";
 
 include "fp_overrides.saw";
+include "fp2_overrides.saw";
 include "vect.saw";
 include "exp.saw";
 include "curve_operations.saw";
 include "ec_mult.saw";
+include "curve_operations_e2.saw";

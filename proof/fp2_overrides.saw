@@ -1,0 +1,128 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+// Overrides needed for the elliptic curve arithmetic operations
+// These are the basic field operations for Fp2.
+// Here, we assume the specs, but eventually we will prove them
+//
+
+/*
+  add_fp2, sub_fp2, sqr_fp2, mul_fp2, mul_by_3_fp2, mul_by_8_fp2
+*/
+
+// NOTE: must have included fp_overrides.saw before this
+
+import "../spec/Parameters.cry";
+import "../spec/PrimeField.cry";
+import "../spec/implementation/Field.cry";
+import "../spec/implementation/CryptolHelpers.cry";
+
+let hoist f unints =
+  prove_cryptol {{\x y z -> f (if x then y else z) == if x then f y else f z}} unints;
+
+////////////////////////////////////////////////////////////////
+//
+// Fp_2 operations
+//
+
+// abs and rep theorems, good rewrites, will hold in the `prime_field` model but not the others
+// TODO: not sure I understand this comment
+fp2_rep_thms <- for
+  [ {{ \x -> fp2_invariant (fp2_rep x) == True }}
+  , {{ \x -> fp2_abs (fp2_rep x) == x }}
+  , {{ \x -> fp2_rep (fp2_abs x) == if fp2_invariant x then x else ((apply fp2_rep) (fp2_abs x)) }} // else branch should never be used
+  //, {{ \x -> fp2_rep (fp2_abs x) == x }} // TODO: temporary
+  ] admit_cryptol;
+
+// hoisting if for rewrites to match
+fp2_abs_ite_thm <- hoist {{fp2_abs}} ["fp2_abs"] ;
+fp2_invariant_ite_thm <- hoist {{fp2_invariant}} [] ;
+fp2_rep_ite_thm <- hoist {{fp2_rep}} ["fp2_rep"] ;
+
+fp2_abstract_invariant_thm <- prove_cryptol {{ \x -> Fp_2.is_val (fp2_abs x) == True }} []; // TODO: doesn't seem needed for now
+
+one_mont_fp2_rep_thm <- prove_cryptol (rewrite (cryptol_ss ())
+  {{ fp2_rep Fp_2.field_unit == [[ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+                             , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493],
+                             [0, 0, 0 , 0, 0, 0 ]] }}) [] ;
+
+let fp2_simpset = addsimps (concat fp2_rep_thms [one_mont_fp2_rep_thm, fp2_abs_ite_thm, fp2_invariant_ite_thm, fp2_rep_ite_thm]) (cryptol_ss ());
+
+let fp2_binop_ovs name op = do {
+  let plain_spec = binop_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
+  plain_ov <- admit name plain_spec;
+
+  let alias_1_2_spec = binop_alias_1_2_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
+  alias_1_2_ov <- admit name alias_1_2_spec;
+
+  return [plain_ov, alias_1_2_ov];
+  };
+
+add_fp2_ovs <- fp2_binop_ovs "add_fp2" {{Fp_2.add}} ;
+sub_fp2_ovs <- fp2_binop_ovs "sub_fp2" {{Fp_2.sub}} ;
+mul_fp2_ovs <- fp2_binop_ovs "mul_fp2" {{Fp_2.mul}} ;
+
+let sqr_fp2_spec =
+  unop_spec "sqr_fp2" vec384x_type {{ fp2_invariant }} {{fp2_rep}} {{fp2_abs}} {{Fp_2.sq}};
+sqr_fp2_ov <- admit "sqr_fp2" sqr_fp2_spec;
+let sqr_fp2_alias_1_2_spec =
+  unop_alias_1_2_spec "sqr_fp2" vec384x_type {{ fp2_invariant }} {{fp2_rep}} {{fp2_abs}} {{Fp_2.sq}};
+sqr_fp2_alias_1_2_ov <- admit "sqr_fp2" sqr_fp2_alias_1_2_spec;
+
+let mul_by_3_fp2_alias_1_2_spec =
+  unop_alias_1_2_spec "mul_by_3_fp2" vec384x_type {{ fp2_invariant }} {{fp2_rep}} {{fp2_abs}} {{ mul_by_3 Fp_2 }};
+mul_by_3_fp2_alias_1_2_ov <- admit "mul_by_3_fp2" mul_by_3_fp2_alias_1_2_spec;
+
+let mul_by_8_fp2_alias_1_2_spec =
+  unop_alias_1_2_spec "mul_by_8_fp2" vec384x_type {{ fp2_invariant }} {{fp2_rep}} {{fp2_abs}} {{ mul_by_8 Fp_2 }};
+mul_by_8_fp2_alias_1_2_ov <- admit "mul_by_8_fp2" mul_by_8_fp2_alias_1_2_spec;
+
+let cneg_fp2_spec = do {
+  ret_ptr <- crucible_alloc vec384x_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
+  cbit <- crucible_fresh_var "cbit" limb_type;
+  crucible_precond {{ fp2_invariant a }};
+  crucible_execute_func [ret_ptr, a_ptr, crucible_term cbit];
+  crucible_points_to ret_ptr (crucible_term {{ if cbit != 0 then fp2_rep (Fp_2.neg (fp2_abs a)) else a }});
+};
+
+cneg_fp2_ov <- admit "cneg_fp2" cneg_fp2_spec;
+
+let cneg_fp2_alias_1_2_spec = do {
+  (a, a_ptr) <- ptr_to_fresh "a" vec384x_type;
+  cbit <- crucible_fresh_var "cbit" limb_type;
+  crucible_precond {{ fp2_invariant a }};
+  crucible_execute_func [a_ptr, a_ptr, crucible_term cbit];
+  crucible_points_to a_ptr (crucible_term {{ if cbit != 0 then fp2_rep (Fp_2.neg (fp2_abs a)) else a }});
+};
+
+cneg_fp2_alias_1_2_ov <- admit "cneg_fp2" cneg_fp2_alias_1_2_spec;
+
+let fp2_overrides = foldr concat [add_fp2_ovs, sub_fp2_ovs, mul_fp2_ovs] [sqr_fp2_ov, sqr_fp2_alias_1_2_ov, mul_by_3_fp2_alias_1_2_ov, mul_by_8_fp2_alias_1_2_ov,cneg_fp2_ov,cneg_fp2_alias_1_2_ov];
+
+let fp2_unints = ["fp2_abs", "fp2_invariant", "fp2_rep", "Fp_2"];
+
+fp2_alg_thms <- for
+  [ {{ \ x y z -> Fp_2.mul (Fp_2.mul (x, y), z) == Fp_2.mul (x, Fp_2.mul (y, z)) }} // mul associates
+  , {{ \x -> Fp_2.mul (x, Fp_2.field_zero) == Fp_2.field_zero }} // x*0 = 0
+  , {{ \x -> Fp_2.mul (Fp_2.field_zero, x) == Fp_2.field_zero }} // 0*x = 0
+  , {{ \x -> Fp_2.mul (x, Fp_2.field_unit) == Fp_2.normalize x }} // x*1 = x ish
+  // , {{ \x -> Fp_2.mul (x, Fp_2.field_unit) == x }} // x*1 = x TODO: OK in the `Z p` model
+  , {{ \x -> Fp_2.mul (Fp_2.field_unit, x) == Fp_2.normalize x }} // 1*x = x ish
+  // , {{ \x -> Fp_2.mul (Fp_2.field_unit, x) == x }} // 1*x = x TODO
+
+  , {{ \x -> Fp_2.sq x == Fp_2.mul (x,x) }} // eliminate squaring.  Not always a good idea
+
+  , {{ \ x y z -> Fp_2.add (Fp_2.add (x, y), z) == Fp_2.add (x, Fp_2.add (y, z)) }} // add associates
+  , {{ \x -> Fp_2.add (x, Fp_2.field_zero) == Fp_2.normalize x }} // x+0 = x ish
+  , {{ \x -> Fp_2.add (Fp_2.field_zero, x) == Fp_2.normalize x }}//  0+x = x ish
+
+  , {{ \ x y -> Fp_2.sub (x, y) == Fp_2.add (x, Fp_2.neg y) }} // eliminate sub in favour of neg
+
+  , {{ \ x -> Fp_2.neg (Fp_2.neg x) == Fp_2.normalize x }} // double negative
+  , {{ \ x y -> Fp_2.neg (Fp_2.add (x, y)) == Fp_2.add (Fp_2.neg x, Fp_2.neg y) }} // push neg inside a sum
+  , {{ Fp_2.neg Fp_2.field_zero == Fp_2.field_zero }} // -0 = 0
+  ] (\ t -> prove_cryptol t []);
+

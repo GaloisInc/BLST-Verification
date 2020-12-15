@@ -1,0 +1,339 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+import "../spec/ShortWeierstrassCurve.cry";
+import "../spec/implementation/Types.cry";
+import "../spec/implementation/CurveOperation.cry";
+
+// we sometimes need to undo SAW's rip-and-restitching of vectors.  It is a bit tricky
+// TODO: not needed
+//let at0 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 0";
+//let at1 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 1";
+//let at2 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 2";
+//let at3 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 3";
+//let at4 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 4";
+//let at5 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 5";
+
+//unrip_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[6][64]) -> [at0 x, at1 x, at2 x, at3 x, at4 x, at5 x] == x }}) [];
+
+//let at0_2 = parse_core "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6 (Vec 64 Bool)) x 0";
+//let at1_2 = parse_core "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6 (Vec 64 Bool)) x 1";
+
+//unrip_thm_2 <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[2][6][64]) -> [at0_2 x, at1_2 x] == x}}) [];
+
+let {{
+    hoist_if_proj_0 : {a} (Eq a) => Bit -> (a,a,a) -> (a,a,a) -> Bit
+    hoist_if_proj_0 x y z = (if x then y else z).0 == if x then y.0 else z.0
+    hoist_if_proj_1 : {a} (Eq a) => Bit -> (a,a,a) -> (a,a,a) -> Bit
+    hoist_if_proj_1 x y z = (if x then y else z).1 == if x then y.1 else z.1
+    hoist_if_proj_2 : {a} (Eq a) => Bit -> (a,a,a) -> (a,a,a) -> Bit
+    hoist_if_proj_2 x y z = (if x then y else z).2 == if x then y.2 else z.2
+  }};
+
+hoist_if_proj_0 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_proj_0"] {{ hoist_if_proj_0`{[2][6][64]} }})) [];
+hoist_if_proj_1 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_proj_1"] {{ hoist_if_proj_1`{[2][6][64]} }})) [];
+hoist_if_proj_2 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_proj_2"] {{ hoist_if_proj_2`{[2][6][64]} }})) [];
+hoist_if_proj_int_0 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_proj_0"] {{ hoist_if_proj_0`{[2]Integer} }})) [];
+hoist_if_proj_int_1 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_proj_1"] {{ hoist_if_proj_1`{[2]Integer} }})) [];
+hoist_if_proj_int_2 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_proj_2"] {{ hoist_if_proj_2`{[2]Integer} }})) [];
+
+// TODO: not needed
+//seq_ite_thm_2 <-
+  //prove_cryptol
+  //(rewrite (cryptol_ss ()) {{ \x (y0:[6][64]) y1 z0 z1 ->
+                                  //[ if x then y0 else z0
+                                  //, if x then y1 else z1]
+                            //== if x then [y0,y1] else [z0,z1] }})
+   //[];
+
+core_rewrites <- for
+  [ "EqTrue (eq Nat (intToNat (natToInt 0)) 0)"
+  , "EqTrue (eq Nat (intToNat (natToInt 1)) 1)"
+  //, "EqTrue (eq Bool (intLe (natToInt 0) (natToInt 0)) True)"
+  //, "EqTrue (eq Bool (intLe (natToInt 0) (natToInt 1)) True)"
+  ] (prove_core abc);
+
+let simpset = addsimps (concat core_rewrites [hoist_if_proj_int_0, hoist_if_proj_int_1, hoist_if_proj_int_2, hoist_if_proj_0, hoist_if_proj_1, hoist_if_proj_2]) fp2_simpset;
+
+let POINTonE2_add_spec = do {
+  out_ptr <- crucible_alloc POINTonE2_type;
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_invariant p2 }};
+  crucible_execute_func [out_ptr, p1_ptr, p2_ptr];
+  crucible_points_to out_ptr (crucible_term  {{ POINTonE2_rep (point_add Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2)) }} );
+};
+
+POINTonE2_add_ov <- custom_verify "POINTonE2_add"
+                      (foldr concat [vec_fp2_overrides, fp2_overrides] [vec_is_zero_fp2_ov])
+                      POINTonE2_add_spec
+                      (do {
+                        unfolding ["POINTonE2_rep","POINTonE2_abs","point_add", "select"];
+                        simplify simpset;
+                        w4_unint_z3 fp2_unints;
+                      });
+
+let POINTonE2_add_alias_1_2_spec = do {
+  (p1, p1_ptr) <- ptr_to_fresh "p1" POINTonE2_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_invariant p2 }};
+  crucible_execute_func [p1_ptr, p1_ptr, p2_ptr];
+  crucible_points_to p1_ptr (crucible_term  {{ POINTonE2_rep (point_add Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2)) }} );
+};
+
+POINTonE2_add_alias_1_2_ov <- custom_verify "POINTonE2_add"
+                      (foldr concat [vec_fp2_overrides, fp2_overrides] [vec_is_zero_fp2_ov])
+                      POINTonE2_add_alias_1_2_spec
+                      (do {
+                        unfolding ["POINTonE2_rep","POINTonE2_abs","point_add", "select"];
+                        simplify simpset;
+                        w4_unint_z3 fp2_unints;
+                      });
+
+let POINTonE2_add_affine_spec = do {
+  out_ptr <- crucible_alloc POINTonE2_type;
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_affine_type;
+  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_affine_invariant p2 }};
+  crucible_execute_func [out_ptr, p1_ptr, p2_ptr];
+  crucible_points_to out_ptr (crucible_term  {{ POINTonE2_rep (point_add_affine Fp_2 (POINTonE2_abs p1) (POINTonE2_affine_abs p2)) }} );
+};
+
+POINTonE2_add_affine_ov <- custom_verify "POINTonE2_add_affine"
+                      (foldr concat [vec_fp2_overrides, fp2_overrides] [vec_is_zero_fp2_ov])
+                      POINTonE2_add_affine_spec
+                      (do {
+                        unfolding ["POINTonE2_rep","POINTonE2_abs","POINTonE2_affine_rep","POINTonE2_affine_abs","point_add_affine", "select"];
+                        simplify simpset;
+                        w4_unint_z3 fp2_unints;
+                      });
+
+let POINTonE2_add_affine_alias_1_2_spec = do {
+  (p1, p1_ptr) <- ptr_to_fresh "p1" POINTonE2_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_affine_type;
+  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_affine_invariant p2 }};
+  crucible_execute_func [p1_ptr, p1_ptr, p2_ptr];
+  crucible_points_to p1_ptr (crucible_term  {{ POINTonE2_rep (point_add_affine Fp_2 (POINTonE2_abs p1) (POINTonE2_affine_abs p2)) }} );
+};
+
+
+POINTonE2_add_affine_alias_1_2_ov <- custom_verify "POINTonE2_add_affine"
+                      (foldr concat [vec_fp2_overrides, fp2_overrides] [vec_is_zero_fp2_ov])
+                      POINTonE2_add_affine_alias_1_2_spec
+                      (do {
+                        unfolding ["POINTonE2_rep","POINTonE2_abs","POINTonE2_affine_rep","POINTonE2_affine_abs","point_add_affine", "select"];
+                        simplify simpset;
+                        w4_unint_z3 fp2_unints;
+                      });
+
+let POINTonE2_double_spec = do {
+  out_ptr <- crucible_alloc POINTonE2_type;
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant p1 }};
+  crucible_execute_func [out_ptr, p1_ptr];
+  crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (point_double Fp_2 (POINTonE2_abs p1)) }});
+};
+
+POINTonE2_double_ov <- custom_verify "POINTonE2_double"
+                      (foldr concat [vec_fp2_overrides, fp2_overrides] [vec_is_zero_fp2_ov])
+                      POINTonE2_double_spec
+                      (do {
+                        unfolding ["POINTonE2_rep","POINTonE2_abs","POINTonE2_affine_rep","POINTonE2_affine_abs","point_double"];
+                        simplify simpset;
+                        w4_unint_z3 fp2_unints;
+                      });
+
+let POINTonE2_double_alias_1_2_spec = do {
+  (p1, p1_ptr) <- ptr_to_fresh "p1" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant p1 }};
+  crucible_execute_func [p1_ptr, p1_ptr];
+  crucible_points_to p1_ptr (crucible_term {{ POINTonE2_rep (point_double Fp_2 (POINTonE2_abs p1)) }});
+};
+
+POINTonE2_double_alias_1_2_ov <- custom_verify "POINTonE2_double"
+                      (foldr concat [vec_fp2_overrides, fp2_overrides] [vec_is_zero_fp2_ov])
+                      POINTonE2_double_alias_1_2_spec
+                      (do {
+                        unfolding ["POINTonE2_rep","POINTonE2_abs","POINTonE2_affine_rep","POINTonE2_affine_abs","point_double"];
+                        simplify simpset;
+                        w4_unint_z3 fp2_unints;
+                      });
+
+let POINTonE2_dadd_null_spec = do {
+  out_ptr <- crucible_alloc POINTonE2_type;
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_invariant p2 }};
+  crucible_execute_func [out_ptr, p1_ptr, p2_ptr, crucible_null];
+   crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (point_dadd Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2) Fp_2.field_zero True) }});
+};
+
+
+POINTonE2_dadd_null_ov <- custom_verify "POINTonE2_dadd"
+                      (concat vec_fp2_overrides fp2_overrides)
+                      POINTonE2_dadd_null_spec
+                      (do {
+                            unfolding ["F_is_zero","POINTonE2_rep","POINTonE2_abs","select","point_dadd"];
+                          simplify simpset;
+                          w4_unint_z3 fp2_unints;
+                          }
+);
+
+let POINTonE2_dadd_nonnull_spec = do {
+  out_ptr <- crucible_alloc POINTonE2_type;
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_type;
+  (a4, a4_ptr) <- ptr_to_fresh_readonly "a4" vec384x_type;
+  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_invariant p2 /\ fp2_invariant a4}};
+  crucible_execute_func [out_ptr, p1_ptr, p2_ptr, a4_ptr];
+  crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (point_dadd Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2) (fp2_abs a4) False) }});
+};
+
+POINTonE2_dadd_nonnull_ov <- custom_verify "POINTonE2_dadd"
+                      (concat vec_fp2_overrides fp2_overrides)
+                      POINTonE2_dadd_nonnull_spec
+                      (do {
+                            unfolding ["F_is_zero","POINTonE2_rep","POINTonE2_abs","select","point_dadd"];
+                          simplify simpset;
+                          w4_unint_z3 fp2_unints;
+                          });
+
+let POINTonE2_dadd_affine_spec = do {
+  out_ptr <- crucible_alloc POINTonE2_type;
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_affine_type;
+  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_affine_invariant p2 }};
+  crucible_execute_func [out_ptr, p1_ptr, p2_ptr];
+  crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (point_dadd_affine Fp_2 (POINTonE2_abs p1) (POINTonE2_affine_abs p2)) }});
+};
+
+POINTonE2_dadd_affine_ov <- custom_verify "POINTonE2_dadd_affine"
+                      (concat vec_fp2_overrides fp2_overrides)
+                      POINTonE2_dadd_affine_spec
+                      (do {
+                            unfolding ["F_is_zero","POINTonE2_rep","POINTonE2_abs","select","point_dadd_affine","POINTonE2_affine_rep","POINTonE2_affine_abs"];
+                          simplify simpset;
+                          w4_unint_z3 fp2_unints;
+                          });
+
+let POINTonE2_is_equal_spec = do {
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_invariant p2 }};
+  crucible_execute_func [p1_ptr, p2_ptr];
+  crucible_return (crucible_term
+   {{ bool_to_limb ((same_point E' (POINTonE2_abs p1) (POINTonE2_abs p2))
+                    /\ (Fp_2.is_equal(fp2_abs p1.2, Fp_2.field_zero) ^ Fp_2.is_equal(fp2_abs p2.2, Fp_2.field_zero) ^ True))
+    }} );
+};
+
+POINTonE2_is_equal_ov <- custom_verify "POINTonE2_is_equal"
+                      (concat vec_fp2_overrides fp2_overrides)
+                      POINTonE2_is_equal_spec
+                      (do {
+                          unfolding ["same_point","bool_to_limb","ShortWeierstrassCurve::cubed","E'","POINTonE2_abs","POINTonE2_rep"];
+                          simplify (addsimps fp2_alg_thms simpset);
+                          w4_unint_z3 fp2_unints;
+                          });
+
+normalize_b_e2_thm <- prove_cryptol {{ Fp_2.normalize b' == b' }} [];
+
+POINTonE2_affine_on_curve_eqv_thm <- custom_prove_cryptol
+   {{ \p -> is_point_affine E' p == (Fp_2.is_val p.0 /\ Fp_2.is_val p.1 /\ POINTonE2_affine_on_curve p) }}
+   z3;
+
+let POINTonE2_affine_on_curve_spec = do {
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_affine_type;
+  crucible_precond {{ POINTonE2_affine_invariant p1 }};
+  crucible_execute_func [p1_ptr];
+  crucible_return (crucible_term {{ if is_point_affine E' (POINTonE2_affine_abs p1) then (1:Limb) else 0 }});
+};
+
+B_E2_invariant_thm <-
+  prove_cryptol (rewrite (cryptol_ss ())
+    {{fp2_invariant [[ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+                     , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
+                    ,[ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+                     , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]]
+       == True}}) [];
+
+B_E2_abs_thm <-
+  prove_cryptol (rewrite (cryptol_ss ())
+    {{fp2_abs       [[ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+                     , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
+                    ,[ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+                     , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]]
+       == b' }}) [];
+
+POINTonE2_affine_on_curve_ov <- custom_verify "POINTonE2_affine_on_curve"
+                      (concat vec_fp2_overrides fp2_overrides)
+                      POINTonE2_affine_on_curve_spec
+                      (do {
+                          // replace the post as written with the implementation-specific post
+                          simplify (addsimp POINTonE2_affine_on_curve_eqv_thm basic_ss);
+                          unfolding ["POINTonE2_affine_on_curve","POINTonE2_affine_abs"];
+                          simplify (addsimps [B_E2_abs_thm, B_E2_invariant_thm] simpset);
+                          w4;
+                          });
+
+let mul_by_b_onE2_spec =
+  unop_spec "mul_by_b_onE2" vec384x_type {{ fp2_invariant }} {{fp2_rep}} {{fp2_abs}}
+                                        {{ \x -> Fp_2.mul (b', x) }};
+let mul_by_b_onE2_alias_1_2_spec =
+  unop_alias_1_2_spec "mul_by_b_onE2" vec384x_type {{ fp2_invariant }} {{fp2_rep}} {{fp2_abs}}
+                                        {{ \x -> Fp_2.mul (b', x) }};
+mul_by_b_onE2_ov <-
+  admit "mul_by_b_onE2"  mul_by_b_onE2_spec;
+mul_by_b_onE2_alias_1_2_ov <-
+  admit "mul_by_b_onE2"  mul_by_b_onE2_alias_1_2_spec;
+
+let POINTonE2_on_curve_spec = do {
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant p1 }};
+  crucible_execute_func [p1_ptr];
+  crucible_return (crucible_term {{ if POINTonE2_on_curve (POINTonE2_abs p1) then (1:Limb) else 0 }});
+};
+
+// NOTE: the precondition in the equality below
+POINTonE2_on_curve_eqv_thm <- custom_prove_cryptol
+   {{ \p -> ~Fp_2.is_equal(p.2, Fp_2.field_zero) ==> is_point_projective E' p == (Fp_2.is_val p.0 /\ Fp_2.is_val p.1 /\ Fp_2.is_val p.2 /\ POINTonE2_on_curve p) }}
+   z3;
+
+let POINTonE2_on_curve_spec = do {
+  (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant p1 }};
+  crucible_execute_func [p1_ptr];
+  crucible_return (crucible_term {{ if POINTonE2_on_curve (POINTonE2_abs p1) then (1:Limb) else 0 }});
+};
+
+POINTonE2_on_curve_ov <- custom_verify "POINTonE2_on_curve"
+                      (foldr concat [vec_fp2_overrides, fp2_overrides] [mul_by_b_onE2_ov, mul_by_b_onE2_alias_1_2_ov])
+                      POINTonE2_on_curve_spec
+                      (do {
+                          unfolding ["POINTonE2_abs","POINTonE2_rep","POINTonE2_on_curve"];
+                          simplify (addsimps [B_E2_abs_thm, B_E2_invariant_thm] simpset);
+                          w4;
+                          });
+
+let POINTonE2_cneg_spec = do {
+  (p, p_ptr) <- ptr_to_fresh "p" POINTonE2_type;
+  cbit <- crucible_fresh_var "cbit" limb_type;
+  crucible_precond {{ POINTonE2_invariant p }};
+  crucible_execute_func [p_ptr, crucible_term cbit];
+  crucible_points_to p_ptr (crucible_term {{ if cbit != 0 then POINTonE2_rep (point_neg Fp_2 (POINTonE2_abs p))
+                                                          else p }});
+};
+
+POINTonE2_cneg <- really_custom_verify "POINTonE2_cneg"
+                      (concat vec_fp2_overrides fp2_overrides)
+                      POINTonE2_cneg_spec
+                      (do {
+                          unfolding ["POINTonE2_abs","POINTonE2_rep","point_neg"];
+                          simplify simpset;
+                          w4;
+                          //w4_unint_z3 fp2_unints;
+                          });
+
+// TODO: useful theorems like in curve_operations.saw?
