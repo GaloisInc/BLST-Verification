@@ -383,5 +383,5 @@ e2_curve_op_thms <- for
  , {{ \ p1 -> affinify E' (point_neg Fp_2 p1) == neg E' (affinify E' p1) }}
  , {{ \ p1 p2 a4 -> affinify E' (point_dadd Fp_2 p1 p2 a4 True) == add E' (affinify E' p1) (affinify E' p2) }}
  , {{ \ p1 p2 -> affinify E' (point_dadd_affine Fp_2 p1 p2) == add E' (affinify E' p1) p2 }}
- ] 
+ ]
  admit_cryptol;
