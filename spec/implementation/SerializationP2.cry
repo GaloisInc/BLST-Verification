@@ -1,0 +1,83 @@
+module implementation::SerializationP2 where
+
+import Parameters (p, E, E', t_Fp, to_Fp, t_Fp_2, Fp, Fp_2)
+import ShortWeierstrassCurve as EC
+import rfc8017
+import Maybe
+import FieldExtras (F_expt)
+import BLSFieldExtras
+import Serialization
+import implementation::Types
+import implementation::Field
+
+// deserialization of compressed representations for curve E2 (aka E').
+// From draft-irtf-cfrg-pairing-friendly-curves-07, Appendix C.2
+
+uncompress_E2_x: [96][8] -> [2][384]
+uncompress_E2_x s_string = x where
+    s_string' = [(s_string@0) && 0x1F] # tail s_string
+    // Step 6 - but not clearly described in the IETF specification
+    x = reverse (split`{parts=2} (join s_string'))
+
+uncompress_E2_x_fp: [96][8] -> t_Fp_2
+uncompress_E2_x_fp s_string = [f x0, f x1] where
+    [x0, x1] = uncompress_E2_x s_string
+    f x = Fp.mul (fp_abs (vec384_rep x), montgomery_factor_p) // Montgomery-encode using multiplication
+
+not_too_big_E2: [2][384] -> Bool
+not_too_big_E2 x = (x@0 < `p) && (x@1 < `p)
+
+uncompress_E2_y2: [96][8] -> t_Fp_2
+uncompress_E2_y2 s_string = y2 where
+    x = uncompress_E2_x_fp s_string
+    y2 = Fp_2.add (Fp_2.mul (Fp_2.sq x, x), [4,4]) // Note [4,4] = 4*u
+
+uncompress_E2_y: [96][8] -> t_Fp_2
+uncompress_E2_y s_string = sqrt_fp2 (uncompress_E2_y2 s_string)
+
+uncompress_E2_imp: [96][8] -> Maybe (EC::AffinePoint t_Fp_2)
+uncompress_E2_imp s_string = ret where
+    // Step 1.
+    m_byte = (s_string@0) && 0xE0 // three highest bits
+    C_bit = m_byte @ 0
+    I_bit = m_byte @ 1
+    S_bit = m_byte @ 2
+    s_string' = [(s_string@0) && 0x1F] # tail s_string
+    x = uncompress_E2_x_fp s_string
+    y2 = uncompress_E2_y2 s_string
+    y = sqrt_fp2 y2
+    Y_bit = sign_F_p_2 y
+    ret = if C_bit == False then nothing // Error, from Step 2
+           | I_bit then (if ~S_bit /\ s_string' == zero then just (EC::point_O E') else nothing)
+//           | (uncompress_E2_x s_string)@0 >= `p then nothing // extra check in the C code
+//           | (uncompress_E2_x s_string)@1 >= `p then nothing // extra check in the C code
+           | ~ (not_too_big_E2 (uncompress_E2_x s_string)) then nothing // extra checks in the C code
+           | ~ (is_square_fp2 y2) then nothing // from Step 7
+           | S_bit == Y_bit then just (x,y)
+          else just (x, Fp_2.neg y)
+
+
+uncompress_E2_OK: [96][8] -> EC::AffinePoint t_Fp_2
+uncompress_E2_OK s_string = if S_bit == Y_bit then (x,y) else (x, Fp_2.neg y) where
+    x = uncompress_E2_x_fp s_string
+    y = uncompress_E2_y s_string
+    S_bit = (s_string@0)@2
+    Y_bit = sign_F_p_2 y
+
+// deserialization of uncompressed representations
+
+deserialize_E2_x: [2*96][8] -> [2][384]
+deserialize_E2_x s_string = x where
+    s_string' = take`{96} ([(s_string@0) && 0x1F] # tail s_string)
+    x = reverse (split`{parts=2} (join s_string'))
+
+//deserialize_E2_x_fp: [96][8] -> t_Fp_2
+//deserialize_E2_x_fp s_string =
+//    Fp.mul (fp_abs (vec384_rep (deserialize_E2_x s_string)), montgomery_factor_p)
+
+deserialize_E2_y: [2*96][8] -> [2][384]
+deserialize_E2_y s_string = reverse (split (join (drop`{96} s_string)))
+
+//deserialize_E2_y_fp: [96][8] -> t_Fp_2
+//deserialize_E2_y_fp s_string =
+//    Fp.mul (fp_abs (vec384_rep (deserialize_E2_y s_string)), montgomery_factor_p)

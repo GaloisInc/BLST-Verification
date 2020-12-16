@@ -55,3 +55,17 @@ sqrt_fp2_c3 = [sqrt_fp2_k, sqrt_fp2_k]
 inverse_fp2: t_Fp_2 -> t_Fp_2
 inverse_fp2 [a,b] = [Fp.div(Fp.neg a, c), Fp.div(b, c)] where
     c = Fp.add (Fp.sq a, Fp.sq b)
+
+// Two ways to implement `is_square` for Fp_2 are offered
+
+//is_square x =  F.is_equal (y, F.field_zero) \/ F.is_equal (y, F.field_unit) where
+//    y = F_expt`{n = width q} F x `((q-1)/2)
+
+// ... and Appendix G.5 of draft-irtf-cfrg-hash-to-curve
+
+is_square_fp2: t_Fp_2 -> Bool
+is_square_fp2 [x_2, x_1] = (tv1' != Fp_2.neg Fp_2.field_unit) where
+    // NB our representation of polynomnials is big-endian unlike the spec
+    tv1 = Fp.sq x_1
+    tv2 = Fp_2.sq [x_2, Fp.field_zero] // = Fp2_sq (Fp_2.mul (u, const_poly x_2))
+    tv1' = F_expt Fp_2 (Fp_2.sub ([Fp.field_zero, tv1], tv2)) (((`p-1)/2):[381])

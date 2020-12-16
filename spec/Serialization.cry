@@ -166,33 +166,9 @@ deserialize_E2 s_string = ret where
     y = sqrt_F_p_2 y2
     Y_bit = sign_F_p_2 y
     // Steps 2, 4, 8
-    ret = if C_bit == False then nothing // Error, from Step 2
+    ret = if m_byte == 0x20 \/ m_byte == 0x60 \/ m_byte == 0xE0 then nothing // Error, from Step 1
+           | C_bit == False then nothing // Error, from Step 2
            | I_bit then (if s_string' == zero then just (EC::point_O E') else nothing) // Step 4
            | ~ (is_square_F_p_2 y2) then nothing // from Step 7
            | S_bit == Y_bit then just (x,y)
           else just (x, Fp_2.neg y)
-
-
-deserialize_E2': [96][8] -> (Maybe (EC::AffinePoint t_Fp_2), Integer)
-deserialize_E2' s_string = ret where
-    // Step 1.
-    m_byte = (s_string@0) && 0xE0
-    C_bit = m_byte @ 0
-    I_bit = m_byte @ 1
-    S_bit = m_byte @ 2
-    // Step 2 deferred (we check that C_bit is 1 later)
-    // Step 3
-    s_string' = [(s_string@0) && 0x1F] # tail s_string
-    // Step 6
-    x = map to_Fp (reverse (split`{parts=2} (OS2IP`{a=[2*384]}(s_string'))))
-    //Step 7 (on curve E')
-    y2 = Fp_2.add (Fp_2.mul (x, Fp_2.sq x), [4,4]) // TODO: make the constant look nicer
-    y = sqrt_F_p_2 y2
-    Y_bit = sign_F_p_2 y
-    // Steps 2, 4, 8
-    ret = if C_bit == False then (nothing,2) // Error, from Step 2
-           | I_bit then (if s_string' == zero then (just (EC::point_O E'),4) else (nothing,4)) // Step 4
-           | ~ (is_square_F_p_2 y2) then (nothing,7) // from Step 7
-           | S_bit == Y_bit then (just (x,y), 8)
-          else (just (x, Fp_2.neg y), 9)
-
