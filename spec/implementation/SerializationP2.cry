@@ -17,7 +17,10 @@ uncompress_E2_x: [96][8] -> [2][384]
 uncompress_E2_x s_string = x where
     s_string' = [(s_string@0) && 0x1F] # tail s_string
     // Step 6 - but not clearly described in the IETF specification
-    x = reverse (split`{parts=2} (join s_string'))
+    // AND - some uncertainty about the order of the parts
+    // x = reverse (split`{parts=2} (join s_string'))
+    // NOTE: this order, used in ZCash and the code, disagrees with the spec.
+    x = split`{parts=2} (join s_string')
 
 uncompress_E2_x_fp: [96][8] -> t_Fp_2
 uncompress_E2_x_fp s_string = [f x0, f x1] where
