@@ -29,9 +29,9 @@ let POINTonE2_times_minus_z_spec = do {
   (in_, in_ptr) <- ptr_to_fresh_readonly "in" POINTonE2_type;
   crucible_precond {{ POINTonE2_invariant in_ }};
   crucible_execute_func [out_ptr, in_ptr];
-  //crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (projectify E' (e2_scalar_mult (-z) (affinify E' (POINTonE2_abs in_)))) }});
+  crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (projectify E' (e2_scalar_mult (-z) (affinify E' (POINTonE2_abs in_)))) }});
   // using mult for testing...
-  crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (projectify E' (mult E' minus_z (affinify E' (POINTonE2_abs in_)))) }});
+  //crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (projectify E' (mult E' minus_z (affinify E' (POINTonE2_abs in_)))) }});
 };
 
 // spec for extraction:
@@ -133,7 +133,7 @@ let POINTonE2_in_G2_spec = do {
   (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE2_affine_type;
   crucible_precond {{ POINTonE2_affine_invariant p }};
   crucible_execute_func [p_ptr];
-  crucible_return (crucible_term {{ if (is_in_G2_impl' (POINTonE2_affine_abs p)) then (1:Limb) else (0:Limb) }});
+  crucible_return (crucible_term {{ if (is_in_G2_impl (POINTonE2_affine_abs p)) then (1:Limb) else (0:Limb) }});
 };
 
 // spec for extraction:
@@ -204,7 +204,7 @@ if_false_1 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["if_false_rew
 one_abs_thm <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["one_mont_px"] {{ \x -> affinify E' (POINTonE2_abs (x.0, x.1, one_mont_px)) == POINTonE2_affine_abs x }})) [];
 
 let {{
-  prop p = POINTonE2_in_G2_term p == (if (is_in_G2_impl' (POINTonE2_affine_abs p)) then (1:Limb) else (0:Limb))
+  prop p = POINTonE2_in_G2_term p == (if (is_in_G2_impl (POINTonE2_affine_abs p)) then (1:Limb) else (0:Limb))
 }};
 
 // TODO: we cannot leave those uninterpreted because they are higher-order. Is there a better way that this:
@@ -234,7 +234,7 @@ point_dadd_affine_fp2_thm <- prove_cryptol {{  \p1 p2 -> point_dadd_affine Fp_2 
 point_double_fp2_thm <- prove_cryptol {{  \p1 -> point_double Fp_2 p1 == point_double_fp2 p1 }} ["Fp_2"];
 point_neg_fp2_thm <- prove_cryptol {{  \p1 -> point_neg Fp_2 p1 == point_neg_fp2 p1 }} ["Fp_2"];
 add_E'_thm <- prove_cryptol {{  \p1 p2 -> add E' p1 p2 == add_E' p1 p2 }} ["E'"];
-mult_E'_thm <- prove_cryptol {{  \p1 p2 -> mult E' p1 p2 == mult_E' p1 p2 }} ["E'"];
+//mult_E'_thm <- prove_cryptol {{  \k p2 -> mult E' k p2 == mult_E' k p2 }} ["E'"];
 neg_E'_thm <- prove_cryptol {{  \p1 -> neg E' p1 == neg_E' p1 }} ["E'"];
 is_point_O_E'_thm <- prove_cryptol {{  \p1 -> is_point_O E' p1 == is_point_O_E' p1 }} ["E'"];
 //add'_E'_thm <- prove_cryptol {{  \p1 p2 -> add' E' p1 p2 == add'_E' p1 p2 }} ["E'"];
@@ -250,14 +250,14 @@ let remove_higher_order_function_simpset =
            , is_point_affine_E'_thm, is_point_projective_E'_thm
            ] empty_ss;
 let remove_higher_order_function_simpset_ =
-  addsimps [ add_E'_thm, mult_E'_thm, neg_E'_thm, is_point_O_E'_thm] empty_ss;
+  addsimps [ add_E'_thm, neg_E'_thm, is_point_O_E'_thm] empty_ss;
 
 prove (do {
-    unfolding ["prop","POINTonE2_in_G2_term","is_in_G2_impl'"];
+    unfolding ["prop","POINTonE2_in_G2_term","is_in_G2_impl"];
     simplify (addsimps (foldr concat [POINTonE2_thms,e2_curve_op_thms_2] [thm1,thm2,is_point_O_thm',if_false_1, one_abs_thm]) (cryptol_ss ()));
     simplify remove_higher_order_function_simpset_;
     print_goal;
-    w4_unint_z3 ["psi", "add_E'", "is_point_O_E'", "mult_E'", "neg_E'"];
+    w4_unint_z3 ["psi", "add_E'", "is_point_O_E'", "neg_E'", "e2_scalar_mult"];
   })
   {{prop}};
 
