@@ -19,14 +19,19 @@ enable_experimental;
 
 // We first give specs for POINTonE2_times_minus_z and psi, which we only, summarily test.
 
-let {{ z = -15132376222941642752}};
+let {{
+  z = -15132376222941642752
+  minus_z = 0xd201000000010000
+}};
 
 let POINTonE2_times_minus_z_spec = do {
   out_ptr <- crucible_alloc POINTonE2_type;
   (in_, in_ptr) <- ptr_to_fresh_readonly "in" POINTonE2_type;
   crucible_precond {{ POINTonE2_invariant in_ }};
   crucible_execute_func [out_ptr, in_ptr];
-  crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (projectify E' (e2_scalar_mult z (affinify E' (POINTonE2_abs in_)))) }});
+  //crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (projectify E' (e2_scalar_mult (-z) (affinify E' (POINTonE2_abs in_)))) }});
+  // using mult for testing...
+  crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (projectify E' (mult E' minus_z (affinify E' (POINTonE2_abs in_)))) }});
 };
 
 // spec for extraction:
@@ -53,12 +58,11 @@ POINTonE2_times_minus_z_ov_ <- crucible_llvm_compositional_extract m
     });
 
 let {{
-minus_z = 0xd201000000010000
 prop_times_minus_z k =
   same_point E' (POINTonE2_abs (POINTonE2_times_minus_z_term p)) (projectify E' (mult E' minus_z (affinify E' (POINTonE2_abs p))))
     where p = POINTonE2_rep (projectify E' (mult E' k BP'))
 }};
-prove (quickcheck 2) {{\(k:[4]) -> prop_times_minus_z k}};
+//prove (quickcheck 2) {{\(k:[4]) -> prop_times_minus_z k}};
 
 let psi_spec = do {
   out_ptr <- crucible_alloc POINTonE2_type;
@@ -120,5 +124,164 @@ let {{
 prop_psi k = same_point E' (POINTonE2_abs (psi_term p)) (projectify E' (psi (affinify E' (POINTonE2_abs p))))
   where p = POINTonE2_rep (projectify E' (mult E' k BP'))
 }};
-prove (quickcheck 2) {{\(k:[4]) -> prop_times_minus_z k}};
+//prove (quickcheck 2) {{\(k:[4]) -> prop_times_minus_z k}};
 
+// just making sure:
+// prove (quickcheck 3) {{\(k:[3]) -> (is_in_G2_impl' p == is_in_G2' p where p = mult E' k BP')}}
+
+let POINTonE2_in_G2_spec = do {
+  (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE2_affine_type;
+  crucible_precond {{ POINTonE2_affine_invariant p }};
+  crucible_execute_func [p_ptr];
+  crucible_return (crucible_term {{ if (is_in_G2_impl' (POINTonE2_affine_abs p)) then (1:Limb) else (0:Limb) }});
+};
+
+// spec for extraction:
+let POINTonE2_in_G2_spec_ = do {
+  (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE2_affine_type;
+  crucible_precond {{ POINTonE2_affine_invariant p }};
+  crucible_execute_func [p_ptr];
+  ret <- crucible_fresh_var "ret" limb_type;
+  crucible_return (crucible_term ret);
+};
+
+// this runs out of memory...
+//prove (quickcheck 1) {{
+  //\(z:[2]) (k:[2]) -> (e2_scalar_mult (toInteger z) P == mult E' z P
+    //where P = mult E' k BP')
+//}};
+
+POINTonE2_in_G2_ov_ <- crucible_llvm_compositional_extract m
+  "POINTonE2_in_G2"
+  "POINTonE2_in_G2_term"
+  (foldr concat [vec_fp2_overrides, fp2_overrides, fp_overrides, curve_operations_e2_ovs] [psi_alias_1_2_ov, psi_ov, POINTonE2_times_minus_z_ov])
+  true
+  POINTonE2_in_G2_spec_
+  (do {
+    simplify (addsimps POINTonE2_thms (cryptol_ss ()));
+    unfolding ["POINTonE2_rep"];
+    simplify fp2_simpset;
+    w4;});
+
+// all Valid:
+//prove (quickcheck 10) {{ \(k:[5]) -> (POINTonE2_in_G2_term (POINTonE2_affine_rep p) == (1:Limb) where p = mult E' k BP')}};
+//prove (quickcheck 2) {{ \(k:[2]) -> (POINTonE2_in_G2_term (POINTonE2_affine_rep p) == (if (is_in_G2_impl' p) then (1:Limb) else (0:Limb)) where p = mult E' k BP')}};
+//prove (quickcheck 2) {{ \p -> POINTonE2_in_G2_term p == (if (is_in_G2_impl' (POINTonE2_affine_abs p)) then (1:Limb) else (0:Limb)) }};
+// more rules:
+// TODO: Invalid, but used as a shortcut for now (the point must satisfy the rep invariant):
+thm1 <- admit_cryptol {{ \ p -> (affinify E' (projectify E' p)) == p }}; // TODO: Invalid
+thm2 <- admit_cryptol {{ \ p -> (fp2_abs ((POINTonE2_rep p).2)) == p.2 }}; // TODO: Invalid
+
+e2_curve_op_thms_2 <- for
+ [ {{ \ p1 p2_aff -> point_dadd_affine Fp_2 p1 p2_aff == projectify E' (add E' (affinify E' p1) p2_aff) }}
+ , {{ \ p1 p2 -> point_dadd Fp_2 p1 p2 Fp_2.field_zero True == projectify E' (add E' (affinify E' p1) (affinify E' p2)) }}
+ , {{ \ p1 -> point_neg Fp_2 p1 == projectify E' (neg E' (affinify E' p1)) }}
+ ]
+ admit_cryptol;
+
+
+// TODO: now deal with the point_zero test
+// TODO: only true for points on the curve
+is_point_O_thm' <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \p -> Fp_2.is_equal((projectify E' p).2, Fp_2.field_zero) == is_point_O E' p }});
+
+// TODO: need to show that the implementation operations do the same as the abstract ops
+// TODO: constant for 1
+
+let {{
+  one_mont_p = [0x760900000002fffd,0xebf4000bc40c0002,0x5f48985753c758ba,0x77ce585370525745,0x5c071a97a256ec6d,0x15f65ec3fa80e493] // see consts.h
+  one_mont_px = [[0x760900000002fffd,0xebf4000bc40c0002,0x5f48985753c758ba,0x77ce585370525745,0x5c071a97a256ec6d,0x15f65ec3fa80e493],[0,0,0,0,0,0]] // see consts.h
+}};
+prove w4 {{ fp_abs one_mont_p == 1 }}; // Valid
+prove w4 {{ fp2_abs [one_mont_p,zero] == [0,1] }}; // Valid
+
+let {{
+    if_false_rewrite : {a} (Eq a) => (a,a,a) -> (a,a,a) -> Bit
+    if_false_rewrite x y = (if False then x else y) == y
+  }};
+if_false_1 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["if_false_rewrite"] {{ if_false_rewrite`{[2]Integer} }})) [];
+
+one_abs_thm <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["one_mont_px"] {{ \x -> affinify E' (POINTonE2_abs (x.0, x.1, one_mont_px)) == POINTonE2_affine_abs x }})) [];
+
+let {{
+  prop p = POINTonE2_in_G2_term p == (if (is_in_G2_impl' (POINTonE2_affine_abs p)) then (1:Limb) else (0:Limb))
+}};
+
+// TODO: we cannot leave those uninterpreted because they are higher-order. Is there a better way that this:
+let {{
+  point_add_fp2 = point_add Fp_2
+  point_add_affine_fp2 = point_add_affine Fp_2
+  point_dadd_fp2 = point_dadd Fp_2
+  point_dadd_affine_fp2 = point_dadd_affine Fp_2
+  point_double_fp2 = point_double Fp_2
+  point_neg_fp2 = point_neg Fp_2
+  add_E' = add E'
+  mult_E' = mult E'
+  neg_E' = neg E'
+  is_point_O_E' = is_point_O E'
+  //add'_E' = add' E'
+  affinify_E' = affinify E'
+  projectify_E' = projectify E'
+  is_point_affine_E' = is_point_affine E'
+  is_point_projective_E' = is_point_projective E'
+  }};
+
+// TODO: for now we only need add_E', mult_E', neg_E', and is_point_O_E'
+point_add_fp2_thm <- prove_cryptol {{  \p1 p2 -> point_add Fp_2 p1 p2 == point_add_fp2 p1 p2 }} ["Fp_2"];
+point_add_affine_fp2_thm <- prove_cryptol {{  \p1 p2 -> point_add_affine Fp_2 p1 p2 == point_add_affine_fp2 p1 p2 }} ["Fp_2"];
+point_dadd_fp2_thm <- prove_cryptol {{  \p1 p2 a4 c -> point_dadd Fp_2 p1 p2 a4 c == point_dadd_fp2 p1 p2 a4 c}} ["Fp_2"];
+point_dadd_affine_fp2_thm <- prove_cryptol {{  \p1 p2 -> point_dadd_affine Fp_2 p1 p2 == point_dadd_affine_fp2 p1 p2 }} ["Fp_2"];
+point_double_fp2_thm <- prove_cryptol {{  \p1 -> point_double Fp_2 p1 == point_double_fp2 p1 }} ["Fp_2"];
+point_neg_fp2_thm <- prove_cryptol {{  \p1 -> point_neg Fp_2 p1 == point_neg_fp2 p1 }} ["Fp_2"];
+add_E'_thm <- prove_cryptol {{  \p1 p2 -> add E' p1 p2 == add_E' p1 p2 }} ["E'"];
+mult_E'_thm <- prove_cryptol {{  \p1 p2 -> mult E' p1 p2 == mult_E' p1 p2 }} ["E'"];
+neg_E'_thm <- prove_cryptol {{  \p1 -> neg E' p1 == neg_E' p1 }} ["E'"];
+is_point_O_E'_thm <- prove_cryptol {{  \p1 -> is_point_O E' p1 == is_point_O_E' p1 }} ["E'"];
+//add'_E'_thm <- prove_cryptol {{  \p1 p2 -> add' E' p1 p2 == add'_E' p1 p2 }} ["E'"];
+affinify_E'_thm <- prove_cryptol {{  \p1 -> affinify E' p1 == affinify_E' p1 }} ["E'"];
+projectify_E'_thm <- prove_cryptol {{  \p1 -> projectify E' p1 == projectify_E' p1 }} ["E'"];
+is_point_affine_E'_thm <- prove_cryptol {{  \p1 -> is_point_affine E' p1 == is_point_affine_E' p1 }} ["E'"];
+is_point_projective_E'_thm <- prove_cryptol {{  \p1 -> is_point_projective E' p1 == is_point_projective_E' p1 }} ["E'"];
+
+let remove_higher_order_function_simpset =
+  addsimps [ point_add_fp2_thm, point_dadd_fp2_thm, point_double_fp2_thm, point_neg_fp2_thm
+           , point_add_affine_fp2_thm, point_dadd_affine_fp2_thm
+           , add_E'_thm, affinify_E'_thm, projectify_E'_thm
+           , is_point_affine_E'_thm, is_point_projective_E'_thm
+           ] empty_ss;
+let remove_higher_order_function_simpset_ =
+  addsimps [ add_E'_thm, mult_E'_thm, neg_E'_thm, is_point_O_E'_thm] empty_ss;
+
+prove (do {
+    unfolding ["prop","POINTonE2_in_G2_term","is_in_G2_impl'"];
+    simplify (addsimps (foldr concat [POINTonE2_thms,e2_curve_op_thms_2] [thm1,thm2,is_point_O_thm',if_false_1, one_abs_thm]) (cryptol_ss ()));
+    simplify remove_higher_order_function_simpset_;
+    print_goal;
+    w4_unint_z3 ["psi", "add_E'", "is_point_O_E'", "mult_E'", "neg_E'"];
+  })
+  {{prop}};
+
+// We just assumne that the projective curve operations take points on the curve
+// to points on the curve.  These are well-known properties of these mathematical functions
+is_point_projective_thms <- for
+  [ {{ \P Q a4 -> is_point_projective E' (point_dadd Fp_2 P Q a4 True) ==
+               if is_point_projective E' P /\ is_point_projective E' Q
+               then True
+               else apply is_point_projective E' (point_dadd Fp_2 P Q a4 True) }}
+
+  , {{ \P Q -> is_point_projective E' (point_dadd_affine Fp_2 P Q) ==
+               if is_point_projective E' P /\ is_point_affine E' Q
+               then True
+               else apply is_point_projective E' (point_dadd_affine Fp_2 P Q) }}
+
+  , {{ \ P -> is_point_projective E' (point_neg Fp_2 P) ==
+              if is_point_projective E' P
+              then True
+              else apply is_point_projective E' (point_neg Fp_2 P) }}
+
+  , {{ \ P -> is_point_projective E' (point_double Fp_2 P) ==
+              if is_point_projective E' P
+              then True
+              else apply is_point_projective E' (point_double Fp_2 P) }}
+  ]
+  admit_cryptol;
