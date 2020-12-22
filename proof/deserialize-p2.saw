@@ -310,7 +310,6 @@ custom_prove_cryptol
        simplify (addsimp mul_to_fp_thm fp_simpset);
        simplify (addsimps (concat [fp2_invariant_alt_thm] fp2_alg_thms) empty_ss); // resolve mul(sq x, x) vs mul (x, sq x)
        unfolding ["fp_invariant"];
-       print_goal_nicely;
        w4_unint_z3 deserialize_p2_unints; // (concat ["sqrt_fp2", "sign_F_p_2", "is_square_fp2"] (concat fp_unints fp2_unints));
        };
 
