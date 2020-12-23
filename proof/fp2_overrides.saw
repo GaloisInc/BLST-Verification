@@ -32,9 +32,17 @@ let hoist f unints =
 fp2_rep_thms <- for
   [ {{ \x -> fp2_invariant (fp2_rep x) == True }}
   , {{ \x -> fp2_abs (fp2_rep x) == x }}
-  , {{ \x -> fp2_rep (fp2_abs x) == if fp2_invariant x then x else ((apply fp2_rep) (fp2_abs x)) }} // else branch should never be used
+  , {{ \x -> fp2_rep (fp2_abs x) == if fp2_invariant x then x else fp2_normalize x }} // else branch should never be used
   //, {{ \x -> fp2_rep (fp2_abs x) == x }} // TODO: temporary
   ] admit_cryptol;
+
+// a conditional rewrite for normalization.  This uses "apply" to avoid having
+// "fp2_normalize x" in the right-hand side (we have "(apply fp2_normalize) x" instead),
+// so that there is no infinite loop when the rewrite is applied.
+
+// This rule is not included in the main fp_simplification rules as it is seldom needed.
+fp2_normalize_thm <- admit_cryptol
+  {{ \x -> fp2_normalize x == if fp2_invariant x then x else apply fp2_normalize x }};
 
 // hoisting if for rewrites to match
 fp2_abs_ite_thm <- hoist {{fp2_abs}} ["fp2_abs"] ;
@@ -102,7 +110,7 @@ cneg_fp2_alias_1_2_ov <- admit "cneg_fp2" cneg_fp2_alias_1_2_spec;
 
 let fp2_overrides = foldr concat [add_fp2_ovs, sub_fp2_ovs, mul_fp2_ovs] [sqr_fp2_ov, sqr_fp2_alias_1_2_ov, mul_by_3_fp2_alias_1_2_ov, mul_by_8_fp2_alias_1_2_ov,cneg_fp2_ov,cneg_fp2_alias_1_2_ov];
 
-let fp2_unints = ["fp2_abs", "fp2_invariant", "fp2_rep", "Fp_2"];
+let fp2_unints = ["fp2_abs", "fp2_invariant", "fp2_rep", "fp2_normalize", "Fp_2"];
 
 fp2_alg_thms <- for
   [ {{ \ x y z -> Fp_2.mul (Fp_2.mul (x, y), z) == Fp_2.mul (x, Fp_2.mul (y, z)) }} // mul associates

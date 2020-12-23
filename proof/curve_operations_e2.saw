@@ -326,7 +326,7 @@ let POINTonE2_cneg_spec = do {
                                                           else p }});
 };
 
-POINTonE2_cneg <- really_custom_verify "POINTonE2_cneg"
+POINTonE2_cneg_ov <- custom_verify "POINTonE2_cneg"
                       (concat vec_fp2_overrides fp2_overrides)
                       POINTonE2_cneg_spec
                       (do {
@@ -336,4 +336,52 @@ POINTonE2_cneg <- really_custom_verify "POINTonE2_cneg"
                           //w4_unint_z3 fp2_unints;
                           });
 
-// TODO: useful theorems like in curve_operations.saw?
+////////////////////////////////////////////////////////////////
+//
+// Finally, we end with some theorems useful for other code that calls these C functions
+//
+
+// ... abs_rep rules for points, and some structure rules
+POINTonE2_thms <- for
+ [ {{ \p1 -> POINTonE2_abs (POINTonE2_rep p1) == p1 }}
+ , {{ \p1 -> POINTonE2_invariant (POINTonE2_rep p1) == True }}
+ , {{ \p1 -> POINTonE2_rep (POINTonE2_abs p1) ==
+             if POINTonE2_invariant p1
+             then p1
+             else POINTonE2_normalize p1 }}
+ , {{ \c p1 p2 -> POINTonE2_invariant (if c then p1 else p2) ==
+         if c then POINTonE2_invariant p1 else POINTonE2_invariant p2 }}
+ , {{ \c p1 p2 -> POINTonE2_rep (if c then p1 else p2) ==
+         if c then POINTonE2_rep p1 else POINTonE2_rep p2 }}
+ , {{ \c p1 p2 -> POINTonE2_abs (if c then p1 else p2) ==
+         if c then POINTonE2_abs p1 else POINTonE2_abs p2 }}
+
+ , {{ \c p1 p2 -> point_neg Fp_2 (if c then p1 else p2) ==
+                  if c then point_neg Fp_2 p1 else point_neg Fp_2 p2 }}
+
+ , {{ \(x:POINTonE2_t) -> (x.0, x.1, x.2) == x }}
+ , {{ \(x:POINTonE2_affine_t) -> (x.0, x.1) == x }}
+ , {{ \ c (x1: [2]Vec384) (x2: [2]Vec384) (x3: [2]Vec384) y1 y2 y3 ->
+        (if c then x1 else y1, if c then x2 else y2, if c then x3 else y3) ==
+        if c then (x1,x2,x3) else (y1,y2,y3) }}
+ ]
+ (\t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
+    do { unfolding ["POINTonE2_abs", "POINTonE2_rep", "POINTonE2_invariant", "POINTonE2_normalize"];
+         simplify fp2_simpset;
+         simplify (addsimp fp2_normalize_thm empty_ss); // for the rep_abs rule
+         w4_unint_z3 fp2_unints; }) ;
+
+
+// .. and these theorems, which are admitted for now rather than proven, that
+// assert that the operations in projective coordinates have the right effect in
+// affine coordinates
+
+e2_curve_op_thms <- for
+ [ {{ \ p1 -> affinify E' (point_double Fp_2 p1) == add E' (affinify E' p1) (affinify E' p1) }}
+ , {{ \ p1 p2 -> affinify E' (point_add Fp_2 p1 p2) == add' E' (affinify E' p1) (affinify E' p2) }}
+ , {{ \ p1 p2 -> affinify E' (point_add_affine Fp_2 p1 p2) == add' E' (affinify E' p1) p2 }}
+ , {{ \ p1 -> affinify E' (point_neg Fp_2 p1) == neg E' (affinify E' p1) }}
+ , {{ \ p1 p2 a4 -> affinify E' (point_dadd Fp_2 p1 p2 a4 True) == add E' (affinify E' p1) (affinify E' p2) }}
+ , {{ \ p1 p2 -> affinify E' (point_dadd_affine Fp_2 p1 p2) == add E' (affinify E' p1) p2 }}
+ ] 
+ admit_cryptol;
