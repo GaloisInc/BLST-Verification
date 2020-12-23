@@ -58,14 +58,6 @@ POINTonE2_times_minus_z_ov_ <- crucible_llvm_compositional_extract m
       w4_unint_z3 (concat fp2_unints e2_unints);
     });
 
-//e2_curve_op_thms_2 <- for
- //[ {{ \ p1 p2_aff -> point_dadd_affine Fp_2 p1 p2_aff == projectify E' (add E' (affinify E' p1) p2_aff) }}
- //, {{ \ p1 p2 -> point_dadd Fp_2 p1 p2 Fp_2.field_zero True == projectify E' (add E' (affinify E' p1) (affinify E' p2)) }}
- //, {{ \ p1 -> point_neg Fp_2 p1 == projectify E' (neg E' (affinify E' p1)) }}
- //, {{ \ p1 -> affinify E' (point_double Fp_2 p1) == add E' (affinify E' p1) (affinify E' p1) }}
- //]
- //admit_cryptol;
-
 // TODO: copied from ec_mult.saw
 let {{
   add_exponents': Integer -> Integer -> Integer -> Integer
@@ -102,11 +94,18 @@ affinify_POINTonE2_times_minus_z_thm <- really_custom_prove_cryptol
           e2_scalar_mult (-z) (affinify E' (POINTonE2_abs p)) }}
   do {
     unfolding ["POINTonE2_times_minus_z"];
-    simplify (addsimps (foldr concat [POINTonE2_thms, e2_curve_op_thms, e2_scalar_mult_alg_thms] []) (cryptol_ss ()));
+    simplify (addsimps (foldr concat [POINTonE2_thms, e2_curve_op_thms, e2_scalar_mult_alg_thms] []) empty_ss);
     print_goal;
     simplify remove_higher_order_function_simpset;
     w4_unint_z3 ["affinify_E'", "E'", "POINTonE2_abs", "e2_scalar_mult"];
   };
+
+invariant_POINTonE2_times_c_thm <- really_custom_prove_cryptol
+  {{ \p -> POINTonE2_invariant (POINTonE2_times_minus_z p) == True }}
+  do { unfolding ["POINTonE2_times_minus_z"];
+       simplify (addsimps POINTonE2_thms empty_ss);
+       w4;
+     };
 
 let POINTonE2_in_g2_spec = do {
   (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE2_affine_type;
