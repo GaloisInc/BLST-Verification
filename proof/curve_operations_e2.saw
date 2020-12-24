@@ -376,8 +376,6 @@ POINTonE2_cneg_ov <- custom_verify "POINTonE2_cneg"
 
 let curve_operations_e2_ovs = [POINTonE2_add_alias_1_2_ov, POINTonE2_add_ov, POINTonE2_cneg_ov, POINTonE2_add_affine_ov, POINTonE2_add_affine_alias_1_2_ov, POINTonE2_double_ov, POINTonE2_double_alias_1_2_ov, POINTonE2_dadd_null_alias_1_2_ov, POINTonE2_dadd_null_ov, POINTonE2_dadd_nonnull_ov, POINTonE2_dadd_nonnull_alias_1_2_ov, POINTonE2_is_equal_ov, POINTonE2_dadd_affine_alias_1_2_ov, POINTonE2_dadd_affine_ov, POINTonE2_affine_on_curve_ov, mul_by_b_onE2_ov, mul_by_b_onE2_alias_1_2_ov];
 
-let e2_unints = ["POINTonE2_abs", "POINTonE2_invariant", "POINTonE2_rep", "Fp_2"];
-
 ////////////////////////////////////////////////////////////////
 //
 // Finally, we end with some theorems useful for other code that calls these C functions
