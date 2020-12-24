@@ -130,7 +130,7 @@ is_point_projective_thms <- for
   ]
   admit_cryptol;
 
-// times_minus_z
+// times_minus_z:
 
 enable_experimental;
 
@@ -177,8 +177,6 @@ invariant_POINTonE2_times_c_thm <- really_custom_prove_cryptol
        w4;
      };
 
-//propositional_lemma <- prove_cryptol {{ \ (x:Bool) c y ->  (if c then y else x == x) == (c ==> x == y) }} [];
-
 is_point_projective_POINTonE1_times_minus_z <- really_custom_prove_cryptol
   {{ \p -> is_point_projective E' (POINTonE2_abs (POINTonE2_times_minus_z p)) ==
            if is_point_projective E' (POINTonE2_abs p)
@@ -187,11 +185,9 @@ is_point_projective_POINTonE1_times_minus_z <- really_custom_prove_cryptol
   do {
     unfolding ["apply"];
     simplify basic_ss;
-    print_goal;
     unfolding ["POINTonE2_times_minus_z"];
     simplify (addsimps (foldr concat [POINTonE2_thms, is_point_projective_thms] []) empty_ss);
     simplify remove_higher_order_function_simpset;
-    print_goal;
     w4_unint_z3 ["point_double_fp2","point_dadd_fp2","is_point_projective_E'"];
   };
 
@@ -234,10 +230,17 @@ thm1 <- admit_cryptol {{ \ p -> (affinify E' (projectify E' p)) == p }};
 thm2 <- admit_cryptol {{ \ p -> (fp2_abs ((POINTonE2_rep p).2)) == p.2 }}; // not sure about that one...
 
 is_point_O_thm <- admit_cryptol (rewrite (cryptol_ss())
-  {{ \p -> Fp_2.is_equal((projectify E' p).2, Fp_2.field_zero) ==
-           if is_point_affine E' p
-           then is_point_O E' p
-           else apply Fp_2.is_equal ((projectify E' p).2, Fp_2.field_zero) }});
+  {{ \p -> Fp_2.is_equal (p.2, Fp_2.field_zero) ==
+           if is_point_projective E' p
+           then is_point_O E' (affinify E' p)
+           else apply Fp_2.is_equal (p.2, Fp_2.field_zero) }});
+
+fp2_abs_POINTonE2_rep_2_thm <- really_custom_prove_cryptol {{ \p -> fp2_abs (POINTonE2_rep p).2 == p.2 }}
+  do {
+    unfolding ["POINTonE2_rep"];
+    simplify fp2_simpset;
+    w4;
+  };
 
 let {{
   one_mont_p = [0x760900000002fffd,0xebf4000bc40c0002,0x5f48985753c758ba,0x77ce585370525745,0x5c071a97a256ec6d,0x15f65ec3fa80e493] // see consts.h
@@ -254,25 +257,33 @@ if_false_1 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["if_false_rew
 
 one_abs_thm <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["one_mont_px"] {{ \x -> affinify E' (POINTonE2_abs (x.0, x.1, one_mont_px)) == POINTonE2_affine_abs x }})) [];
 
-is_point_affine_thms <- for
-  [ {{ \P Q -> is_point_affine_E' (add_E' P Q) ==
-               if is_point_affine_E' P /\ is_point_affine_E' Q
+is_point_projective_thms <- for
+  [ {{ \P Q a4 -> is_point_projective E (point_dadd Fp P Q a4 True) ==
+               if is_point_projective E P /\ is_point_projective E Q
                then True
-               else apply is_point_affine_E' (add_E' P Q) }}
-  , {{ \P -> is_point_affine_E' (neg_E' P) ==
-               if is_point_affine_E' P
+               else apply is_point_projective E (point_dadd Fp P Q a4 True) }}
+
+  , {{ \P Q -> is_point_projective E (point_dadd_affine Fp P Q) ==
+               if is_point_projective E P /\ is_point_affine E Q
                then True
-               else apply is_point_affine_E' (neg_E' P) }}
-  , {{ \P k -> is_point_affine_E' (e2_scalar_mult k P) ==
-               if is_point_affine_E' P
-               then True
-               else apply is_point_affine_E' (e2_scalar_mult k P) }}
-  , {{ \P -> is_point_affine_E' (psi P) ==
-               if is_point_affine_E' P
-               then True
-               else apply is_point_affine_E' (psi P) }}
+               else apply is_point_projective E (point_dadd_affine Fp P Q) }}
+
+  , {{ \ P -> is_point_projective E (point_neg Fp P) ==
+              if is_point_projective E P
+              then True
+              else apply is_point_projective E (point_neg Fp P) }}
+
+  , {{ \ P -> is_point_projective E (point_double Fp P) ==
+              if is_point_projective E P
+              then True
+              else apply is_point_projective E (point_double Fp P) }}
   ]
   admit_cryptol;
+
+if_affinify_thm <- really_custom_prove_cryptol {{ \c p q -> affinify E' (if c then p else q) == if c then (affinify E' p) else (affinify E' q) }} do {
+  simplify remove_higher_order_function_simpset;
+  w4_unint_z3 ["affinify_E'"];
+};
 
 //prove (do {
     //unfolding ["prop","POINTonE2_in_g2_term","is_in_g2_impl"];
@@ -285,6 +296,29 @@ is_point_affine_thms <- for
   //})
   //{{prop}};
 
+POINTonE2_in_g2_ov <- really_custom_verify "POINTonE2_in_G2"
+  (foldr concat [vec_fp2_overrides, fp2_overrides, fp_overrides, curve_operations_e2_ovs] [psi_alias_1_2_ov', psi_ov', POINTonE2_times_minus_z_ov_])
+  POINTonE2_in_g2_spec
+  (goal_num_ite 8
+    (do {
+        unfolding ["is_in_g2_impl"];
+        simplify (addsimps [fp2_abs_POINTonE2_rep_2_thm, is_point_O_thm] empty_ss); // replace the zero test by is_point_O
+        simplify (addsimps (foldr concat [e2_curve_op_thms, POINTonE2_thms] [if_affinify_thm]) empty_ss);
+        // now get rid of (affinify psi_imp) and (affinify times_...)
+        print_goal;
+        simplify (addsimps (foldr concat [POINTonE2_thms, e2_curve_op_thms] [is_point_O_thm,thm1,thm2]) basic_ss);
+        unfolding ["bool_to_limb"];
+        simplify (addsimps (foldr concat [POINTonE2_thms, e2_curve_op_thms] [is_point_O_thm,thm1,thm2,if_false_1,one_abs_thm]) (cryptol_ss ()));
+        simplify remove_higher_order_function_simpset;
+        simplify (addsimps is_point_affine_thms basic_ss);
+        w4_unint_z3 ["psi", "add_E'", "is_point_O_E'", "neg_E'", "e2_scalar_mult", "is_point_affine_E'", "projectify_E'", "affinify_E'", "POINTonE2_affine_abs", "POINTonE2_affine_invariant", "E'", "Fp_2", "psi_imp"];
+      })
+    (do {
+      simplify (addsimps (concat POINTonE2_thms [invariant_POINTonE2_times_c_thm]) (cryptol_ss ()));
+      unfolding ["POINTonE2_rep"];
+      simplify fp2_simpset;
+      w4;})
+  );
 
 //POINTonE2_in_g2_ov <- really_custom_verify "POINTonE2_in_g2"
   //(foldr concat [vec_fp2_overrides, fp2_overrides, fp_overrides, curve_operations_e2_ovs] [psi_alias_1_2_ov', psi_ov', POINTonE2_times_minus_z_ov])
