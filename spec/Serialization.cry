@@ -38,10 +38,11 @@ x_string_E1 P = if EC::is_point_O E P
                 then I2OSP(0)
                 else I2OSP(x) where (x,_) = P
 
+// See the note about the order of the x_i below, in deserialize_E2
 x_string_E2: EC::AffinePoint t_Fp_2 -> [96][8]
 x_string_E2 P = if EC::is_point_O E' P
                 then I2OSP(0)
-                else I2OSP`{xLen=48}(x_0) # I2OSP(x_1) where ([x_1, x_0],_) = P
+                else I2OSP`{xLen=48}(x_1) # I2OSP(x_0) where ([x_1, x_0],_) = P
 
 serialize_E1: EC::AffinePoint t_Fp -> [48][8]
 serialize_E1 P = x_string_E1 P || ([m_byte_E1 P]# zero)
