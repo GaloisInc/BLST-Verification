@@ -486,105 +486,105 @@
     "status": "assumed",
     "method": "add_fp",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:324:20",
+    "loc": "/workdir/proof/deserialize-p1.saw:320:20",
     "type": "method"
   },
   {
     "status": "assumed",
     "method": "sgn0x_pty_mont_384",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:326:25",
+    "loc": "/workdir/proof/deserialize-p1.saw:322:25",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "limbs_from_be_bytes",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:328:30",
+    "loc": "/workdir/proof/deserialize-p1.saw:324:30",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "blst_p1_deserialize",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:330:31",
+    "loc": "/workdir/proof/deserialize-p1.saw:326:31",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress_BE",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:340:36",
+    "loc": "/workdir/proof/deserialize-p1.saw:336:36",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress_BE",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:383:36",
+    "loc": "/workdir/proof/deserialize-p1.saw:379:36",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress_BE",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:392:34",
+    "loc": "/workdir/proof/deserialize-p1.saw:388:34",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:405:36",
+    "loc": "/workdir/proof/deserialize-p1.saw:401:36",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:408:35",
+    "loc": "/workdir/proof/deserialize-p1.saw:404:35",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:410:31",
+    "loc": "/workdir/proof/deserialize-p1.saw:406:31",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:419:32",
+    "loc": "/workdir/proof/deserialize-p1.saw:415:32",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:428:33",
+    "loc": "/workdir/proof/deserialize-p1.saw:424:33",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "blst_p1_uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:450:29",
+    "loc": "/workdir/proof/deserialize-p1.saw:446:29",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Deserialize_BE",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:463:37",
+    "loc": "/workdir/proof/deserialize-p1.saw:459:37",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Deserialize_BE",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:475:38",
+    "loc": "/workdir/proof/deserialize-p1.saw:471:38",
     "type": "method"
   },
   {
@@ -3550,7 +3550,7 @@
   },
   {
     "status": "verified",
-    "term": "let { x@1 = Prelude.Vec 64 Prelude.Bool\n      x@2 = Prelude.Vec 6 x@1\n    }\n in (x : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/implementation/Field/fp_invariant x)\n        (Cryptol.ecEq x@2\n           (Cryptol.PEqSeq (Cryptol.TCNum 6) x@1\n              (Cryptol.PEqSeqBool (Cryptol.TCNum 64)))\n           x\n           (cryptol:add_rep#6406 x)))",
+    "term": "let { x@1 = Prelude.Vec 64 Prelude.Bool\n      x@2 = Prelude.Vec 6 x@1\n    }\n in (x : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/implementation/Field/fp_invariant x)\n        (Cryptol.ecEq x@2\n           (Cryptol.PEqSeq (Cryptol.TCNum 6) x@1\n              (Cryptol.PEqSeqBool (Cryptol.TCNum 64)))\n           x\n           (cryptol:add_rep#6408 x)))",
     "loc": "unknown",
     "type": "property"
   },
