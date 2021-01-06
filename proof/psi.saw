@@ -7,7 +7,7 @@ import "../spec/Parameters.cry";
 import "../spec/Frobenius.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/Field.cry";
-import "../spec/subgroup-g2.cry";
+import "../spec/G2SubGroupCheck.cry";
 import "../spec/Pairing.cry"; // for "alpha"
 import "../spec/ShortWeierstrassCurve.cry"; // for ProjctivePoint, affinify
 import "../spec/implementation/CurveOperation.cry"; // for POINTonE2_invariant, _abs, etc.

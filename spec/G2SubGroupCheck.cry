@@ -83,7 +83,7 @@ is_in_G2' P = is_point_O E' Q where
     P3 = psi P2
     z' = 0xd201000000010000
 
-is_in_G2_impl P = is_point_O E' Q where
+is_in_g2_impl P = is_point_O E' Q where
   Q = add E' (neg E' P1) P
   P1 = add E' P4 P2
   P2 = e2_scalar_mult z' P3
@@ -91,7 +91,7 @@ is_in_G2_impl P = is_point_O E' Q where
   P4 = psi (psi P)
   z' = 15132376222941642752
 
-is_in_G2_impl' P = is_point_O E' Q where
+is_in_g2_impl' P = is_point_O E' Q where
   Q = add E' (neg E' P1) P
   P1 = add E' P4 P2
   P2 = mult E' z' P3
