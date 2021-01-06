@@ -34,11 +34,11 @@ let blst_p1_uncompress_OK_spec = do {
   // the return still might be BLST_POINT_NOT_IN_GROUP rather than BLST_SUCCESS
 };
 
-// Tyhe proof is a compostional verification, in 3 stages: first proofs about POINTonE1_Uncompress_BE,
-// themn proofs about  POINTonE1_Uncompress, and finally the proof of blst_p1_uncompress.
+// The proof is a compostional verification, in 3 stages: first proofs about POINTonE1_Uncompress_BE,
+// then proofs about  POINTonE1_Uncompress, and finally the proof of blst_p1_uncompress.
 
 // POINTonE1_Uncompress_BE has two different error conditions, which we deal with by having
-// three different sopecifications and overrides, one for each error and one for success.
+// three different specifications and overrides, one for each error and one for success.
 
 // ... the success case
 let POINTonE1_Uncompress_BE_OK_spec = do {
@@ -319,7 +319,7 @@ custom_prove_cryptol
 
 add_fp_noabs_ov <- admit "add_fp" add_fp_noabs_spec;
 
-sgn0_pty_mont_384_ov <- admit "sgn0_pty_mont_384" sgn0_pty_mont_384_spec;
+sgn0_pty_mont_384_ov <- admit "sgn0x_pty_mont_384" sgn0_pty_mont_384_spec;
 
 limbs_from_be_bytes_48_ov <- verify "limbs_from_be_bytes" [] limbs_from_be_bytes_spec48;
 

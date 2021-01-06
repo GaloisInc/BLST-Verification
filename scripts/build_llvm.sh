@@ -11,7 +11,7 @@ do
   patch -f -p1 -t < "$p" # -f to prevent patch from automatically enabling option -R when it things it should
 done
 
-export CFLAGS='-g -fPIC -Wall -Wextra -Werror'
+export CFLAGS='-g -fPIC -Wall -Wextra -Werror -D__ADX__'
 export CC=wllvm
 export LLVM_COMPILER=clang
 ./build.sh
