@@ -1611,517 +1611,6 @@
   },
   {
     "status": "assumed",
-    "method": "add_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:169:19",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:170:31",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:171:31",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:172:29",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:173:33",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_3_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:176:24",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_3_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:177:36",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "lshift_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:180:22",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "lshift_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:181:34",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "rshift_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:184:22",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "rshift_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:185:34",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "cneg_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:188:20",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "cneg_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:189:32",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:192:19",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:193:31",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:194:31",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:195:29",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_256",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_256.saw:196:33",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:428:19",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:429:31",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:430:31",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:431:29",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:432:33",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:435:20",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:436:32",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:437:32",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:438:34",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "lshift_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:441:24",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "lshift_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:442:36",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "lshift_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:443:36",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_3_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:446:24",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_3_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:447:36",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_8_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:450:24",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_8_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:451:36",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_b_onE1",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:454:21",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_b_onE1",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:455:34",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_3_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:458:25",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_3_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:459:37",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_8_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:462:25",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_8_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:463:37",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_b_onE2",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:466:21",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_b_onE2",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:467:34",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "cneg_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:470:20",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "cneg_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:471:32",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:474:19",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:475:31",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:476:31",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:477:29",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:478:33",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:481:20",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:482:32",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:483:32",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:484:30",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:485:34",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_1_plus_i_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:488:32",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_1_plus_i_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:489:44",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sgn0_pty_mod_384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:492:24",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sgn0_pty_mod_384x",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:495:25",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "vec_select_144",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:502:19",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "vec_select_192",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:502:19",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "vec_select_288",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:502:19",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "vec_select_48",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:502:19",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "vec_select_96",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384.saw:502:19",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384x384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384x384.saw:100:35",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384x384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384x384.saw:101:35",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384x384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384x384.saw:102:33",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384x384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384x384.saw:103:37",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384x384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384x384.saw:106:23",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384x384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384x384.saw:107:35",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384x384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384x384.saw:108:35",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384x384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384x384.saw:109:33",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384x384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384x384.saw:110:37",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384x384",
-    "specification": "unknown",
-    "loc": "/workdir/proof/x86/add_mod_384x384.saw:99:23",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
     "method": "eucl_inverse_mod_384",
     "specification": "unknown",
     "loc": "/workdir/proof/x86/inverse_mod_384.saw:39:28",
@@ -2213,6 +1702,160 @@
   },
   {
     "status": "assumed",
+    "method": "add_mod_384",
+    "specification": "unknown",
+    "loc": "0x17980",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384x",
+    "specification": "unknown",
+    "loc": "0x17a60",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "lshift_mod_384",
+    "specification": "unknown",
+    "loc": "0x17ae0",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_3_mod_384",
+    "specification": "unknown",
+    "loc": "0x17c20",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_8_mod_384",
+    "specification": "unknown",
+    "loc": "0x17c80",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_b_onE1",
+    "specification": "unknown",
+    "loc": "0x17d00",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_3_mod_384x",
+    "specification": "unknown",
+    "loc": "0x17e00",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_8_mod_384x",
+    "specification": "unknown",
+    "loc": "0x17ea0",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_b_onE2",
+    "specification": "unknown",
+    "loc": "0x17f60",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "cneg_mod_384",
+    "specification": "unknown",
+    "loc": "0x180c0",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384",
+    "specification": "unknown",
+    "loc": "0x181a0",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384x",
+    "specification": "unknown",
+    "loc": "0x18280",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_1_plus_i_mod_384x",
+    "specification": "unknown",
+    "loc": "0x18300",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sgn0_pty_mod_384",
+    "specification": "unknown",
+    "loc": "0x184a0",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sgn0_pty_mod_384x",
+    "specification": "unknown",
+    "loc": "0x18520",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "vec_select_48",
+    "specification": "unknown",
+    "loc": "0x18640",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "vec_select_96",
+    "specification": "unknown",
+    "loc": "0x186c0",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "vec_select_192",
+    "specification": "unknown",
+    "loc": "0x187a0",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "vec_select_144",
+    "specification": "unknown",
+    "loc": "0x18920",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "vec_select_288",
+    "specification": "unknown",
+    "loc": "0x18a40",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384x384",
+    "specification": "unknown",
+    "loc": "0x18e20",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384x384",
+    "specification": "unknown",
+    "loc": "0x18e60",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
     "method": "mulx_mont_384x",
     "specification": "unknown",
     "loc": "0x190c0",
@@ -2286,6 +1929,48 @@
     "method": "redcx_mont_256",
     "specification": "unknown",
     "loc": "0x1b9c0",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_256",
+    "specification": "unknown",
+    "loc": "0x1bc00",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_3_mod_256",
+    "specification": "unknown",
+    "loc": "0x1bc80",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "lshift_mod_256",
+    "specification": "unknown",
+    "loc": "0x1bd20",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "rshift_mod_256",
+    "specification": "unknown",
+    "loc": "0x1bd80",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "cneg_mod_256",
+    "specification": "unknown",
+    "loc": "0x1be20",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_256",
+    "specification": "unknown",
+    "loc": "0x1bec0",
     "type": "method"
   },
   {
