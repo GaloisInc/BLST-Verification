@@ -3,11 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-// include "blst_error.saw"; ... missing?
-let BLST_SUCCESS = 0;
-let BLST_BAD_ENCODING = 1;
-let BLST_POINT_NOT_ON_CURVE = 2;
-let BLST_POINT_NOT_IN_GROUP = 3;
+include "blst_error.saw";
 
 import "../spec/Serialization.cry";
 EC <- cryptol_load "../spec/ShortWeierstrassCurve.cry";
