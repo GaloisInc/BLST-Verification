@@ -508,7 +508,7 @@ let sqrt_fp2_alias_spec = do {
 // mul_div_fp_thm <- admit_cryptol {{ \x y z -> Fp.mul (x, Fp.div (y,z)) == Fp.div (Fp.mul (x, y), z) }};
 // special case
 mul_div_fp_thm <- admit_cryptol (rewrite (cryptol_ss())
-  {{ \x z -> Fp.mul (x, Fp.div (Fp.field_unit,z)) == Fp.div (x, z) }});
+  {{ \x z -> Fp.mul (x, inverse_fp z) == Fp.div (x, z) }});
 div_neg_fp_thm <- admit_cryptol {{ \x y  -> Fp.div (Fp.neg x,y) == Fp.neg (Fp.div (x, y)) }};
 // commute add once -- use with caution!
 add_commutes_fp_thm <- prove_cryptol {{ \x y  -> Fp.add (x, y) == apply Fp.add (y,x) }} [];

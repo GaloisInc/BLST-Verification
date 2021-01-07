@@ -13,7 +13,7 @@ import ShortWeierstrassCurve as EC
 import rfc8017
 import Maybe
 import FieldExtras (F_expt)
-import BLSFieldExtras (sqrt_fp2, is_square_fp2)
+import BLSFieldExtras (sqrt_fp, is_square_fp, sqrt_fp2, is_square_fp2)
 
 //// Serialization (with compression)
 
