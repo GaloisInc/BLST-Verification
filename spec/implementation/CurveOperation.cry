@@ -74,6 +74,9 @@ POINTonE2_abs (x,y,z) = (fp2_abs x, fp2_abs y, fp2_abs z)
 POINTonE2_rep: ProjectivePoint t_Fp_2-> POINTonE2_t
 POINTonE2_rep (x,y,z) = (fp2_rep x, fp2_rep y, fp2_rep z)
 
+POINTonE2_normalize: POINTonE2_t -> POINTonE2_t
+POINTonE2_normalize (x,y,z) = (fp2_normalize x, fp2_normalize y, fp2_normalize z)
+
 POINTonE2_affine_invariant: POINTonE2_affine_t -> Bool
 POINTonE2_affine_invariant (x,y) = fp2_invariant x /\ fp2_invariant y
    // Should we also insist the point in on the curve?

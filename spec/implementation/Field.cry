@@ -68,9 +68,8 @@ fp2_rep [a,b] = [fp_rep b, fp_rep a]
 fp2_invariant: Fp_2_rep_t -> Bool
 fp2_invariant v = all fp_invariant v
 
-// needed?
-//fp2_normalize: Fp_2_rep_t -> Fp_2_rep_t
-//fp2_normalize x = vec384_rep (from_Fp (Fp.normalize (to_Fp (vec384_abs x))))
+fp2_normalize: Fp_2_rep_t -> Fp_2_rep_t
+fp2_normalize [x,y] = [fp_normalize x, fp_normalize y]
 
 // fp6 - TODO
 
