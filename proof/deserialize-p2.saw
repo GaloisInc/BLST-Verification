@@ -1,0 +1,513 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+include "blst_error.saw";
+
+import "../spec/Serialization.cry";
+EC <- cryptol_load "../spec/ShortWeierstrassCurve.cry";
+import "../Parameters.cry";
+import "../spec/implementation/Types.cry";
+import "../spec/Maybe.cry";
+import "../spec/implementation/CurveOperation.cry";
+import "../spec/implementation/SerializationP2.cry";
+
+let compressed_E2_rep_type = (llvm_array 96 (llvm_int 8));
+
+///////////////////////////////////////////////////////////////////////////////
+// Specifications
+///////////////////////////////////////////////////////////////////////////////
+
+// The main specification here is for blst_p2_uncompress
+
+let blst_p2_uncompress_OK_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
+  crucible_precond {{ uncompress_E2_imp inp != nothing }};
+  crucible_execute_func [out_ptr, in_ptr];
+  crucible_points_to out_ptr (crucible_term {{
+    POINTonE2_affine_rep (if (inp@0)@1 // infinity bit 
+                          then EC::point_O E'
+                          else uncompress_E2_OK inp) }});
+  crucible_return (crucible_term {{`BLST_SUCCESS:[32] }});
+};
+
+// The proof is a compostional verification, in 3 stages: first proofs about POINTonE2_Uncompress_BE,
+// themn proofs about  POINTonE2_Uncompress, and finally the proof of blst_p2_uncompress.
+
+// POINTonE2_Uncompress_BE has two different error conditions, which we deal with by having
+// three different specifications and overrides, one for each error and one for success.
+
+// ... the success case
+let POINTonE2_Uncompress_BE_OK_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
+  crucible_precond {{ not_too_big_E2 (uncompress_E2_x inp) }};
+  crucible_precond {{ is_square_fp2 (uncompress_E2_y2 inp) }};
+  crucible_execute_func [out_ptr, in_ptr];
+  crucible_points_to out_ptr (crucible_term {{
+     (fp2_rep (uncompress_E2_x_fp inp), fp2_rep (sqrt_fp2 (uncompress_E2_y2 inp))) }}) ;
+  // This return value is copied from sgn0_pty_mont_384x_spec
+  crucible_return (crucible_term {{ if sign_F_p_2 (sqrt_fp2 (uncompress_E2_y2 inp)) then zext 0b10 else (zero:[64]) }});
+};
+
+// ... first error case, when the given X coordinate is too large
+let POINTonE2_Uncompress_BE_BAD0_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
+  crucible_precond {{ ~ (not_too_big_E2 (uncompress_E2_x inp))  }};
+  crucible_execute_func [out_ptr, in_ptr];
+  crucible_return (crucible_term {{ (0:Limb) - `BLST_BAD_ENCODING }} );
+};
+
+// ... second error case, when the X coordinate does not belong to a point on the curve
+let POINTonE2_Uncompress_BE_BAD1_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
+  crucible_precond {{ not_too_big_E2 (uncompress_E2_x inp)  }};
+  crucible_precond {{ ~ (is_square_fp2 (uncompress_E2_y2 inp)) }};
+  crucible_execute_func [out_ptr, in_ptr];
+  crucible_return (crucible_term {{ (0:Limb) - `BLST_POINT_NOT_ON_CURVE }} );
+};
+
+// Uncompress
+
+let POINTonE2_Uncompress_OK_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
+
+  crucible_precond {{ (inp@0)@0 }}; // only dealing with compressed points
+  crucible_precond {{ ~ (inp@0)@1 }}; // not point-at-infinity
+  crucible_precond {{ not_too_big_E2 (uncompress_E2_x inp)  }}; // not too large
+  crucible_precond {{ is_square_fp2 (uncompress_E2_y2 inp) }}; // and is on the curve
+  crucible_execute_func [out_ptr, in_ptr];
+  crucible_points_to out_ptr (crucible_term {{ POINTonE2_affine_rep (uncompress_E2_OK inp) }});
+  crucible_return (crucible_term {{ `BLST_SUCCESS: [32] }});
+  };
+
+let POINTonE2_Uncompress_inf_OK_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
+
+  crucible_precond {{ (inp@0)@0 }}; // only dealing with compressed points
+  crucible_precond {{ (inp@0)@1 }}; // point-at-infinity
+  crucible_precond {{ ~(inp@0)@2 }}; // sign bit clear
+  crucible_precond {{ uncompress_E2_x inp == zero }};
+
+  crucible_execute_func [out_ptr, in_ptr];
+
+  crucible_points_to out_ptr (crucible_term {{ POINTonE2_affine_rep (EC::point_O E') }});
+  crucible_return (crucible_term {{ `BLST_SUCCESS: [32] }});
+};
+
+let POINTonE2_Uncompress_inf_BAD_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
+
+  crucible_precond {{ (inp@0)@0 }}; // only dealing with compressed points
+  crucible_precond {{ (inp@0)@1 }}; // point-at-infinity
+  crucible_precond {{ (inp@0)@2 \/ uncompress_E2_x inp != zero }};
+
+  crucible_execute_func [out_ptr, in_ptr];
+
+  crucible_return (crucible_term {{ `BLST_BAD_ENCODING: [32] }});
+};
+
+// We do not care about specific error codes, so...
+let POINTonE2_Uncompress_BAD_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
+  crucible_precond {{ ~ (inp@0)@1 }}; // not point-at-infinity
+  crucible_precond {{    ~ (inp@0)@0
+                      \/ ~ (not_too_big_E2 (uncompress_E2_x inp))
+                      \/ ~ is_square_fp2 (uncompress_E2_y2 inp) }}; // and is on the curve
+  crucible_execute_func [out_ptr, in_ptr];
+  ret <- crucible_fresh_var "ret_POINTonE2_Uncompress" (llvm_int 32);
+  crucible_return (crucible_term {{ ret }});
+  crucible_postcond {{ ret != `BLST_SUCCESS }};
+  };
+
+let POINTonE2_Uncompress_BAD1_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
+  crucible_precond {{ ~ (inp@0)@0 }}; // not compressed
+  crucible_execute_func [out_ptr, in_ptr];
+  ret <- crucible_fresh_var "ret_POINTonE2_Uncompress" (llvm_int 32);
+  crucible_return (crucible_term {{ ret }});
+  crucible_postcond {{ ret == `BLST_BAD_ENCODING }};
+  };
+
+// ... Deserialize (out of scope; the BLS ciphersuites use compression)
+// but some analysis is included here in case we want to include these functions later.
+/*
+let POINTonE2_Deserialize_BE_BAD0_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Deserialize_in" (llvm_array 96 (llvm_int 8));
+  // crucible_precond {{ deserialize_E2_x inp >= `p \/ deserialize_E2_y inp < `p }}; // given X or Y is too big
+  crucible_precond {{ deserialize_E2_x inp >= `p }}; // given X is too big
+  crucible_execute_func [out_ptr, in_ptr];
+  crucible_return (crucible_term {{ `BLST_BAD_ENCODING: [32] }});
+  };
+
+let POINTonE2_Deserialize_BE_BAD0a_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Deserialize_in" (llvm_array 96 (llvm_int 8));
+  // crucible_precond {{ deserialize_E2_x inp >= `p \/ deserialize_E2_y inp < `p }}; // given X or Y is too big
+  crucible_precond {{ deserialize_E2_y inp >= `p }}; // given Y is too big
+  crucible_execute_func [out_ptr, in_ptr];
+  crucible_return (crucible_term {{ `BLST_BAD_ENCODING: [32] }});
+  };
+
+let POINTonE2_Deserialize_BE_BAD1_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Deserialize_in" (llvm_array 96 (llvm_int 8));
+  crucible_precond {{ deserialize_E2_x inp < `p }}; // given X is not too big
+  crucible_precond {{ deserialize_E2_y inp < `p }}; // given Y is not too big
+  crucible_precond {{ ~ (is_point_affine E (deserialize_E2_x_fp inp, deserialize_E2_y_fp inp)) }}; // not on curve
+  crucible_execute_func [out_ptr, in_ptr];
+  crucible_return (crucible_term {{ `BLST_POINT_NOT_ON_CURVE: [32] }});
+  };
+
+let POINTonE2_Deserialize_BE_OK_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Deserialize_in" (llvm_array 96 (llvm_int 8));
+  crucible_precond {{ deserialize_E2_x inp < `p }}; // given X is not too big
+  crucible_precond {{ deserialize_E2_y inp < `p }}; // given Y is not too big
+  crucible_precond {{ is_point_affine E (deserialize_E2_x_fp inp, deserialize_E2_y_fp inp) }}; // on the curve
+  crucible_execute_func [out_ptr, in_ptr];
+  crucible_points_to out_ptr (crucible_term {{
+     (fp_rep (deserialize_E2_x_fp inp), fp_rep (deserialize_E2_y_fp inp)) }} );
+  };
+
+let POINTonE2_Deserialize_BE_OK_spec' = do { // For proof debugging
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Deserialize_in" (llvm_array 96 (llvm_int 8));
+  crucible_precond {{ deserialize_E2_x inp < `p }}; // given X is not too big
+  crucible_precond {{ deserialize_E2_y inp < `p }}; // given Y is not too big
+  crucible_precond {{ is_point_affine E (deserialize_E2_x_fp inp, deserialize_E2_y_fp inp) }}; // on the curve
+  crucible_execute_func [out_ptr, in_ptr];
+  w <- crucible_fresh_var "w" (llvm_struct "struct.POINTonE2_affine");
+  crucible_points_to out_ptr (crucible_term w);
+  crucible_postcond {{ w.1 == fp_rep (deserialize_E2_y_fp inp) }};
+  // {{ w.0 ==  fp_rep (deserialize_E2_x_fp inp) }} ?
+  };
+
+// just to try:
+let blst_p2_deserialize_inf_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  inp <- crucible_fresh_var "p2_deserialize_in" (llvm_array 96 (llvm_int 8));
+  in_ptr <- crucible_alloc_readonly (llvm_array 96 (llvm_int 8));
+  crucible_points_to_untyped in_ptr (crucible_term inp);
+  crucible_precond {{ inp@0 && 0x80 == zero }}; // not compressed
+  crucible_precond {{ inp@0 && 0x40 != zero }}; // point at infinity
+
+  crucible_execute_func [out_ptr, in_ptr];
+
+  new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE2_affine");
+  ret <- crucible_fresh_var "ret" (llvm_int 32);
+  crucible_conditional_points_to {{ ret == `BLST_SUCCESS }} out_ptr (crucible_term new_out);
+  crucible_postcond {{ inp@0 && 0x40 != zero /\ ([inp@0 && 0x3F]#(tail inp)) == zero ==> ret == `BLST_SUCCESS /\ new_out.0 == vec384_rep (from_Fp (EC::point_O E).0) /\ new_out.1 == vec384_rep (from_Fp (EC::point_O E).1) }}; // TODO spec says 0x1F and not 0x3F
+  crucible_return (crucible_term ret);
+};
+*/
+
+// ... other overrides used in the proofs:
+
+// Not necessary, but useful when developing a proof, to keep the SAW
+// formulas more readable.  This override also appears in keygen.saw: TODO refactor
+// TODO: duplicate in deserialize-p1.saw
+let limbs_from_be_bytes_spec48 = do {
+  ret_p <-crucible_alloc (llvm_array 6 limb_type);
+  (inx, in_ptr) <- ptr_to_fresh_readonly "limbs_from_be_bytes_in" (llvm_array 48 (llvm_int 8)); // "in" is a keyword
+  crucible_execute_func [ret_p, in_ptr, crucible_term {{ 48:[64] }}];
+  crucible_points_to ret_p (crucible_term {{ vec384_rep (join inx) }});
+  };
+
+/*
+let blst_p2_deserialize_spec = do {
+  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  (_, in_ptr) <- ptr_to_fresh_readonly "in" (llvm_array 192 (llvm_int 8));
+  crucible_execute_func [out_ptr, in_ptr];
+  new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE2_affine");
+  ret <- crucible_fresh_var "ret" (llvm_int 32);
+  crucible_conditional_points_to {{ ret == zero }} out_ptr (crucible_term new_out);
+  crucible_return (crucible_term ret);
+};
+*/
+
+// TODO: duplicated from deserialize_p1.saw
+let {{
+  add_rep a = if vec384_abs a < `p then a else vec384_rep ((vec384_abs a) - `p)
+  }};
+
+// TODO: duplicated from deserialize_p1.saw
+let add_fp_noabs_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  crucible_precond {{ b == zero }}; // make sure this override is applied only where we want it.
+
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ add_rep a }});
+  //  {{ if vec384_abs a < `p then a else vec384_rep ((vec384_abs a) - `p) }}) ;
+};
+
+let sgn0_pty_mont_384x_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_precond {{ b == vec384_rep `p }};
+  crucible_execute_func [a_ptr, b_ptr, crucible_term {{0x89f3fffcfffcfffd}}];
+  // TODO: Not sure what the return value should be. From what follows in the C code, it seems that the sign bit is the second bit of the return value.
+  crucible_return (crucible_term {{ (if (sign_F_p_2 (fp2_abs a)) then (zext 0b10) else zero):[64] }});
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Proofs
+////////////////////////////////////////////////////////////////////////////////
+
+let deserialize_p2_unints = foldr concat  [fp_unints, fp2_unints, ef_unints]
+                                  ["sqrt_fp2", "sign_F_p_2", "is_square_fp2"];
+
+// Starting with proofs that the as-implemented algorithm matches the reference specification
+// as-implemented has an additional check
+
+// We have a conditional property
+//  {{ \x -> fp_invariant x ==> Fp.mul (fp_abs x,  montgomery_factor_p) == to_Fp (vec384_abs x) }}
+// expressed as this conditional rewrite rule:
+
+// TODO: get this from the existing proof in deserialize-p1.saw
+mul_to_fp_thm <- admit_cryptol // prove_cryptol
+  {{ \x -> Fp.mul (fp_abs x, montgomery_factor_p) ==
+           if fp_invariant x
+           then to_Fp (vec384_abs x)
+           else apply Fp.mul (fp_abs x,  montgomery_factor_p) }}
+   ; // [] ;
+
+// "uncompress_OK" is the correct value in the non-infinity case
+
+prove_cryptol
+  {{ \ s ->    (s@0)@1 // infinity bit is set, or
+            \/ maybe_cases (uncompress_E2_imp s)
+                           True // the input is rejected
+                           (\ p -> p == (uncompress_E2_OK s) ) }} // or accepted, giving the OK values
+  // (concat ["sqrt_fp2", "sign_F_p_2", "is_square_fp2"] fp2_unints);
+  deserialize_p2_unints;
+
+let {{ uncompress_E2 = deserialize_E2 }}; // TODO: update Serialization.cry ?
+
+// The implementation must reject at least everything rejected by the spec
+// (implied by the theorem that follows)
+custom_prove_cryptol
+  {{ \s -> uncompress_E2 s == nothing ==> uncompress_E2_imp s == nothing }}
+  do { unfolding ["uncompress_E2", "deserialize_E2", "uncompress_E2_imp", "uncompress_E2_x"
+                 , "uncompress_E2_x_fp", "uncompress_E2_y2"];
+       simplify (addsimp mul_to_fp_thm fp_simpset);
+       simplify (addsimps (concat [fp2_invariant_alt_thm] fp2_alg_thms) empty_ss); // resolve mul(sq x, x) vs mul (x, sq x)
+       unfolding ["fp_invariant"];
+       w4_unint_z3 deserialize_p2_unints; // (concat ["sqrt_fp2", "sign_F_p_2", "is_square_fp2"] (concat fp_unints fp2_unints));
+       };
+
+// The implementation may reject more strings, but otherwise agrees with the spec:
+custom_prove_cryptol
+  {{ \s -> maybe_cases (uncompress_E2_imp s)
+                      True // may reject more
+                      (\ P -> maybe_cases (uncompress_E2 s)
+                                          False // may not reject less
+                                          (\ Q -> P == Q)) }}  // spec and impl deliver the same result
+  do { unfolding ["uncompress_E2", "deserialize_E2", "uncompress_E2_imp", "uncompress_E2_x"
+                 , "uncompress_E2_x_fp", "uncompress_E2_y2"];
+       simplify (addsimp mul_to_fp_thm fp_simpset);
+       simplify (addsimps (concat [fp2_invariant_alt_thm] fp2_alg_thms) empty_ss); // resolve mul(sq x, x) vs mul (x, sq x)
+       unfolding ["fp_invariant"];
+       w4_unint_z3 deserialize_p2_unints; // (concat ["sqrt_fp2", "sign_F_p_2", "is_square_fp2"] fp_unints);
+       };
+
+// Now the code proofs
+
+add_fp_noabs_ov <- admit "add_fp" add_fp_noabs_spec;
+
+sgn0_pty_mont_384x_ov <- admit "sgn0x_pty_mont_384x" sgn0_pty_mont_384x_spec;
+
+limbs_from_be_bytes_48_ov <- verify "limbs_from_be_bytes" [] limbs_from_be_bytes_spec48;
+
+// blst_p2_deserialize_inf_ov <- verify "blst_p2_deserialize" [] blst_p2_deserialize_inf_spec;
+
+// TODO: duplicated
+add_rep_invariant_thm <- prove_cryptol
+ {{ \ x -> fp_invariant x == (x == add_rep x) }}
+ [];
+
+let overrides_for_POINTonE2_Uncompress_BE =
+   foldr concat [ sqrt_fp2_ovs, fp_overrides, fp2_overrides]
+         [sgn0_pty_mont_384x_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov
+         // , vec_is_equal_48_vec_ov // TODO: FIX
+         ];
+
+// OK
+POINTonE2_Uncompress_BE_BAD0_ov <- custom_verify "POINTonE2_Uncompress_BE"
+  overrides_for_POINTonE2_Uncompress_BE
+  POINTonE2_Uncompress_BE_BAD0_spec
+  do { apply_fp_rewrites;
+       unfolding ["fp_invariant", "vec384_abs", "vec_abs"]; // evaluate this for BLS12_381_RR
+       w4_unint_z3 deserialize_p2_unints;}; // was fp_unints;};
+
+
+// Cryptol can evaluate:fp_rep (montgomery_factor_p)
+// [0xf4df1f341c341746, 0x0a76e6a609d104f1, 0x8de5476c4c95b6d5,
+//  0x67eb88a9939d83c0, 0x9a793e85b519952d, 0x11988fe592cae3aa]
+
+// TODO: duplicate
+fp_abs_RR_thm <- prove_cryptol
+ (rewrite (cryptol_ss ())
+  {{ fp_abs [ 0xf4df1f341c341746, 0x0a76e6a609d104f1, 0x8de5476c4c95b6d5
+            , 0x67eb88a9939d83c0, 0x9a793e85b519952d, 0x11988fe592cae3aa]
+      == montgomery_factor_p }})
+  [] ;
+
+// TODO: duplicate
+fp_inv_RR_thm <- prove_cryptol
+  (rewrite (cryptol_ss ())
+   {{ fp_invariant [ 0xf4df1f341c341746, 0x0a76e6a609d104f1, 0x8de5476c4c95b6d5
+                   , 0x67eb88a9939d83c0, 0x9a793e85b519952d, 0x11988fe592cae3aa]
+       == True }})
+  [] ;
+
+// Cryptol also can produce the value of `B_E2`:
+/*
+implementation::Field> fp2_rep [a,a] where a = to_Fp 0x4
+[[0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f,
+  0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e],
+ [0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f,
+  0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e]]
+*/
+
+fp2_abs_B_E2_thm <- prove_cryptol
+  (rewrite (cryptol_ss ())
+   {{ fp2_abs [[0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f,
+                0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e],
+               [0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f,
+                0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e]]
+      == [to_Fp 0x4, to_Fp 0x4] }}) [];
+
+fp2_invariant_B_E2_thm <- prove_cryptol
+  (rewrite (cryptol_ss ())
+   {{ fp2_invariant [[0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f,
+                      0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e],
+                     [0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f,
+                      0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e]]
+      == True }}) [];
+
+// OK
+POINTonE2_Uncompress_BE_BAD1_ov <- custom_verify "POINTonE2_Uncompress_BE"
+  overrides_for_POINTonE2_Uncompress_BE
+  POINTonE2_Uncompress_BE_BAD1_spec
+  do { apply_fp_rewrites;
+       simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm, fp2_abs_B_E2_thm, fp2_invariant_B_E2_thm] empty_ss);
+       simplify (addsimp add_rep_invariant_thm empty_ss); // only after applying fp_inv_RR_thm!
+       simplify (addsimp fp2_abs_fp_rep_thm fp2_simpset);
+       simplify (addsimp fp2_invariant_alt_seq_thm fp_simpset);
+       w4_unint_z3 deserialize_p2_unints; };
+
+fp2_rep_seq_thm <- prove_cryptol {{ \x y -> fp2_rep [x, y] == [fp_rep y, fp_rep x] }} ["fp_rep"];
+
+// The OK case, proper compressed input
+POINTonE2_Uncompress_BE_OK_ov <- custom_verify "POINTonE2_Uncompress_BE"
+  overrides_for_POINTonE2_Uncompress_BE
+  POINTonE2_Uncompress_BE_OK_spec
+  do { unfolding ["uncompress_E2", "deserialize_E2", "uncompress_E2_imp", "uncompress_E2_x"
+                 , "uncompress_E2_x_fp", "uncompress_E2_y2"]; // for proof debugging
+       apply_fp_rewrites;
+       simplify (addsimps [fp2_rep_seq_thm, fp_abs_RR_thm, fp_inv_RR_thm, fp2_abs_B_E2_thm, fp2_invariant_B_E2_thm] empty_ss);
+       simplify (addsimp add_rep_invariant_thm empty_ss); // only after applying fp_inv_RR_thm!
+       simplify (addsimp fp2_abs_fp_rep_thm fp2_simpset);
+       simplify (addsimp fp2_invariant_alt_seq_thm fp_simpset);
+       w4_unint_z3 deserialize_p2_unints;};
+
+let POINTonE2_Uncompress_BE_overrides =
+  [POINTonE2_Uncompress_BE_OK_ov, POINTonE2_Uncompress_BE_BAD0_ov, POINTonE2_Uncompress_BE_BAD1_ov];
+
+// Uncompress
+
+POINTonE2_Uncompress_inf_BAD_ov <- verify_unint "POINTonE2_Uncompress" [] deserialize_p2_unints
+                                   POINTonE2_Uncompress_inf_BAD_spec;
+
+POINTonE2_Uncompress_inf_OK_ov <- verify "POINTonE2_Uncompress" [] POINTonE2_Uncompress_inf_OK_spec ;
+
+POINTonE2_Uncompress_OK_ov <- custom_verify
+  "POINTonE2_Uncompress"
+  (foldr concat [fp2_overrides, vec_overrides] POINTonE2_Uncompress_BE_overrides)
+  POINTonE2_Uncompress_OK_spec
+  do {simplify fp2_simpset;
+    w4_unint_z3 (concat ["sign_F_p_2", "uncompress_E2_y2", "uncompress_E2_x_fp"
+                        , "is_square_fp2", "sqrt_fp2", "uncompress_E2_x"]
+                        fp2_unints);};
+
+POINTonE2_Uncompress_BAD_ov <- custom_verify
+  "POINTonE2_Uncompress"
+  (foldr concat [fp2_overrides, vec_overrides] POINTonE2_Uncompress_BE_overrides)
+  POINTonE2_Uncompress_BAD_spec
+  do {simplify fp2_simpset;
+    w4_unint_z3 (concat ["sign_F_p_2", "uncompress_E2_y2", "uncompress_E2_x_fp"
+                        , "is_square_fp2", "sqrt_fp2", "uncompress_E2_x"]
+                        fp2_unints);};
+
+POINTonE2_Uncompress_BAD1_ov <- custom_verify
+  "POINTonE2_Uncompress"
+  (foldr concat [fp2_overrides, vec_overrides] POINTonE2_Uncompress_BE_overrides)
+  POINTonE2_Uncompress_BAD1_spec
+  do {simplify fp2_simpset;
+    w4_unint_z3 (concat ["sign_F_p_2", "uncompress_E2_y2", "uncompress_E2_x_fp"
+                        , "sqrt_fp2", "is_square_fp2", "uncompress_E2_x"]
+                        fp2_unints);};
+
+
+// Main result: blst_p2_uncompress
+
+point_O_rep_E2 <- prove_cryptol
+  {{ POINTonE2_affine_rep (EC::point_O E') == zero }}
+  [];
+
+hoist_POINTonE2_affine_rep <- prove_cryptol
+  (rewrite (cryptol_ss())
+    {{ \c p1 p2 -> POINTonE2_affine_rep (if c then p1 else p2) ==
+                   if c then POINTonE2_affine_rep p1 else POINTonE2_affine_rep p2 }})
+  ["POINTonE2_affine_rep"];
+
+blst_p2_uncompress_OK_ov <- custom_verify "blst_p2_uncompress"
+  [ POINTonE2_Uncompress_OK_ov , POINTonE2_Uncompress_inf_OK_ov]
+  blst_p2_uncompress_OK_spec
+  do {
+    unfolding ["uncompress_E2_imp", "uncompress_E2_x"];
+    simplify fp2_simpset;
+    simplify (addsimps [point_O_rep_E2, hoist_POINTonE2_affine_rep]  empty_ss);
+    w4_unint_z3 (concat ["sign_F_p_2", "sqrt_fp2", "is_square_fp2"] fp2_unints);
+    };
+
+// Deserialize
+/*
+POINTonE2_Deserialize_BE_BAD0_ov <- custom_verify
+  "POINTonE2_Deserialize_BE"
+  (foldr concat [fp_overrides, vec_overrides]
+         [POINTonE2_affine_on_curve_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov, vec_is_equal_48_vec_ov])
+  POINTonE2_Deserialize_BE_BAD0_spec
+  do {apply_fp_rewrites;
+      simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm] empty_ss);
+      simplify (addsimp add_rep_invariant_thm empty_ss);
+      unfolding ["POINTonE2_affine_invariant"];
+      apply_fp_rewrites;
+      (w4_unint_z3 fp_unints);};
+
+POINTonE2_Deserialize_BE_BAD0a_ov <- custom_verify
+  "POINTonE2_Deserialize_BE"
+  (foldr concat [fp_overrides, vec_overrides]
+         [POINTonE2_affine_on_curve_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov, vec_is_equal_48_vec_ov])
+  POINTonE2_Deserialize_BE_BAD0a_spec
+  do {apply_fp_rewrites;
+      simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm] empty_ss);
+      simplify (addsimp add_rep_invariant_thm empty_ss);
+      unfolding ["POINTonE2_affine_invariant"];
+      apply_fp_rewrites;
+      (w4_unint_z3 fp_unints);};
+*/

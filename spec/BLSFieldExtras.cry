@@ -1,6 +1,6 @@
 module BLSFieldExtras where
 
-import Parameters (p, Fp)
+import Parameters (p, Fp, t_Fp, Fp_2, t_Fp_2)
 import FieldExtras
 
 is_square_fp x =  y == 0 \/ y == 1 where
@@ -10,3 +10,62 @@ sqrt_fp x = F_expt`{n=width p} Fp x `((p+1)/4) // the =3 (mod 4) variant
 
 inverse_fp x = F_expt`{n=width p} Fp x `(p-2) // but also could be F.div (F.field_unit, x)
 
+type q = p*p
+
+// sqrt in Fp2 from Appendix G.3 (q = 9 mod 8)
+sqrt_fp2 x = z where
+    tv1 = F_expt`{n=(width q) - 3} Fp_2 x `((q+7)/16)
+    tv2 = Fp_2.mul (c1, tv1)
+    tv3 = Fp_2.mul (c2, tv1)
+    tv4 = Fp_2.mul (c3, tv1)
+    e1 =  Fp_2.is_equal (Fp_2.sq tv2, x)
+    e2 =  Fp_2.is_equal (Fp_2.sq tv3, x)
+
+    tv1_1 = CMOV (tv1, tv2, e1)
+    tv2_1 = CMOV (tv4, tv3, e2)
+    e3 = Fp_2.is_equal (Fp_2.sq tv2_1, x)
+    z = CMOV (tv1_1, tv2_1, e3)
+
+    // From Section 4. Utility Functions
+    CMOV (a,b,c) = if c==False then a else b
+
+    // Need constants c1,c2,c3 with c1^2 = -1, c2^2 = c1, c3^3 = -c1
+    // As Fp_2 = Fp(u) with u^2 +1 = 0, c1 = u does the first
+    c1 = [1,0]
+    c2 = sqrt_fp2_c2
+    c3 = sqrt_fp2_c3
+
+// Appendix G.3 asks for `c2` so that `c2^2 == u`, without saying how to get it.  If we find a
+// constant `k` in Fp with `k^^2 == -1/2, then
+//  (k*(u+1))^2 == k^2 * (u-1)^2 == (-1/2) * (u^2 - 2*u + 1) = (-1/2) * (-2*u) == u
+// and
+//  (k*(u-1))^2 = (-1/2)*(u^2 + 2*u + 1) == -u
+// We found this k (thanks to SageMath):
+sqrt_fp2_k: t_Fp
+sqrt_fp2_k = 1028732146235106349975324479215795277384839936929757896155643118032610843298655225875571310552543014690878354869257
+
+sqrt_fp2_c2: t_Fp_2
+sqrt_fp2_c2 = [sqrt_fp2_k, Fp.neg sqrt_fp2_k]
+
+sqrt_fp2_c3: t_Fp_2
+sqrt_fp2_c3 = [sqrt_fp2_k, sqrt_fp2_k]
+
+
+// (a*u + b) inverse is (-a*u + b)/(a^2+b^2), as can be checked by multiplying out
+inverse_fp2: t_Fp_2 -> t_Fp_2
+inverse_fp2 [a,b] = [Fp.div(Fp.neg a, c), Fp.div(b, c)] where
+    c = Fp.add (Fp.sq a, Fp.sq b)
+
+// Two ways to implement `is_square` for Fp_2 are offered
+
+//is_square x =  F.is_equal (y, F.field_zero) \/ F.is_equal (y, F.field_unit) where
+//    y = F_expt`{n = width q} F x `((q-1)/2)
+
+// ... and Appendix G.5 of draft-irtf-cfrg-hash-to-curve
+
+is_square_fp2: t_Fp_2 -> Bool
+is_square_fp2 [x_2, x_1] = (tv1' != Fp_2.neg Fp_2.field_unit) where
+    // NB our representation of polynomnials is big-endian unlike the spec
+    tv1 = Fp.sq x_1
+    tv2 = Fp_2.sq [x_2, Fp.field_zero] // = Fp2_sq (Fp_2.mul (u, const_poly x_2))
+    tv1' = F_expt Fp_2 (Fp_2.sub ([Fp.field_zero, tv1], tv2)) (((`p-1)/2):[381])

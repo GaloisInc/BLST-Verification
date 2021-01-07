@@ -1,0 +1,668 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+import "../spec/implementation/Types.cry";
+import "../spec/Parameters.cry";
+import "../spec/FieldExtras.cry";
+import "../spec/ExtensionField.cry";
+import "../spec/BLSFieldExtras.cry";
+
+// we need to undo goal_eval's rip-and-restitching of vectors.
+let fp2_at0 = parse_core "\\ (x:(Vec 2 Integer)) -> at 2 Integer x 0";
+let fp2_at1 = parse_core "\\ (x:(Vec 2 Integer)) -> at 2 Integer x 1";
+
+fp2_unrip_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[2]Integer) -> [fp2_at0 x, fp2_at1 x] == x }}) [];
+
+// alternative definition for fp2_invariant, avoiding `all` and thus also `foldr'` and `map`,
+// allowing for more rewriting in proofs:
+fp2_invariant_alt_thm <-
+  prove_cryptol
+  {{ \x -> fp2_invariant x == (fp_invariant (x@0) /\ fp_invariant (x@1)) }}
+  ["fp_invariant"];
+
+fp2_invariant_alt_seq_thm <-
+  prove_cryptol
+  {{ \x y -> fp2_invariant [x,y] == (fp_invariant x /\ fp_invariant y) }}
+  ["fp_invariant"];
+
+// possibly move this to fp_overrides
+fp2_abs_fp_rep_thm <- custom_prove_cryptol
+  (rewrite (cryptol_ss ()) {{ \x y -> fp2_abs [fp_rep x, fp_rep y] == [y,x] }})
+  do { unfolding ["fp2_abs"]; apply_fp_rewrites; z3; } ;
+
+let vec384x_at0 = parse_core
+  "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6 (Vec 64 Bool)) x 0";
+let vec384x_at1 = parse_core
+  "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6 (Vec 64 Bool)) x 1";
+
+fp_abs_fp2_rep_thms <- for
+  [ {{ \x -> fp_abs (vec384x_at0 (fp2_rep x)) == fp2_at1 x }}
+  , {{ \x -> fp_abs (vec384x_at1 (fp2_rep x)) == fp2_at0 x }}
+  ] (\ t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
+            do {goal_eval_unint fp_unints; apply_fp_rewrites; w4_unint_z3 fp_unints; } ) ;
+
+// More unripping
+/*
+let at6 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 6";
+let at7 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 7";
+let at8 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 8";
+let at9 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 9";
+let at10 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 10";
+let at11 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 11";
+
+fp2_unrip_thm2 <- prove_cryptol (rewrite (cryptol_ss ())
+{{ \(x:[12][64]) -> [at0 x, at1 x, at2 x, at3 x, at4 x, at5 x] == x }}) [];
+*/
+
+
+// Proof development:
+
+// ... to print goals readably we need to unfold "Fp_2" and
+// "extension_field"; then we get readable function names but these
+// are higher order.  So we then need first-order cover functions that
+// can be left uninterpreted.
+
+let {{
+  ef_zero_fp = Fp_2.field_zero
+  ef_unit_fp = Fp_2.field_unit
+  ef_mul_fp = Fp_2.mul
+  ef_sq_fp  = Fp_2.sq
+  ef_add_fp = Fp_2.add
+  ef_sub_fp = Fp_2.sub
+  ef_neg_fp = Fp_2.neg
+  }};
+
+ef_cover_thms <- for
+ [ {{ Fp_2.field_zero == ef_zero_fp }}
+ , {{ Fp_2.field_unit == ef_unit_fp }}
+ , {{ \x -> Fp_2.mul x == ef_mul_fp x}}
+ , {{ \x -> Fp_2.add x == ef_add_fp x }}
+ , {{ \x -> Fp_2.sub x == ef_sub_fp x }}
+ , {{ \x -> Fp_2.sq x == ef_sq_fp x }}
+ , {{ \x -> Fp_2.neg x == ef_neg_fp x }}
+ ] ( \t -> prove_cryptol t [] );
+
+let expand_fp2 = do {
+  simplify (addsimps ef_cover_thms (cryptol_ss ()));
+  };
+
+let ef_unints = ["ef_zero_fp", "ef_unit_fp", "ef_mul_fp", "ef_neg_fp", "ef_add_fp", "ef_sub_fp", "ef_sq_fp"];
+
+let print_goal_nicely = do {
+    unfolding ["Fp", "prime_field_integer", "prime_field", "\\/", "/\\", "==>"];
+    expand_fp2;
+     simplify prop_simpset;
+     print_goal;
+     };
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Specifications
+////////////////////////////////////////////////////////////////////////////////
+
+let fp2_unop_spec name op = unop_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
+
+// reciprocal_fp2
+
+let reciprocal_fp2_spec = fp2_unop_spec "reciprocal_fp2" {{ inverse_fp2 }};
+
+// recip_sqrt_fp2_9mod16 is computed using an addition chain.
+// We can use rewriting to show that it computes the correct power.
+
+// We then assume as axioms that these powers compute the appropriate functions.
+
+// We can use algebraic rules relating multiplication to exponentiation to show that these chains
+// computes the correct values.
+
+// fp2_exp is for positive exponents only, avoiding the need for rewriting x*1 to x
+// TODO: Should perhaps define this correctly for negative exponents too.
+let {{ fp2_exp: t_Fp_2 -> Integer -> t_Fp_2
+       fp2_exp x e = if e == 1 then x else Fp_2.mul (x, fp2_exp x (e-1))
+       }};
+
+// Algebraic rules
+fp2_mult_exp_thm_1 <- prove_cryptol {{\x -> Fp_2.mul (x, x) == fp2_exp x 2 }} [] ;
+fp2_mult_exp_thm_2 <- admit_cryptol {{ \x k -> Fp_2.mul (x, fp2_exp x k) == fp2_exp x (k+1) }};
+fp2_mult_exp_thm_3 <- admit_cryptol {{ \x k -> Fp_2.mul (fp2_exp x k, x) == fp2_exp x (k+1) }};
+fp2_mult_exp_thm_4 <- admit_cryptol {{ \x n k -> Fp_2.mul (fp2_exp x n, fp2_exp x k) == fp2_exp x (k+n) }};
+fp2_mult_exp_thm_5 <- admit_cryptol {{ \x n k -> fp2_exp (fp2_exp x n) k == fp2_exp x (k*n) }};
+fp2_mult_exp_thm_6 <- admit_cryptol {{ \n -> fp2_exp Fp_2.field_unit n == Fp_2.field_unit }};
+
+fp2_exp_simps <- addsimps (concat [fp2_mult_exp_thm_1, fp2_mult_exp_thm_2, fp2_mult_exp_thm_3
+                                  , fp2_mult_exp_thm_4, fp2_mult_exp_thm_5, fp2_mult_exp_thm_6]
+                                  fp2_alg_thms)
+                           fp2_simpset;
+
+// Algebraic rule for multiplication by the field unit.  We can easily show that the result of
+// Fp_2.mul satisfies Fp_2.is_val, thus so does fp2_exp x e whenever e > 1 (but cannot prove this in SAW)
+// This captures the nub of the argument:
+prove_cryptol {{\x y -> (Fp_2.mul(Fp_2.field_unit, z) == z where z = Fp_2.mul(x,y)) }} [];
+// and this is the rule we need.  Admitted, because SAW does not let us unfold once.
+fp2_mul_unit_exp_thm <- admit_cryptol
+  {{ \ x e -> Fp_2.mul (Fp_2.field_unit, fp2_exp x e)
+              == if e > 1 then fp2_exp x e else apply Fp_2.mul (Fp_2.field_unit, fp2_exp x e) }} ;
+
+
+// sqr_n_mul_fp2
+
+// Assumed overrides
+
+let {{
+  sqr_n_mul_fp2: t_Fp_2 -> Size_t -> t_Fp_2 -> t_Fp_2
+  sqr_n_mul_fp2 x count y = Fp_2.mul (fp2_exp x (2^^count), y)
+  }};
+
+let sqr_n_mul_fp2_spec = do {
+  out_ptr <- crucible_alloc vec384x_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
+  count <- crucible_fresh_var "count" size_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384x_type;
+  crucible_precond {{ count > 0 }};
+  crucible_execute_func [out_ptr, a_ptr, crucible_term count, b_ptr];
+  crucible_points_to out_ptr (crucible_term {{ fp2_rep (sqr_n_mul_fp2 (fp2_abs a) count (fp2_abs b)) }});
+  };
+
+let sqr_n_mul_fp2_alias_1_2_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
+  count <- crucible_fresh_var "count" size_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384x_type;
+  crucible_precond {{ count > 0 }};
+  crucible_execute_func [a_ptr, a_ptr, crucible_term count, b_ptr];
+  crucible_points_to a_ptr (crucible_term {{ fp2_rep (sqr_n_mul_fp2 (fp2_abs a) count (fp2_abs b)) }});
+  };
+
+let recip_sqrt_fp2_9mod16_spec = fp2_unop_spec "recip_sqrt_fp2_9mod16" {{ \ x ->  fp2_exp x ((`p^^2-9)/16) }};
+
+// ... sqrt_fp2 deviates from the algorithm in Appendix G.3; instead of squaring each of the
+// candidates for square root, it uses some algebraically equivalent operations.  That is,
+// given a candidate `s` or square root, it is supposed to test s^2, (c1*s)^2, (c2*s)^2, and (c3*s)^2
+// to see which (if any) gives the correct result.  The code uses these rules:
+//  if s^2 = b*u + a, then, as c1 = u
+//   (c1*s)^2 = c1^2 * s^2 = - (s^2)
+//   (c2*s)^2 = c2^2 * s*2 = c1 * (s^2) =a*u - b
+//   (c3*s)^2 = -c1 * s = -a*u + b
+// ... avoiding the need for any more multiplications after the first squaring, and then
+// at the end multiplying `s` by the appropriate number.
+
+// Note for (c1*s)^2 == c1^2 * s^2 we need to permute a multiplication
+// Algebraic law:
+square_product_thm <- admit_cryptol
+  {{ \ x y -> Fp_2.sq (Fp_2.mul (x, y)) == Fp_2.mul (Fp_2.sq x, Fp_2.sq y) }};
+
+/*
+sqrt_align_fp2_thms <- for
+ [ {{ \x y -> Fp_2.mul ([x, y], Fp_2.sq u) ==  [Fp.neg x, Fp.neg y] }}
+ , {{ \ x y -> Fp_2.mul (Fp_2.sq sqrt_fp2_c2, [x, y]) == [Fp.normalize y, Fp.neg x] }}
+ , {{ \ x y -> Fp_2.mul (Fp_2.sq sqrt_fp2_c3, [x, y]) == [Fp.neg y, Fp.normalize x] }}
+ ]
+ ( \ t -> prove_cryptol t [] );
+*/
+
+// these variants may work better in the proof
+sqrt_align_fp2_thms <- for
+ [ {{ \ x -> Fp_2.mul (Fp_2.sq u,           x) ==  [Fp.neg (x@0), Fp.neg (x@1)] }}
+ , {{ \ x -> Fp_2.mul (Fp_2.sq sqrt_fp2_c2, x) == [Fp.normalize (x@1), Fp.neg (x@0)] }}
+ , {{ \ x -> Fp_2.mul (Fp_2.sq sqrt_fp2_c3, x) == [Fp.neg (x@1), Fp.normalize (x@0)] }}
+ ]
+ ( \ t -> prove_cryptol t [] );
+
+
+// These machinations are done in function `sqrt_align_fp2`, called from two places, so we will give it its own
+// specification and override.
+
+let {{
+  sqrt_align_fp2_coeff: t_Fp_2 -> t_Fp_2 -> t_Fp_2
+  sqrt_align_fp2_coeff s inp =
+    if Fp_2.sq (Fp_2.mul(sqrt_fp2_c3, s)) == inp then sqrt_fp2_c3
+     | Fp_2.sq (Fp_2.mul(sqrt_fp2_c2, s)) == inp then sqrt_fp2_c2
+     | Fp_2.sq (Fp_2.mul(          u, s)) == inp then u
+    else Fp_2.field_unit
+    }};
+
+/*
+prove z3 {{ \x y ->  Fp.is_val x ==> Fp.is_val y ==> Fp_2.mul (u, [x, y]) ==  [y, Fp.neg x] }};
+prove z3 {{ \x y ->  Fp.is_val x ==> Fp.is_val y ==> Fp_2.mul ([x, y], u) ==  [y, Fp.neg x] }};
+prove z3 {{ \x y ->  Fp.is_val x ==> Fp.is_val y ==> Fp_2.mul ([x, y], Fp_2.neg u) ==  [Fp.neg y, x] }}
+prove z3 {{ Fp_2.sq sqrt_fp2_c2 == u }};
+prove z3 {{ Fp_2.sq sqrt_fp2_c3 == Fp_2.neg u }};
+*/
+
+// .. and an equivalent version closer to the code
+let {{
+  sqrt_align_fp2_coeff': t_Fp_2 -> t_Fp_2 -> t_Fp_2
+  sqrt_align_fp2_coeff' s inp =
+      if [Fp.neg y, Fp.normalize x] == inp then sqrt_fp2_c3
+       | [Fp.normalize y, Fp.neg x] == inp then sqrt_fp2_c2
+       | [Fp.neg x, Fp.neg y] == inp then u
+      else Fp_2.field_unit
+    where [x,y] = Fp_2.sq s
+    }};
+
+sqrt_align_fp2_coeff_equiv_thm <- custom_prove_cryptol
+  {{ \s inp -> sqrt_align_fp2_coeff s inp == sqrt_align_fp2_coeff' s inp }}
+  do { unfolding ["sqrt_align_fp2_coeff", "sqrt_align_fp2_coeff'"];
+       simplify (addsimps (concat [square_product_thm] sqrt_align_fp2_thms) (cryptol_ss()));
+       // print_goal_nicely;
+       w4_unint_z3 fp_unints;
+       };
+
+// ... but the tests is the code are not like that!
+
+/* These basic theorems explain the equivalences that are behind the code.
+   Fp_2.is_val will hold for t0 because it is the result of Fp_2.sq, and will hold for
+   inp because it is fp2_abs or something assumed to satisfy fp2_invariant.
+
+prove_cryptol {{ \t0 inp -> Fp_2.is_val t0 /\ Fp_2.is_val inp ==>
+                           (Fp_2.sub (t0, inp) == Fp_2.field_zero) == (t0 == inp) }} [];
+
+prove_cryptol {{ \t0 inp -> Fp_2.is_val t0 /\ Fp_2.is_val inp ==>
+                      (Fp_2.add (t0, inp) == Fp_2.field_zero) == (Fp_2.neg t0 == inp) }} [];
+
+prove_cryptol {{ \ x y inp -> Fp_2.is_val [x,y] /\ Fp_2.is_val inp ==>
+                      (Fp.sub(x, inp@1) == Fp.field_zero /\ Fp.add(y, inp@0) == Fp.field_zero)
+                         == ([Fp.neg y, x] == inp) }} [];
+
+prove_cryptol {{ \ x y inp -> Fp_2.is_val [x,y] /\ Fp_2.is_val inp ==>
+                      (Fp.add(x, inp@1) == Fp.field_zero /\ Fp.sub(y, inp@0) == Fp.field_zero)
+                         == ([y, Fp.neg x] == inp) }} [];
+But we need to rephrase the last two
+
+prove_cryptol {{ \ x y inp -> Fp_2.is_val [x,y] /\ Fp_2.is_val inp ==>
+                      ([Fp.sub(x, inp@1), Fp.add(y, inp@0)] == Fp_2.field_zero) == ([Fp.neg y, x] == inp) }} [];
+
+prove_cryptol {{ \ x y inp -> Fp_2.is_val [x,y] /\ Fp_2.is_val inp ==>
+                      ([Fp.add(x, inp@1), Fp.sub(y, inp@0)] == Fp_2.field_zero) == ([y, Fp.neg x] == inp) }} [];
+
+We can make unconditional rules by substituting in the specific terms used, as we can show
+ prove z3 {{ \x -> Fp_2.is_val (Fp_2.sq x) }};
+ prove z3 {{ \x -> Fp_2.is_val (fp2_abs x) }};
+*/
+
+// To have these rules apply where we need them to, we have to massage the Cryptol form in several ways
+// - the forms `a@0` and `a@1` need a direct SAWcore `Prelude.at` term
+// -
+
+// Note: all but the second of these can be shown with `prove_cryptol`
+// TODO: fix the proof of the second property here, eliminate the `admit`
+
+// We further rephrase some of the formulas using the replacements
+// prove z3 {{ fp2_at0 (fp2_abs i) == fp_abs (vec384x_at1 i) }};
+// prove z3 {{ fp2_at1 (fp2_abs i) == fp_abs (vec384x_at0 i) }};
+
+sqrt_align_condition_thms <- for
+  [ {{\ s i -> ((Fp_2.sub (t0, inp) == Fp_2.field_zero) == (t0 == inp)
+                 where t0 = Fp_2.sq s; inp = fp2_abs i) }}
+  , {{\ s i -> ((Fp_2.add (t0, inp) == Fp_2.field_zero) == (Fp_2.neg t0 == inp)
+                 where t0 = Fp_2.sq s; inp = fp2_abs i) }}
+/*
+  , {{\ s i -> (([Fp.sub(x, fp2_at1 inp), Fp.add(y, fp2_at0 inp)] == Fp_2.field_zero) == ([Fp.neg y, x] == inp)
+                 where x = fp2_at0 t0; y = fp2_at1 t0; t0 = Fp_2.sq s; inp = fp2_abs i) }}
+  , {{\ s i -> (([Fp.add(x, fp2_at1 inp), Fp.sub(y, fp2_at0 inp)] == Fp_2.field_zero) == ([y, Fp.neg x] == inp)
+                 where x = fp2_at0 t0; y = fp2_at1 t0; t0 = Fp_2.sq s; inp = fp2_abs i) }}
+*/
+  , {{\ s i -> (([Fp.sub(x, fp2_at1 inp), Fp.add(y, fp_abs (vec384x_at1 i))] == Fp_2.field_zero) == ([Fp.neg y, x] == inp)
+                 where x = fp2_at0 t0; y = fp2_at1 t0; t0 = Fp_2.sq s; inp = fp2_abs i) }}
+
+  , {{\ s i -> (([Fp.add(x, fp2_at1 inp), Fp.sub(y, fp_abs (vec384x_at0 i))] == Fp_2.field_zero) == ([y, Fp.neg x] == inp)
+                 where x = fp2_at0 t0; y = fp2_at1 t0; t0 = Fp_2.sq s; inp = fp2_abs i) }}
+
+  ] // (\t -> prove_cryptol (rewrite (cryptol_ss()) t) []);
+  (\t -> admit_cryptol (rewrite (add_cryptol_defs ["ecEq"] (cryptol_ss ())) t) );
+
+// .. and now an equivalent version even closer to the code
+let {{
+  sqrt_align_fp2_coeff'': t_Fp_2 -> t_Fp_2 -> t_Fp_2
+  sqrt_align_fp2_coeff'' s inp =
+      if [Fp.sub(x, fp2_at1 inp), Fp.add(y, fp2_at0 inp)] == Fp_2.field_zero then sqrt_fp2_c3
+       | [Fp.add(x, fp2_at1 inp), Fp.sub(y, fp2_at0 inp)] == Fp_2.field_zero then sqrt_fp2_c2
+       | Fp_2.add (t0, inp) == Fp_2.field_zero then u
+      else Fp_2.field_unit
+    where [x,y] = t0
+          t0 = Fp_2.sq s
+    }};
+
+// prove z3 {{ \inp s -> Fp_2.is_val inp ==> sqrt_align_fp2_coeff'' s inp == sqrt_align_fp2_coeff' s inp }};
+
+fp_inv_fp2_rep_thms <- for [0,1]
+  (\ i -> custom_prove_cryptol (rewrite (cryptol_ss()) {{ \ x -> fp_invariant ((fp2_rep x) @ (`i:[1])) == True }})
+            do {unfolding ["fp2_rep"];
+                simplify fp_simpset;
+                w4_unint_z3 fp_unints; } );
+
+
+let sqrt_align_fp2_spec_for_extract = do {
+  out_ptr <- crucible_alloc vec384x_type;
+  (ret, ret_ptr) <- ptr_to_fresh_readonly "ret" vec384x_type;
+  (sqrt, sqrt_ptr) <- ptr_to_fresh_readonly "sqrt" vec384x_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
+  crucible_precond {{ fp2_invariant inp }};
+  crucible_precond {{ fp2_invariant sqrt }};
+  crucible_precond {{ fp2_invariant ret }};
+  crucible_execute_func [out_ptr, ret_ptr, sqrt_ptr, inp_ptr];
+  //crucible_points_to out_ptr (crucible_term
+  //    {{ fp2_rep (Fp_2.mul(fp2_abs ret, sqrt_align_fp2_coeff (fp2_abs sqrt) (fp2_abs inp))) }});
+  //crucible_return (crucible_term {{ Fp_2.sq (Fp_2.mul(sqrt, sqrt_align_fp2_coeff sqrt inp)) == fp2_abs inp }};
+  out <- crucible_fresh_var "out" vec384x_type;
+  crucible_points_to out_ptr (crucible_term out);
+  };
+
+
+enable_experimental;
+
+crucible_llvm_compositional_extract m
+ "sqrt_align_fp2"
+ "foo"
+ // (foldr concat [vec_fp2_overrides, fp2_overrides, fp_overrides] [])
+ (foldr concat [fp2_overrides, fp_overrides] [vec_select_2Fp_alias_1_3_ov, vec_is_zero_2fp_ov])
+ false
+ sqrt_align_fp2_spec_for_extract
+ do { unfolding ["fp2_invariant"]; // unfold to get preconditions for the fp functions
+      simplify (addsimps fp_inv_fp2_rep_thms (cryptol_ss()));
+      goal_eval_unint fp_unints;
+      w4_unint_z3 fp2_unints; } ;
+
+
+/*
+crucible_llvm_compositional_extract m
+ "sqrt_align_fp2"
+ "foo"
+ (foldr concat [vec_fp2_overrides, fp2_overrides, fp_overrides] [])
+ false
+ sqrt_align_fp2_spec_for_extract
+ do { unfolding ["fp2_invariant"]; // unfold to get preconditions for the fp functions
+      simplify (addsimps fp_inv_fp2_rep_thms (cryptol_ss()));
+      print_goal_nicely;
+      z3;
+      }
+*/
+
+let sqrt_align_fp2_spec = do {
+  out_ptr <- crucible_alloc vec384x_type;
+  (ret, ret_ptr) <- ptr_to_fresh_readonly "ret" vec384x_type;
+  (sqrt, sqrt_ptr) <- ptr_to_fresh_readonly "sqrt" vec384x_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
+  crucible_precond {{ fp2_invariant inp }};
+  crucible_precond {{ fp2_invariant sqrt }};
+  crucible_precond {{ fp2_invariant ret }};
+  crucible_execute_func [out_ptr, ret_ptr, sqrt_ptr, inp_ptr];
+  crucible_points_to out_ptr (crucible_term
+      {{ fp2_rep (Fp_2.mul(fp2_abs ret, sqrt_align_fp2_coeff (fp2_abs sqrt) (fp2_abs inp))) }});
+  crucible_return (crucible_term
+      {{ bool_to_limb (Fp_2.sq (Fp_2.mul(fp2_abs sqrt, sqrt_align_fp2_coeff (fp2_abs sqrt) (fp2_abs inp)))
+                        == fp2_abs inp) }});
+  };
+
+let sqrt_align_fp2_alias_2_3_spec = do { // for the call in sqrt_fp2
+  out_ptr <- crucible_alloc vec384x_type;
+  (ret, ret_ptr) <- ptr_to_fresh_readonly "ret" vec384x_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
+  crucible_precond {{ fp2_invariant inp }};
+  crucible_precond {{ fp2_invariant ret }};
+  crucible_execute_func [out_ptr, ret_ptr, ret_ptr, inp_ptr];
+  crucible_points_to out_ptr (crucible_term
+      {{ fp2_rep (Fp_2.mul( sqrt_align_fp2_coeff (fp2_abs ret) (fp2_abs inp)
+                          , fp2_abs ret)) }});
+  crucible_return (crucible_term
+      {{ bool_to_limb (Fp_2.sq (Fp_2.mul( sqrt_align_fp2_coeff (fp2_abs ret) (fp2_abs inp)
+                                        , fp2_abs ret))
+                        == fp2_abs inp) }});
+  };
+
+// need to lift ite out of FP_2.mul:
+hoist_fp2_mul_right_thm <- prove_cryptol
+  (rewrite (cryptol_ss ())
+    {{\ c x y z -> Fp_2.mul (z, if c then x else y) ==
+                   if c then Fp_2.mul (z, x) else Fp_2.mul (z, y) }} )
+    ["Fp_2"];
+
+// and need facts about the constants used
+sqrt_align_const_thms <- for
+ [ {{ fp2_abs [[0x7bcfa7a25aa30fda, 0xdc17dec12a927e7c, 0x2f088dd86b4ebef1,
+                0xd1ca2087da74d4a7, 0x2da2596696cebc1d, 0x0e2b7eedbbfd87d2],
+               [0x7bcfa7a25aa30fda, 0xdc17dec12a927e7c, 0x2f088dd86b4ebef1,
+                 0xd1ca2087da74d4a7, 0x2da2596696cebc1d, 0x0e2b7eedbbfd87d2]] == sqrt_fp2_c3 }}
+
+ , {{ fp2_abs [[0x3e2f585da55c9ad1, 0x4294213d86c18183, 0x382844c88b623732,
+                0x92ad2afd19103e18, 0x1d794e4fac7cf0b9, 0x0bd592fc7d825ec8],
+               [0x7bcfa7a25aa30fda, 0xdc17dec12a927e7c, 0x2f088dd86b4ebef1,
+                0xd1ca2087da74d4a7, 0x2da2596696cebc1d, 0x0e2b7eedbbfd87d2]] == sqrt_fp2_c2 }}
+
+ , {{ fp2_abs [[0,0,0,0,0,0],
+               [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+               , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]] == u }}
+
+ , {{ fp2_abs [[ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+               , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493],
+               [0,0,0,0,0,0]]                                                 == Fp_2.field_unit }}
+ ] (\t -> prove_cryptol (rewrite (cryptol_ss ()) t) []) ;
+
+
+/* ... this gets all the subgoals, but not the main proof
+sqrt_align_fp2_ov <- custom_verify "sqrt_align_fp2"
+  (foldr concat [vec_fp2_overrides, fp2_overrides, fp_overrides] [])
+  sqrt_align_fp2_spec
+  do { simplify (addsimp sqrt_align_fp2_coeff_equiv_thm  empty_ss);
+       // unfolding ["sqrt_align_fp2_coeff'", "/\\", "select"];
+       simplify fp2_simpset;
+       simplify (addsimps [fp2_invariant_alt_thm, hoist_fp2_mul_right_thm] fp2_simpset);
+       simplify (addsimps fp_inv_fp2_rep_thms (cryptol_ss()));
+       w4_unint_z3 fp2_unints;
+       };
+*/
+/* TODO: complete the proof
+sqrt_align_fp2_ov <- custom_verify "sqrt_align_fp2"
+  // (foldr concat [vec_fp2_overrides, fp2_overrides, fp_overrides] [])
+  (foldr concat [fp2_overrides, fp_overrides] [vec_select_2Fp_alias_1_3_ov, vec_is_zero_2fp_ov])
+  sqrt_align_fp2_spec
+  do { simplify (addsimp sqrt_align_fp2_coeff_equiv_thm  empty_ss);
+       unfolding ["sqrt_align_fp2_coeff'", "/\\", "select"];
+       // simplify fp2_simpset;
+       // unfolding ["fp2_invariant"]; // unfold to get preconditions for the fp functions
+       simplify (addsimps [fp2_invariant_alt_thm, hoist_fp2_mul_right_thm, fp2_abs_fp_rep_thm] fp2_simpset);
+       // simplify (addsimps (concat fp_inv_fp2_rep_thms sqrt_align_const_thms) (cryptol_ss()));
+       simplify (addsimps (foldr concat [ fp_inv_fp2_rep_thms, sqrt_align_const_thms
+                                        , fp_abs_fp2_rep_thms
+                                        , sqrt_align_condition_thms] []) (cryptol_ss()));
+       print_goal_nicely;
+       w4_unint_z3 (concat ef_unints fp2_unints);
+       };
+*/
+sqrt_align_fp2_ov <- admit "sqrt_align_fp2" sqrt_align_fp2_spec;
+//TODO
+sqrt_align_fp2_alias_2_3_ov <- admit  "sqrt_align_fp2" sqrt_align_fp2_alias_2_3_spec;
+
+
+// ... recip_sqrt_fp2
+
+// let recip_sqrt_fp2_spec = fp2_unop_spec "reciprocal_sqrt_fp2" {{ undefined }}; // TODO
+
+// ... sqrt_fp2
+
+// let sqrt_fp2_spec = fp2_unop_spec "sqrt_fp2" {{ sqrt_fp2 }};
+
+let sqrt_fp2_spec = do {
+    out_ptr <- crucible_alloc vec384x_type;
+    (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
+    crucible_precond {{ fp2_invariant inp }};
+    crucible_execute_func [out_ptr, inp_ptr];
+    crucible_points_to out_ptr (crucible_term {{ fp2_rep (sqrt_fp2 (fp2_abs inp)) }});
+    crucible_return (crucible_term {{ if is_square_fp2 (fp2_abs inp) then 1:Limb else 0 }});
+    };
+
+let sqrt_fp2_alias_spec = do {
+    (out, out_ptr) <- ptr_to_fresh "out" vec384x_type;
+    crucible_precond {{ fp2_invariant out }};
+    crucible_execute_func [out_ptr, out_ptr];
+    crucible_points_to out_ptr (crucible_term {{ fp2_rep (sqrt_fp2 (fp2_abs out)) }});
+    crucible_return (crucible_term {{ if is_square_fp2 (fp2_abs out) then 1:Limb else 0 }});
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// Proofs
+////////////////////////////////////////////////////////////////////////////////
+
+
+// Some additional algebraic rules for Fp operations:
+// mul_div_fp_thm <- admit_cryptol {{ \x y z -> Fp.mul (x, Fp.div (y,z)) == Fp.div (Fp.mul (x, y), z) }};
+// special case
+mul_div_fp_thm <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \x z -> Fp.mul (x, inverse_fp z) == Fp.div (x, z) }});
+div_neg_fp_thm <- admit_cryptol {{ \x y  -> Fp.div (Fp.neg x,y) == Fp.neg (Fp.div (x, y)) }};
+// commute add once -- use with caution!
+add_commutes_fp_thm <- prove_cryptol {{ \x y  -> Fp.add (x, y) == apply Fp.add (y,x) }} [];
+
+
+reciprocal_fp2_ov <- custom_verify "reciprocal_fp2"
+   (concat [reciprocal_fp_ov] fp_overrides)
+   (fp2_unop_spec "reciprocal_fp2" {{ inverse_fp2 }})
+   do { // commute Fp.add BEFORE we unfold inverse_fp2; this flips the add used in the code
+        // but not the add in the definition.  We need to commute one but not the other.
+       simplify (addsimp add_commutes_fp_thm empty_ss);
+       unfolding ["inverse_fp2", "fp2_rep", "fp2_abs", "fp2_invariant"];
+       simplify (addsimps [mul_div_fp_thm, div_neg_fp_thm] (addsimps fp_alg_thms fp_simpset));
+       w4_unint_z3 fp_unints;
+       };
+
+// We have to "admit" these functions until we have specs for the assembly routines they call
+sqr_n_mul_fp2_ov <- admit "sqr_n_mul_fp2" sqr_n_mul_fp2_spec;
+sqr_n_mul_fp2_alias_1_2_ov <- admit "sqr_n_mul_fp2" sqr_n_mul_fp2_alias_1_2_spec;
+
+recip_sqrt_fp2_9mod16_ov <- custom_verify "recip_sqrt_fp2_9mod16"
+  (concat [sqr_n_mul_fp2_ov, sqr_n_mul_fp2_alias_1_2_ov]
+          (concat fp2_overrides vec_fp2_overrides))
+  recip_sqrt_fp2_9mod16_spec
+  do {
+     // simplify (addsimp recip_fp_algebra_thm empty_ss);
+     unfolding ["sqr_n_mul_fp2"];
+     simplify fp2_exp_simps;
+     w4_unint_z3 (concat ["fp2_exp"] fp2_unints);
+     };
+
+// ... for the proof of sqrt_fp and recip_sqrt_fp we relate fp2_exp and F_expt
+// Provable by induction, but not in SAW
+sqrt_fp_power_lemma <- admit_cryptol
+  (rewrite (cryptol_ss()) {{ \ x -> F_expt`{n=(width q) - 3} Fp_2 x `((q+7)/16) == fp2_exp x `((q+7)/16) }})
+  ;
+
+/*
+// Some proof issues: the base of Fp_2.field_unit introduces fp2_normalize
+
+  do { goal_eval_unint (concat ["fp2_exp"] fp2_unints); // needed to expand F_expt, which uses a comprehension
+       simplify (addsimp fp2_unrip_thm fp2_exp_simps);
+       print_goal_nicely;
+       w4_unint_z3 (concat ["fp2_exp"] fp2_unints);
+       };
+*/
+
+/* The proof of sqrt_fp2 presents several challenges.
+
+- As described above, the squares of the four candidate roots are computed using some algebraically
+  equivalent formulas that are cheaper to evaluate.  We handle this by rewriting the spec
+  `sqrt_align_fp2` to `sqrt_align_fp2'`, with a separate proof to show the equivalence of the two forms.
+
+- The equality tests are done strangely, e.g., rather than testing `a^2 == in`, the test is
+  `vec_is_zero(sub_fp2(a^2, in))`, rather than `a^2 == neg_fp2 in` the test is
+  `vec_is_zero(add_fp2(a^2, in))` and so on.
+
+- In addition, the spec used `Fp_2.is_equal` rather than `==`.  We deal with this via rewrtiting,
+  (as in SAW  we cannot just unfold `Fp_2.is_equal`).
+
+- the candidates are tested in a different order in the implementation from the order in the specification.
+  This does not matter, because the candidates are different multiples of some value, if any two are equal
+  then the value was 0 and all the multiples are equal.  But is is a bit awkward to prove. Informally,
+  if (ax)^2 = (bx)^2 then (a^2-b^2)x^2 == 0.  For our 4 constants, the a^2-b^2 term is nonzero,
+  so we must have x=0.
+
+  There are four candidate square roots: r, u*r, c2*r, and c3*r
+  The code gives order c3*r, c2*r, u*r, r (i.e., the first in that list that works)
+  The specification gives order c2*r, c3*r, u*r, r.
+
+  We planned to handle this by a litle trick.  We have two expressions like
+    (*1) `if P1 then c1 else if P2 then c2 else c3`
+  and
+    (*2) `if P2 then c2 else if P1 then c1 else c3`
+
+  We also know `(P1 /\ P2) ==> c1 == c2`.  So we can rewrite `P1` to the equivalent
+    `P1 /\ (P2 ==> c1 == c2')`
+
+  Making that replacement in (*1) and (*2) gives terms that can be proved equal.
+
+  It turns out easier, though, to simply rewrite one of the if-then-else chains to a different order.
+*/
+
+// need to lift ite out of FP_2.mul:
+hoist_fp2_mul_left_thm <- prove_cryptol
+  (rewrite (cryptol_ss ())
+    {{\ c x y z -> Fp_2.mul (if c then x else y, z) ==
+                   if c then Fp_2.mul (x, z) else Fp_2.mul (y,z) }})
+    ["Fp_2"];
+
+// `u` is unfolded in some parts automatically!?  So we expand it everywhere else with this rule
+u_expander_thm <- prove_cryptol {{ u == [1, 0] }} [];
+
+// we also have some instances of Fp_2.is_equal that need to be replaced with actual equality,
+fp2_is_equal_thm <- prove_cryptol {{ \x y -> Fp_2.is_equal (x,y) == (x==y) }} [];
+
+// .. and the rule for dealing with the ordering difference:
+/*
+sqrt_candidate_comparison_thm <- admit_cryptol
+  (rewrite (cryptol_ss ()) {{ \ x y -> (Fp_2.sq (Fp_2.mul (sqrt_fp2_c2, x)) == y) ==
+                              ( (apply Fp_2.sq (Fp_2.mul (sqrt_fp2_c2, x)) == y)
+                                /\ ((Fp_2.sq (Fp_2.mul (sqrt_fp2_c3, x)) == y)
+                                    ==> (Fp_2.mul (sqrt_fp2_c2, x) == Fp_2.mul (sqrt_fp2_c3, x)))) }});
+*/
+// ... this version is more direct and works better:
+sqrt_candidate_comparison_thm' <- admit_cryptol
+  (rewrite (cryptol_ss ())
+    {{ \ x y C -> (((if Fp_2.sq A == y then A else if Fp_2.sq B == y then B else C) ==
+                     if Fp_2.sq B == y then B else if Fp_2.sq A == y then A else C)
+                    where A = Fp_2.mul (sqrt_fp2_c3, x)
+                          B = Fp_2.mul (sqrt_fp2_c2, x) ) }} );
+
+// TODO: We also need to know Fp_2.sq ((sqrt_fp2 x)) == x iff is_square_fp2 x
+// which will be another algebraic assumption
+
+/*
+sqrt_fp_ov <- custom_verify "sqrt_fp2"
+  (concat [recip_sqrt_fp2_9mod16_ov, sqrt_align_fp2_alias_2_3_ov] fp2_overrides)
+  sqrt_fp2_spec
+  do {
+  // absorb the multiplication into the exponentiation:
+  simplify fp2_exp_simps;
+  // open up a bit, and replace `F_expt` with `fp2_exp`, hoist ifs through Fp_2.mul, and expand `u`
+  unfolding ["sqrt_fp2", "sqrt_align_fp2_coeff"]; //
+  simplify (addsimps [sqrt_fp_power_lemma, hoist_fp2_mul_left_thm, u_expander_thm] (cryptol_ss()));
+  // eliminate Fp_2.is_equal, and use the trick for order of comparisons
+  // and turn mul(field_unit, x) into x
+  simplify (addsimps [fp2_is_equal_thm, fp2_mul_unit_exp_thm, sqrt_candidate_comparison_thm']
+                     empty_ss);
+  w4_unint_z3 (concat ["fp2_exp"] fp2_unints);
+  };
+*/
+
+let verify_sqrt_fp2 spec = custom_verify "sqrt_fp2"
+  (concat [recip_sqrt_fp2_9mod16_ov, sqrt_align_fp2_alias_2_3_ov] fp2_overrides)
+  spec
+  do {
+  // absorb the multiplication into the exponentiation:
+  simplify fp2_exp_simps;
+  // open up a bit, and replace `F_expt` with `fp2_exp`, hoist ifs through Fp_2.mul, and expand `u`
+  unfolding ["sqrt_fp2", "sqrt_align_fp2_coeff"]; //
+  simplify (addsimps [sqrt_fp_power_lemma, hoist_fp2_mul_left_thm, u_expander_thm] (cryptol_ss()));
+  // eliminate Fp_2.is_equal, and use the trick for order of comparisons
+  // and turn mul(field_unit, x) into x
+  simplify (addsimps [fp2_is_equal_thm, fp2_mul_unit_exp_thm, sqrt_candidate_comparison_thm']
+                     empty_ss);
+  print_goal_nicely;
+  w4_unint_z3 (concat ["fp2_exp"] fp2_unints);
+  };
+
+//sqrt_fp2_ov <- verify_sqrt_fp2 sqrt_fp2_spec;
+//sqrt_fp2_alias_ov <- verify_sqrt_fp2 sqrt_fp2_alias_spec;
+sqrt_fp2_ov <- admit "sqrt_fp2" sqrt_fp2_spec;
+sqrt_fp2_alias_ov <- admit "sqrt_fp2" sqrt_fp2_alias_spec;
+
+let sqrt_fp2_ovs = [sqrt_fp2_ov, sqrt_fp2_alias_ov];
+
