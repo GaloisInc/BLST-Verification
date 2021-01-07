@@ -273,77 +273,77 @@
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_add",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations.saw:111:31",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_add_affine",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations.saw:182:28",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_double",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations.saw:237:24",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_double",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations.saw:260:34",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_dadd",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations.saw:293:27",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_dadd",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations.saw:324:37",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_dadd",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations.saw:358:37",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_dadd",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations.saw:393:30",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_dadd_affine",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations.saw:429:29",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_is_equal",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations.saw:460:26",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_affine_on_curve",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations.saw:508:33",
@@ -357,84 +357,84 @@
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_on_curve",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations.saw:563:26",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_cneg",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations.saw:592:22",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_add",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations.saw:83:21",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_add_affine",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations_e2.saw:104:28",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_add_affine",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations_e2.saw:122:38",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_double",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations_e2.saw:139:24",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_double",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations_e2.saw:155:34",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_dadd",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations_e2.saw:174:27",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_dadd",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations_e2.saw:194:30",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_dadd_affine",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations_e2.saw:212:29",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_is_equal",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations_e2.saw:232:26",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_affine_on_curve",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations_e2.saw:270:33",
@@ -455,7 +455,7 @@
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_on_curve",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations_e2.saw:311:26",
@@ -469,14 +469,14 @@
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_add",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations_e2.saw:69:21",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_add",
     "specification": "unknown",
     "loc": "/workdir/proof/curve_operations_e2.saw:86:31",
@@ -497,91 +497,91 @@
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "limbs_from_be_bytes",
     "specification": "unknown",
     "loc": "/workdir/proof/deserialize-p1.saw:324:30",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "blst_p1_deserialize",
     "specification": "unknown",
     "loc": "/workdir/proof/deserialize-p1.saw:326:31",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_Uncompress_BE",
     "specification": "unknown",
     "loc": "/workdir/proof/deserialize-p1.saw:336:36",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_Uncompress_BE",
     "specification": "unknown",
     "loc": "/workdir/proof/deserialize-p1.saw:379:36",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_Uncompress_BE",
     "specification": "unknown",
     "loc": "/workdir/proof/deserialize-p1.saw:388:34",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
     "loc": "/workdir/proof/deserialize-p1.saw:401:36",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
     "loc": "/workdir/proof/deserialize-p1.saw:404:35",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
     "loc": "/workdir/proof/deserialize-p1.saw:406:31",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
     "loc": "/workdir/proof/deserialize-p1.saw:415:32",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
     "loc": "/workdir/proof/deserialize-p1.saw:424:33",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "blst_p1_uncompress",
     "specification": "unknown",
     "loc": "/workdir/proof/deserialize-p1.saw:446:29",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_Deserialize_BE",
     "specification": "unknown",
     "loc": "/workdir/proof/deserialize-p1.saw:459:37",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_Deserialize_BE",
     "specification": "unknown",
     "loc": "/workdir/proof/deserialize-p1.saw:471:38",
@@ -591,84 +591,84 @@
     "status": "assumed",
     "method": "add_fp",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p2.saw:333:20",
+    "loc": "/workdir/proof/deserialize-p2.saw:329:20",
     "type": "method"
   },
   {
     "status": "assumed",
     "method": "sgn0x_pty_mont_384x",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p2.saw:335:26",
+    "loc": "/workdir/proof/deserialize-p2.saw:331:26",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "limbs_from_be_bytes",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p2.saw:337:30",
+    "loc": "/workdir/proof/deserialize-p2.saw:333:30",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_Uncompress_BE",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p2.saw:353:36",
+    "loc": "/workdir/proof/deserialize-p2.saw:349:36",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_Uncompress_BE",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p2.saw:407:36",
+    "loc": "/workdir/proof/deserialize-p2.saw:403:36",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_Uncompress_BE",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p2.saw:420:34",
+    "loc": "/workdir/proof/deserialize-p2.saw:416:34",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p2.saw:437:36",
+    "loc": "/workdir/proof/deserialize-p2.saw:433:36",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p2.saw:440:35",
+    "loc": "/workdir/proof/deserialize-p2.saw:436:35",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p2.saw:442:31",
+    "loc": "/workdir/proof/deserialize-p2.saw:438:31",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p2.saw:451:32",
+    "loc": "/workdir/proof/deserialize-p2.saw:447:32",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE2_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p2.saw:460:33",
+    "loc": "/workdir/proof/deserialize-p2.saw:456:33",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "blst_p2_uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p2.saw:482:29",
+    "loc": "/workdir/proof/deserialize-p2.saw:478:29",
     "type": "method"
   },
   {
@@ -686,56 +686,56 @@
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_precompute_w5",
     "specification": "unknown",
     "loc": "/workdir/proof/ec_mult.saw:323:4",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_gather_booth_w5",
     "specification": "unknown",
     "loc": "/workdir/proof/ec_mult.saw:449:4",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_mult_w5",
     "specification": "unknown",
     "loc": "/workdir/proof/ec_mult.saw:596:1",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_mult_w5",
     "specification": "unknown",
     "loc": "/workdir/proof/ec_mult.saw:597:1",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_mult_w5",
     "specification": "unknown",
     "loc": "/workdir/proof/ec_mult.saw:598:1",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_mult_w5",
     "specification": "unknown",
     "loc": "/workdir/proof/ec_mult.saw:600:1",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_mult_w5",
     "specification": "unknown",
     "loc": "/workdir/proof/ec_mult.saw:601:1",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_mult_w5",
     "specification": "unknown",
     "loc": "/workdir/proof/ec_mult.saw:603:1",
@@ -966,28 +966,28 @@
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "reciprocal_fp",
     "specification": "unknown",
     "loc": "/workdir/proof/exp.saw:137:21",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "recip_sqrt_fp",
     "specification": "unknown",
     "loc": "/workdir/proof/exp.saw:169:21",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "sqrt_fp",
     "specification": "unknown",
     "loc": "/workdir/proof/exp.saw:210:15",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "sqrt_fp",
     "specification": "unknown",
     "loc": "/workdir/proof/exp.saw:211:21",
@@ -1008,7 +1008,7 @@
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "reciprocal_fp2",
     "specification": "unknown",
     "loc": "/workdir/proof/exp2.saw:517:22",
@@ -1029,7 +1029,7 @@
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "recip_sqrt_fp2_9mod16",
     "specification": "unknown",
     "loc": "/workdir/proof/exp2.saw:532:29",
@@ -1470,14 +1470,14 @@
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "POINTonE1_in_G1",
     "specification": "unknown",
     "loc": "/workdir/proof/map_to_g1.saw:257:23",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "sigma",
     "specification": "unknown",
     "loc": "/workdir/proof/map_to_g1.saw:32:13",
@@ -1533,70 +1533,70 @@
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_is_zero",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:126:22",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_is_zero",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:127:23",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_is_zero",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:148:23",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_is_zero",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:149:24",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_is_equal",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:160:23",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_is_equal",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:169:27",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_is_equal",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:188:23",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_is_equal",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:189:24",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_is_equal",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:212:24",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_is_equal",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:213:25",
@@ -1624,42 +1624,42 @@
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_select",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:237:28",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_select",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:238:38",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_select",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:240:23",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_select",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:241:33",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_select",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:242:24",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_select",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:243:34",
@@ -1701,52 +1701,563 @@
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_select",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:76:28",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_select",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:77:38",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_select",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:78:38",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_select",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:81:21",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_select",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:83:31",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_select",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:85:22",
     "type": "method"
   },
   {
-    "status": "verified",
+    "status": "assumed",
     "method": "vec_select",
     "specification": "unknown",
     "loc": "/workdir/proof/vect.saw:87:32",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:169:19",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:170:31",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:171:31",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:172:29",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:173:33",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_3_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:176:24",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_3_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:177:36",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "lshift_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:180:22",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "lshift_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:181:34",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "rshift_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:184:22",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "rshift_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:185:34",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "cneg_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:188:20",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "cneg_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:189:32",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:192:19",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:193:31",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:194:31",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:195:29",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_256",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_256.saw:196:33",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:428:19",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:429:31",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:430:31",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:431:29",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:432:33",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:435:20",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:436:32",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:437:32",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:438:34",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "lshift_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:441:24",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "lshift_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:442:36",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "lshift_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:443:36",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_3_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:446:24",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_3_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:447:36",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_8_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:450:24",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_8_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:451:36",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_b_onE1",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:454:21",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_b_onE1",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:455:34",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_3_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:458:25",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_3_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:459:37",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_8_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:462:25",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_8_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:463:37",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_b_onE2",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:466:21",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_b_onE2",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:467:34",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "cneg_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:470:20",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "cneg_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:471:32",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:474:19",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:475:31",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:476:31",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:477:29",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:478:33",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:481:20",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:482:32",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:483:32",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:484:30",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:485:34",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_1_plus_i_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:488:32",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_by_1_plus_i_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:489:44",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sgn0_pty_mod_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:492:24",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sgn0_pty_mod_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:495:25",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "vec_select_144",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:502:19",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "vec_select_192",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:502:19",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "vec_select_288",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:502:19",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "vec_select_48",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:502:19",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "vec_select_96",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384.saw:502:19",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384x384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384x384.saw:100:35",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384x384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384x384.saw:101:35",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384x384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384x384.saw:102:33",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384x384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384x384.saw:103:37",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384x384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384x384.saw:106:23",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384x384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384x384.saw:107:35",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384x384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384x384.saw:108:35",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384x384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384x384.saw:109:33",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sub_mod_384x384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384x384.saw:110:37",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "add_mod_384x384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/add_mod_384x384.saw:99:23",
     "type": "method"
   },
   {
@@ -1842,160 +2353,6 @@
   },
   {
     "status": "assumed",
-    "method": "add_mod_384",
-    "specification": "unknown",
-    "loc": "0x17980",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384x",
-    "specification": "unknown",
-    "loc": "0x17a60",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "lshift_mod_384",
-    "specification": "unknown",
-    "loc": "0x17ae0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_3_mod_384",
-    "specification": "unknown",
-    "loc": "0x17c20",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_8_mod_384",
-    "specification": "unknown",
-    "loc": "0x17c80",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_b_onE1",
-    "specification": "unknown",
-    "loc": "0x17d00",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_3_mod_384x",
-    "specification": "unknown",
-    "loc": "0x17e00",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_8_mod_384x",
-    "specification": "unknown",
-    "loc": "0x17ea0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_b_onE2",
-    "specification": "unknown",
-    "loc": "0x17f60",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "cneg_mod_384",
-    "specification": "unknown",
-    "loc": "0x180c0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384",
-    "specification": "unknown",
-    "loc": "0x181a0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384x",
-    "specification": "unknown",
-    "loc": "0x18280",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_1_plus_i_mod_384x",
-    "specification": "unknown",
-    "loc": "0x18300",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sgn0_pty_mod_384",
-    "specification": "unknown",
-    "loc": "0x184a0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sgn0_pty_mod_384x",
-    "specification": "unknown",
-    "loc": "0x18520",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "vec_select_48",
-    "specification": "unknown",
-    "loc": "0x18640",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "vec_select_96",
-    "specification": "unknown",
-    "loc": "0x186c0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "vec_select_192",
-    "specification": "unknown",
-    "loc": "0x187a0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "vec_select_144",
-    "specification": "unknown",
-    "loc": "0x18920",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "vec_select_288",
-    "specification": "unknown",
-    "loc": "0x18a40",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_384x384",
-    "specification": "unknown",
-    "loc": "0x18e20",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_384x384",
-    "specification": "unknown",
-    "loc": "0x18e60",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
     "method": "mulx_mont_384x",
     "specification": "unknown",
     "loc": "0x190c0",
@@ -2069,48 +2426,6 @@
     "method": "redcx_mont_256",
     "specification": "unknown",
     "loc": "0x1b9c0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "add_mod_256",
-    "specification": "unknown",
-    "loc": "0x1bc00",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_by_3_mod_256",
-    "specification": "unknown",
-    "loc": "0x1bc80",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "lshift_mod_256",
-    "specification": "unknown",
-    "loc": "0x1bd20",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "rshift_mod_256",
-    "specification": "unknown",
-    "loc": "0x1bd80",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "cneg_mod_256",
-    "specification": "unknown",
-    "loc": "0x1be20",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sub_mod_256",
-    "specification": "unknown",
-    "loc": "0x1bec0",
     "type": "method"
   },
   {
@@ -2565,7 +2880,7 @@
   },
   {
     "status": "verified",
-    "term": "let { x@1 = Cryptol.TCNum 2\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = x@2 * x@2\n      x@4 = Cryptol.PEqSeq x@1 Prelude.Integer Cryptol.PEqInteger\n      x@5 = Prelude.Bool * x@3\n      x@6 = Cryptol.PZeroSeq x@1 Prelude.Integer Cryptol.PZeroInteger\n      x@7 = cryptol:/Maybe/nothing x@3 (x@6,x@6)\n      x@8 = Cryptol.PEqPair Prelude.Bool x@3 Cryptol.PEqBit\n              (Cryptol.PEqPair x@2 x@2 x@4 x@4)\n    }\n in (s : Prelude.Vec 96 (Prelude.Vec 8 Prelude.Bool))\n-> Prelude.EqTrue\n     (cryptol:/Cryptol/==%3e\n        (Cryptol.ecEq x@5 x@8 (cryptol:uncompress_E2#6493 s) x@7)\n        (Cryptol.ecEq x@5 x@8\n           (cryptol:/implementation/SerializationP2/uncompress_E2_imp s)\n           x@7))",
+    "term": "let { x@1 = Cryptol.TCNum 2\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = x@2 * x@2\n      x@4 = Cryptol.PEqSeq x@1 Prelude.Integer Cryptol.PEqInteger\n      x@5 = Prelude.Bool * x@3\n      x@6 = Cryptol.PZeroSeq x@1 Prelude.Integer Cryptol.PZeroInteger\n      x@7 = cryptol:/Maybe/nothing x@3 (x@6,x@6)\n      x@8 = Cryptol.PEqPair Prelude.Bool x@3 Cryptol.PEqBit\n              (Cryptol.PEqPair x@2 x@2 x@4 x@4)\n    }\n in (s : Prelude.Vec 96 (Prelude.Vec 8 Prelude.Bool))\n-> Prelude.EqTrue\n     (cryptol:/Cryptol/==%3e\n        (Cryptol.ecEq x@5 x@8 (cryptol:uncompress_E2#6495 s) x@7)\n        (Cryptol.ecEq x@5 x@8\n           (cryptol:/implementation/SerializationP2/uncompress_E2_imp s)\n           x@7))",
     "loc": "unknown",
     "type": "property"
   },
@@ -3279,7 +3594,7 @@
   },
   {
     "status": "verified",
-    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (s : Prelude.Vec 96 (Prelude.Vec 8 Prelude.Bool))\n-> Prelude.EqTrue\n     (cryptol:/Maybe/maybe_cases x@2 Prelude.Bool\n        (cryptol:/implementation/SerializationP2/uncompress_E2_imp s)\n        Prelude.True\n        (\\(P : x@2) ->\n           cryptol:/Maybe/maybe_cases x@2 Prelude.Bool\n             (cryptol:uncompress_E2#6493 s)\n             Prelude.False\n             (\\(Q : x@2) ->\n                Cryptol.ecEq x@2 (Cryptol.PEqPair x@1 x@1 x@3 x@3) P Q)))",
+    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (s : Prelude.Vec 96 (Prelude.Vec 8 Prelude.Bool))\n-> Prelude.EqTrue\n     (cryptol:/Maybe/maybe_cases x@2 Prelude.Bool\n        (cryptol:/implementation/SerializationP2/uncompress_E2_imp s)\n        Prelude.True\n        (\\(P : x@2) ->\n           cryptol:/Maybe/maybe_cases x@2 Prelude.Bool\n             (cryptol:uncompress_E2#6495 s)\n             Prelude.False\n             (\\(Q : x@2) ->\n                Cryptol.ecEq x@2 (Cryptol.PEqPair x@1 x@1 x@3 x@3) P Q)))",
     "loc": "unknown",
     "type": "property"
   },
@@ -3609,7 +3924,7 @@
   },
   {
     "status": "verified",
-    "term": "let { x@1 = Prelude.Vec 64 Prelude.Bool\n      x@2 = Prelude.Vec 6 x@1\n    }\n in (x : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/implementation/Field/fp_invariant x)\n        (Cryptol.ecEq x@2\n           (Cryptol.PEqSeq (Cryptol.TCNum 6) x@1\n              (Cryptol.PEqSeqBool (Cryptol.TCNum 64)))\n           x\n           (cryptol:add_rep#6491 x)))",
+    "term": "let { x@1 = Prelude.Vec 64 Prelude.Bool\n      x@2 = Prelude.Vec 6 x@1\n    }\n in (x : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/implementation/Field/fp_invariant x)\n        (Cryptol.ecEq x@2\n           (Cryptol.PEqSeq (Cryptol.TCNum 6) x@1\n              (Cryptol.PEqSeqBool (Cryptol.TCNum 64)))\n           x\n           (cryptol:add_rep#6493 x)))",
     "loc": "unknown",
     "type": "property"
   },
