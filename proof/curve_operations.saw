@@ -7,24 +7,6 @@ import "../spec/ShortWeierstrassCurve.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/CurveOperation.cry";
 
-// useful things for proof development, to tidy up the goal formula before printing it.
-
-propositional_rewrites <- for
-  [ "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a True b) (or a b))"
-  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a b False) (and a b))"
-  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (and a b)) (or (not a) (not b)))"
-  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (or a b)) (and (not a) (not b)))"
-   ] (prove_core abc);
-
-let prop_simpset = add_prelude_eqs
-  [ "ite_true", "ite_false", "ite_eq"
-  , "not_True", "not_False", "not_not"
-  , "and_True1", "and_True2", "and_False1", "and_False2", "and_idem"
-  , "or_True1", "or_True2", "or_False1", "or_False2", "or_idem"]
-  (addsimps propositional_rewrites empty_ss);
-
-let cleanup_simpset = add_cryptol_defs ["ecEq", "PEqInteger"] prop_simpset;
-
 let print_goal_readably_fp = do {
     unfolding ["Fp", "prime_field_bv", "prime_field_integer", "prime_field"];
     simplify cleanup_simpset;

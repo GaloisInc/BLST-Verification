@@ -150,6 +150,24 @@ vec_is_zero_2fp2_ov <- test "vec_is_zero" []  vec_is_zero_2fp2_spec;
 
 // ... continuing with vec_is_equal
 
+let vec_is_equal_48_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  crucible_execute_func [a_ptr, b_ptr, crucible_term {{ (48:Size_t) }}]; // Non-portable
+  crucible_return (crucible_term {{ if a == b then 1 else (0:Limb) }});
+  };
+
+vec_is_equal_48_ov <- verify "vec_is_equal" []  vec_is_equal_48_spec;
+
+let vec_is_equal_48_vec_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  crucible_execute_func [a_ptr, b_ptr, crucible_term {{ (48:Size_t) }}]; // Non-portable
+  crucible_return (crucible_term {{ if (vec384_abs a) == (vec384_abs b) then 1 else (0:Limb) }});
+  };
+
+vec_is_equal_48_vec_ov <- verify "vec_is_equal" []  vec_is_equal_48_spec;
+
 let vec_is_equal_fp_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
@@ -205,12 +223,14 @@ let vec_copy_spec bytes  ty = do {
 
 vec_copy_fp_ov <- verify "vec_copy" [] (vec_copy_spec 48 vec384_type);
 vec_copy_POINTonE1_ov <- verify "vec_copy" [] (vec_copy_spec 144 POINTonE1_type);
+vec_copy_POINTonE1_affine_ov <- verify "vec_copy" [] (vec_copy_spec 96 POINTonE1_affine_type);
 
 // all overrides
 
 let vec_overrides = concat [ vec_is_zero_fp_ov, vec_is_zero_2fp_ov
                            , vec_is_equal_fp_ov, vec_is_equal_2fp_ov
-                           , vec_copy_fp_ov, vec_copy_POINTonE1_ov] vec_select_overrides;
+                           , vec_copy_fp_ov, vec_copy_POINTonE1_ov
+                           , vec_copy_POINTonE1_affine_ov] vec_select_overrides;
 
 // for E2:
 
