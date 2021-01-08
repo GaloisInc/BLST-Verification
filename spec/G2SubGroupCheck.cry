@@ -65,36 +65,39 @@ psi (x, y) = (qxn, qyn) where
 
 // The subgroup check for G2, from Bowe "Faster Subgroup Checks for BLS12-381"
 
-e2_scalar_mult: Integer -> AffinePoint t_Fp_2 -> AffinePoint t_Fp_2
-e2_scalar_mult k P = if k < 0 then e2_scalar_mult (-k) (neg E' P)
-                              else add E' P (e2_scalar_mult (k-1) P)
+// TODO: e2_scalar_mult is already defined in ec_mult2.saw
 
-is_in_G2: AffinePoint t_Fp_2 -> Bool
-is_in_G2 P = is_point_O E' Q where
-    Q = add E' (sub E' (e2_scalar_mult z P3) P2) P
-    P2 = psi (psi P)
-    P3 = psi P2
-    z = -15132376222941642752 // -0xd201000000010000
+//e2_scalar_mult: Integer -> AffinePoint t_Fp_2 -> AffinePoint t_Fp_2
+//e2_scalar_mult k P = if k < 0 then e2_scalar_mult (-k) (neg E' P)
+                              //else if k == 0 then point_O E'
+                              //else add E' P (e2_scalar_mult (k-1) P)
 
-is_in_G2': AffinePoint t_Fp_2 -> Bool
-is_in_G2' P = is_point_O E' Q where
-    Q = sub E' P (add E' (mult E' z' P3) P2) // rearranged because we multiply by a positive here
-    P2 = psi (psi P)
-    P3 = psi P2
-    z' = 0xd201000000010000
+//is_in_G2: AffinePoint t_Fp_2 -> Bool
+//is_in_G2 P = is_point_O E' Q where
+    //Q = add E' (sub E' (e2_scalar_mult z P3) P2) P
+    //P2 = psi (psi P)
+    //P3 = psi P2
+    //z = -15132376222941642752 // -0xd201000000010000
 
-is_in_g2_impl P = is_point_O E' Q where
-  Q = add E' (neg E' P1) P
-  P1 = add E' P4 P2
-  P2 = e2_scalar_mult z' P3
-  P3 = psi P4
-  P4 = psi (psi P)
-  z' = 15132376222941642752
+//is_in_G2': AffinePoint t_Fp_2 -> Bool
+//is_in_G2' P = is_point_O E' Q where
+    //Q = sub E' P (add E' (mult E' z' P3) P2) // rearranged because we multiply by a positive here
+    //P2 = psi (psi P)
+    //P3 = psi P2
+    //z' = 0xd201000000010000
 
-is_in_g2_impl' P = is_point_O E' Q where
-  Q = add E' (neg E' P1) P
-  P1 = add E' P4 P2
-  P2 = mult E' z' P3
-  P3 = psi P4
-  P4 = psi (psi P)
-  z' = 0xd201000000010000
+//is_in_g2_impl P = is_point_O E' Q where
+  //Q = add E' (neg E' P1) P
+  //P1 = add E' P4 P2
+  //P2 = e2_scalar_mult z' P3
+  //P3 = psi P4
+  //P4 = psi (psi P)
+  //z' = 15132376222941642752
+
+//is_in_g2_impl' P = is_point_O E' Q where
+  //Q = add E' (neg E' P1) P
+  //P1 = add E' P4 P2
+  //P2 = mult E' z' P3
+  //P3 = psi P4
+  //P4 = psi (psi P)
+  //z' = 0xd201000000010000

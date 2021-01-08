@@ -12,26 +12,6 @@ import "../spec/Pairing.cry"; // for "alpha"
 import "../spec/ShortWeierstrassCurve.cry"; // for ProjctivePoint, affinify
 import "../spec/implementation/CurveOperation.cry"; // for POINTonE2_invariant, _abs, etc.
 
-
-// copied from exp2.saw
-let fp2_at0 = parse_core "\\ (x:(Vec 2 Integer)) -> at 2 Integer x 0";
-let fp2_at1 = parse_core "\\ (x:(Vec 2 Integer)) -> at 2 Integer x 1";
-
-fp2_unrip_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[2]Integer) -> [fp2_at0 x, fp2_at1 x] == x }}) [];
-
-let vec384x_at0 = parse_core
-  "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6 (Vec 64 Bool)) x 0";
-let vec384x_at1 = parse_core
-  "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6 (Vec 64 Bool)) x 1";
-
-fp_abs_fp2_rep_thms <- for
-  [ {{ \x -> fp_abs (vec384x_at0 (fp2_rep x)) == fp2_at1 x }}
-  , {{ \x -> fp_abs (vec384x_at1 (fp2_rep x)) == fp2_at0 x }}
-  ] (\ t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
-            do {goal_eval_unint fp_unints; apply_fp_rewrites; w4_unint_z3 fp_unints; } ) ;
-
-//; (end copy)
-
 fp_inv_fp2_rep_thms <- for [0,1]
   (\ i -> custom_prove_cryptol (rewrite (cryptol_ss()) {{ \ x -> fp_invariant ((fp2_rep x) @ (`i:[1])) == True }})
             do {unfolding ["fp2_rep"];

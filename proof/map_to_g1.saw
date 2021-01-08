@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
+import "../spec/implementation/Types.cry"; // bool_to_limb
+
 let point_op_overrides = concat vec_overrides
   [ POINTonE1_add_ov, POINTonE1_add_alias_1_2_ov // <= prob not needed
   , POINTonE1_dadd_null_ov, POINTonE1_dadd_null_alias_1_2_ov
@@ -62,9 +64,6 @@ let {{
     // Q = sub E (sub E (add E P' P') P) P''
     Q = add E (neg E (add E P'' P)) (add E P' P')
     c =  zz_minus_1_div_by_3 // (z^2-1)/3, 0x396c8c005555e1560000000055555555
-
-  bool_to_limb: Bool -> Limb
-  bool_to_limb c = if c then 1 else 0
   }};
 
 
