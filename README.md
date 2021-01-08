@@ -28,9 +28,9 @@ Cryptol definitions exist for the BLS12-381 parameters, and for all functions ne
 
 ## Memory Safety proofs
 
-We have proved memory safety for the following x86_64 routines: add_mod_256, mul_by_3_mod_256, lshift_mod_256, rshift_mod_256, cneg_mod_256, sub_mod_256, add_mod_384, add_mod_384x, lshift_mod_384, mul_by_3_mod_384, mul_by_8_mod_384, mul_by_b_onE1, mul_by_3_mod_384x, mul_by_8_mod_384x, mul_by_b_onE2, cneg_mod_384, sub_mod_384, sub_mod_384x, mul_by_1_plus_i_mod_384x, sgn0_pty_mod_384, sgn0_pty_mod_384x, add_mod_384x384, sub_mod_384x384, mulx_mont_sparse_256, sqrx_mont_sparse_256, from_mont_256, redcx_mont_256, mulx_mont_384x, mulx_382x, sqrx_382x, redcx_mont_384, fromx_mont_384, sgn0x_pty_mont_384, and sgn0x_pty_mont_384x.
+We have proved memory safety for the following x86_64 routines: `add_mod_256`, `mul_by_3_mod_256`, `lshift_mod_256`, `rshift_mod_256`, `cneg_mod_256`, `sub_mod_256`, `add_mod_384`, `add_mod_384x`, `lshift_mod_384`, `mul_by_3_mod_384`, `mul_by_8_mod_384`, `mul_by_b_onE1`, `mul_by_3_mod_384x`, `mul_by_8_mod_384x`, `mul_by_b_onE2`, `cneg_mod_384`, `sub_mod_384`, `sub_mod_384x`, `mul_by_1_plus_i_mod_384x`, `sgn0_pty_mod_384`, `sgn0_pty_mod_384x`, `add_mod_384x384`, `sub_mod_384x384`, `mulx_mont_sparse_256`, `sqrx_mont_sparse_256`, `from_mont_256`, `redcx_mont_256`, `mulx_mont_384x`, `mulx_382x, sqrx_382x`, `redcx_mont_384`, `fromx_mont_384`, `sgn0x_pty_mont_384`, and `sgn0x_pty_mont_384x`.
 
-We still assume memory safety for sqrx_mont_384x, mulx_mont_384, sqrx_mont_384, sqrx_n_mul_mont_383, and sqrx_mont_382x. There are also variants of the routines prefixed with mulx, sqrx, redcx, and fromx that use the mulq instruction rather than mulx that are currently unverified.
+We still assume memory safety for `sqrx_mont_384x`, `mulx_mont_384`, `sqrx_mont_384`, `sqrx_n_mul_mont_383`, and `sqrx_mont_382x`. There are also variants of the routines prefixed with` mulx`, `sqrx`, `redcx`, and `fromx` that use the `mulq` instruction rather than `mulx` that are currently unverified.
 
 ## Functional correctness
 
@@ -38,11 +38,13 @@ Function `blst_keygen` has been shown to give a result in agreement with the Cry
 
 # Proof limitations
 
+* The verified code base is a little behind the current blst development.  Some proofs will need to be modified to suit the changes to the code when we bring in a more recent version.  The extra condition needed in the proof of the `blst_sk_to_pk` routines is an artifact of this; recent code changes make it unnecessary.
+
 * Some of the blst functions have parameters of arbitrary length, for example `blst_keygen` and the signing functions that take an arbitrary-length message.  SAW cannot prove these functions in full generality; it can only prove them for fixed input sizes.  In these cases, the proofs here pick some reasonable set of fixed sizes to be proved.
 
-* The proof of scalar multiplication takes time that increases rapidly with the number of bits in the exponent.  We have a genericproof that has been run of a variety of sizes, up to 22 bits.  So the 255-bit call used in `blst_sk_to_pk_in_g1` and  `blst_sk_to_pk_in_g2` has not been mechanizally checked, but is deemed to hold by extrapolation from the proofs that have been run.
+* The proof of scalar multiplication takes time that increases rapidly with the number of bits in the exponent.  We have a generic proof that has been run of a variety of sizes, up to 22 bits.  So the 255-bit call used in `blst_sk_to_pk_in_g1` and  `blst_sk_to_pk_in_g2` has not been mechanically checked, but is deemed to hold by extrapolation from the proofs that have been run.
 
-* There is an ambiguity in the IETF about the representation of field values in extension fields.  The Cryptol specification and C impleentaion initially differed on this point.  Theyare now in agreement and we hopw that the specification authors will clarify this point.
+* There is an ambiguity in the IETF about the representation of field values in extension fields.  The Cryptol specification and C implementation initially differed on this point.  They are now in agreement and we hope that the specification authors will clarify this point.
 
 * For now, the assembly language subroutines have their functional correctness assumed, and in a few cases as noted above, their memory safety is also assumed.
 
