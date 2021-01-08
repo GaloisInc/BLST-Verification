@@ -11,11 +11,11 @@ blst_p1_affine_in_g1_ov <- verify_unint "blst_p1_affine_in_g1"
     POINTonE1_in_G1_spec;
 
 blst_p2_affine_in_g2_ov <- verify_unint "blst_p2_affine_in_g2"
-    [POINTonE2_in_G2_ov]
+    [POINTonE2_in_g2_ov]
     (concat fp_unints ["POINTonE2_affine_invariant" // , "is_point_affine", "E"
                       , "POINTonE2_affine_abs", "bool_to_limb" // , "is_point_O"
                       , "is_in_g2_impl"])
-    POINTonE2_in_G2_spec;
+    POINTonE2_in_g2_spec;
 
 POINTonE1_mult_w5_sk_ov <- admit "POINTonE1_mult_w5" (POINTonE1_mult_w5_spec 32 255);
 

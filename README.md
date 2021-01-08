@@ -32,6 +32,8 @@ We have proved memory safety for the following x86_64 routines: `add_mod_256`, `
 
 We still assume memory safety for `sqrx_mont_384x`, `mulx_mont_384`, `sqrx_mont_384`, `sqrx_n_mul_mont_383`, and `sqrx_mont_382x`. There are also variants of the routines prefixed with` mulx`, `sqrx`, `redcx`, and `fromx` that use the `mulq` instruction rather than `mulx` that are currently unverified.
 
+Under these assumptions, memory safety has been shown for all the C functions.  As noted below, for a few of these we have had to restrict the proof to a few specific input sizes.
+
 ## Functional correctness
 
 Function `blst_keygen` has been shown to give a result in agreement with the Cryptol specification for `KeyGen`, with some proof limitations as noted below. In particular, this proof is not completely general, but instead has selected a variety of lengths for both `IKM` and `info` (for a total of 5 combinations).  Functions  `blst_sk_to_pk_in_g1` and  `blst_sk_to_pk_in_g2` have been shown to agree with the requirements of `SkToPk` (with one extra condition on the secret key as noted below).  Functions `blst_p1_affine_in_g1`, `blst_p2_affine_in_g2`, `blst_p1_uncompress`, and `blst_p2_uncompress` have been shown to agree with the Cryptol specification of `KeyValidate`, except that there are some additional checks in the C implementation that are believed to be a good idea and will likely be added to the IETF specifications.  These checks are not yet in the Cryptol formalization.
@@ -45,6 +47,8 @@ Function `blst_keygen` has been shown to give a result in agreement with the Cry
 * The proof of scalar multiplication takes time that increases rapidly with the number of bits in the exponent.  We have a generic proof that has been run of a variety of sizes, up to 22 bits.  So the 255-bit call used in `blst_sk_to_pk_in_g1` and  `blst_sk_to_pk_in_g2` has not been mechanically checked, but is deemed to hold by extrapolation from the proofs that have been run.
 
 * There is an ambiguity in the IETF about the representation of field values in extension fields.  The Cryptol specification and C implementation initially differed on this point.  They are now in agreement and we hope that the specification authors will clarify this point.
+
+* Many algebraic properties of field operations, such as the associative and unit laws, have been assumed rather than proved.  Similarly, some algebraic properties relating to elliptic curves are assumed.
 
 * For now, the assembly language subroutines have their functional correctness assumed, and in a few cases as noted above, their memory safety is also assumed.
 
