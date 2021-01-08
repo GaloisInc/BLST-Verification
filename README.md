@@ -24,20 +24,26 @@ The proofs are also staged.  The first set of specifications and proofs state on
 
 ## Cryptol definitions
 
-Cryptol definitions exist for the BLS12-381 parameters, for the `hash_to_curve` functions for bls from draft-irtf-cfrg-hash-to-curve-09, and for the pairing function from draft-irtf-cfrg-pairing-friendly-curves-07.  Definitions for the API functions from draft-irtf-cfrg-bls-signature-04 are in progress, with the definition of `KeyGen` complete.
+Cryptol definitions exist for the BLS12-381 parameters, and for all functions needed for the minimal-signature-size suite `BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_`, other than for the aggregate signing and aggregate verification operations.  Definitions for the minimal-pubkey-size suite and for the aggregate operations is in progress.
 
 ## Memory Safety proofs
 
-Under the assumption that the assembler routines are memory-safe when called correctly, memory safety has been shown for `blst_keygen`, `hash_to_field`, `blst_sk_to_pk_in_g1`, `blst_sk_to_pk_in_g2`, `blst_p1_affine_in_g1`, `blst_p2_affine_in_g2`, `blst_p1_deserialize`, `blst_p2_deserialize`, `expand_message_xmd`, `POINTonE1_dadd`, `POINTonE2_dadd`, `POINTonE1_dadd_affine`, `POINTonE2_dadd_affine`, `POINTonE1_add`, `POINTonE1_add`, `POINTonE1_add`, `POINTonE2_add`, `POINTonE2_add`, `POINTonE1_add_affine`, `POINTonE1_add_affine`, `POINTonE2_add_affine`, `POINTonE2_add_affine`, `POINTonE1_double`, `POINTonE1_double`, `POINTonE2_double`, `POINTonE2_double`, `POINTonE1_is_equal`, and `POINTonE2_is_equal`.  As noted below, for a few of these we have had to restrict the proof to a few specific input sizes.
+We have proved memory safety for the following x86_64 routines: add_mod_256, mul_by_3_mod_256, lshift_mod_256, rshift_mod_256, cneg_mod_256, sub_mod_256, add_mod_384, add_mod_384x, lshift_mod_384, mul_by_3_mod_384, mul_by_8_mod_384, mul_by_b_onE1, mul_by_3_mod_384x, mul_by_8_mod_384x, mul_by_b_onE2, cneg_mod_384, sub_mod_384, sub_mod_384x, mul_by_1_plus_i_mod_384x, sgn0_pty_mod_384, sgn0_pty_mod_384x, add_mod_384x384, sub_mod_384x384, mulx_mont_sparse_256, sqrx_mont_sparse_256, from_mont_256, redcx_mont_256, mulx_mont_384x, mulx_382x, sqrx_382x, redcx_mont_384, fromx_mont_384, sgn0x_pty_mont_384, and sgn0x_pty_mont_384x.
+
+We still assume memory safety for sqrx_mont_384x, mulx_mont_384, sqrx_mont_384, sqrx_n_mul_mont_383, and sqrx_mont_382x. There are also variants of the routines prefixed with mulx, sqrx, redcx, and fromx that use the mulq instruction rather than mulx that are currently unverified.
 
 ## Functional correctness
 
-Function `blst_keygen` has been shown to give a result in agreement with the Cryptol specification, with some proof limitations as noted below. In particular, this proof is not completely general, but instead has selected a variety of lengths for both `IKM` and `info` (for a total of 5 combinations).
+Function `blst_keygen` has been shown to give a result in agreement with the Cryptol specification for `KeyGen`, with some proof limitations as noted below. In particular, this proof is not completely general, but instead has selected a variety of lengths for both `IKM` and `info` (for a total of 5 combinations).  Functions  `blst_sk_to_pk_in_g1` and  `blst_sk_to_pk_in_g2` have been shown to agree with the requirements of `SkToPk` (with one extra condition on the secret key as noted below).  Functions `blst_p1_affine_in_g1`, `blst_p2_affine_in_g2`, `blst_p1_uncompress`, and `blst_p2_uncompress` have been shown to agree with the Cryptol specification of `KeyValidate`, except that there are some additional checks in the C implementation that are believed to be a good idea and will likely be added to the IETF specifications.  These checks are not yet in the Cryptol formalization.
 
 # Proof limitations
 
 * Some of the blst functions have parameters of arbitrary length, for example `blst_keygen` and the signing functions that take an arbitrary-length message.  SAW cannot prove these functions in full generality; it can only prove them for fixed input sizes.  In these cases, the proofs here pick some reasonable set of fixed sizes to be proved.
 
-* For now, the assembly language subroutines have their memory safety and functional correctness assumed.
+* The proof of scalar multiplication takes time that increases rapidly with the number of bits in the exponent.  We have a genericproof that has been run of a variety of sizes, up to 22 bits.  So the 255-bit call used in `blst_sk_to_pk_in_g1` and  `blst_sk_to_pk_in_g2` has not been mechanizally checked, but is deemed to hold by extrapolation from the proofs that have been run.
+
+* There is an ambiguity in the IETF about the representation of field values in extension fields.  The Cryptol specification and C impleentaion initially differed on this point.  Theyare now in agreement and we hopw that the specification authors will clarify this point.
+
+* For now, the assembly language subroutines have their functional correctness assumed, and in a few cases as noted above, their memory safety is also assumed.
 
 * We have assumed the memory-safety and functional correctness of the implementation of SHA-256.
