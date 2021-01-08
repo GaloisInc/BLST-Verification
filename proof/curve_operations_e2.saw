@@ -7,22 +7,6 @@ import "../spec/ShortWeierstrassCurve.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/CurveOperation.cry";
 
-// we sometimes need to undo SAW's rip-and-restitching of vectors.  It is a bit tricky
-// TODO: not needed
-//let at0 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 0";
-//let at1 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 1";
-//let at2 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 2";
-//let at3 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 3";
-//let at4 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 4";
-//let at5 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 5";
-
-//unrip_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[6][64]) -> [at0 x, at1 x, at2 x, at3 x, at4 x, at5 x] == x }}) [];
-
-//let at0_2 = parse_core "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6 (Vec 64 Bool)) x 0";
-//let at1_2 = parse_core "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6 (Vec 64 Bool)) x 1";
-
-//unrip_thm_2 <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[2][6][64]) -> [at0_2 x, at1_2 x] == x}}) [];
-
 let {{
     hoist_if_proj_0 : {a} (Eq a) => Bit -> (a,a,a) -> (a,a,a) -> Bit
     hoist_if_proj_0 x y z = (if x then y else z).0 == if x then y.0 else z.0
@@ -181,6 +165,25 @@ POINTonE2_dadd_null_ov <- custom_verify "POINTonE2_dadd"
                           }
 );
 
+let POINTonE2_dadd_null_alias_1_2_spec = do {
+  (p1, p1_ptr) <- ptr_to_fresh "p1" POINTonE2_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_invariant p2 }};
+  crucible_execute_func [p1_ptr, p1_ptr, p2_ptr, crucible_null];
+  crucible_points_to p1_ptr (crucible_term {{ POINTonE2_rep (point_dadd Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2) Fp_2.field_zero True) }});
+};
+
+
+POINTonE2_dadd_null_alias_1_2_ov <- custom_verify "POINTonE2_dadd"
+                      (concat vec_fp2_overrides fp2_overrides)
+                      POINTonE2_dadd_null_alias_1_2_spec
+                      (do {
+                            unfolding ["F_is_zero","POINTonE2_rep","POINTonE2_abs","select","point_dadd"];
+                          simplify simpset;
+                          w4_unint_z3 fp2_unints;
+                          }
+);
+
 let POINTonE2_dadd_nonnull_spec = do {
   out_ptr <- crucible_alloc POINTonE2_type;
   (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
@@ -200,6 +203,24 @@ POINTonE2_dadd_nonnull_ov <- custom_verify "POINTonE2_dadd"
                           w4_unint_z3 fp2_unints;
                           });
 
+let POINTonE2_dadd_nonnull_alias_1_2_spec = do {
+  (p1, p1_ptr) <- ptr_to_fresh "p1" POINTonE2_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_type;
+  (a4, a4_ptr) <- ptr_to_fresh_readonly "a4" vec384x_type;
+  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_invariant p2 /\ fp2_invariant a4}};
+  crucible_execute_func [p1_ptr, p1_ptr, p2_ptr, a4_ptr];
+  crucible_points_to p1_ptr (crucible_term {{ POINTonE2_rep (point_dadd Fp_2 (POINTonE2_abs p1) (POINTonE2_abs p2) (fp2_abs a4) False) }});
+};
+
+POINTonE2_dadd_nonnull_alias_1_2_ov <- custom_verify "POINTonE2_dadd"
+                      (concat vec_fp2_overrides fp2_overrides)
+                      POINTonE2_dadd_nonnull_alias_1_2_spec
+                      (do {
+                            unfolding ["F_is_zero","POINTonE2_rep","POINTonE2_abs","select","point_dadd"];
+                          simplify simpset;
+                          w4_unint_z3 fp2_unints;
+                          });
+
 let POINTonE2_dadd_affine_spec = do {
   out_ptr <- crucible_alloc POINTonE2_type;
   (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
@@ -212,6 +233,23 @@ let POINTonE2_dadd_affine_spec = do {
 POINTonE2_dadd_affine_ov <- custom_verify "POINTonE2_dadd_affine"
                       (concat vec_fp2_overrides fp2_overrides)
                       POINTonE2_dadd_affine_spec
+                      (do {
+                            unfolding ["F_is_zero","POINTonE2_rep","POINTonE2_abs","select","point_dadd_affine","POINTonE2_affine_rep","POINTonE2_affine_abs"];
+                          simplify simpset;
+                          w4_unint_z3 fp2_unints;
+                          });
+
+let POINTonE2_dadd_affine_alias_1_2_spec = do {
+  (p1, p1_ptr) <- ptr_to_fresh "p1" POINTonE2_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_affine_type;
+  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_affine_invariant p2 }};
+  crucible_execute_func [p1_ptr, p1_ptr, p2_ptr];
+  crucible_points_to p1_ptr (crucible_term {{ POINTonE2_rep (point_dadd_affine Fp_2 (POINTonE2_abs p1) (POINTonE2_affine_abs p2)) }});
+};
+
+POINTonE2_dadd_affine_alias_1_2_ov <- custom_verify "POINTonE2_dadd_affine"
+                      (concat vec_fp2_overrides fp2_overrides)
+                      POINTonE2_dadd_affine_alias_1_2_spec
                       (do {
                             unfolding ["F_is_zero","POINTonE2_rep","POINTonE2_abs","select","point_dadd_affine","POINTonE2_affine_rep","POINTonE2_affine_abs"];
                           simplify simpset;
@@ -336,6 +374,8 @@ POINTonE2_cneg_ov <- custom_verify "POINTonE2_cneg"
                           //w4_unint_z3 fp2_unints;
                           });
 
+let curve_operations_e2_ovs = [POINTonE2_add_alias_1_2_ov, POINTonE2_add_ov, POINTonE2_cneg_ov, POINTonE2_add_affine_ov, POINTonE2_add_affine_alias_1_2_ov, POINTonE2_double_ov, POINTonE2_double_alias_1_2_ov, POINTonE2_dadd_null_alias_1_2_ov, POINTonE2_dadd_null_ov, POINTonE2_dadd_nonnull_ov, POINTonE2_dadd_nonnull_alias_1_2_ov, POINTonE2_is_equal_ov, POINTonE2_dadd_affine_alias_1_2_ov, POINTonE2_dadd_affine_ov, POINTonE2_affine_on_curve_ov, mul_by_b_onE2_ov, mul_by_b_onE2_alias_1_2_ov];
+
 ////////////////////////////////////////////////////////////////
 //
 // Finally, we end with some theorems useful for other code that calls these C functions
@@ -383,5 +423,5 @@ e2_curve_op_thms <- for
  , {{ \ p1 -> affinify E' (point_neg Fp_2 p1) == neg E' (affinify E' p1) }}
  , {{ \ p1 p2 a4 -> affinify E' (point_dadd Fp_2 p1 p2 a4 True) == add E' (affinify E' p1) (affinify E' p2) }}
  , {{ \ p1 p2 -> affinify E' (point_dadd_affine Fp_2 p1 p2) == add E' (affinify E' p1) p2 }}
- ] 
+ ]
  admit_cryptol;

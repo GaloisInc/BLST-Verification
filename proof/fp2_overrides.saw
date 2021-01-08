@@ -32,7 +32,7 @@ let hoist f unints =
 fp2_rep_thms <- for
   [ {{ \x -> fp2_invariant (fp2_rep x) == True }}
   , {{ \x -> fp2_abs (fp2_rep x) == x }}
-  , {{ \x -> fp2_rep (fp2_abs x) == if fp2_invariant x then x else fp2_normalize x }} // else branch should never be used
+  , {{ \x -> fp2_rep (fp2_abs x) == if fp2_invariant x then x else fp2_normalize x }}
   //, {{ \x -> fp2_rep (fp2_abs x) == x }} // TODO: temporary
   ] admit_cryptol;
 
@@ -134,3 +134,6 @@ fp2_alg_thms <- for
   , {{ Fp_2.neg Fp_2.field_zero == Fp_2.field_zero }} // -0 = 0
   ] (\ t -> prove_cryptol t []);
 
+// This rule is not included in the main fp_simplification rules as it is seldom needed.
+fp2_normalize_thm <- admit_cryptol
+  {{ \x -> fp2_normalize x == if fp2_invariant x then x else apply fp2_normalize x }};

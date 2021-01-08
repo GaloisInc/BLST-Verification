@@ -85,38 +85,47 @@ e2_scalar_mult_alg_thms <- for
 // point_add_fp can be.  Usually we bring them in just before doign a `goal_eval_unit` or `w4_unint_z3`.
 
 let {{
-  point_add_fp = point_add Fp_2
-  point_add_affine_fp = point_add_affine Fp_2
-  point_dadd_fp = point_dadd Fp_2
-  point_dadd_affine_fp = point_dadd_affine Fp_2
-  point_double_fp = point_double Fp_2
-  point_neg_fp = point_neg Fp_2
+  point_add_fp2 = point_add Fp_2
+  point_add_affine_fp2 = point_add_affine Fp_2
+  point_dadd_fp2 = point_dadd Fp_2
+  point_dadd_affine_fp2 = point_dadd_affine Fp_2
+  point_double_fp2 = point_double Fp_2
+  point_neg_fp2 = point_neg Fp_2
   add_E' = add E'
   add'_E' = add' E'
+  mult_E' = mult E'
+  neg_E' = neg E'
+  is_point_O_E' = is_point_O E'
   affinify_E' = affinify E'
   projectify_E' = projectify E'
   is_point_affine_E' = is_point_affine E'
   is_point_projective_E' = is_point_projective E'
   }};
 
-point_add_fp_thm <- prove_cryptol {{  \p1 p2 -> point_add Fp_2 p1 p2 == point_add_fp p1 p2 }} ["Fp_2"];
-point_add_affine_fp_thm <- prove_cryptol {{  \p1 p2 -> point_add_affine Fp_2 p1 p2 == point_add_affine_fp p1 p2 }} ["Fp_2"];
-point_dadd_fp_thm <- prove_cryptol {{  \p1 p2 a4 c -> point_dadd Fp_2 p1 p2 a4 c == point_dadd_fp p1 p2 a4 c}} ["Fp_2"];
-point_dadd_affine_fp_thm <- prove_cryptol {{  \p1 p2 -> point_dadd_affine Fp_2 p1 p2 == point_dadd_affine_fp p1 p2 }} ["Fp_2"];
-point_double_fp_thm <- prove_cryptol {{  \p1 -> point_double Fp_2 p1 == point_double_fp p1 }} ["Fp_2"];
-point_neg_fp_thm <- prove_cryptol {{  \p1 -> point_neg Fp_2 p1 == point_neg_fp p1 }} ["Fp_2"];
+point_add_fp2_thm <- prove_cryptol {{  \p1 p2 -> point_add Fp_2 p1 p2 == point_add_fp2 p1 p2 }} ["Fp_2"];
+point_add_affine_fp2_thm <- prove_cryptol {{  \p1 p2 -> point_add_affine Fp_2 p1 p2 == point_add_affine_fp2 p1 p2 }} ["Fp_2"];
+point_dadd_fp2_thm <- prove_cryptol {{  \p1 p2 a4 c -> point_dadd Fp_2 p1 p2 a4 c == point_dadd_fp2 p1 p2 a4 c}} ["Fp_2"];
+point_dadd_affine_fp2_thm <- prove_cryptol {{  \p1 p2 -> point_dadd_affine Fp_2 p1 p2 == point_dadd_affine_fp2 p1 p2 }} ["Fp_2"];
+point_double_fp2_thm <- prove_cryptol {{  \p1 -> point_double Fp_2 p1 == point_double_fp2 p1 }} ["Fp_2"];
+point_neg_fp2_thm <- prove_cryptol {{  \p1 -> point_neg Fp_2 p1 == point_neg_fp2 p1 }} ["Fp_2"];
 add_E'_thm <- prove_cryptol {{  \p1 p2 -> add E' p1 p2 == add_E' p1 p2 }} ["E'"];
 add'_E'_thm <- prove_cryptol {{  \p1 p2 -> add' E' p1 p2 == add'_E' p1 p2 }} ["E'"];
+neg_E'_thm <- prove_cryptol {{  \p1 -> neg E' p1 == neg_E' p1 }} ["E'"];
+is_point_O_E'_thm <- prove_cryptol {{  \p1 -> is_point_O E' p1 == is_point_O_E' p1 }} ["E'"];
 affinify_E'_thm <- prove_cryptol {{  \p1 -> affinify E' p1 == affinify_E' p1 }} ["E'"];
 projectify_E'_thm <- prove_cryptol {{  \p1 -> projectify E' p1 == projectify_E' p1 }} ["E'"];
 is_point_affine_E'_thm <- prove_cryptol {{  \p1 -> is_point_affine E' p1 == is_point_affine_E' p1 }} ["E'"];
 is_point_projective_E'_thm <- prove_cryptol {{  \p1 -> is_point_projective E' p1 == is_point_projective_E' p1 }} ["E'"];
 
+let e2_unints = ["POINTonE2_abs", "POINTonE2_affine_abs", "POINTonE2_invariant", "POINTonE2_affine_invariant", "POINTonE2_rep", "Fp_2", "E'", "is_point_affine_E'", "is_point_projective_E'", "projectify_E'", "affinify_E'", "is_point_O_E'", "neg_E'", "add_E'", "point_neg_fp2", "point_double_fp2", "point_dadd_affine_fp2", "point_dadd_fp2", "point_add_affine_fp2", "point_add_fp2"];
+
 let remove_higher_order_function_simpset =
-  addsimps [ point_add_fp_thm, point_dadd_fp_thm, point_double_fp_thm, point_neg_fp_thm
-           , point_add_affine_fp_thm, point_dadd_affine_fp_thm
-           , add_E'_thm, add'_E'_thm, affinify_E'_thm, projectify_E'_thm
+  addsimps [ point_add_fp2_thm, point_dadd_fp2_thm, point_double_fp2_thm, point_neg_fp2_thm
+           , point_add_affine_fp2_thm, point_dadd_affine_fp2_thm
+           , add_E'_thm, add'_E'_thm, neg_E'_thm
+           , affinify_E'_thm, projectify_E'_thm
            , is_point_affine_E'_thm, is_point_projective_E'_thm
+           , is_point_O_E'_thm
            ] empty_ss;
 
 // more rules to hoist `if`-terms
@@ -141,8 +150,8 @@ let ec_mult_unints =
     [ "e2_scalar_mult", "e2_order"
     , "POINTonE2_abs", "POINTonE2_rep", "POINTonE2_invariant", "POINTonE2_normalize"
     // , "point_add", "point_double"
-    , "Fp_2", "point_add_fp", "point_double_fp", "point_neg_fp"
-    , "point_add_affine_fp", "point_dadd_fp", "point_dadd_affine_fp"
+    , "Fp_2", "point_add_fp2", "point_double_fp2", "point_neg_fp2"
+    , "point_add_affine_fp2", "point_dadd_fp2", "point_dadd_affine_fp2"
     , "precomputed_table"
     , "add_E'", "add'_E'", "affinify_E'", "projectify_E'"
     ];
@@ -158,15 +167,15 @@ let ec_mult_unints =
 
 let {{
   small_mult: Integer -> ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
-  small_mult i p = if i < 0 then point_neg_fp (small_nonnegative_mult (-i) p)
+  small_mult i p = if i < 0 then point_neg_fp2 (small_nonnegative_mult (-i) p)
                             else small_nonnegative_mult i p
 
   small_nonnegative_mult: Integer -> ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
   small_nonnegative_mult i p1 =
     if i <= 0 then zero
      | i == 1 then p1
-     | (i%2)==0 then point_double_fp (small_nonnegative_mult (i/2) p1)
-    else point_add_fp (small_nonnegative_mult (i/2 + 1) p1) (small_nonnegative_mult (i/2) p1)
+     | (i%2)==0 then point_double_fp2 (small_nonnegative_mult (i/2) p1)
+    else point_add_fp2 (small_nonnegative_mult (i/2 + 1) p1) (small_nonnegative_mult (i/2) p1)
 
   precomputed_table: ProjectivePoint t_Fp_2 -> [16]POINTonE2_t
   precomputed_table p1 = [POINTonE2_rep p1] # [POINTonE2_rep (small_nonnegative_mult i p1) | i <- [2..16] ]
@@ -234,7 +243,7 @@ for (from_to 2 16)
   (\ i -> custom_prove_cryptol
     {{ \p1 -> e2_order (affinify_E' p1) > 1 ==> affinify_E' (small_mult `i p1) == e2_scalar_mult `i (affinify_E' p1) }}
     do { goal_eval_unint ec_mult_unints;
-    unfolding ["point_add_fp", "point_double_fp", "affinify_E'"]; // restore higher-order functions
+    unfolding ["point_add_fp2", "point_double_fp2", "affinify_E'"]; // restore higher-order functions
     simplify (addsimps (concat e2_curve_op_thms e2_scalar_mult_alg_thms) (addsimps POINTonE2_thms fp2_simpset_x));
     unfolding ["add_exponents'"];
     simplify remove_higher_order_function_simpset;
@@ -283,12 +292,12 @@ bpt_lemma3 <- custom_prove_cryptol
      };
 
 bpt_lemma4 <- prove_cryptol
-  (rewrite (cryptol_ss()) {{ \ c p1 p2 -> point_neg_fp (if c then p1 else p2)
-                           == if c then (point_neg_fp p1) else (point_neg_fp p2) }})
-   ["point_neg_fp"];
+  (rewrite (cryptol_ss()) {{ \ c p1 p2 -> point_neg_fp2 (if c then p1 else p2)
+                           == if c then (point_neg_fp2 p1) else (point_neg_fp2 p2) }})
+   ["point_neg_fp2"];
 
 bpt_lemma5 <- prove_cryptol
-  (rewrite (cryptol_ss ()) {{\p -> point_neg_fp (small_nonnegative_mult 0 p) == small_nonnegative_mult 0 p }})
+  (rewrite (cryptol_ss ()) {{\p -> point_neg_fp2 (small_nonnegative_mult 0 p) == small_nonnegative_mult 0 p }})
   [];
 
 booth'_precomputed_table_thm <- custom_prove_cryptol 
@@ -297,7 +306,7 @@ booth'_precomputed_table_thm <- custom_prove_cryptol
   do { unfolding ["booth'", "booth_lookup"];
        simplify (addsimp bpt_lemma3 (cryptol_ss()));
        unfolding ["booth_exponent", "small_mult"];
-       simplify (addsimp point_neg_fp_thm empty_ss);
+       simplify (addsimp point_neg_fp2_thm empty_ss);
        goal_eval_unint (concat ["small_nonnegative_mult"] ec_mult_unints);
        simplify (addsimps (concat [bpt_lemma5, bpt_lemma4] POINTonE2_thms) fp2_simpset_x);
        w4_unint_z3 (concat ["small_nonnegative_mult"] ec_mult_unints);};

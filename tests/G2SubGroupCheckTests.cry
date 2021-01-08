@@ -1,0 +1,42 @@
+import Parameters (p, Fp_2, t_Fp_2, E', BP', r)
+import Frobenius
+import FieldExtras
+import ShortWeierstrassCurve
+import G2SubGroupCheck
+
+property test_psi_1 = is_point_affine E' (psi BP') // psi takes BP' to a point on the curve
+// and multiples of BP':
+test_psi_2 m = is_point_affine E' (psi (mult E' m BP')) // and multiples of BP'
+property test_psi_2_1 = test_psi_2 0x6db7
+property test_psi_2_2 = test_psi_2 0xdefc
+
+property in_G2_1 = is_in_G2' BP'
+
+in_G2_2 m = is_in_G2' (mult E' m BP')
+property in_G2_2_1 = in_G2_2 0xa3e0
+property in_G2_2_2 = in_G2_2 0xd58f
+
+// psi has order 12, apparently
+
+property test_psi_order =
+  same_point_affine E' (images@12) BP' where
+  images = [BP'] # [psi P | P <- images] // so images @ i == psi^i BP'
+
+test_psi_order_mult m =
+  same_point_affine E' (images@12) Q where
+  images = [Q] # [psi P | P <- images] // so images @ i == psi^i BP'
+  Q = mult E' m BP'
+property test_psi_order_mult_1 = test_psi_order_mult 0x7ecf
+property test_psi_order_mult_2 = test_psi_order_mult 0xe233
+
+// psi is claimed to map elements of G2 to a multiple, by p.  So
+
+property test_psi_is_mult = same_point_affine E' (psi BP') (mult E' (`p:[384]) BP')
+
+// or as the order of G2 is r, we can use exponent (p mod r)
+
+test_psi_is_mult_reduced m = same_point_affine E' (psi P) (mult E' e  P)
+  where e = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfe2dfefffeffff0001
+        P = mult E' m BP'
+property test_psi_is_mult_reduced_1 = test_psi_is_mult_reduced 0xdefc
+property test_psi_is_mult_reduced_2 = test_psi_is_mult_reduced 0x7ecf

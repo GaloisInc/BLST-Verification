@@ -597,6 +597,8 @@ POINTonE1_cneg_ov <- custom_verify "POINTonE1_cneg"
                         // print_goal_readably_fp;
                         (w4_unint_z3 fp_unints); } ;
 
+let curve_operations_e1_ovs = [POINTonE1_add_alias_1_2_ov, POINTonE1_add_ov, POINTonE1_cneg_ov, POINTonE1_add_affine_ov, POINTonE1_double_ov, POINTonE1_double_alias_1_2_ov, POINTonE1_dadd_null_ov, POINTonE1_dadd_nonnull_ov, POINTonE1_is_equal_ov, POINTonE1_dadd_affine_ov, POINTonE1_affine_on_curve_ov, mul_by_b_onE1_alias_1_2_ov];
+
 ////////////////////////////////////////////////////////////////
 //
 // Finally, we end with some theorems useful for other code that calls these C functions

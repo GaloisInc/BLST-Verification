@@ -30,4 +30,6 @@ cryptol << EOF
 :check
 :l tests/SerializationTests.cry
 :check
+:l tests/G2SubGroupCheckTests.cry
+:check
 EOF

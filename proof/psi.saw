@@ -1,0 +1,329 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+import "../spec/Parameters.cry";
+import "../spec/Frobenius.cry";
+import "../spec/implementation/Types.cry";
+import "../spec/implementation/Field.cry";
+import "../spec/G2SubGroupCheck.cry";
+import "../spec/Pairing.cry"; // for "alpha"
+import "../spec/ShortWeierstrassCurve.cry"; // for ProjctivePoint, affinify
+import "../spec/implementation/CurveOperation.cry"; // for POINTonE2_invariant, _abs, etc.
+
+fp_inv_fp2_rep_thms <- for [0,1]
+  (\ i -> custom_prove_cryptol (rewrite (cryptol_ss()) {{ \ x -> fp_invariant ((fp2_rep x) @ (`i:[1])) == True }})
+            do {unfolding ["fp2_rep"];
+                simplify fp_simpset;
+                w4_unint_z3 fp_unints; } );
+
+// qi_x_iwsc
+
+// Note psi_ci has the form [a, 0], i.e., is a constant multiple of u.
+// prove z3 {{ \a x y -> Fp_2.mul ([a, 0], [x,y]) == [Fp.mul(a, y), Fp.neg (Fp.mul (a, x))] }};
+
+fp2_mult_constant_thm <- prove_cryptol
+  {{ \x y z -> Fp_2.mul ([x, y], [Fp.field_zero, z]) == [Fp.mul(x, z), Fp.mul(y,z)] }} [];
+
+fp2_mult_constant_rev_thm <- prove_cryptol
+  {{ \x y z -> [Fp.mul(x, z), Fp.mul(y,z)] == Fp_2.mul ([x, y], [Fp.field_zero, z])  }} [];
+
+frobenius_f2_thm <- prove_cryptol {{ \ x y -> f2_frobenius [x, y] == [Fp.neg x, y]}} [] ;
+frobenius_f2_rev_thm <- prove_cryptol {{ \ x y -> [Fp.neg x, y] == f2_frobenius [x, y]}} [] ;
+
+// We define two functions here: `qi_x_imp` coirresponds fairly closely to the code, and `qi_x_abs`
+// is a more abstract and compact description of the effect.  We will prove them equivalent.
+let {{
+  // qi_x_imp' x = [Fp.neg (Fp.mul (x@0, psi_c1@0)), Fp.mul (x@1, psi_c1@0)]
+  qi_x_imp' x = [Fp.neg (Fp.mul (fp2_at0 x, psi_c1@0)), Fp.mul (fp2_at1 x, psi_c1@0)]
+  qi_x_imp x = qi_x_imp' (Fp_2.mul (x, alpha))
+
+  psi_x_factor = Fp_2.mul (alpha, [Fp.field_zero,psi_c1@0])
+  qi_x_abs x = f2_frobenius (Fp_2.mul (x, psi_x_factor))
+  }};
+
+qi_x_spec_equiv_thm <- custom_prove_cryptol
+  {{ \x -> qi_x_abs x == qi_x_imp x }}
+  do { unfolding ["qi_x_abs", "psi_x_factor", "qi_x_imp", "qi_x_imp'"];
+       simplify (addsimps [fp2_unrip_thm, frobenius_f2_rev_thm, fp2_mult_constant_rev_thm] empty_ss);
+       simplify (addsimps fp2_alg_thms empty_ss);
+       w4_unint_z3 (concat fp2_unints fp_unints); };
+
+let qi_x_iwsc_spec = do {
+  out_ptr <- crucible_alloc vec384x_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
+  crucible_precond {{ fp2_invariant inp }};
+  crucible_execute_func [out_ptr, inp_ptr];
+  crucible_points_to out_ptr (crucible_term {{fp2_rep (qi_x_abs (fp2_abs inp))}});
+  };
+
+let qi_x_iwsc_alias_spec = do {
+  (inp, inp_ptr) <- ptr_to_fresh "inp" vec384x_type;
+  crucible_precond {{ fp2_invariant inp }};
+  crucible_execute_func [inp_ptr, inp_ptr];
+  crucible_points_to inp_ptr (crucible_term {{fp2_rep (qi_x_abs (fp2_abs inp))}});
+  };
+
+// Need theorems about the constants
+
+fp2_invariant_iwsc_thm <- prove_cryptol
+(rewrite (cryptol_ss())
+  {{ fp2_invariant [[0x1804000000015554, 0x855000053ab00001, 0x633cb57c253c276f,
+  0x6e22d1ec31ebb502, 0xd3916126f2d14ca2, 0x17fbb8571a006596],
+ [0xa1fafffffffe5557, 0x995bfff976a3fffe, 0x03f41d24d174ceb4,
+  0xf6547998c1995dbd, 0x778a468f507a6034, 0x020559931f7f8103]] == True }}) [];
+
+
+fp2_abs_iwsc_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ fp2_abs [[0x1804000000015554, 0x855000053ab00001, 0x633cb57c253c276f,
+               0x6e22d1ec31ebb502, 0xd3916126f2d14ca2, 0x17fbb8571a006596],
+              [0xa1fafffffffe5557, 0x995bfff976a3fffe, 0x03f41d24d174ceb4,
+               0xf6547998c1995dbd, 0x778a468f507a6034, 0x020559931f7f8103]] == alpha }}) [];
+
+
+fp2_invariant_k_cx_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{
+  fp2_invariant [[0, 0, 0, 0, 0, 0]
+                ,[ 0x890dc9e4867545c3, 0x2af322533285a5d5, 0x50880866309b7e2c
+                 , 0xa20d1b8c7e881024, 0x14e4f04fe2db9068, 0x14e56d3f1564853a]] == True }}) [];
+
+fp2_abs_k_cx_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{
+  fp2_abs       [[0, 0, 0, 0, 0, 0]
+                ,[ 0x890dc9e4867545c3, 0x2af322533285a5d5, 0x50880866309b7e2c
+                 , 0xa20d1b8c7e881024, 0x14e4f04fe2db9068, 0x14e56d3f1564853a]] == psi_c1 }}) [];
+
+fp_invariant_k_cx_1_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{
+   fp_invariant [ 0x890dc9e4867545c3, 0x2af322533285a5d5, 0x50880866309b7e2c
+                , 0xa20d1b8c7e881024, 0x14e4f04fe2db9068, 0x14e56d3f1564853a] == True }}) [];
+
+fp_abs_k_cx_1_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{
+   fp_abs [ 0x890dc9e4867545c3, 0x2af322533285a5d5, 0x50880866309b7e2c
+          , 0xa20d1b8c7e881024, 0x14e4f04fe2db9068, 0x14e56d3f1564853a] ==
+   psi_c1 @ 0 }}) [];
+
+
+fp2_invariant_k_cy_thm <- prove_cryptol (rewrite (cryptol_ss ())
+{{ fp2_invariant [[0x3e2f585da55c9ad1, 0x4294213d86c18183, 0x382844c88b623732,
+  0x92ad2afd19103e18, 0x1d794e4fac7cf0b9, 0x0bd592fc7d825ec8],
+ [0x7bcfa7a25aa30fda, 0xdc17dec12a927e7c, 0x2f088dd86b4ebef1,
+  0xd1ca2087da74d4a7, 0x2da2596696cebc1d, 0x0e2b7eedbbfd87d2]] == True }}) [];
+
+fp2_abs_k_cy_thm <- prove_cryptol (rewrite (cryptol_ss ())
+{{ fp2_abs [[0x3e2f585da55c9ad1, 0x4294213d86c18183, 0x382844c88b623732,
+  0x92ad2afd19103e18, 0x1d794e4fac7cf0b9, 0x0bd592fc7d825ec8],
+ [0x7bcfa7a25aa30fda, 0xdc17dec12a927e7c, 0x2f088dd86b4ebef1,
+  0xd1ca2087da74d4a7, 0x2da2596696cebc1d, 0x0e2b7eedbbfd87d2]] == psi_c2 }}) [];
+
+
+fp_invariant_k_cy_1_thm <- prove_cryptol (rewrite (cryptol_ss ())
+{{ fp_invariant [0x7bcfa7a25aa30fda, 0xdc17dec12a927e7c, 0x2f088dd86b4ebef1,
+                 0xd1ca2087da74d4a7, 0x2da2596696cebc1d, 0x0e2b7eedbbfd87d2] == True }}) [];
+
+fp_abs_k_cy_1_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{
+   fp_abs [0x7bcfa7a25aa30fda, 0xdc17dec12a927e7c, 0x2f088dd86b4ebef1,
+           0xd1ca2087da74d4a7, 0x2da2596696cebc1d, 0x0e2b7eedbbfd87d2]
+      == psi_c2 @ 0 }}) [];
+
+
+qi_x_iwsc_ov <- custom_verify "qi_x_iwsc"
+  (concat fp_overrides fp2_overrides)
+   qi_x_iwsc_spec
+   do { simplify (addsimp qi_x_spec_equiv_thm  empty_ss); // replace qi_x_abs with qi_x_imp
+        unfolding ["qi_x_imp", "qi_x_imp'", "fp2_rep"];
+        simplify (addsimps [fp_invariant_k_cx_1_thm, fp_abs_k_cx_1_thm, fp2_abs_iwsc_thm, fp2_invariant_iwsc_thm]
+                 (addsimps fp_inv_fp2_rep_thms (addsimps fp_abs_fp2_rep_thms fp_simpset)));
+        w4_unint_z3 fp_unints;
+        };
+
+qi_x_iwsc_alias_ov <- custom_verify "qi_x_iwsc"
+  (concat fp_overrides fp2_overrides)
+   qi_x_iwsc_alias_spec
+   do { simplify (addsimp qi_x_spec_equiv_thm  empty_ss); // replace qi_x_abs with qi_x_imp
+        unfolding ["qi_x_imp", "qi_x_imp'", "fp2_rep"];
+        simplify (addsimps [fp_invariant_k_cx_1_thm, fp_abs_k_cx_1_thm, fp2_abs_iwsc_thm, fp2_invariant_iwsc_thm]
+                 (addsimps fp_inv_fp2_rep_thms (addsimps fp_abs_fp2_rep_thms fp_simpset)));
+        w4_unint_z3 fp_unints;
+        };
+
+
+// qi_y
+
+// Note psi_c2 has the form [a, -a] or equivalently [-a, a], so multiplication can be simplified:
+//prove z3 {{ \a x y -> Fp_2.mul ([Fp.neg a, a], [x,y]) == [Fp.mul(a, Fp.sub(x,y)), Fp.mul (a, Fp.add (x,y))] }};
+//prove z3 {{ \a x y -> Fp_2.mul ([a, Fp.neg a], [x,y]) == [Fp.mul(a, Fp.sub(y,x)), Fp.neg (Fp.mul (a, Fp.add (x,y)))] }};
+
+// As for `qi_x_iwsc`, we give two definitions of the effect of the function
+let {{
+  qi_y_imp' x = [Fp.mul (out1, psi_c2@0), Fp.mul (out0, psi_c2@0)] where
+      out0 = Fp.add (fp2_at1 x, fp2_at0 x)
+      out1 = Fp.sub (fp2_at1 x, fp2_at0 x)
+
+  qi_y_imp x = qi_y_imp' (Fp_2.mul (x, alpha))
+
+  psi_y_factor = Fp_2.mul (alpha, Fp_2.neg psi_c2)
+  qi_y_abs x = f2_frobenius (Fp_2.mul (x, psi_y_factor))
+  }};
+
+mul_neg_psi_c2_thm <- prove_cryptol
+    {{ \ x -> Fp_2.mul (x, Fp_2.neg psi_c2) ==
+               [Fp.mul (Fp.sub (x@0, x@1), psi_c2@0), Fp.mul (Fp.add (x@0, x@1), psi_c2@0)] }} [] ;
+
+fp2_rev_assoc_mul_thm <- custom_prove_cryptol
+  {{ \x y z -> Fp_2.mul (x, Fp_2.mul (y, z)) == Fp_2.mul (Fp_2.mul (x, y), z) }}
+  do { simplify (addsimps fp2_alg_thms empty_ss); w4_unint_z3 fp2_unints; };
+
+qi_y_spec_equiv_thm <- custom_prove_cryptol
+  {{ \x -> qi_y_abs x == qi_y_imp x }}
+  do { unfolding ["qi_y_abs", "psi_y_factor", "qi_y_imp", "qi_y_imp'"];
+       simplify (addsimp fp2_rev_assoc_mul_thm empty_ss);
+       simplify (addsimp mul_neg_psi_c2_thm empty_ss);
+       w4_unint_z3 fp2_unints; };
+
+let qi_y_iwsc_spec = do {
+  out_ptr <- crucible_alloc vec384x_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
+  crucible_precond {{ fp2_invariant inp }};
+  crucible_execute_func [out_ptr, inp_ptr];
+  crucible_points_to out_ptr (crucible_term {{fp2_rep (qi_y_abs (fp2_abs inp))}});
+  };
+
+let qi_y_iwsc_alias_spec = do {
+  (inp, inp_ptr) <- ptr_to_fresh "inp" vec384x_type;
+  crucible_precond {{ fp2_invariant inp }};
+  crucible_execute_func [inp_ptr, inp_ptr];
+  crucible_points_to inp_ptr (crucible_term {{fp2_rep (qi_y_abs (fp2_abs inp))}});
+  };
+
+qi_y_iwsc_ov <- custom_verify "qi_y_iwsc"
+  (concat fp_overrides fp2_overrides)
+   qi_y_iwsc_spec
+   do { simplify (addsimp qi_y_spec_equiv_thm empty_ss);
+        unfolding ["qi_y_imp", "qi_y_imp'", "fp2_rep"];
+        simplify (addsimps [fp_invariant_k_cy_1_thm, fp_abs_k_cy_1_thm, fp2_abs_iwsc_thm, fp2_invariant_iwsc_thm]
+                 (addsimps fp_inv_fp2_rep_thms (addsimps fp_abs_fp2_rep_thms fp_simpset)));
+        w4_unint_z3 fp_unints;
+        };
+
+qi_y_iwsc_alias_ov <- custom_verify "qi_y_iwsc"
+  (concat fp_overrides fp2_overrides)
+   qi_y_iwsc_alias_spec
+   do { simplify (addsimp qi_y_spec_equiv_thm empty_ss);
+        unfolding ["qi_y_imp", "qi_y_imp'", "fp2_rep"];
+        simplify (addsimps [fp_invariant_k_cy_1_thm, fp_abs_k_cy_1_thm, fp2_abs_iwsc_thm, fp2_invariant_iwsc_thm]
+                 (addsimps fp_inv_fp2_rep_thms (addsimps fp_abs_fp2_rep_thms fp_simpset)));
+        w4_unint_z3 fp_unints;
+        };
+
+// psi
+
+let {{
+  psi_imp: ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
+  psi_imp P = projective_pair_to_jacobian_imp qpp where
+    pp = jacobian_to_projective_pair P
+    qpp = psi_projective_imp pp
+
+  psi_projective_imp (xn, xd, yn, yd) = (qxn, qxd, qyn, qyd) where
+    qxn = Fp_2.mul (qi_x_abs xn, psi_c1)
+    qxd = qi_x_abs xd
+    qyn = Fp_2.mul (qi_y_abs yn, psi_c2)
+    qyd = qi_y_abs yd
+
+  // This is a simple algebraic reanrrangement of `projective_pair_to_jacobian`
+  projective_pair_to_jacobian_imp: projective_pair_fp2 -> ProjectivePoint t_Fp_2
+  projective_pair_to_jacobian_imp (xn, xd, yn, yd) = (X', Y', Z') where
+    X' = Fp_2.mul (xn, Fp_2.mul (yd, Z'))
+    Y' = Fp_2.mul (Fp_2.sq Z', Fp_2.mul (xd, yn))
+    Z' = Fp_2.mul (xd, yd)
+  }};
+
+// Proved algebraically, outside SAW
+psi_equiv_thm <- admit_cryptol {{ \P -> psi (affinify E' P) == affinify E' (psi_imp P) }} ;
+psi_equiv_thm' <- admit_cryptol {{ \P -> affinify E' (psi_imp P) == psi (affinify E' P) }} ;
+
+POINT_on_E2_fp2_rep_thm <- custom_prove_cryptol
+  {{ \x y z -> POINTonE2_abs (fp2_rep x, fp2_rep y, fp2_rep z) == (x,y,z) }}
+  do { unfolding ["POINTonE2_abs"]; simplify fp2_simpset; w4_unint_z3 fp2_unints; } ;
+
+let psi_spec = do {
+  out_ptr <- crucible_alloc POINTonE2_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant inp }};
+  crucible_execute_func [out_ptr, inp_ptr];
+  out <-  crucible_fresh_var "out_psi" POINTonE2_type;
+  crucible_points_to out_ptr (crucible_term out);
+  crucible_postcond {{ affinify E' (POINTonE2_abs out) == psi (affinify E' (POINTonE2_abs inp)) }};
+  };
+
+let psi_alias_1_2_spec = do {
+  (inp, inp_ptr) <- ptr_to_fresh "inp" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant inp }};
+  crucible_execute_func [inp_ptr, inp_ptr];
+  out <-  crucible_fresh_var "out_psi" POINTonE2_type;
+  crucible_points_to inp_ptr (crucible_term out);
+  crucible_postcond {{ affinify E' (POINTonE2_abs out) == psi (affinify E' (POINTonE2_abs inp)) }};
+  };
+
+let psi_spec' = do {
+  out_ptr <- crucible_alloc POINTonE2_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant inp }};
+  crucible_execute_func [out_ptr, inp_ptr];
+  crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (psi_imp (POINTonE2_abs inp)) }});
+  };
+
+let psi_alias_1_2_spec' = do {
+  (inp, inp_ptr) <- ptr_to_fresh "inp" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant inp }};
+  crucible_execute_func [inp_ptr, inp_ptr];
+  crucible_points_to inp_ptr (crucible_term {{ POINTonE2_rep (psi_imp (POINTonE2_abs inp)) }});
+  };
+
+psi_ov <- custom_verify "psi"
+    (concat [qi_x_iwsc_ov, qi_x_iwsc_alias_ov, qi_y_iwsc_ov, qi_y_iwsc_alias_ov]
+            fp2_overrides)
+    psi_spec
+    do { simplify (addsimp psi_equiv_thm empty_ss);
+         simplify (addsimps [fp2_invariant_k_cx_thm, fp2_invariant_k_cy_thm
+                            ,fp2_abs_k_cx_thm, fp2_abs_k_cy_thm, POINT_on_E2_fp2_rep_thm] fp2_simpset);
+         unfolding [ "psi_imp", "projective_pair_to_jacobian_imp"
+                   , "psi_projective_imp", "jacobian_to_projective_pair"];
+         simplify (addsimps fp2_alg_thms fp2_simpset);
+         w4_unint_z3 (concat ["qi_x_abs", "qi_y_abs"] fp2_unints);
+         };
+
+psi_alias_1_2_ov <- custom_verify "psi"
+    (concat [qi_x_iwsc_ov, qi_x_iwsc_alias_ov, qi_y_iwsc_ov, qi_y_iwsc_alias_ov]
+            fp2_overrides)
+    psi_alias_1_2_spec
+    do { simplify (addsimp psi_equiv_thm empty_ss);
+         simplify (addsimps [fp2_invariant_k_cx_thm, fp2_invariant_k_cy_thm
+                            ,fp2_abs_k_cx_thm, fp2_abs_k_cy_thm, POINT_on_E2_fp2_rep_thm] fp2_simpset);
+         unfolding [ "psi_imp", "projective_pair_to_jacobian_imp"
+                   , "psi_projective_imp", "jacobian_to_projective_pair"];
+         simplify (addsimps fp2_alg_thms fp2_simpset);
+         w4_unint_z3 (concat ["qi_x_abs", "qi_y_abs"] fp2_unints);
+         };
+
+psi_ov' <- really_custom_verify "psi"
+    (concat [qi_x_iwsc_ov, qi_x_iwsc_alias_ov, qi_y_iwsc_ov, qi_y_iwsc_alias_ov]
+            fp2_overrides)
+    psi_spec'
+    do { simplify (addsimps [fp2_invariant_k_cx_thm, fp2_invariant_k_cy_thm
+                            ,fp2_abs_k_cx_thm, fp2_abs_k_cy_thm, POINT_on_E2_fp2_rep_thm] fp2_simpset);
+         unfolding [ "psi_imp", "projective_pair_to_jacobian_imp"
+                   , "psi_projective_imp", "jacobian_to_projective_pair"];
+         simplify (addsimps fp2_alg_thms fp2_simpset);
+         w4_unint_z3 (concat ["qi_x_abs", "qi_y_abs"] fp2_unints);
+         };
+
+psi_alias_1_2_ov' <- really_custom_verify "psi"
+    (concat [qi_x_iwsc_ov, qi_x_iwsc_alias_ov, qi_y_iwsc_ov, qi_y_iwsc_alias_ov]
+            fp2_overrides)
+    psi_alias_1_2_spec'
+    do { simplify (addsimps [fp2_invariant_k_cx_thm, fp2_invariant_k_cy_thm
+                            ,fp2_abs_k_cx_thm, fp2_abs_k_cy_thm, POINT_on_E2_fp2_rep_thm] fp2_simpset);
+         unfolding [ "psi_imp", "projective_pair_to_jacobian_imp"
+                   , "psi_projective_imp", "jacobian_to_projective_pair"];
+         simplify (addsimps fp2_alg_thms fp2_simpset);
+         w4_unint_z3 (concat ["qi_x_abs", "qi_y_abs"] fp2_unints);
+         };
