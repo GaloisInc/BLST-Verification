@@ -154,6 +154,48 @@
     "type": "method"
   },
   {
+    "status": "verified",
+    "method": "blst_sk_to_pk_in_g2",
+    "specification": "unknown",
+    "loc": "/workdir/proof/api-extra-for-release-2.saw:100:27",
+    "type": "method"
+  },
+  {
+    "status": "verified",
+    "method": "blst_p2_affine_in_g2",
+    "specification": "unknown",
+    "loc": "/workdir/proof/api-extra-for-release-2.saw:13:28",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "POINTonE1_mult_w5",
+    "specification": "unknown",
+    "loc": "/workdir/proof/api-extra-for-release-2.saw:20:28",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "POINTonE2_mult_w5",
+    "specification": "unknown",
+    "loc": "/workdir/proof/api-extra-for-release-2.saw:22:28",
+    "type": "method"
+  },
+  {
+    "status": "verified",
+    "method": "blst_p1_affine_in_g1",
+    "specification": "unknown",
+    "loc": "/workdir/proof/api-extra-for-release-2.saw:6:28",
+    "type": "method"
+  },
+  {
+    "status": "verified",
+    "method": "blst_sk_to_pk_in_g1",
+    "specification": "unknown",
+    "loc": "/workdir/proof/api-extra-for-release-2.saw:74:27",
+    "type": "method"
+  },
+  {
     "status": "assumed",
     "method": "line_dbl",
     "specification": "unknown",
@@ -4511,6 +4553,12 @@
   },
   {
     "status": "verified",
+    "term": "let { x@1 = Prelude.Vec 64 Prelude.Bool\n      x@2 = Prelude.bvNat 64 0\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 6 x@1\n      x@5 = Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (x@3 * x@3) (Cryptol.PEqPair x@3 x@3 x@5 x@5)\n         (cryptol:/ShortWeierstrassCurve/affinify x@3 cryptol:/Parameters/E'\n            (cryptol:/implementation/CurveOperation/POINTonE2_abs\n               ([ [ Prelude.bvNat 64 17722385409647053328\n                , Prelude.bvNat 64 12967546844987299354\n                , Prelude.bvNat 64 11648722842835150208\n                , Prelude.bvNat 64 10994581490347323113\n                , Prelude.bvNat 64 8027586497049998955\n                , Prelude.bvNat 64 396758299565931735 ]\n                , [ Prelude.bvNat 64 11937283898719073798\n                , Prelude.bvNat 64 12295044263989567683\n                , Prelude.bvNat 64 4301357764460312582\n                , Prelude.bvNat 64 1953074377943790439\n                , Prelude.bvNat 64 14030662337566180679\n                , Prelude.bvNat 64 1266120665323335155 ] ],\n                [ [ Prelude.bvNat 64 5508758831087832138\n                , Prelude.bvNat 64 6448303779119275098\n                , Prelude.bvNat 64 16710190169160573786\n                , Prelude.bvNat 64 13542242618704742751\n                , Prelude.bvNat 64 563980702369916322\n                , Prelude.bvNat 64 37152010398653157 ]\n                , [ Prelude.bvNat 64 12520284671833321565\n                , Prelude.bvNat 64 1777275927576994268\n                , Prelude.bvNat 64 9704602344324656032\n                , Prelude.bvNat 64 8739618045342622522\n                , Prelude.bvNat 64 16651875250601773805\n                , Prelude.bvNat 64 804950956836789234 ] ],\n                [ [ Prelude.bvNat 64 8505329371266088957\n                , Prelude.bvNat 64 17002214543764226050\n                , Prelude.bvNat 64 6865905132761471162\n                , Prelude.bvNat 64 8632934651105793861\n                , Prelude.bvNat 64 6631298214892334189\n                , Prelude.bvNat 64 1582556514881692819 ]\n                , [x@2, x@2, x@2, x@2, x@2, x@2] ])))\n         cryptol:/Parameters/BP')",
+    "loc": "unknown",
+    "type": "property"
+  },
+  {
+    "status": "verified",
     "term": "let { x@1 = Prelude.Vec 64 Prelude.Bool\n      x@2 = Prelude.bvNat 64 0\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = x@3 * x@3\n      x@5 = Prelude.Vec 6 x@1\n      x@6 = Prelude.Vec 2 x@5\n      x@7 = Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger\n    }\n in (x : (x@6 * x@6))\n-> Prelude.EqTrue\n     (Cryptol.ecEq (x@3 * x@4)\n        (Cryptol.PEqPair x@3 x@4 x@7 (Cryptol.PEqPair x@3 x@3 x@7 x@7))\n        (cryptol:/implementation/CurveOperation/POINTonE2_abs\n           (x.1,\n            x.2,\n            [ [ Prelude.bvNat 64 8505329371266088957\n            , Prelude.bvNat 64 17002214543764226050\n            , Prelude.bvNat 64 6865905132761471162\n            , Prelude.bvNat 64 8632934651105793861\n            , Prelude.bvNat 64 6631298214892334189\n            , Prelude.bvNat 64 1582556514881692819 ]\n            , [x@2, x@2, x@2, x@2, x@2, x@2] ]))\n        (cryptol:/ShortWeierstrassCurve/projectify x@3 cryptol:/Parameters/E'\n           (cryptol:/implementation/CurveOperation/POINTonE2_affine_abs x)))",
     "loc": "unknown",
     "type": "property"
@@ -4518,6 +4566,12 @@
   {
     "status": "verified",
     "term": "let { x@1 = Prelude.Vec 64 Prelude.Bool\n      x@2 = Prelude.bvNat 64 0\n      x@3 = Prelude.Vec 6 x@1\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 2 x@3)\n         (Cryptol.PEqVec 2 x@3 (Cryptol.PEqVec 6 x@1 (Cryptol.PEqWord 64)))\n         (cryptol:/implementation/Field/fp2_rep cryptol:/Parameters/Fp_2.2.2.1)\n         [ [ Prelude.bvNat 64 8505329371266088957\n         , Prelude.bvNat 64 17002214543764226050\n         , Prelude.bvNat 64 6865905132761471162\n         , Prelude.bvNat 64 8632934651105793861\n         , Prelude.bvNat 64 6631298214892334189\n         , Prelude.bvNat 64 1582556514881692819 ]\n         , [x@2, x@2, x@2, x@2, x@2, x@2] ])",
+    "loc": "unknown",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "term": "let { x@1 = Prelude.Vec 64 Prelude.Bool\n      x@2 = Prelude.bvNat 64 0\n      x@3 = Prelude.Vec 6 x@1\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n         (cryptol:/implementation/CurveOperation/POINTonE2_invariant\n            ([ [ Prelude.bvNat 64 17722385409647053328\n             , Prelude.bvNat 64 12967546844987299354\n             , Prelude.bvNat 64 11648722842835150208\n             , Prelude.bvNat 64 10994581490347323113\n             , Prelude.bvNat 64 8027586497049998955\n             , Prelude.bvNat 64 396758299565931735 ]\n             , [ Prelude.bvNat 64 11937283898719073798\n             , Prelude.bvNat 64 12295044263989567683\n             , Prelude.bvNat 64 4301357764460312582\n             , Prelude.bvNat 64 1953074377943790439\n             , Prelude.bvNat 64 14030662337566180679\n             , Prelude.bvNat 64 1266120665323335155 ] ],\n             [ [ Prelude.bvNat 64 5508758831087832138\n             , Prelude.bvNat 64 6448303779119275098\n             , Prelude.bvNat 64 16710190169160573786\n             , Prelude.bvNat 64 13542242618704742751\n             , Prelude.bvNat 64 563980702369916322\n             , Prelude.bvNat 64 37152010398653157 ]\n             , [ Prelude.bvNat 64 12520284671833321565\n             , Prelude.bvNat 64 1777275927576994268\n             , Prelude.bvNat 64 9704602344324656032\n             , Prelude.bvNat 64 8739618045342622522\n             , Prelude.bvNat 64 16651875250601773805\n             , Prelude.bvNat 64 804950956836789234 ] ],\n             [ [ Prelude.bvNat 64 8505329371266088957\n             , Prelude.bvNat 64 17002214543764226050\n             , Prelude.bvNat 64 6865905132761471162\n             , Prelude.bvNat 64 8632934651105793861\n             , Prelude.bvNat 64 6631298214892334189\n             , Prelude.bvNat 64 1582556514881692819 ]\n             , [x@2, x@2, x@2, x@2, x@2, x@2] ]))\n         Prelude.True)",
     "loc": "unknown",
     "type": "property"
   },
@@ -4571,6 +4625,12 @@
   },
   {
     "status": "verified",
+    "term": "let { x@1 = Prelude.Vec 64 Prelude.Bool\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Integer * Prelude.Integer)\n         (Cryptol.PEqPair Prelude.Integer Prelude.Integer Cryptol.PEqInteger\n            Cryptol.PEqInteger)\n         (cryptol:/ShortWeierstrassCurve/affinify Prelude.Integer\n            cryptol:/Parameters/E\n            (cryptol:/implementation/CurveOperation/POINTonE1_abs\n               ([ Prelude.bvNat 64 6679831729115696150\n                , Prelude.bvNat 64 8653662730902241269\n                , Prelude.bvNat 64 1535610680227111361\n                , Prelude.bvNat 64 17342916647841752903\n                , Prelude.bvNat 64 17135755455211762752\n                , Prelude.bvNat 64 1297449291367578485 ],\n                [ Prelude.bvNat 64 13451288730302620273\n                , Prelude.bvNat 64 10097742279870053774\n                , Prelude.bvNat 64 15949884091978425806\n                , Prelude.bvNat 64 5885175747529691540\n                , Prelude.bvNat 64 1016841820992199104\n                , Prelude.bvNat 64 845620083434234474 ],\n                [ Prelude.bvNat 64 8505329371266088957\n                , Prelude.bvNat 64 17002214543764226050\n                , Prelude.bvNat 64 6865905132761471162\n                , Prelude.bvNat 64 8632934651105793861\n                , Prelude.bvNat 64 6631298214892334189\n                , Prelude.bvNat 64 1582556514881692819 ])))\n         cryptol:/Parameters/BP)",
+    "loc": "unknown",
+    "type": "property"
+  },
+  {
+    "status": "verified",
     "term": "let { x@1 = Prelude.Vec 64 Prelude.Bool\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 2 Prelude.Integer)\n         (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n         (cryptol:/implementation/Field/fp2_abs\n            [ [ Prelude.bvNat 64 1730508156817200468\n            , Prelude.bvNat 64 9606178027640717313\n            , Prelude.bvNat 64 7150789853162776431\n            , Prelude.bvNat 64 7936136305760253186\n            , Prelude.bvNat 64 15245073033536294050\n            , Prelude.bvNat 64 1728177566264616342 ]\n            , [ Prelude.bvNat 64 11671922859260663127\n            , Prelude.bvNat 64 11050707557586042878\n            , Prelude.bvNat 64 284884720401305268\n            , Prelude.bvNat 64 17749945728364010941\n            , Prelude.bvNat 64 8613774818643959860\n            , Prelude.bvNat 64 145621051382923523 ] ])\n         cryptol:/Pairing/alpha)",
     "loc": "unknown",
     "type": "property"
@@ -4590,6 +4650,12 @@
   {
     "status": "verified",
     "term": "let { x@1 = Prelude.Vec 64 Prelude.Bool\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 6 x@1)\n         (Cryptol.PEqVec 6 x@1 (Cryptol.PEqWord 64))\n         (cryptol:/implementation/Field/fp_rep cryptol:/Parameters/Fp.2.2.1)\n         [ Prelude.bvNat 64 8505329371266088957\n         , Prelude.bvNat 64 17002214543764226050\n         , Prelude.bvNat 64 6865905132761471162\n         , Prelude.bvNat 64 8632934651105793861\n         , Prelude.bvNat 64 6631298214892334189\n         , Prelude.bvNat 64 1582556514881692819 ])",
+    "loc": "unknown",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "term": "let { x@1 = Prelude.Vec 64 Prelude.Bool\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n         (cryptol:/implementation/CurveOperation/POINTonE1_invariant\n            ([ Prelude.bvNat 64 6679831729115696150\n             , Prelude.bvNat 64 8653662730902241269\n             , Prelude.bvNat 64 1535610680227111361\n             , Prelude.bvNat 64 17342916647841752903\n             , Prelude.bvNat 64 17135755455211762752\n             , Prelude.bvNat 64 1297449291367578485 ],\n             [ Prelude.bvNat 64 13451288730302620273\n             , Prelude.bvNat 64 10097742279870053774\n             , Prelude.bvNat 64 15949884091978425806\n             , Prelude.bvNat 64 5885175747529691540\n             , Prelude.bvNat 64 1016841820992199104\n             , Prelude.bvNat 64 845620083434234474 ],\n             [ Prelude.bvNat 64 8505329371266088957\n             , Prelude.bvNat 64 17002214543764226050\n             , Prelude.bvNat 64 6865905132761471162\n             , Prelude.bvNat 64 8632934651105793861\n             , Prelude.bvNat 64 6631298214892334189\n             , Prelude.bvNat 64 1582556514881692819 ]))\n         Prelude.True)",
     "loc": "unknown",
     "type": "property"
   },
