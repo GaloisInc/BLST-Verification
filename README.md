@@ -32,7 +32,8 @@ We have proved memory safety for the following x86_64 routines: `add_mod_256`, `
 
 We still assume memory safety for `sqrx_mont_384x`, `mulx_mont_384`, `sqrx_mont_384`, `sqrx_n_mul_mont_383`, and `sqrx_mont_382x`. There are also variants of the routines prefixed with` mulx`, `sqrx`, `redcx`, and `fromx` that use the `mulq` instruction rather than `mulx` that are currently unverified.
 
-Under these assumptions, memory safety has been shown for all the C functions.  As noted below, for a few of these we have had to restrict the proof to a few specific input sizes.
+Under these assumptions, memory safety has been shown for all the following C functions: `blst_sk_to_pk_in_g1`, `blst_sk_to_pk_in_g2`, `blst_p1_affine_in_g1`, `blst_p2_affine_in_g2`, `blst_p1_deserialize`, `blst_p2_deserialize`, `hash_to_field`, `map_to_g1`, `map_to_g2`, `blst_core_verify_pk_in_g1`, `blst_core_verify_pk_in_g1`, `blst_pairing_init`, `blst_pairing_aggregate_pk_in_g1`, `blst_pairing_aggregate_pk_in_g2`, `blst_pairing_commit`, `blst_pairing_finalverify`.
+As noted below, for a few of these we have had to restrict the proof to a few specific input sizes.
 
 ## Functional correctness
 
