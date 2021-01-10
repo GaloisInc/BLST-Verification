@@ -26,3 +26,4 @@ include "psi.saw";
 include "map_to_g2.saw";
 include "deserialize-p1.saw";
 include "deserialize-p2.saw";
+include "api-extra-for-release-2.saw";
