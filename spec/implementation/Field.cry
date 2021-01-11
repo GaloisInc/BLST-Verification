@@ -11,7 +11,7 @@ module implementation::Field where
 
 import Common::Field
 import implementation::Types
-import Parameters ( p, Fp, t_Fp, to_Fp, from_Fp, t_Fp_2, Fp_2)
+import Parameters ( p, Fp, t_Fp, to_Fp, from_Fp, t_Fp_2, Fp_2, t_Fp_6, Fp_6, t_Fp_12, Fp_12)
 
 mul_by_3: {t} FieldRep t -> t -> t
 mul_by_3 F x = F.add (x, F.add (x, x))
@@ -70,6 +70,27 @@ fp2_invariant v = all fp_invariant v
 fp2_normalize: Fp_2_rep_t -> Fp_2_rep_t
 fp2_normalize [x,y] = [fp_normalize x, fp_normalize y]
 
-// fp6 - TODO
+// fp6
 
-// fp12 - TODO
+type Fp_6_rep_t = [3]Fp_2_rep_t
+
+fp6_abs [x,y,z] = [fp2_abs z, fp2_abs y, fp2_abs x]
+fp6_rep [x,y,z] = [fp2_rep z, fp2_rep y, fp2_rep x]
+fp6_invariant [x,y,z] = fp2_invariant x /\ fp2_invariant y /\ fp2_invariant z
+fp6_normalize [x,y,z] = [fp2_normalize x, fp2_normalize y, fp2_normalize z]
+
+// fp12
+
+type Fp_12_rep_t = [2]Fp_6_rep_t
+
+fp12_abs: Fp_12_rep_t -> t_Fp_12
+fp12_abs [a,b] = [fp6_abs b, fp6_abs a]
+
+fp12_rep: t_Fp_12 -> Fp_12_rep_t
+fp12_rep [a,b] = [fp6_rep b, fp6_rep a]
+
+fp12_invariant: Fp_12_rep_t -> Bool
+fp12_invariant [x,y] = fp6_invariant x /\ fp6_invariant y
+
+fp12_normalize: Fp_12_rep_t -> Fp_12_rep_t
+fp12_normalize [x,y] = [fp6_normalize x, fp6_normalize y]
