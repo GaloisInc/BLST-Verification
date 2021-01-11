@@ -13,13 +13,11 @@ p = `P::p
 // in fact p^th powers.  We can run a few tests just to check against simple implementation
 // errors.
 
-property f2_frobenius_prop x =
-  f2_frobenius x' == F_expt f2 x' p where x' = f2.normalize x
+property fp2_frobenius_prop x =
+  fp2_frobenius x' == F_expt P::Fp_2 x' p where x' = P::Fp_2.normalize x
 
 property f6_frobenius_prop x =
-  f6_frobenius x' == F_expt f6 x' p where x' = f6.normalize x
+  fp6_frobenius x' == F_expt P::Fp_6 x' p where x' = P::Fp_6.normalize x
 
 property f12_frobenius_prop x =
-  f12_frobenius x' == F_expt f12 x' p where x' = f12.normalize x
-
-
+  fp12_frobenius x' == F_expt P::Fp_12 x' p where x' = P::Fp_12.normalize x
