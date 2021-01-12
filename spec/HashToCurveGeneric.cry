@@ -109,7 +109,7 @@ hash_to_field: {msg_len, DST_len, count}
 
 hash_to_field msg DST = us where
       type k = 128 // for BLS12-381
-      type L = ((lg2 p) + k) /^ 8
+      type L = ((lg2 p) + k) /^ 8 // 64 for BLS12-381
       uniform_bytes: [count * m * L][8]
       uniform_bytes = expand_message msg DST
       // The double loop in the Draft just splits pseduo_random_bytes into

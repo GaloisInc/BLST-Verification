@@ -31,6 +31,7 @@ vec_abs limbs = join (reverse limbs)
 vec256_abs = vec_abs`{256/64}
 vec384_abs = vec_abs`{384/64}
 vec512_abs = vec_abs`{512/64}
+vec768_abs x = vec_abs`{768/64} x
 
 /**
  * A vector representing a given (bitvector) integer.  The integer should be non-negative.
@@ -42,6 +43,7 @@ vec_rep x = reverse (split x)
 
 vec256_rep = vec_rep`{256/64}
 vec384_rep = vec_rep`{384/64}
+vec768_rep x = vec_rep`{768/64} x
 
 /**
  * Represent a Boolean as a limb, with value 1 for true, 0 for false

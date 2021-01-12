@@ -8,12 +8,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 include "helpers.saw";
-include "list_utils.saw";
 include "types.saw";
 m <- llvm_load_module "../build/llvm/libblst.a.bc";
 
-let do_prove = true;
+let do_prove = false;
 include "proof-helpers.saw";
+include "list_utils.saw"; // for stuff in sha-overrides
 include "sha_overrides.saw";
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -31,22 +31,51 @@ let expand_message_spec len_in_bytes aug_len msg_len DST_len = do {
   crucible_points_to bytes_ptr (crucible_term {{ expand_message_xmd`{len_in_bytes=len_in_bytes} (aug # msg) DST }});
 };
 
-import "../spec/hash_to_field_impl.cry";
+HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
+//import "../spec/hash_to_field_impl.cry";
+import "../spec/implementation/Types.cry";
+import "../spec/implementation/Field.cry";
 
-let hash_to_field_spec nelems aug_len msg_len DST_len = do {
+let hash_to_field_fp_spec nelems aug_len msg_len DST_len = do {
   elems_ptr <- crucible_alloc (llvm_array nelems vec384_type);
   (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
   crucible_execute_func [elems_ptr, crucible_term {{ `nelems : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}, msg_ptr, crucible_term {{ `msg_len : [64] }}, DST_ptr, crucible_term {{ `DST_len : [64] }}];
-  crucible_points_to elems_ptr (crucible_term {{ hash_to_field_rep`{nelems=nelems} (aug#msg) DST }});
+  crucible_points_to elems_ptr (crucible_term {{ map fp_rep (HE1::hash_to_field`{count=nelems} (aug#msg) DST) }});
+  //crucible_points_to elems_ptr (crucible_term {{ [fp_rep x | x <- HE1::hash_to_field`{count=nelems} (aug#msg) DST] }});
 };
+
+import "../cryptol-specs/Common/bv.cry";
+import "../spec/Parameters.cry";
+let {{
+  bv_R_inv = (fromInteger montgomery_factor_inverse_p):[384] // = 0x1bbe869330009d577204078a4f77266aab6fca8f09dc705f13f75b69fe75c040
+
+  redc_p_bv: [768] -> [384]
+  redc_p_bv x = safe_mod (`p:[384], safe_product (x, zext bv_R_inv))
+
+  redc_rep: Vec768 -> Vec384
+  redc_rep x = vec384_rep (redc_p_bv (vec768_abs x))
+
+  mul_mont_p_bv: [384] -> [384] -> [384]
+  mul_mont_p_bv a b = safe_mod (`p:[384], safe_product (zext a, safe_product (b, bv_R_inv)))
+
+  mul_mont_rep: Vec384 -> Vec384 -> Vec384
+  mul_mont_rep x y = vec384_rep (mul_mont_p_bv (vec384_abs x) (vec384_abs y))
+
+  // Cryptol agrees that `fp_rep Fp.mul(R,R)) = BLS12_381_RRRR`. So BLS12_381_RRRR is the Montgomery reprentation of R^2
+  RRR_rep : Vec384
+  RRR_rep = [0xed48ac6bd94ca1e0, 0x315f831e03a7adf8, 0x9a53352a615e29dd, 0x34c04e5e921e1761, 0x2512d43565724728, 0x0aa6346091755d4d]
+
+  bv_p0 : [64]
+  bv_p0 = 0x89f3fffcfffcfffd // TODO: what is this?
+}};
 
 let redc_mont_384_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
-  crucible_precond {{ b == vec_rep bv_p }};
+  crucible_precond {{ b == vec384_rep (`p:[384]) }};
   crucible_execute_func [ret_ptr, a_ptr, b_ptr, crucible_term {{bv_p0}}];
   crucible_points_to ret_ptr (crucible_term {{ redc_rep a }});
 };
@@ -54,9 +83,9 @@ let redc_mont_384_spec = do {
 let mul_mont_384_alias_spec = do {
   (ret, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  crucible_precond {{ b == RRR_rep }}; // TODO remove, just a check
+  crucible_precond {{ b == RRR_rep }};
   (p, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  crucible_precond {{ p == vec_rep bv_p }};
+  crucible_precond {{ p == vec384_rep (`p:[384]) }};
   crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term {{bv_p0}}];
   crucible_points_to ret_ptr (crucible_term {{ mul_mont_rep ret b }});
 };
@@ -64,11 +93,10 @@ let mul_mont_384_alias_spec = do {
 let limbs_from_be_bytes_spec nlimbs = do {
   let nbytes = eval_size {| nlimbs*8 |};
   ret_p <- crucible_alloc (llvm_array nlimbs limb_type);
-  (inx, in_ptr) <- ptr_to_fresh_readonly "limbs_from_be_bytes_in" (llvm_array nbytes (llvm_int 8)); // "in" is a keyword
+  (in_, in_ptr) <- ptr_to_fresh_readonly "limbs_from_be_bytes_in" (llvm_array nbytes (llvm_int 8)); // "in" is a keyword, thus we use "in_"
   crucible_execute_func [ret_p, in_ptr, crucible_term {{`nbytes:[64]}}];
-  crucible_points_to ret_p (crucible_term {{limbs_from_be_bytes_rep`{nlimbs} inx}});
+  crucible_points_to ret_p (crucible_term {{reverse (split`{parts=nlimbs} (join`{each=8} in_))}});
   };
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // Proofs
@@ -81,14 +109,25 @@ redc_mont_384_ov <- crucible_llvm_unsafe_assume_spec m "redcx_mont_384" redc_mon
 // we verify limbs_from_be_bytes (not strictly needed):
 limbs_from_be_bytes_ov <- verify "limbs_from_be_bytes" [] (limbs_from_be_bytes_spec 8);
 
+vec_abs_rep_thm <- really_prove_cryptol {{ \x -> vec384_abs (vec384_rep x) == x}} [];
+
 let verify_hash_to_field_for aug_len msg_len DST_len nelems = do {
   let L = 64; // sizeof(vec384) + 128/8 = 48 + 16
   let len_in_bytes = eval_size {| L*nelems |};
   block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
-  expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, so we use abc
-  let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov]; // NOTE: limbs_from_be_bytes is not needed but doesn't hurt
-  let unints = ["redc_rep", "mul_mont_rep", "expand_message_xmd"];
-  r <- verify_unint "hash_to_field" overrides unints (hash_to_field_spec nelems aug_len msg_len DST_len);
+  expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, but abc does better
+  let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov]; // NOTE: limbs_from_be_bytes is not strictly necessary
+  //let unints = ["redc_rep", "mul_mont_rep", "expand_message_xmd"];
+  r <- really_custom_verify "hash_to_field" overrides (hash_to_field_fp_spec nelems aug_len msg_len DST_len)
+  //  (quickcheck 10);
+    (do {
+      print_goal;
+      unfolding ["redc_rep", "mul_mont_rep", "map", "hash_to_field"];
+      print_goal;
+      simplify (addsimps [vec_abs_rep_thm] (cryptol_ss ()));
+      print_goal;
+      //print_clean_goal;
+      z3;});
   return r;
 };
 
@@ -97,42 +136,67 @@ let msg_len = 32;
 let DST_len= 8;
 let hash_to_field_nelems = [1,2,4]; // the values of nelems for which we prove hash_to_field
 
-// We prove that hash_to_field satisfies its low-level spec (hash_to_field_rep):
-hash_to_field_ovs <- for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
+  let nelems = 1;
+  let L = 64; // sizeof(vec384) + 128/8 = 48 + 16
+  let len_in_bytes = eval_size {| L*nelems |};
+  block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
+  expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, but abc does better
+  let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov]; // NOTE: limbs_from_be_bytes is not strictly necessary
 
-import "../spec/HashToCurveE1.cry";
-import "../spec/Parameters.cry";
+// A theorem to get rid of map:
+let map_size_1_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y : Vec 1 Integer) -> map Integer (Vec 6 (Vec 64 Bool)) (\\(x : Integer) -> f x) 1 y";
+let map_size_1_eq_term = beta_reduce_term {{ \x -> map_size_1_term fp_rep x == [fp_rep (x@0)]}};
+map_size_1_thm <- prove_cryptol map_size_1_eq_term [];
+let intLe_sym_term = parse_core "\\(x : Integer) -> intLe x x";
+intLe_sym_thm <- really_prove_cryptol (beta_reduce_term {{\x -> intLe_sym_term x == True}}) [];
+let my_thm_term = {{ \x -> vec384_rep (mul_mont_p_bv (redc_p_bv x) (vec384_abs RRR_rep)) == fp_rep (to_Fp (drop`{back=384} (x % `p))) }};
+my_thm <- admit_cryptol (rewrite (cryptol_ss ()) (unfold_term ["RRR_rep"] my_thm_term)); // TODO: why is the outermost simplification needed (rule does not apply otherwise)?
+let term1 = parse_core "\\(x:Vec 8 (Vec 64 Bool)) -> [ at 8 (Vec 64 Bool) x 0 , at 8 (Vec 64 Bool) x 1 , at 8 (Vec 64 Bool) x 2 , at 8 (Vec 64 Bool) x 3 , at 8 (Vec 64 Bool) x 4 , at 8 (Vec 64 Bool) x 5 , at 8 (Vec 64 Bool) x 6 , at 8 (Vec 64 Bool) x 7 , bvNat 64 0 , bvNat 64 0 , bvNat 64 0 , bvNat 64 0 ]"; // TODO: this seems to fail when indented...
 
-// hash_to_field_rep computes the Montgomery representation of what hash_to_field computes. This is the refinement property:
-let refinement count msg_len dst_len = {{
-  \(msg:[msg_len][8]) (dst:[dst_len][8]) ->
-    [Fp.mul(x, bv_R) | x <- (hash_to_field`{count=count} msg dst)] ==
-    [vec384_abs x | x <- (hash_to_field_rep`{nelems=count} msg dst)]
-}};
+let eq_1 = {{\x -> drop`{back=384} ((vec768_abs (term1 x)) % `p) == drop`{back=384} ((vec512_abs x) % `p) }};
+eq_1_thm <- really_prove_cryptol (rewrite (cryptol_ss ()) eq_1) [];
 
-//prove_print (quickcheck 10) (refinement 1 32 8); // this has to compute hash_to_field and is slow
+  r <- really_custom_verify "hash_to_field" overrides (hash_to_field_fp_spec nelems aug_len msg_len DST_len)
+    (do {
+      // TODO: do we actually need to remove map?
+      //simplify (cryptol_ss ()); // Cryptol.seqMap -> Prelude.map
+      //simplify (addsimp map_size_1_thm (cryptol_ss ())); // remove Prelude.map
+      //print_goal;
+      unfolding ["redc_rep", "mul_mont_rep", "hash_to_field","expand_message"];
+      simplify (addsimps [vec_abs_rep_thm] (cryptol_ss ()));
+      print_goal;
+      simplify (addsimps [my_thm, eq_1_thm] empty_ss);
+      simplify (cryptol_ss ());
+      print_goal;
+      w4_unint_yices ["expand_message", "to_Fp", "fp_rep"];}); // TODO: still quite slow; z3 even slower. Probably not a stable proof.
 
-// to prove the refinement we need a lemma that we will assume is true:
-let slice = parse_core "\\(x : Vec 512 Bool) -> slice Bool 128 384 0 x";
-let lemma = {{
-  // NOTE: in hash_to_field.c, elem has 768 bits, but only the first 512 are non-zero
-  \(x:[512]) -> Fp.mul(slice (x % `p), bv_R)
-    == mul_mont_p_bv (redc_p_bv (zext x)) (vec384_abs RRR_rep)
-}};
-assumed_lemma_simplified <-
-  prove_print (do { assume_unsat;}) // too hard for the solvers that bitblast (needs some algebra)
-  (rewrite (cryptol_ss ()) lemma);
+// Proof of hash-to-field:
+//hash_to_field_ovs <- for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
+//hash_to_field_ov <- (verify_hash_to_field_for aug_len msg_len DST_len 1);
+
+//import "../spec/Parameters.cry";
+
+// TODO: we changed representation
+//let slice = parse_core "\\(x : Vec 512 Bool) -> slice Bool 128 384 0 x";
+//let lemma = {{
+  //// NOTE: in hash_to_field.c, elem has 768 bits, but only the first 512 are non-zero
+  //\(x:[512]) -> Fp.mul(slice (x % `p), bv_R)
+    //== mul_mont_p_bv (redc_p_bv (zext x)) (vec384_abs RRR_rep)
+//}};
+//assumed_lemma_simplified <-
+  //prove_print (do { assume_unsat;}) // too hard for the solvers that bitblast (needs some algebra)
+  //(rewrite (cryptol_ss ()) lemma);
 
 // Now we can prove the refinement property:
-let prove_refinement msg_len dst_len count =
-  prove_print (do {
-      unfolding ["hash_to_field", "hash_to_field_rep", "mul_mont_rep", "redc_rep", "limbs_from_be_bytes_rep"];
-      unfolding ["module parameter base_to_F", "base_to_F"]; // goal_eval_unint fails without this...
-      goal_eval_unint ["expand_message", "redc_p_bv", "mul_mont_p_bv", "Fp", "bv_R", "RRR_rep"]; // put goal in a form in which the lemma can be applied
-      simplify (addsimp assumed_lemma_simplified (empty_ss)); // apply the lemma
-      w4_unint_z3 ["expand_message_xmd"];
-      })
-      (refinement count msg_len dst_len);
+//let prove_refinement msg_len dst_len count =
+  //prove_print (do {
+      //unfolding ["hash_to_field", "hash_to_field_rep", "mul_mont_rep", "redc_rep", "limbs_from_be_bytes_rep"];
+      //unfolding ["module parameter base_to_F", "base_to_F"]; // goal_eval_unint fails without this...
+      //goal_eval_unint ["expand_message", "redc_p_bv", "mul_mont_p_bv", "Fp", "bv_R", "RRR_rep"]; // put goal in a form in which the lemma can be applied
+      //simplify (addsimp assumed_lemma_simplified (empty_ss)); // apply the lemma
+      //w4_unint_z3 ["expand_message_xmd"];
+      //})
+      //(refinement count msg_len dst_len);
 
-print "proving refinement:";
-for hash_to_field_nelems (prove_refinement msg_len DST_len);
+//print "proving refinement:";
+//for hash_to_field_nelems (prove_refinement msg_len DST_len);
