@@ -7,13 +7,6 @@
 // Imports
 ///////////////////////////////////////////////////////////////////////////////
 
-include "helpers.saw";
-include "types.saw";
-m <- llvm_load_module "../build/llvm/libblst.a.bc";
-
-let do_prove = false;
-include "proof-helpers.saw";
-include "list_utils.saw"; // for stuff in sha-overrides
 include "sha_overrides.saw";
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -43,13 +36,21 @@ let hash_to_field_fp_spec nelems aug_len msg_len DST_len = do {
   (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
   crucible_execute_func [elems_ptr, crucible_term {{ `nelems : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}, msg_ptr, crucible_term {{ `msg_len : [64] }}, DST_ptr, crucible_term {{ `DST_len : [64] }}];
   crucible_points_to elems_ptr (crucible_term {{ map fp_rep (HE1::hash_to_field`{count=nelems} (aug#msg) DST) }});
-  //crucible_points_to elems_ptr (crucible_term {{ [fp_rep x | x <- HE1::hash_to_field`{count=nelems} (aug#msg) DST] }});
+};
+
+let hash_to_field_fp2_spec nelems aug_len msg_len DST_len = do {
+  elems_ptr <- crucible_alloc (llvm_array (eval_int {{2*(`nelems:[64])}}) vec384_type);
+  (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
+  crucible_execute_func [elems_ptr, crucible_term {{ (2*`nelems) : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}, msg_ptr, crucible_term {{ `msg_len : [64] }}, DST_ptr, crucible_term {{ `DST_len : [64] }}];
+  crucible_points_to elems_ptr (crucible_term {{ join (map fp2_rep (HE2::hash_to_field`{count=nelems} (aug#msg) DST)) }});
 };
 
 import "../cryptol-specs/Common/bv.cry";
 import "../spec/Parameters.cry";
 
-let {{
+let {{ // TODO: this should probably be in a Cryptol file somewhere
   bv_R_inv = (fromInteger montgomery_factor_inverse_p):[384] // = 0x1bbe869330009d577204078a4f77266aab6fca8f09dc705f13f75b69fe75c040
 
   redc_p_bv: [768] -> [384]
@@ -113,25 +114,24 @@ limbs_from_be_bytes_ov <- verify "limbs_from_be_bytes" [] (limbs_from_be_bytes_s
 // a simple rewrite rule to rewrite `abs (rep x)` to `x`:
 vec_abs_rep_thm <- prove_cryptol {{ \x -> vec384_abs (vec384_rep x) == x}} [];
 
-// A theorem to get rid of map (TODO: does not seem useful so far):
-let map_size_1_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y : Vec 1 Integer) -> map Integer (Vec 6 (Vec 64 Bool)) (\\(x : Integer) -> f x) 1 y";
+// An unused theorem to get rid of map
+let map_size_1_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y : Vec 1 Integer) -> map Integer (Vec 6 (Vec 64 Bool)) f 1 y";
 let map_size_1_eq_term = beta_reduce_term {{ \x -> map_size_1_term fp_rep x == [fp_rep (x@0)]}};
-map_size_1_thm <- prove_cryptol map_size_1_eq_term [];
+//map_size_1_thm <- prove_cryptol map_size_1_eq_term []; // does not work?
 
 // A rewrite to get rid of a triviality (not really necessary):
 let intLe_sym_term = parse_core "\\(x : Integer) -> intLe x x";
-intLe_sym_thm <- really_prove_cryptol (beta_reduce_term {{\x -> intLe_sym_term x == True}}) [];
+intLe_sym_thm <- prove_cryptol (beta_reduce_term {{\x -> intLe_sym_term x == True}}) [];
 
 // Here is a lemma that we assume (it needs some basic algebra that SAW can't handle).
 // RRR is (R^3 mod p), redc x is by x(R^-1) mod p, and Montgomery multiplication of a and b is abR^-1 mod p, so the left-hand side below is x(R^-1)(R^3)(R^-1) mod p = xR mod p. In the lhs, redc takes a [768] and produces a [384], hence the drop on the rhs.
 let main_lemma_term = {{ \x -> vec384_rep (mul_mont_p_bv (redc_p_bv x) (vec384_abs RRR_rep)) == fp_rep (to_Fp (drop`{back=384} (x % `p))) }};
 main_lemma <- admit_cryptol (rewrite (cryptol_ss ()) (unfold_term ["RRR_rep"] main_lemma_term)); // TODO: why is the outermost simplification needed (rule does not apply otherwise)?
-
 // A rewrite to help the SMT solver. The issue is that the spec operates on 512-bit chunks, but the implementation uses 768 out of which only 512 are non-zero. The following term represents a 768-bits chunk obtained by appending zeros to a 512-bits chunk.
 let term1 = parse_core "\\(x:Vec 8 (Vec 64 Bool)) -> [ at 8 (Vec 64 Bool) x 0 , at 8 (Vec 64 Bool) x 1 , at 8 (Vec 64 Bool) x 2 , at 8 (Vec 64 Bool) x 3 , at 8 (Vec 64 Bool) x 4 , at 8 (Vec 64 Bool) x 5 , at 8 (Vec 64 Bool) x 6 , at 8 (Vec 64 Bool) x 7 , bvNat 64 0 , bvNat 64 0 , bvNat 64 0 , bvNat 64 0 ]"; // TODO: parse_core seems to fail when this is made readable over multiple lines.
-// we rewrite the term comming from the implementation to better match the term comming from the spec:
+// we rewrite the term comming from the implementation to better match the term coming from the spec:
 let eq_1 = {{\x -> drop`{back=384} ((vec768_abs (term1 x)) % `p) == drop`{back=384} ((vec512_abs x) % `p) }};
-eq_1_thm <- really_prove_cryptol (rewrite (cryptol_ss ()) eq_1) [];
+eq_1_thm <- prove_cryptol (rewrite (cryptol_ss ()) eq_1) [];
 
 let verify_hash_to_field_for aug_len msg_len DST_len nelems = do {
   let L = 64; // sizeof(vec384) + 128/8 = 48 + 16
@@ -152,34 +152,27 @@ let verify_hash_to_field_for aug_len msg_len DST_len nelems = do {
 let aug_len = 48; // aug_len should be 96 or 48
 let msg_len = 32;
 let DST_len= 8;
-let hash_to_field_nelems = [1,2,4]; // the values of nelems for which we prove hash_to_field
+let hash_to_field_nelems = [1,2]; // the values of nelems for which we prove hash_to_field
 
 // Proof of hash-to-field for fp:
 hash_to_field_ovs <- for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
 
 // Now for fp2:
 
-let hash_to_field_fp2_spec nelems aug_len msg_len DST_len = do {
-  elems_ptr <- crucible_alloc (llvm_array (eval_int {{2*(`nelems:[64])}}) vec384_type);
-  (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
-  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
-  (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
-  crucible_execute_func [elems_ptr, crucible_term {{ (2*`nelems) : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}, msg_ptr, crucible_term {{ `msg_len : [64] }}, DST_ptr, crucible_term {{ `DST_len : [64] }}];
-  crucible_points_to elems_ptr (crucible_term {{ join (map fp2_rep (HE2::hash_to_field`{count=nelems} (aug#msg) DST)) }});
-  //crucible_points_to elems_ptr (crucible_term {{ [fp_rep x | x <- HE1::hash_to_field`{count=nelems} (aug#msg) DST] }});
-};
-
-// We verify it for 1 element
-let L = 64; // sizeof(vec384) + 128/8 = 48 + 16
-let nelems = 1;
-let len_in_bytes = eval_size {| L*2*nelems |};
-block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
-expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, but abc does better
-let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov];
-really_custom_verify "hash_to_field" overrides (hash_to_field_fp2_spec nelems aug_len msg_len DST_len)
+let verify_hash_to_field_fp2_for aug_len msg_len DST_len nelems = do {
+  let L = 64; // sizeof(vec384) + 128/8 = 48 + 16
+  let len_in_bytes = eval_size {| L*2*nelems |};
+  block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
+  expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, but abc does better
+  let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov];
+  r <- custom_verify "hash_to_field" overrides (hash_to_field_fp2_spec nelems aug_len msg_len DST_len)
   (do {
     unfolding ["redc_rep", "mul_mont_rep", "HashToCurveE2::hash_to_field","expand_message"];
     simplify (addsimps [vec_abs_rep_thm] empty_ss);
     simplify (cryptol_ss ());
     simplify (addsimps [main_lemma, eq_1_thm] empty_ss);
-    w4_unint_yices ["expand_message", "to_Fp", "fp_rep"];}); // TODO: still quite slow; z3 even slower. Probably not a stable proof.
+    w4_unint_yices ["expand_message", "to_Fp", "fp_rep"];});
+  return r;
+};
+
+hash_to_field_fp2_ovs <- for hash_to_field_nelems (verify_hash_to_field_fp2_for aug_len msg_len DST_len);

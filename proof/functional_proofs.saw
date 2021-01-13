@@ -12,6 +12,7 @@ let do_prove = true;
 
 include "proof-helpers.saw";
 
+include "hash_to_field.saw";
 include "fp_overrides.saw";
 include "fp2_overrides.saw";
 include "vect.saw";
