@@ -13,7 +13,6 @@ import Common::Field
 import implementation::Types
 import Parameters ( p, Fp, t_Fp, to_Fp, from_Fp, t_Fp_2, Fp_2)
 
-// TODO is this add or mul? (add if it's seen as a group op?)
 mul_by_3: {t} FieldRep t -> t -> t
 mul_by_3 F x = F.add (x, F.add (x, x))
 

@@ -120,7 +120,7 @@ hash_to_field msg DST = us where
       //
       us = [ make_u_i part | part <- parts ]
       make_u_i: [m][L][8] -> t_F
-      // "drop" here takes the 8*L-bit result and drops leading zeros to get to [384]
+      // "drop" here takes the 8*L-bit (i.e. 512-bit for BLS12-381) result and drops leading zeros to get to [384]
       make_u_i part = base_to_F [to_Fp (drop`{back=384} ((join bytes) % `p)) | bytes <- part]
 
 hash_to_field_1: {msg_len, DST_len}
