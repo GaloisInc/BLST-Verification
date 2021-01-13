@@ -1,8 +1,0 @@
-/*
- * Copyright (c) 2020 Galois, Inc.
- * SPDX-License-Identifier: Apache-2.0 OR MIT
-*/
-m <- llvm_load_module "../build/llvm/libblst.a.bc";
-
-include "helpers.saw";
-
