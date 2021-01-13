@@ -32,6 +32,7 @@ let expand_message_spec len_in_bytes aug_len msg_len DST_len = do {
 };
 
 HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
+HE2 <- cryptol_load "../spec/HashToCurveE2.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/Field.cry";
 
@@ -138,9 +139,9 @@ let verify_hash_to_field_for aug_len msg_len DST_len nelems = do {
   block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
   expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, but abc does better
   let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov];
-  r <- really_custom_verify "hash_to_field" overrides (hash_to_field_fp_spec nelems aug_len msg_len DST_len)
+  r <- custom_verify "hash_to_field" overrides (hash_to_field_fp_spec nelems aug_len msg_len DST_len)
     (do {
-      unfolding ["redc_rep", "mul_mont_rep", "hash_to_field","expand_message"];
+      unfolding ["redc_rep", "mul_mont_rep", "HashToCurveE1::hash_to_field","expand_message"];
       simplify (addsimps [vec_abs_rep_thm] empty_ss);
       simplify (cryptol_ss ());
       simplify (addsimps [main_lemma, eq_1_thm] empty_ss);
@@ -153,8 +154,32 @@ let msg_len = 32;
 let DST_len= 8;
 let hash_to_field_nelems = [1,2,4]; // the values of nelems for which we prove hash_to_field
 
-// Proof of hash-to-field:
+// Proof of hash-to-field for fp:
 hash_to_field_ovs <- for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
 
-// TODO: we are use the specification from HashToCurveE1.cry, which defines hashing to a number of elements of Fp. What about Fp2?
+// Now for fp2:
 
+let hash_to_field_fp2_spec nelems aug_len msg_len DST_len = do {
+  elems_ptr <- crucible_alloc (llvm_array (eval_int {{2*(`nelems:[64])}}) vec384_type);
+  (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
+  crucible_execute_func [elems_ptr, crucible_term {{ (2*`nelems) : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}, msg_ptr, crucible_term {{ `msg_len : [64] }}, DST_ptr, crucible_term {{ `DST_len : [64] }}];
+  crucible_points_to elems_ptr (crucible_term {{ join (map fp2_rep (HE2::hash_to_field`{count=nelems} (aug#msg) DST)) }});
+  //crucible_points_to elems_ptr (crucible_term {{ [fp_rep x | x <- HE1::hash_to_field`{count=nelems} (aug#msg) DST] }});
+};
+
+// We verify it for 1 element
+let L = 64; // sizeof(vec384) + 128/8 = 48 + 16
+let nelems = 1;
+let len_in_bytes = eval_size {| L*2*nelems |};
+block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
+expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, but abc does better
+let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov];
+really_custom_verify "hash_to_field" overrides (hash_to_field_fp2_spec nelems aug_len msg_len DST_len)
+  (do {
+    unfolding ["redc_rep", "mul_mont_rep", "HashToCurveE2::hash_to_field","expand_message"];
+    simplify (addsimps [vec_abs_rep_thm] empty_ss);
+    simplify (cryptol_ss ());
+    simplify (addsimps [main_lemma, eq_1_thm] empty_ss);
+    w4_unint_yices ["expand_message", "to_Fp", "fp_rep"];}); // TODO: still quite slow; z3 even slower. Probably not a stable proof.
