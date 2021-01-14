@@ -325,13 +325,6 @@ let {{
 
 // prove z3 {{ \inp s -> Fp_2.is_val inp ==> sqrt_align_fp2_coeff'' s inp == sqrt_align_fp2_coeff' s inp }};
 
-fp_inv_fp2_rep_thms <- for [0,1]
-  (\ i -> custom_prove_cryptol (rewrite (cryptol_ss()) {{ \ x -> fp_invariant ((fp2_rep x) @ (`i:[1])) == True }})
-            do {unfolding ["fp2_rep"];
-                simplify fp_simpset;
-                w4_unint_z3 fp_unints; } );
-
-
 let sqrt_align_fp2_spec_for_extract = do {
   out_ptr <- crucible_alloc vec384x_type;
   (ret, ret_ptr) <- ptr_to_fresh_readonly "ret" vec384x_type;
