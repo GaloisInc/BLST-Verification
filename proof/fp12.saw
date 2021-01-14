@@ -1,0 +1,767 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+/* NOTE: used in pairing.c:
+  mul_by_xy00z0_fp12,
+  sqr_fp12,
+  conjugate_fp12,
+  mul_fp12,
+  cyclotomic_sqr_fp12,
+  frobenius_map_fp12
+  inverse_fp12
+*/
+
+import "../spec/Parameters.cry";
+import "../spec/ExtensionField.cry";
+import "../spec/Frobenius.cry";
+import "../spec/implementation/Field.cry";
+
+///////////////////////////////////////////////////////////////////////////////
+// Specifications
+///////////////////////////////////////////////////////////////////////////////
+
+
+
+let sqr_fp12_spec = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  crucible_precond {{ fp12_invariant a }};
+  crucible_execute_func [ret_ptr, a_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp12_rep (Fp_12.sq (fp12_abs a)) }});
+};
+
+let sqr_fp12_alias_spec = do {
+  (a, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
+  crucible_execute_func [ret_ptr, ret_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp12_rep (Fp_12.sq (fp12_abs a)) }});
+};
+
+let mul_fp12_spec = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384fp12_type;
+  crucible_precond {{ fp12_invariant a }};
+  crucible_precond {{ fp12_invariant b }};
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp12_rep (Fp_12.mul (fp12_abs a, fp12_abs b)) }});
+};
+
+let mul_fp12_alias_spec = do {
+  (a, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384fp12_type;
+  crucible_precond {{ fp12_invariant a }};
+  crucible_precond {{ fp12_invariant b }};
+  crucible_execute_func [ret_ptr, ret_ptr, b_ptr];
+  new_ret <- crucible_fresh_var "new_mul_fp12_alias_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term {{ fp12_rep (Fp_12.mul (fp12_abs a, fp12_abs b)) }});
+};
+
+let conjugate_fp12_spec = do {
+  (a, a_ptr) <- ptr_to_fresh "a" vec384fp12_type;
+  crucible_precond {{ fp12_invariant a }};
+  crucible_execute_func [a_ptr];
+  crucible_points_to a_ptr (crucible_term {{ fp12_rep (fp12_conjugate (fp12_abs a)) }});
+};
+
+
+let frobenius_map_fp12_spec n = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  crucible_precond {{ fp12_invariant a }};
+  crucible_execute_func [ret_ptr, a_ptr, crucible_term {{ `n:[64] }}];
+  crucible_points_to ret_ptr (crucible_term
+    (if eval_bool {{`n == 0x1}}
+     then {{ fp12_rep (fp12_frobenius (fp12_abs a)) }}
+     else if eval_bool {{ `n == 0x2 }}
+     then {{ fp12_rep (fp12_frobenius (fp12_frobenius (fp12_abs a))) }}
+     else {{ fp12_rep (fp12_frobenius (fp12_frobenius (fp12_frobenius (fp12_abs a)))) }} ));
+};
+
+let frobenius_map_fp12_alias_spec n = do {
+  (a, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
+  crucible_precond {{ fp12_invariant a }};
+  crucible_execute_func [ret_ptr, ret_ptr, crucible_term {{ `n:[64] }}];
+  crucible_points_to ret_ptr (crucible_term
+    (if eval_bool {{`n == 0x1}}
+     then {{ fp12_rep (fp12_frobenius (fp12_abs a)) }}
+     else if eval_bool {{ `n == 0x2 }}
+     then {{ fp12_rep (fp12_frobenius (fp12_frobenius (fp12_abs a))) }}
+     else {{ fp12_rep (fp12_frobenius (fp12_frobenius (fp12_frobenius (fp12_abs a)))) }} ));
+};
+
+
+// not done
+let cyclotomic_sqr_fp12_spec = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  crucible_execute_func [ret_ptr, a_ptr];
+  new_cyclotomic_sqr_fp12_ret <- crucible_fresh_var "new_cyclotomic_sqr_fp12_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_cyclotomic_sqr_fp12_ret);
+};
+
+let cyclotomic_sqr_fp12_alias_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
+  crucible_execute_func [ret_ptr, ret_ptr];
+  new_cyclotomic_sqr_fp12_ret <- crucible_fresh_var "new_cyclotomic_sqr_fp12_alias_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_cyclotomic_sqr_fp12_ret);
+};
+
+
+let mul_by_xy00z0_fp12_spec = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  (_, xy00z0_ptr) <- ptr_to_fresh_readonly "xy00z0" vec384fp6_type;
+  crucible_execute_func [ret_ptr, a_ptr, xy00z0_ptr];
+  new_mul_by_xy00z0_fp12_ret <- crucible_fresh_var "new_mul_by_xy00z0_fp12_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_mul_by_xy00z0_fp12_ret);
+};
+
+let mul_by_xy00z0_fp12_alias_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "a" vec384fp12_type;
+  (_, xy00z0_ptr) <- ptr_to_fresh_readonly "xy00z0" vec384fp6_type;
+  crucible_execute_func [ret_ptr, ret_ptr, xy00z0_ptr];
+  new_mul_by_xy00z0_fp12_alias_ret <- crucible_fresh_var "new_mul_by_xy00z0_fp12_alias_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_mul_by_xy00z0_fp12_alias_ret);
+};
+
+
+let inverse_fp12_spec = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  crucible_execute_func [ret_ptr, a_ptr];
+  new_inverse_fp12_ret <- crucible_fresh_var "new_inverse_fp12_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_inverse_fp12_ret);
+};
+
+
+// For proof development:
+
+let {{
+  ff_zero_fp = Fp.field_zero
+  ff_unit_fp = Fp.field_unit
+  ff_mul_fp = Fp.mul
+  ff_sq_fp  = Fp.sq
+  ff_add_fp = Fp.add
+  ff_sub_fp = Fp.sub
+  ff_neg_fp = Fp.neg
+
+  ff_zero_fp2 = Fp_2.field_zero
+  ff_unit_fp2 = Fp_2.field_unit
+  ff_mul_fp2 = Fp_2.mul
+  ff_sq_fp2  = Fp_2.sq
+  ff_add_fp2 = Fp_2.add
+  ff_sub_fp2 = Fp_2.sub
+  ff_neg_fp2 = Fp_2.neg
+  }};
+
+ff_cover_thms <- for
+ [ 
+   {{ Fp.field_zero == ff_zero_fp }}
+ , {{ Fp.field_unit == ff_unit_fp }}
+ , {{ \x -> Fp.mul x == ff_mul_fp x}}
+ , {{ \x -> Fp.add x == ff_add_fp x }}
+ , {{ \x -> Fp.sub x == ff_sub_fp x }}
+ , {{ \x -> Fp.sq x == ff_sq_fp x }}
+ , {{ \x -> Fp.neg x == ff_neg_fp x }}
+
+ , {{ Fp_2.field_zero == ff_zero_fp2 }}
+ , {{ Fp_2.field_unit == ff_unit_fp2 }}
+ , {{ \x -> Fp_2.mul x == ff_mul_fp2 x}}
+ , {{ \x -> Fp_2.add x == ff_add_fp2 x }}
+ , {{ \x -> Fp_2.sub x == ff_sub_fp2 x }}
+ , {{ \x -> Fp_2.sq x == ff_sq_fp2 x }}
+ , {{ \x -> Fp_2.neg x == ff_neg_fp2 x }}
+ ] ( \t -> prove_cryptol t [] );
+
+ff_uncover_thms <- for
+ [ 
+   {{ ff_zero_fp == Fp.field_zero }}
+ , {{ ff_unit_fp == Fp.field_unit }}
+ , {{ \x -> ff_mul_fp x == Fp.mul x }}
+ , {{ \x -> ff_add_fp x == Fp.add x }}
+ , {{ \x -> ff_sub_fp x == Fp.sub x }}
+ , {{ \x -> ff_sq_fp x == Fp.sq x }}
+ , {{ \x -> ff_neg_fp x == Fp.neg x }}
+
+ , {{ ff_zero_fp2 == Fp_2.field_zero }}
+ , {{ ff_unit_fp2 == Fp_2.field_unit }}
+ , {{ \x -> ff_mul_fp2 x == Fp_2.mul x }}
+ , {{ \x -> ff_add_fp2 x == Fp_2.add x }}
+ , {{ \x -> ff_sub_fp2 x == Fp_2.sub x }}
+ , {{ \x -> ff_sq_fp2 x == Fp_2.sq x }}
+ , {{ \x -> ff_neg_fp2 x == Fp_2.neg x }}
+ ] ( \t -> prove_cryptol t [] );
+
+let expand_fp2 = do {
+  simplify (addsimps ff_cover_thms (cryptol_ss ()));
+  };
+
+// let ff_unints = ["ff_zero_fp2", "ff_unit_fp2", "ff_mul_fp2", "ff_neg_fp2", "ff_add_fp2", "ff_sub_fp2", "ff_sq_fp2"];
+
+let print_goal_nicely = do {
+    expand_fp2;
+    simplify prop_simpset;
+    print_goal;
+    simplify (addsimps ff_uncover_thms (cryptol_ss ())); // put things back. ish
+    };
+
+// "nest" is just used to simplify the writing of the postcondition for the
+// frobenius_map functions.  However, there is a sipler way, which is used for
+// frobenius_map_fp12.  Maybe we can come back to this part and revise it in line with that.
+let {{
+  nest f x (n:[64]) =
+    if n==0 then x
+     | n == 1 then f x
+     | n == 2 then f (f x)
+    else f (f (f x))
+  }};
+
+nest_fp2_thms <- for
+  [ {{ \ f (x:t_Fp_2) -> nest f x 1 == f x }}
+  , {{ \ f (x:t_Fp_2) -> nest f x 2 == f (f x) }}
+  , {{ \ f (x:t_Fp_2) -> nest f x 3 == f (f (f x)) }}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
+
+let frobenius_map_fp2_spec n = do {
+  ret_ptr <- crucible_alloc vec384x_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
+  crucible_precond {{ fp2_invariant a }};
+  crucible_execute_func [ret_ptr, a_ptr, crucible_term {{ `n:[64] }}];
+  crucible_points_to ret_ptr (crucible_term {{ fp2_rep (nest fp2_frobenius (fp2_abs a) `n) }} );
+};
+
+let frobenius_map_fp2_alias_spec n = do {
+  (a, ret_ptr) <- ptr_to_fresh "a" vec384x_type;
+  crucible_precond {{ fp2_invariant a }};
+  crucible_execute_func [ret_ptr, ret_ptr, crucible_term {{ `n:[64] }}];
+  crucible_points_to ret_ptr (crucible_term {{ fp2_rep (nest fp2_frobenius (fp2_abs a) `n) }} );
+};
+
+nest_fp6_thms <- for
+  [ {{ \ f (x:t_Fp_6) -> nest f x 1 == f x }}
+  , {{ \ f (x:t_Fp_6) -> nest f x 2 == f (f x) }}
+  , {{ \ f (x:t_Fp_6) -> nest f x 3 == f (f (f x)) }}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
+
+
+let frobenius_map_fp6_spec n = do {
+  ret_ptr <- crucible_alloc vec384fp6_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp6_type;
+  crucible_precond {{ fp6_invariant a }};
+  crucible_execute_func [ret_ptr, a_ptr, crucible_term {{ `n:[64] }}];
+  crucible_points_to ret_ptr (crucible_term {{ fp6_rep (nest fp6_frobenius (fp6_abs a) `n) }} );
+};
+
+let frobenius_map_fp6_alias_spec n = do {
+  (a, ret_ptr) <- ptr_to_fresh "a" vec384fp6_type;
+  crucible_precond {{ fp6_invariant a }};
+  crucible_execute_func [ret_ptr, ret_ptr, crucible_term {{ `n:[64] }}];
+  crucible_points_to ret_ptr (crucible_term {{ fp6_rep (nest fp6_frobenius (fp6_abs a) `n) }} );
+};
+
+// enable_experimental;
+
+let frobenius_map_fp12_spec' n = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  crucible_precond {{ fp12_invariant a }};
+  crucible_execute_func [ret_ptr, a_ptr, crucible_term {{ `n:[64] }}];
+  new_frobenius_map_fp12_ret <- crucible_fresh_var "new_frobenius_map_fp12_ret" vec384fp12_type;
+  crucible_points_to ret_ptr (crucible_term new_frobenius_map_fp12_ret);
+};
+
+// borrowed from exp2.saw:
+fp2_invariant_alt_thm <-
+  prove_cryptol
+  {{ \x -> fp2_invariant x == (fp_invariant (x@0) /\ fp_invariant (x@1)) }}
+  ["fp_invariant"];
+
+
+fp2_invariant_alt_seq_thm <-
+  prove_cryptol
+  {{ \x y -> fp2_invariant [x,y] == (fp_invariant x /\ fp_invariant y) }}
+  ["fp_invariant"];
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Proofs
+///////////////////////////////////////////////////////////////////////////////
+
+conjugate_fp12_ov <- custom_verify "conjugate_fp12"
+  fp2_overrides
+  conjugate_fp12_spec
+  do { unfolding ["fp12_conjugate", "f12", "f6", "Fp_6", "Fp_12", "extension_field"
+                  ,"fp12_rep", "fp6_rep", "fp12_abs", "fp6_abs",
+                  "fp12_invariant", "fp6_invariant"];
+       simplify (addsimps propositional_rewrites fp2_simpset);
+       w4_unint_z3 fp2_unints; };
+
+/* FAILS
+conjugate_fp12_ov <- custom_verify "conjugate_fp12"
+  fp2_overrides
+  conjugate_fp12_spec
+  (w4_unint_z3 fp2_unints);
+*/
+
+/*
+frobenius_map_fp2_1_ov <- custom_verify "frobenius_map_fp2"
+    (concat fp_overrides fp2_overrides)
+    (frobenius_map_fp2_spec 1)
+    do { unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
+         simplify fp_simpset;
+         print_goal;
+         w4_unint_z3 fp_unints;};
+*/
+
+frobenius_map_fp2_1_ov <- custom_verify "frobenius_map_fp2"
+    (concat fp_overrides fp2_overrides)
+    (frobenius_map_fp2_spec 1)
+    do { unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
+         simplify (addsimps nest_fp2_thms fp_simpset);
+         w4_unint_z3 fp_unints;};
+
+frobenius_map_fp2_1_alias_ov <- custom_verify "frobenius_map_fp2"
+    (concat fp_overrides fp2_overrides)
+    (frobenius_map_fp2_alias_spec 1)
+    do { unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
+         simplify (addsimps nest_fp2_thms fp_simpset);
+         w4_unint_z3 fp_unints;};
+
+fp_rep_normalize_abs_thm <- admit_cryptol {{ \x -> fp_rep (Fp.normalize (fp_abs x)) == fp_normalize x }};
+ 
+frobenius_map_fp2_2_ov <- custom_verify "frobenius_map_fp2"
+    (concat fp_overrides fp2_overrides)
+    (frobenius_map_fp2_spec 2)
+    do { unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
+         simplify (addsimp fp2_invariant_alt_thm (addsimps nest_fp2_thms fp_simpset));
+         simplify (addsimps [fp_rep_normalize_abs_thm, fp_normalize_thm] (addsimps fp_alg_thms empty_ss));
+         w4_unint_z3 fp_unints;};
+
+frobenius_map_fp2_2_alias_ov <- custom_verify "frobenius_map_fp2"
+    (concat fp_overrides fp2_overrides)
+    (frobenius_map_fp2_alias_spec 2)
+    do { unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
+         simplify (addsimp fp2_invariant_alt_thm (addsimps nest_fp2_thms fp_simpset));
+         simplify (addsimps [fp_rep_normalize_abs_thm, fp_normalize_thm] (addsimps fp_alg_thms empty_ss));
+         w4_unint_z3 fp_unints;};
+
+fp_neg_normalize_thm <- prove_cryptol {{ \x -> Fp.neg (Fp.normalize x) == Fp.neg x }} [];
+
+frobenius_map_fp2_3_ov <- custom_verify "frobenius_map_fp2"
+    (concat fp_overrides fp2_overrides)
+    (frobenius_map_fp2_spec 3)
+    do { unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
+         simplify (addsimp fp2_invariant_alt_thm (addsimps nest_fp2_thms fp_simpset));
+         simplify (addsimps [fp_rep_normalize_abs_thm, fp_normalize_thm, fp_neg_normalize_thm]
+                            (addsimps fp_alg_thms empty_ss));
+         w4_unint_z3 fp_unints;};
+
+frobenius_map_fp2_3_alias_ov <- custom_verify "frobenius_map_fp2"
+    (concat fp_overrides fp2_overrides)
+    (frobenius_map_fp2_alias_spec 3)
+    do { unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
+         simplify (addsimp fp2_invariant_alt_thm (addsimps nest_fp2_thms fp_simpset));
+         simplify (addsimps [fp_rep_normalize_abs_thm, fp_normalize_thm, fp_neg_normalize_thm]
+                            (addsimps fp_alg_thms empty_ss));
+         w4_unint_z3 fp_unints;};
+
+// constants for the various Frobenius maps
+let {{
+  rep_v_frobenius_constant =
+    [[0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000],
+     [0xcd03c9e48671f071, 0x5dab22461fcda5d2, 0x587042afd3851b95,
+      0x8eb60ebe01bacb9e, 0x03f97d6e83d050d2, 0x18f0206554638741]]
+
+  rep_v_frobenius_constant_sq =
+    [[0x890dc9e4867545c3, 0x2af322533285a5d5, 0x50880866309b7e2c,
+      0xa20d1b8c7e881024, 0x14e4f04fe2db9068, 0x14e56d3f1564853a],
+     [0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000]]
+
+  rep_v_frobenius_constant_sq_const_part =
+    [0x890dc9e4867545c3, 0x2af322533285a5d5, 0x50880866309b7e2c,
+     0xa20d1b8c7e881024, 0x14e4f04fe2db9068, 0x14e56d3f1564853a]
+
+  // w_frobenius_constant has the form [0,0,c], so we can multiply easily using fp2_mul,
+  // and do not need to store all the zeros
+  rep_w_frobenius_constant_const_part =
+    [[0x07089552b319d465, 0xc6695f92b50a8313, 0x97e83cccd117228f,
+      0xa35baecab2dc29ee, 0x1ce393ea5daace4d, 0x08f2220fb0fb66eb],
+     [0xb2f66aad4ce5d646, 0x5842a06bfc497cec, 0xcf4895d42599d394,
+      0xc11b9cba40a8e8d0, 0x2e3813cbe5a0de89, 0x110eefda88847faf]]
+
+  }};
+
+frobenius_constant_thms <- for [
+    {{ fp2_invariant rep_v_frobenius_constant == True }}
+  , {{ fp2_abs       rep_v_frobenius_constant ==  v_frobenius_constant }}
+  , {{ fp2_invariant rep_v_frobenius_constant_sq == True }}
+  , {{ fp2_abs       rep_v_frobenius_constant_sq ==  v_frobenius_constant_sq }}
+  , {{ fp_invariant  rep_v_frobenius_constant_sq_const_part == True }}
+  , {{ fp_abs        rep_v_frobenius_constant_sq_const_part ==  v_frobenius_constant_sq!0 }}
+  , {{ fp2_invariant rep_w_frobenius_constant_const_part == True }}
+  , {{ fp2_abs       rep_w_frobenius_constant_const_part ==  w_frobenius_constant!0 }}
+  ] (\t -> prove_cryptol (rewrite (cryptol_ss ())
+                          (unfold_term [ "rep_v_frobenius_constant"
+                                       , "rep_v_frobenius_constant_sq"
+                                       , "rep_v_frobenius_constant_sq_const_part"
+                                       , "rep_w_frobenius_constant_const_part"
+                                       ] t))
+                         []);
+
+
+fp2_mul_v_sq_thm <- prove_cryptol
+// {{ \ x y -> Fp_2.mul (v_frobenius_constant_sq, [x,y])
+//             == [Fp.mul (x, v_frobenius_constant_sq!0), Fp.mul (y, v_frobenius_constant_sq!0)] }}
+ {{ \ x -> Fp_2.mul (v_frobenius_constant_sq, x)
+             == [Fp.mul (x@0, v_frobenius_constant_sq!0), Fp.mul (x@1, v_frobenius_constant_sq!0)] }}
+ [];
+
+fp2_mul_comutes_thm <- prove_cryptol {{ \x y -> Fp_2.mul (x, y) == apply Fp_2.mul (y,x) }} [];
+
+// Not needed but sometimes improves the readabilty of a formula:
+intLe_self_thm <- prove_core z3 "(x : Integer) -> EqTrue (eq Bool (intLe x x) True)";
+
+frobenius_map_fp6_1_ov <- custom_verify "frobenius_map_fp6"
+    (concat [frobenius_map_fp2_1_ov] (concat fp_overrides fp2_overrides))
+    (frobenius_map_fp6_spec 1)
+    do { rw_with_1 fp2_mul_comutes_thm;
+       rw_with (concat nest_fp2_thms nest_fp6_thms);
+       rw_with frobenius_constant_thms;
+       rw_with_1 fp2_invariant_alt_seq_thm;
+       unfolding ["fp6_rep", "fp6_abs", "fp6_invariant", "fp6_frobenius", "f2", "apply"];
+       simplify (addsimps [fp2_mul_v_sq_thm, fp2_invariant_alt_thm] (addsimps fp_inv_fp2_rep_thms fp2_simpset));
+       unfolding ["fp2_rep"];
+       simplify fp_simpset;
+       w4_unint_z3 (concat ["v_frobenius_constant", "v_frobenius_constant_sq"] (concat fp_unints fp2_unints)); };
+
+
+frobenius_map_fp6_1_alias_ov <- custom_verify "frobenius_map_fp6"
+    (concat [frobenius_map_fp2_1_alias_ov] (concat fp_overrides fp2_overrides))
+    (frobenius_map_fp6_alias_spec 1)
+    do { rw_with_1 fp2_mul_comutes_thm;
+       rw_with (concat nest_fp2_thms nest_fp6_thms);
+       rw_with frobenius_constant_thms;
+       rw_with_1 fp2_invariant_alt_seq_thm;
+       unfolding ["fp6_rep", "fp6_abs", "fp6_invariant", "fp6_frobenius", "f2", "apply"];
+       simplify (addsimps [fp2_mul_v_sq_thm, fp2_invariant_alt_thm] (addsimps fp_inv_fp2_rep_thms fp2_simpset));
+       unfolding ["fp2_rep"];
+       simplify fp_simpset;
+       // w4_unint_z3 (concat ["v_frobenius_constant", "v_frobenius_constant_sq"] (concat fp_unints fp2_unints)); };
+       w4_unint_z3 (concat fp_unints fp2_unints); };
+
+/*
+crucible_llvm_compositional_extract m
+ "frobenius_map_fp12"
+ "fm"
+ (concat fp_overrides fp2_overrides)
+ false
+ (frobenius_map_fp12_spec' 1)
+  do { simplify (addsimps frobenius_constant_thms (cryptol_ss ()));
+       simplify (addsimp fp2_invariant_alt_seq_thm (cryptol_ss()));
+       unfolding [ "fp12_rep", "fp6_rep", "fp12_abs", "fp6_abs", "fp12_invariant", "fp6_invariant"];
+       simplify (addsimp fp2_invariant_alt_thm (addsimps propositional_rewrites fp2_simpset));
+       simplify fp_simpset;
+       w4_unint_z3 (concat fp_unints fp2_unints); };
+*/
+
+// For double Frobenius:
+let {{
+  v_frobenius_constant_2 = F_expt f2 u_plus_1 (`((p*p-1)/3):[762])
+  v_frobenius_constant_2_sq = Fp_2.sq v_frobenius_constant_2
+
+  w_frobenius_constant_2_part = F_expt f2 u_plus_1 (`((p*p-1)/6):[762])
+  
+  rep_v_frobenius_constant_2 = 
+    [[0x30f1361b798a64e8, 0xf3b8ddab7ece5a2a, 0x16a8ca3ac61577f7,
+      0xc26a2ff874fd029b, 0x3636b76660701c6e, 0x051ba4ab241b6160],
+     [0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000]]
+
+  rep_v_frobenius_constant_2_sq_const_part =
+    [0xcd03c9e48671f071, 0x5dab22461fcda5d2, 0x587042afd3851b95,
+     0x8eb60ebe01bacb9e, 0x03f97d6e83d050d2, 0x18f0206554638741]
+
+  rep_w_frobenius_constant_2_const_part =
+    [[0xecfb361b798dba3a, 0xc100ddb891865a2c, 0x0ec08ff1232bda8e,
+      0xd5c13cc6f1ca4721, 0x47222a47bf7b5c04, 0x0110f184e51c5f59],
+     [0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000]]
+   }};
+
+frobenius_2_constant_thms <- for [
+    {{ fp2_invariant rep_v_frobenius_constant_2 == True }}
+  , {{ fp2_abs       rep_v_frobenius_constant_2 ==  v_frobenius_constant_2 }}
+  , {{ fp_invariant rep_v_frobenius_constant_2_sq_const_part == True }}
+  , {{ fp_abs       rep_v_frobenius_constant_2_sq_const_part ==  v_frobenius_constant_2_sq @ 1}}
+  , {{ fp2_invariant rep_w_frobenius_constant_2_const_part == True }}
+  , {{ fp2_abs       rep_w_frobenius_constant_2_const_part == w_frobenius_constant_2_part }}
+  ] (\t -> prove_cryptol (rewrite (cryptol_ss ())
+                          (unfold_term [ "rep_v_frobenius_constant_2"
+                                       , "rep_v_frobenius_constant_2_sq_const_part"
+                                       , "rep_w_frobenius_constant_2_const_part"
+                                       ] t))
+                         []);
+
+fp2_mul_v_sq_2_thm <- prove_cryptol
+ {{ \ x -> Fp_2.mul (v_frobenius_constant_2_sq, x)
+             == [Fp.mul (x@0, v_frobenius_constant_2_sq@1), Fp.mul (x@1, v_frobenius_constant_2_sq@1)] }}
+ [];
+
+             
+// The double Frobenius for fp6 has a similar formula to the single
+let {{
+  fp6_frobenius2 [a,b,c] = [a',b',c'] where
+    a' = f2.mul (v_frobenius_constant_2_sq, fp2_frobenius (fp2_frobenius a))
+    b' = f2.mul (v_frobenius_constant_2, fp2_frobenius (fp2_frobenius b))
+    c' = fp2_frobenius (fp2_frobenius c)
+    }};
+
+frobenius_2_theorems <- for
+  [ // {{ \x -> fp2_frobenius (fp2_frobenius x) == [Fp.normalize (x@0), x@1] }}
+  // ,
+  {{ \x -> fp6_frobenius (fp6_frobenius x) == fp6_frobenius2 x }}
+  ] (\t -> prove_cryptol t []);
+
+frobenius_map_fp6_2_ov <- custom_verify "frobenius_map_fp6"
+    (concat [frobenius_map_fp2_2_ov] (concat fp_overrides fp2_overrides))
+    (frobenius_map_fp6_spec 2)
+    do { rw_with_1 fp2_mul_comutes_thm;
+       rw_with (concat nest_fp2_thms nest_fp6_thms);
+       rw_with (concat frobenius_2_theorems frobenius_2_constant_thms);
+       rw_with_1 fp2_invariant_alt_seq_thm;
+       unfolding ["fp6_rep", "fp6_abs", "fp6_invariant", "fp6_frobenius2", "f2", "apply"];
+       simplify (addsimps [fp2_mul_v_sq_2_thm, fp2_invariant_alt_thm] (addsimps fp_inv_fp2_rep_thms fp2_simpset));
+       unfolding ["fp2_rep"];
+       simplify fp_simpset;
+       w4_unint_z3 (concat ["v_frobenius_constant", "v_frobenius_constant_sq"] (concat fp_unints fp2_unints)); };
+
+frobenius_map_fp6_2_alias_ov <- custom_verify "frobenius_map_fp6"
+    (concat [frobenius_map_fp2_2_alias_ov] (concat fp_overrides fp2_overrides))
+    (frobenius_map_fp6_alias_spec 2)
+    do { rw_with_1 fp2_mul_comutes_thm;
+       rw_with (concat nest_fp2_thms nest_fp6_thms);
+       rw_with (concat frobenius_2_theorems frobenius_2_constant_thms);
+       rw_with_1 fp2_invariant_alt_seq_thm;
+       unfolding ["fp6_rep", "fp6_abs", "fp6_invariant", "fp6_frobenius2", "f2", "apply"];
+       simplify (addsimps [fp2_mul_v_sq_2_thm, fp2_invariant_alt_thm] (addsimps fp_inv_fp2_rep_thms fp2_simpset));
+       unfolding ["fp2_rep"];
+       simplify fp_simpset;
+       // w4_unint_z3 (concat ["v_frobenius_constant", "v_frobenius_constant_sq"] (concat fp_unints fp2_unints)); };
+       w4_unint_z3 (concat fp_unints fp2_unints); };
+
+// for triple Frobenius
+
+let {{
+  v_frobenius_constant_3 = F_expt f2 u_plus_1 (`((p*p*p-1)/3):[1143])
+  v_frobenius_constant_3_sq = Fp_2.sq v_frobenius_constant_3
+
+  w_frobenius_constant_3_part = F_expt f2 u_plus_1 (`((p*p*p-1)/6):[1143])
+  
+  rep_v_frobenius_constant_3 = 
+    [[0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000],
+     [0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba,
+      0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]]
+
+  rep_v_frobenius_constant_3_sq_const_part =
+    [0x43f5fffffffcaaae, 0x32b7fff2ed47fffd, 0x07e83a49a2e99d69,
+     0xeca8f3318332bb7a, 0xef148d1ea0f4c069, 0x040ab3263eff0206]
+
+  rep_w_frobenius_constant_3_const_part =
+    [[0x3e2f585da55c9ad1, 0x4294213d86c18183, 0x382844c88b623732,
+      0x92ad2afd19103e18, 0x1d794e4fac7cf0b9, 0x0bd592fc7d825ec8],
+     [0x7bcfa7a25aa30fda, 0xdc17dec12a927e7c, 0x2f088dd86b4ebef1,
+      0xd1ca2087da74d4a7, 0x2da2596696cebc1d, 0x0e2b7eedbbfd87d2]]
+
+   }};
+
+frobenius_3_constant_thms <- for [
+    {{ fp2_invariant rep_v_frobenius_constant_3 == True }}
+  , {{ fp2_abs       rep_v_frobenius_constant_3 ==  v_frobenius_constant_3 }}
+  , {{ fp_invariant rep_v_frobenius_constant_3_sq_const_part == True }}
+  , {{ fp_abs       rep_v_frobenius_constant_3_sq_const_part ==  v_frobenius_constant_3_sq @ 1}}
+  , {{ fp2_invariant rep_w_frobenius_constant_3_const_part == True }}
+  , {{ fp2_abs       rep_w_frobenius_constant_3_const_part == w_frobenius_constant_3_part }}
+  ] (\t -> prove_cryptol (rewrite (cryptol_ss ())
+                          (unfold_term [ "rep_v_frobenius_constant_3"
+                                       , "rep_v_frobenius_constant_3_sq_const_part"
+                                       , "rep_w_frobenius_constant_3_const_part"
+                                       ] t))
+                         []);
+
+fp2_mul_v_sq_3_thm <- prove_cryptol
+ {{ \ x -> Fp_2.mul (v_frobenius_constant_3_sq, x)
+             == [Fp.mul (x@0, v_frobenius_constant_3_sq@1), Fp.mul (x@1, v_frobenius_constant_3_sq@1)] }}
+ [];
+
+let {{
+  fp6_frobenius3 [a,b,c] = [a',b',c'] where
+    a' = f2.mul (v_frobenius_constant_3_sq, fp2_frobenius a)
+    b' = f2.mul (v_frobenius_constant_3, fp2_frobenius b)
+    c' = fp2_frobenius c
+    }};
+
+frobenius_3_theorems <- for
+  [ {{ \x -> fp2_frobenius (fp2_frobenius (fp2_frobenius x)) == fp2_frobenius x }}
+  , {{ \x -> fp6_frobenius (fp6_frobenius (fp6_frobenius x)) == fp6_frobenius3 x }}
+  ] (\t -> prove_cryptol t []);
+
+frobenius_map_fp6_3_ov <- custom_verify "frobenius_map_fp6"
+    (concat [frobenius_map_fp2_3_ov] (concat fp_overrides fp2_overrides))
+    (frobenius_map_fp6_spec 3)
+    do { rw_with_1 fp2_mul_comutes_thm;
+       rw_with (concat nest_fp2_thms nest_fp6_thms);
+       rw_with (concat frobenius_3_theorems frobenius_3_constant_thms);
+       rw_with_1 fp2_invariant_alt_seq_thm;
+       unfolding ["fp6_rep", "fp6_abs", "fp6_invariant", "fp6_frobenius3", "f2", "apply"];
+       simplify (addsimps [fp2_mul_v_sq_3_thm, fp2_invariant_alt_thm] (addsimps fp_inv_fp2_rep_thms fp2_simpset));
+       unfolding ["fp2_rep"];
+       simplify fp_simpset;
+       w4_unint_z3 (concat ["v_frobenius_constant_3", "v_frobenius_constant_3_sq"] (concat fp_unints fp2_unints)); };
+
+frobenius_map_fp6_3_alias_ov <- custom_verify "frobenius_map_fp6"
+    (concat [frobenius_map_fp2_3_alias_ov] (concat fp_overrides fp2_overrides))
+    (frobenius_map_fp6_alias_spec 3)
+    do { rw_with_1 fp2_mul_comutes_thm;
+       rw_with (concat nest_fp2_thms nest_fp6_thms);
+       rw_with (concat frobenius_3_theorems frobenius_3_constant_thms);
+       rw_with_1 fp2_invariant_alt_seq_thm;
+       unfolding ["fp6_rep", "fp6_abs", "fp6_invariant", "fp6_frobenius3", "f2", "apply"];
+       simplify (addsimps [fp2_mul_v_sq_3_thm, fp2_invariant_alt_thm] (addsimps fp_inv_fp2_rep_thms fp2_simpset));
+       unfolding ["fp2_rep"];
+       simplify fp_simpset;
+       w4_unint_z3 (concat ["v_frobenius_constant_3", "v_frobenius_constant_3_sq"] (concat fp_unints fp2_unints)); };
+
+// Finally, fp12_frobenius_map
+
+// For the fp2 multiplications in frobenius_map_fp12:
+
+fp6_mul_w_const_thm <- prove_cryptol
+  {{ \ x -> Fp_6.mul (w_frobenius_constant, x) == [Fp_2.mul(x@0,c), Fp_2.mul(x@1,c), Fp_2.mul(x@2,c)] where
+     c = w_frobenius_constant!0 }}
+  [];
+
+frobenius_map_fp12_1_ov <- custom_verify "frobenius_map_fp12"
+    (concat [frobenius_map_fp6_1_ov] fp2_overrides)
+    (frobenius_map_fp12_spec 1)
+    do {
+       rw_with nest_fp6_thms;
+       rw_with frobenius_constant_thms;
+       unfolding [ "fp12_rep", "fp12_abs", "fp12_invariant", "fp12_frobenius", "f6"
+                 , "fp6_rep", "fp6_abs", "fp6_invariant"];
+       simplify (addsimps [fp6_mul_w_const_thm] fp2_simpset);
+       w4_unint_z3 fp2_unints; };
+
+frobenius_map_fp12_1_alias_ov <- custom_verify "frobenius_map_fp12"
+    (concat [frobenius_map_fp6_1_alias_ov] fp2_overrides)
+    (frobenius_map_fp12_alias_spec 1)
+    do {
+       //rw_with nest_fp6_thms;
+       //rw_with frobenius_constant_thms;
+       rw_with (concat nest_fp6_thms frobenius_constant_thms);
+       unfolding [ "fp12_rep", "fp12_abs", "fp12_invariant", "fp12_frobenius", "f6"
+                 , "fp6_rep", "fp6_abs", "fp6_invariant"];
+       simplify (addsimps [fp6_mul_w_const_thm] fp2_simpset);
+       w4_unint_z3 fp2_unints; };
+
+
+// The double Frobenius for fp12 has a similar formula to the single
+let {{
+  fp12_frobenius2 [a,b] = [a',b'] where
+    a' = Fp_6.mul (Fp_2_to_Fp_6 w_frobenius_constant_2_part,
+                   fp6_frobenius (fp6_frobenius a))
+    b' = fp6_frobenius (fp6_frobenius b)
+    }};
+
+frobenius_12_2_theorems <- for
+  [ {{ \x -> fp12_frobenius (fp12_frobenius x) == fp12_frobenius2 x }}
+  , {{ \ x -> Fp_6.mul (Fp_2_to_Fp_6 c, x) == [Fp_2.mul(x@0,c), Fp_2.mul(x@1,c), Fp_2.mul(x@2,c)] where
+              c = w_frobenius_constant_2_part }}
+  ] (\t -> prove_cryptol t []);
+
+frobenius_map_fp12_2_ov <- custom_verify "frobenius_map_fp12"
+    (concat [frobenius_map_fp6_2_ov] fp2_overrides)
+    (frobenius_map_fp12_spec 2)
+    do {
+       rw_with nest_fp6_thms;
+       rw_with frobenius_2_constant_thms;
+       rw_with frobenius_12_2_theorems;
+       unfolding [ "fp12_rep", "fp12_abs", "fp12_invariant", "fp12_frobenius2", "f6"
+                 , "fp6_rep", "fp6_abs", "fp6_invariant"];
+       simplify (addsimps frobenius_12_2_theorems fp2_simpset);
+       w4_unint_z3 fp2_unints; };
+
+frobenius_map_fp12_2_alias_ov <- custom_verify "frobenius_map_fp12"
+    (concat [frobenius_map_fp6_2_alias_ov] fp2_overrides)
+    (frobenius_map_fp12_alias_spec 2)
+    do {
+       rw_with nest_fp6_thms;
+       rw_with frobenius_2_constant_thms;
+       rw_with frobenius_12_2_theorems;
+       unfolding [ "fp12_rep", "fp12_abs", "fp12_invariant", "fp12_frobenius2", "f6"
+                 , "fp6_rep", "fp6_abs", "fp6_invariant"];
+       simplify (addsimps frobenius_12_2_theorems fp2_simpset);
+       w4_unint_z3 fp2_unints; };
+
+let {{
+  fp12_frobenius3 [a,b] = [a',b'] where
+    a' = Fp_6.mul (Fp_2_to_Fp_6 w_frobenius_constant_3_part,
+                   fp6_frobenius (fp6_frobenius (fp6_frobenius a)))
+    b' = fp6_frobenius (fp6_frobenius (fp6_frobenius b))
+    }};
+
+frobenius_12_3_theorems <- for
+  [ {{ \x -> fp12_frobenius (fp12_frobenius (fp12_frobenius x)) == fp12_frobenius3 x }}
+  , {{ \ x -> Fp_6.mul (Fp_2_to_Fp_6 c, x) == [Fp_2.mul(x@0,c), Fp_2.mul(x@1,c), Fp_2.mul(x@2,c)] where
+              c = w_frobenius_constant_3_part }}
+  ] (\t -> prove_cryptol t []);
+
+
+frobenius_map_fp12_3_ov <- custom_verify "frobenius_map_fp12"
+    (concat [frobenius_map_fp6_3_ov] fp2_overrides)
+    (frobenius_map_fp12_spec 3)
+    do {
+       rw_with nest_fp6_thms;
+       rw_with frobenius_3_constant_thms;
+       rw_with frobenius_12_3_theorems;
+       unfolding [ "fp12_rep", "fp12_abs", "fp12_invariant", "fp12_frobenius3", "f6"
+                 , "fp6_rep", "fp6_abs", "fp6_invariant"];
+       simplify (addsimps frobenius_12_3_theorems fp2_simpset);
+       w4_unint_z3 fp2_unints; };
+
+frobenius_map_fp12_3_alias_ov <- custom_verify "frobenius_map_fp12"
+    (concat [frobenius_map_fp6_3_alias_ov] fp2_overrides)
+    (frobenius_map_fp12_alias_spec 3)
+    do {
+       //rw_with nest_fp6_thms;
+       //rw_with frobenius_3_constant_thms;
+       //rw_with frobenius_12_3_theorems;
+       rw_with (concat_all [nest_fp6_thms, frobenius_3_constant_thms, frobenius_12_3_theorems]);
+       unfolding [ "fp12_rep", "fp12_abs", "fp12_invariant", "fp12_frobenius3", "f6"
+                 , "fp6_rep", "fp6_abs", "fp6_invariant"];
+       simplify (addsimps frobenius_12_3_theorems fp2_simpset);
+       w4_unint_z3 fp2_unints; };
+
+
+/*
+sqr_fp12_ov <- verify "sqr_fp12" assembly_overrides sqr_fp12_spec;
+sqr_fp12_alias_ov <- verify "sqr_fp12" assembly_overrides sqr_fp12_alias_spec;
+cyclotomic_sqr_fp12_ov <- verify "cyclotomic_sqr_fp12" assembly_overrides cyclotomic_sqr_fp12_spec;
+cyclotomic_sqr_fp12_alias_ov <- verify "cyclotomic_sqr_fp12" assembly_overrides cyclotomic_sqr_fp12_alias_spec;
+mul_fp12_ov <- verify "mul_fp12" assembly_overrides mul_fp12_spec;
+mul_fp12_alias_ov <- verify "mul_fp12" assembly_overrides mul_fp12_alias_spec;
+mul_by_xy00z0_fp12_ov <- verify "mul_by_xy00z0_fp12" assembly_overrides mul_by_xy00z0_fp12_spec;
+mul_by_xy00z0_fp12_alias_ov <- verify "mul_by_xy00z0_fp12" assembly_overrides mul_by_xy00z0_fp12_alias_spec;
+conjugate_fp12_ov <- verify "conjugate_fp12" assembly_overrides conjugate_fp12_spec;
+inverse_fp12_ov <- verify "inverse_fp12" assembly_overrides inverse_fp12_spec;
+let make_frobenius_map_fp12_ov n = verify "frobenius_map_fp12" assembly_overrides (frobenius_map_fp12_spec n);
+frobenius_map_fp12_ovs <- for [1,2,3] make_frobenius_map_fp12_ov; // NOTE: this could be verified for any 0 < n <= 3, but it fails with that precondition in the spec
+let make_frobenius_map_fp12_alias_ov n = verify "frobenius_map_fp12" assembly_overrides (frobenius_map_fp12_alias_spec n);
+frobenius_map_fp12_alias_ovs <- for [1,2,3] make_frobenius_map_fp12_alias_ov; // NOTE: this could be verified for any 0 < n <= 3, but it fails with that precondition in the spec
+
+let fp12_tower_ovs = foldr concat [frobenius_map_fp12_alias_ovs, frobenius_map_fp12_ovs, [sqr_fp12_alias_ov, sqr_fp12_ov, mul_fp12_alias_ov, mul_fp12_ov, mul_by_xy00z0_fp12_alias_ov, mul_by_xy00z0_fp12_ov, conjugate_fp12_ov, inverse_fp12_ov, cyclotomic_sqr_fp12_ov, cyclotomic_sqr_fp12_alias_ov]] [];
+*/
