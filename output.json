@@ -2010,6 +2010,83 @@
   },
   {
     "status": "assumed",
+    "method": "sqr_mont_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulq_mont_384.saw:265:22",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqr_mont_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulq_mont_384.saw:266:28",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_mont_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulq_mont_384.saw:289:21",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_mont_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulq_mont_384.saw:290:29",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_mont_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulq_mont_384.saw:291:31",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqr_mont_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulq_mont_384.saw:296:21",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqr_mont_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulq_mont_384.saw:297:27",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqr_n_mul_mont_383",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulq_mont_384.saw:302:27",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqr_n_mul_mont_383",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulq_mont_384.saw:303:37",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqr_mont_382x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulq_mont_384.saw:308:22",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqr_mont_382x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulq_mont_384.saw:309:28",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
     "method": "sqrx_mont_384x",
     "specification": "unknown",
     "loc": "/workdir/proof/x86/mulx_mont_384.saw:265:22",
@@ -2241,6 +2318,13 @@
   },
   {
     "status": "assumed",
+    "method": "mul_mont_384x",
+    "specification": "unknown",
+    "loc": "0x190c0",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
     "method": "mulx_mont_384x",
     "specification": "unknown",
     "loc": "0x190c0",
@@ -2248,9 +2332,23 @@
   },
   {
     "status": "assumed",
+    "method": "mul_382x",
+    "specification": "unknown",
+    "loc": "0x19320",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
     "method": "mulx_382x",
     "specification": "unknown",
     "loc": "0x19340",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqr_382x",
+    "specification": "unknown",
+    "loc": "0x19480",
     "type": "method"
   },
   {
@@ -2276,6 +2374,20 @@
   },
   {
     "status": "assumed",
+    "method": "redc_mont_384",
+    "specification": "unknown",
+    "loc": "0x19c40",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "from_mont_384",
+    "specification": "unknown",
+    "loc": "0x19ca0",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
     "method": "sgn0x_pty_mont_384",
     "specification": "unknown",
     "loc": "0x1a040",
@@ -2290,6 +2402,34 @@
   },
   {
     "status": "assumed",
+    "method": "sgn0_pty_mont_384",
+    "specification": "unknown",
+    "loc": "0x1a140",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sgn0_pty_mont_384x",
+    "specification": "unknown",
+    "loc": "0x1a1e0",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mul_mont_sparse_256",
+    "specification": "unknown",
+    "loc": "0x1b440",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqr_mont_sparse_256",
+    "specification": "unknown",
+    "loc": "0x1b4a0",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
     "method": "mulx_mont_sparse_256",
     "specification": "unknown",
     "loc": "0x1b4e0",
@@ -2300,6 +2440,20 @@
     "method": "sqrx_mont_sparse_256",
     "specification": "unknown",
     "loc": "0x1b540",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "from_mont_256",
+    "specification": "unknown",
+    "loc": "0x1b820",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "redc_mont_256",
+    "specification": "unknown",
+    "loc": "0x1b8a0",
     "type": "method"
   },
   {
