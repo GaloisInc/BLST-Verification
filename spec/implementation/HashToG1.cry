@@ -1,0 +1,36 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+import Parameters (Fp, t_Fp, to_Fp)
+//import FieldExtras
+import ShortWeierstrassCurve (ProjectivePoint)
+import ExpandMessage (Expandable)
+import HashToCurveE1 (hash_to_field)
+import HashToCurveE1Aux
+import implementation::CurveOperation (point_dadd)
+
+map_to_curve_simple_swu: t_Fp -> ProjectivePoint t_Fp
+map_to_curve_simple_swu u = undefined
+
+iso_map: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
+iso_map p = undefined
+
+clear_cofactor: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
+clear_cofactor p = undefined // TODO: this is inline in the code, so needs a spec here
+
+hash_to_curve_opt: {msg_len, DST_len}
+               (fin msg_len, fin DST_len
+               , DST_len <= 255
+               , Expandable msg_len DST_len
+               , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384
+               ) =>
+               ([msg_len][8], [DST_len][8]) -> ProjectivePoint t_Fp
+hash_to_curve_opt (msg,dst) = P where
+    u = hash_to_field`{count=2} msg dst
+    Q0 = map_to_curve_simple_swu (u@0)
+    Q1 = map_to_curve_simple_swu (u@1)
+    R = point_dadd Fp Q0 Q1 A' False // This is addition on the isogenous curve
+    S = iso_map R
+    P = clear_cofactor S
