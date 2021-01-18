@@ -25,7 +25,7 @@ let verify_x86 name spec =
 include "x86/add_mod_256.saw";
 include "x86/add_mod_384.saw";
 include "x86/add_mod_384x384.saw";
-include "x86/inverse_mod_384.saw";
+// include "x86/inverse_mod_384.saw";
 include "x86/mulx_mont_256.saw";
 include "x86/mulx_mont_384.saw";
 
@@ -33,7 +33,7 @@ let assembly_overrides = concat_all
   [ add_mod_256_overrides
   , add_mod_384_overrides
   , add_mod_384x384_overrides
-  , inverse_mod_384_overrides
+  // , inverse_mod_384_overrides
   , mulx_mont_256_overrides
   , mulx_mont_384_overrides
   ];

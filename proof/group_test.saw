@@ -10,7 +10,7 @@
 let blst_p1_affine_in_g1_spec = do {
   (_, p_ptr) <- ptr_to_fresh_readonly "p" (llvm_struct "struct.POINTonE1_affine");
   crucible_execute_func [p_ptr];
-  ret <- crucible_fresh_var "ret" limb_type;
+  ret <- crucible_fresh_var "ret" bool_type;
   crucible_return (crucible_term ret);
 };
 
@@ -18,7 +18,7 @@ let blst_p1_affine_in_g1_spec = do {
 let blst_p2_affine_in_g2_spec = do {
   (_, p_ptr) <- ptr_to_fresh_readonly "p" (llvm_struct "struct.POINTonE2_affine");
   crucible_execute_func [p_ptr];
-  ret <- crucible_fresh_var "ret" limb_type;
+  ret <- crucible_fresh_var "ret" bool_type;
   crucible_return (crucible_term ret);
 };
 

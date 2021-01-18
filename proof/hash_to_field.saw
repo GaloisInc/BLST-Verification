@@ -36,9 +36,10 @@ let verify_hash_to_field_for aug_len msg_len DST_len nelems = do {
   let L = 64; // sizeof(vec384) + 128/8 = 48 + 16
   let len_in_bytes = eval_size {| nelems * L |};
   block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
-  expand_message_xmd_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever
+  expand_message_xmd_ov <- custom_verify "expand_message_xmd" (concat vec_zero_overrides (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov]))) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever
   expand_message_xmd_ov <- admit "expand_message_xmd" (expand_message_spec len_in_bytes aug_len msg_len DST_len);
-  hash_to_field_ov <- verify "hash_to_field" [expand_message_xmd_ov, redcx_mont_384_ov, mulx_mont_384_ov, mulx_mont_384_ret_ret_ov] (hash_to_field_spec nelems aug_len msg_len DST_len);
+ //  hash_to_field_ov <- verify "hash_to_field" [expand_message_xmd_ov, redcx_mont_384_ov, mulx_mont_384_ov, mulx_mont_384_ret_ret_ov] (hash_to_field_spec nelems aug_len msg_len DST_len);
+  hash_to_field_ov <- verify "hash_to_field" (concat vec_zero_overrides [expand_message_xmd_ov, redcx_mont_384_ov, mulx_mont_384_ov, mulx_mont_384_ret_ret_ov]) (hash_to_field_spec nelems aug_len msg_len DST_len);
   return hash_to_field_ov;
 };
 

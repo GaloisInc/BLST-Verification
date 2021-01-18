@@ -40,8 +40,8 @@ index 1f70d8a..83f1bff 100644
      sigma(&t1, (POINTonE1_affine*)&t0); /* σ²(P)                        */
  
      POINTonE1_double(&t0, &t0);         /* 2σ(P)                        */
--    POINTonE1_add_affine(&t2, &t1, p);  /* P +  σ²(P)                   */
-+    POINTonE1_dadd_affine(&t2, &t1, p);  /* P +  σ²(P)                   */
+-    POINTonE1_add(&t2, &t1, P);         /* P +  σ²(P)                   */
++    POINTonE1_dadd(&t2, &t1, P, NULL);  /* P +  σ²(P)                   */
      POINTonE1_cneg(&t2, 1);             /* - P - σ²(P)                  */
 -    POINTonE1_add(&t2, &t2, &t0);       /* 2σ(P) - P - σ²(P)            */
 +    POINTonE1_dadd(&t2, &t2, &t0, NULL);       /* 2σ(P) - P - σ²(P)            */
@@ -92,8 +92,8 @@ index 8eac770..8021a6a 100644
 -    POINTonE2_add(&t0, &t0, &t2);
 +    POINTonE2_dadd(&t0, &t0, &t2, NULL);
      POINTonE2_cneg(&t0, 1);
--    POINTonE2_add_affine(&t0, &t0, p);  /* [z]Ψ³(P) - Ψ²(P) + P         */
-+    POINTonE2_dadd_affine(&t0, &t0, p);  /* [z]Ψ³(P) - Ψ²(P) + P         */
+-    POINTonE2_add(&t0, &t0, P);         /* [z]Ψ³(P) - Ψ²(P) + P         */
++    POINTonE2_dadd(&t0, &t0, P, NULL);  /* [z]Ψ³(P) - Ψ²(P) + P         */
  
      return vec_is_zero(t0.Z, sizeof(t0.Z));
  }

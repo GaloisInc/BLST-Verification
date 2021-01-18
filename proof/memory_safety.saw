@@ -16,6 +16,7 @@ let do_prove = true;
 include "proof-helpers.saw";
 
 include "x86.saw";
+include "vec_zero.saw"; // EXTRAS
 include "fp12_tower.saw";
 include "ec_opts.saw";
 include "sha_overrides.saw";
@@ -31,4 +32,5 @@ let DST_len = 8;
 include "hash_to_field.saw";
 include "core_verify.saw"; // needs hash_to_field
 include "aggregate_defs.saw";
+
 include "aggregate.saw"; // needs core_verify and hash_to_field

@@ -305,8 +305,8 @@ let do_prove_x86 = true;
 
 // sqrx_mont_382x - counterexample for internal var
 let do_prove_x86 = false;
-sqrx_mont_382x_ov <- verify_x86 "sqrx_mont_382x" sqrx_mont_382x_spec;
-sqrx_mont_382x_alias_ov <- verify_x86 "sqrx_mont_382x" sqrx_mont_382x_alias_spec;
+//sqrx_mont_382x_ov <- verify_x86 "sqrx_mont_382x" sqrx_mont_382x_spec;
+//sqrx_mont_382x_alias_ov <- verify_x86 "sqrx_mont_382x" sqrx_mont_382x_alias_spec;
 let do_prove_x86 = true;
 
 let mulx_mont_384_overrides =
@@ -339,6 +339,6 @@ let mulx_mont_384_overrides =
   , sqrx_n_mul_mont_383_ov
   , sqrx_n_mul_mont_383_alias_1_2_ov
 
-  , sqrx_mont_382x_ov
-  , sqrx_mont_382x_alias_ov
+//  , sqrx_mont_382x_ov
+//  , sqrx_mont_382x_alias_ov
   ];

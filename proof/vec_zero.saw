@@ -1,0 +1,189 @@
+let vec_zero_spec n = do {
+  // a_ptr <- crucible_alloc (llvm_array n (llvm_int 64)); // TODO: limb_type, alignment
+  //  let nbytes = eval_int {{ (8:[64])*`n }};
+  a_ptr <- crucible_alloc (llvm_array n (llvm_int 8)); // TODO: limb_type
+  crucible_execute_func [a_ptr, crucible_term {{ (`n:[64]) }}]; // Non-portable
+  crucible_points_to a_ptr (crucible_term {{ zero:[n][8] }});
+  };
+
+vec_zero_overrides <- for [32, 64, 96, 144, 192, 288, 384, 576]
+	                  (\ n -> admit "vec_zero" (vec_zero_spec n));
+
+// Other overrides
+
+// void div_by_2_mod_384(vec384 ret, const vec384 a, const vec384 p);
+let div_by_2_mod_384_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr];
+  new_div_by_2_mod_384_ret <- crucible_fresh_var "new_div_by_2_mod_384_ret" vec384_type;
+  crucible_points_to ret_ptr (crucible_term new_div_by_2_mod_384_ret);
+};
+
+let div_by_2_mod_384_alias_spec = do {
+  (_, a_ptr) <- ptr_to_fresh "a" vec384_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  crucible_execute_func [a_ptr, a_ptr, p_ptr];
+  new_div_by_2_mod_384_ret <- crucible_fresh_var "new_div_by_2_mod_384_ret" vec384_type;
+  crucible_points_to a_ptr (crucible_term new_div_by_2_mod_384_ret);
+};
+
+div_by_2_mod_384_ov <- admit "div_by_2_mod_384" div_by_2_mod_384_spec;
+div_by_2_mod_384_alias_ov <- admit "div_by_2_mod_384" div_by_2_mod_384_alias_spec;
+
+//limb_t div_3_limbs(const limb_t dividend_top[2], limb_t d_lo, limb_t d_hi);
+//limb_t quot_rem_128(limb_t *quot_rem, const limb_t *divisor, limb_t quotient);
+//limb_t quot_rem_64(limb_t *quot_rem, const limb_t *divisor, limb_t quotient);
+// TODO
+
+/*
+let div_3_limbs_spec = do {
+  (_, top_ptr) <- crucible_alloc (llvm_array 2 limb_type);
+  d_lo <-  crucible_fresh_var "d_lo" limb_type;
+  d_hi <-  crucible_fresh_var "d_hi" limb_type;
+  crucible_execute_func [top_ptr, (crucible_term d_lo), (crucible_term d_hi)];
+  new_div_3_limbs_top <- crucible_fresh_var "new_div_3_limbs_top" (llvm_array 2 limb_type);
+  crucible_points_to top_ptr (crucible_term new_div_3_limbs_top);
+  ret <- crucible_fresh_var "_div_3_limbs_ret" limb_type;
+  crucible_return (crucible_term ret);
+};
+
+let quot_rem_128_spec = do {
+  (_,quot_rem_ptr) <- crucible_alloc (llvm_array 1 limb_type);
+  (_, divisor_ptr <- ptr_to_fresh "divisor" (llvm_array 1 limb_type);
+  quotient <- crucible_fresh_var "quotient" limb_type;
+  crucible_execute_func [, (crucible_term quotient)];
+  ret <- crucible_fresh_var "_div_3_limbs_ret" limb_type;
+  crucible_return (crucible_term ret);
+
+};
+
+*/
+
+/* Easier (memory safety) specifications in SAW
+
+This is a set of definition culminating in `easyspec` and `easyspec_ret`, which give a
+fairly compact way to write a crucible Setup.
+
+Parameters for a function call are described in a list of parameter
+descriptions, each one of the following.  All of these functions
+have signature `String -> LLVMType -> parameter_spec`, with the string giving
+the parameter's name and the LLVMType its type.
+
+- `in_value(n, ty)` - a parameter passed by value
+- `in_ref(n,ty)` - a parameter passed by reference (that is, a pointer to
+   the type), and not modified in the call. Parameters like `const uint64_t *x`
+- `inout_ref(n,ty)` - a parameter passed by reference and modified by the call.
+- `out_ref(n,ty)` - a pointer to a variable that is written to, but not read.
+
+EXAMPLE:
+
+A C function like
+
+   uint32_t foo(uint32_t x; uint32_t y[10])
+
+might be specified as
+
+easyspec [in_value("x", llvm_int 32),
+          inout_ref("y", llvm_array 10 (llvm_int 32))];
+*/
+
+/*
+// parameter spec is a tuple (name, in?, out?, ptr?, type)
+
+typedef parameter_spec = (String,Bool,Bool,Bool,LLVMType);
+let in_value (n,ty)  = (n, true,false,false,ty);
+let in_ref (n,ty)    = (n, true,false, true,ty);
+let inout_ref (n,ty) = (n, true, true, true,ty);
+let out_ref (n,ty)   = (n,false, true, true, ty);
+
+// `declare_input` creates any pointers and fresh_vars needed for a parameter,
+// and returns argument-to-use-in-call
+
+let declare_input (n:String, inp, outp, ptrp, ty:LLVMType) =  do {
+  if ptrp then
+    do { let alloc_fn = if outp then crucible_alloc else crucible_alloc_readonly;
+         x <- alloc_fn ty;  // the pointer argument
+         if inp then do {
+           v <- crucible_fresh_var n ty; // the pointed-to initial value
+	   crucible_points_to x (crucible_term v);
+	   return x; }
+         else return x; }
+   else do {
+     // in_value only
+     v <- crucible_fresh_var n ty;
+     return (crucible_term v);
+     };
+   };
+
+
+// `declare_result` creates a fresh_var for the result, if needed, and points to it.
+
+let declare_result ((n:String, inp, outp, ptrp, ty:LLVMType), arg) =  do {
+  if outp then
+   do { v <- crucible_fresh_var n ty; // the pointed-to final value
+        let tv = (crucible_term v);
+	crucible_points_to arg tv;
+	return ();
+	}
+   else
+   return ();
+   };
+
+let zip =
+  rec f = \ xs ys ->
+    if null xs then []
+    else if null ys then []
+    else concat [(head xs, head ys)] (f (tail xs) (tail ys))
+  in f;
+
+// the payoff
+
+// with no return:
+let easyspec arglist = do {
+  args <- for arglist declare_input;
+  crucible_execute_func args;
+  for (zip arglist args) declare_result;
+  return ();
+  };
+
+// or if the function returns
+
+let easyspec_ret return_type arglist = do {
+  easyspec arglist;
+  r <- crucible_fresh_var "ret" return_type;
+  crucible_return (crucible_term r);
+  };
+
+////////////////
+
+//limb_t div_3_limbs(const limb_t dividend_top[2], limb_t d_lo, limb_t d_hi);
+//limb_t quot_rem_128(limb_t *quot_rem, const limb_t *divisor, limb_t quotient);
+//limb_t quot_rem_64(limb_t *quot_rem, const limb_t *divisor, limb_t quotient);
+
+div_3_limbs_ov <- admit "div_3_limbs"
+	       (easyspec_ret limb_type
+	                      [ out_ref ("dividend_top", (llvm_array 2 limb_type))
+			      , in_value ("d_lo", limb_type)
+			      , in_value ("d_hi", limb_type)
+			      ]);
+
+quot_rem_128_ov <- admit "quot_rem_128"
+  (easyspec_ret limb_type
+     [ out_ref ("quot_rem", limb_type)
+     , inout_ref ("divisor", limb_type)
+     , in_value ("quotient", limb_type)
+     ]);
+
+quot_rem_64_ov <- admit "quot_rem_128"
+  (easyspec_ret limb_type
+     [ out_ref ("quot_rem", limb_type)
+     , inout_ref ("divisor", limb_type)
+     , in_value ("quotient", limb_type)
+     ]);
+*/
+
+let assembly_overrides = concat_all [assembly_overrides, vec_zero_overrides,
+    		         	    [ div_by_2_mod_384_ov, div_by_2_mod_384_alias_ov
+				    ]]; // , div_3_limbs_ov, quot_rem_128_ov, quot_rem_64_ov]];
