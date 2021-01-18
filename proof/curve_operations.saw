@@ -411,13 +411,10 @@ let POINTonE1_dadd_nonnull_alias_1_2_spec = do {
   (a4, a4_ptr) <- ptr_to_fresh_readonly "a4" vec384_type;
   crucible_precond {{ POINTonE1_invariant out /\ POINTonE1_invariant p2 /\ fp_invariant a4 }};
   crucible_execute_func [out_ptr, out_ptr, p2_ptr, a4_ptr];
-  new_out <- crucible_fresh_var "new_POINTonE1_dadd_out" POINTonE1_type;
-  crucible_points_to out_ptr (crucible_term new_out);
-  crucible_postcond {{ POINTonE1_invariant new_out }};
-  crucible_postcond {{ POINTonE1_abs new_out == point_dadd Fp (POINTonE1_abs out) (POINTonE1_abs p2) (fp_abs a4) False}};
+  crucible_points_to out_ptr (crucible_term {{ POINTonE1_rep (point_dadd Fp (POINTonE1_abs out) (POINTonE1_abs p2) (fp_abs a4) False) }});
 };
 
-POINTonE1_dadd_nonnull_alias_1_2_ov <- custom_verify "POINTonE1_dadd"
+POINTonE1_dadd_nonnull_alias_1_2_ov <- really_custom_verify "POINTonE1_dadd"
                       (concat vec_overrides fp_overrides)
                       POINTonE1_dadd_nonnull_alias_1_2_spec
                       // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
