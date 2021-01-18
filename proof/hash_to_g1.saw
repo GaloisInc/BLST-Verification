@@ -12,44 +12,48 @@ let do_prove = false;
 
 include "proof-helpers.saw";
 include "hash_to_field.saw";
+include "fp_overrides.saw";
+include "vect.saw";
+include "curve_operations.saw";
 
-import "../spec/Parameters.cry";
-import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/HashToCurveE1.cry";
-import "../spec/iso_map_E1.cry";
+//import "../spec/Parameters.cry";
+//import "../spec/ShortWeierstrassCurve.cry";
+//import "../spec/HashToCurveE1.cry";
 import "../spec/implementation/CurveOperation.cry";
+import "../spec/implementation/HashToG1.cry";
 
 let blst_hash_to_g1_spec msg_len DST_len aug_len = do {
   p_ptr <- llvm_alloc POINTonE1_type;
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
   (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
-  llvm_execute_func [p_ptr, llvm_term {{ `msg_len : [64] }}, msg_ptr, llvm_term {{ `DST_len : [64] }}, DST_ptr, llvm_term {{ `aug_len : [64] }}, aug_ptr];
+  llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
 
-  // TODO: that's probably wrong (there are many projective points representing the same affine point)
-  // TODO: we should probably write a projective, implementation spec
-  llvm_points_to p_ptr (llvm_term {{ POINTonE1_rep (projectify E (HE1::hash_to_curve_opt (aug#msg, DST))) }});
+  llvm_points_to p_ptr (llvm_term {{ POINTonE1_rep (hash_to_curve_opt (aug#msg, DST)) }});
 };
 
 let map_to_isogenous_E1_spec = do {
   p_ptr <- llvm_alloc POINTonE1_type;
   (u, u_ptr) <- ptr_to_fresh_readonly "u" vec384_type;
   llvm_execute_func [p_ptr, u_ptr];
-  // TODO: that's probably wrong (there are many projective points representing the same affine point)
-  // TODO: we should probably write a projective, implementation spec for map_...swu
-  llvm_points_to p_ptr (llvm_term {{ POINTonE1_rep (projectify E (map_to_curve_simple_swu (fp_abs u))) }});
+  llvm_points_to p_ptr (llvm_term {{ POINTonE1_rep (map_to_curve_simple_swu (fp_abs u)) }});
 };
 
 let isogeny_map_to_E1_alias_spec = do {
   (out, out_ptr) <- ptr_to_fresh "out" POINTonE1_type;
   llvm_execute_func [out_ptr, out_ptr];
-  // TODO: that's probably wrong (there are many projective points representing the same affine point)
-  llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (projectify E (iso_map (POINTonE1_abs' out))) }});
+  llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (iso_map (POINTonE1_abs out)) }});
 };
 
 map_to_isogenous_E1_ov <- admit "map_to_isogenous_E1" map_to_isogenous_E1_spec;
 isogeny_map_to_E1_alias_ov <- admit "isogeny_map_to_E1" isogeny_map_to_E1_alias_spec;
 
-// TODO: override for dadd on the isogenous curve
+let aug_len = 48; // aug_len should be 96 or 48
+let msg_len = 32;
+let DST_len= 8;
+let hash_to_field_nelems = [2]; // the values of nelems for which we prove hash_to_field
+hash_to_field_ovs <- for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
 
-let overrides = concat hash_to_field_ovs [map_to_isogenous_E1_ov, isogeny_map_to_E1_alias_ov];
+let overrides = foldr concat [hash_to_field_ovs, curve_operations_e1_ovs] [map_to_isogenous_E1_ov, isogeny_map_to_E1_alias_ov];
+map_to_g1_ov <- really_custom_verify "blst_hash_to_g1" overrides (blst_hash_to_g1_spec msg_len DST_len aug_len)
+  (do {print_goal; assume_unsat;});

@@ -405,6 +405,32 @@ POINTonE1_dadd_nonnull_ov <- custom_verify "POINTonE1_dadd"
                           w4_unint_z3 fp_unints;
                           });
 
+let POINTonE1_dadd_nonnull_alias_1_2_spec = do {
+  (out, out_ptr) <- ptr_to_fresh "out" POINTonE1_type;
+  (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE1_type;
+  (a4, a4_ptr) <- ptr_to_fresh_readonly "a4" vec384_type;
+  crucible_precond {{ POINTonE1_invariant out /\ POINTonE1_invariant p2 /\ fp_invariant a4 }};
+  crucible_execute_func [out_ptr, out_ptr, p2_ptr, a4_ptr];
+  new_out <- crucible_fresh_var "new_POINTonE1_dadd_out" POINTonE1_type;
+  crucible_points_to out_ptr (crucible_term new_out);
+  crucible_postcond {{ POINTonE1_invariant new_out }};
+  crucible_postcond {{ POINTonE1_abs new_out == point_dadd Fp (POINTonE1_abs out) (POINTonE1_abs p2) (fp_abs a4) False}};
+};
+
+POINTonE1_dadd_nonnull_alias_1_2_ov <- custom_verify "POINTonE1_dadd"
+                      (concat vec_overrides fp_overrides)
+                      POINTonE1_dadd_nonnull_alias_1_2_spec
+                      // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
+                      (do {
+                          unfolding ["point_dadd", "POINTonE1_abs", "POINTonE1_affine_abs"
+                                    , "POINTonE1_invariant", "POINTonE1_affine_invariant"
+                                    , "POINTonE1_rep"
+                                    , "select"
+                                    , "/\\", "Fp", "prime_field_bv", "prime_field_integer", "prime_field"
+                                    , "F_is_zero"];
+                          simplify (addsimps structural_rewrites fp_simpset);
+                          w4_unint_z3 fp_unints;
+                          });
 
 // ... POINTonE1_dadd_affine
 
@@ -597,7 +623,7 @@ POINTonE1_cneg_ov <- custom_verify "POINTonE1_cneg"
                         // print_goal_readably_fp;
                         (w4_unint_z3 fp_unints); } ;
 
-let curve_operations_e1_ovs = [POINTonE1_add_alias_1_2_ov, POINTonE1_add_ov, POINTonE1_cneg_ov, POINTonE1_add_affine_ov, POINTonE1_double_ov, POINTonE1_double_alias_1_2_ov, POINTonE1_dadd_null_ov, POINTonE1_dadd_nonnull_ov, POINTonE1_is_equal_ov, POINTonE1_dadd_affine_ov, POINTonE1_affine_on_curve_ov, mul_by_b_onE1_alias_1_2_ov];
+let curve_operations_e1_ovs = [POINTonE1_add_alias_1_2_ov, POINTonE1_add_ov, POINTonE1_cneg_ov, POINTonE1_add_affine_ov, POINTonE1_double_ov, POINTonE1_double_alias_1_2_ov, POINTonE1_dadd_null_ov, POINTonE1_dadd_null_alias_1_2_ov, POINTonE1_dadd_null_alias_1_3_ov, POINTonE1_dadd_nonnull_ov, POINTonE1_dadd_nonnull_alias_1_2_ov, POINTonE1_is_equal_ov, POINTonE1_dadd_affine_ov, POINTonE1_affine_on_curve_ov, mul_by_b_onE1_alias_1_2_ov];
 
 ////////////////////////////////////////////////////////////////
 //
