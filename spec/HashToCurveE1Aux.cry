@@ -3,21 +3,69 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-// Copied from HashToCurveE1.cry
-// See https://github.com/GaloisInc/saw-script/issues/798 for the reason behind this
+// See https://github.com/GaloisInc/saw-script/issues/798 for the reason behind the existence of this file
 
-import Parameters
+// NOTE: Our ExtensionField and Polynonial modules represents elements
+// of extension fields as polynomials, and those as lists of elements
+// of a base field in descending order by degree, so that [a,b,c]
+// represents ax^2 + bx+c.
+//
+// Section 2.1 of the specification states that they are represented
+// "in ascending order by degree" so that [a,b,c] represents a+bx +
+// cx^2.  So we need reversals when transcribing the spec's defintions
+// into our Cryptol model, whenever lists of elements are used. These are
+// notes in the definitions belo0w
+
+module HashToCurveE1Aux where
+
+import Parameters as P
 import FieldExtras
+import ShortWeierstrassCurve as EC
 
-iso_map: (t_Fp, t_Fp) -> (t_Fp, t_Fp)
+type p = P::p // characteristic
+type q = P::p // cardinality
+type t_F = P::t_Fp // not really an extension
+type m = 1 // extension degree
+
+F = P::Fp // the field
+
+base_to_F [x] = x // trivial
+
+C = P::E // {base_field = F, a = F.field_zero, b = P::b}
+
+h_eff = 0xd201000000010001 // For clearing the cofactor
+clear_cofactor P = EC::mult C h_eff P
+
+is_square x =  y == 0 \/ y == 1 where
+    y = F_expt`{n=width q} F x `((q-1)/2)
+
+sqrt x = F_expt`{n=width p} F x `((p+1)/4) // the =3 (mod 4) variant
+
+// sgn0 for m=1, from Section 4.1 
+// sgn0 x = if x > `((p - 1) / 2) then -1 else 1 -- old Draft 6 definition
+sgn0: P::t_Fp -> [1]
+sgn0 x = [(P::from_Fp x)!0]
+
+inv0 x = F_expt`{n=width q} F x `(q-2) // but could be F.div (F.field_unit, x)
+
+// Constants from Section 8.8.1
+Z = 11
+A' = to_Fp 0x144698a3b8e9433d693a02c96d4982b0ea985383ee66a8d8e8981aefd881ac98936f8da0e0f97f5cf428082d584c1d
+B' = to_Fp 0x12e2908d11688030018b12e8753eee3b2016c1f0f24f4070a0b9c14fcef35ef55a23215a316ceaa5d1cc48e98e172be0
+
+// for the isogenous curve
+private
+    to_Fp = P::to_Fp
+
+iso_map: (t_F, t_F) -> (t_F, t_F)
 iso_map (x', y') = (x, y) where
-    x_powers = [Fp.field_unit] # [Fp.mul(x', xi) | xi <- x_powers]
-    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- x_powers]
-    x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
-    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- x_powers]
-    y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
-    x = Fp.div (x_num, x_den)
-    y = Fp.mul (y', Fp.div(y_num, y_den))
+    x_powers = [F.field_unit] # [F.mul(x', xi) | xi <- x_powers]
+    x_num = F_sum F [F.mul(ki, xi) | ki <- k1s | xi <- x_powers]
+    x_den = F.add (x_powers@10, F_sum F [F.mul(ki, xi) | ki <- k2s | xi <- x_powers])
+    y_num = F_sum F [F.mul(ki, xi) | ki <- k3s | xi <- x_powers]
+    y_den = F.add (x_powers@15, F_sum F [F.mul(ki, xi) | ki <- k4s | xi <- x_powers])
+    x = F.div (x_num, x_den)
+    y = F.mul (y', F.div(y_num, y_den))
 
 k1s = map to_Fp // k1s@i is "k_(1,i)" from the spec
    [ 0x11a05f2b1e833340b809101dd99815856b303e88a2d7005ff2627b56cdb4e2c85610c2d5f2e62d6eaeac1662734649b7
