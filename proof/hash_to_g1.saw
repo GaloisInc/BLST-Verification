@@ -24,6 +24,7 @@ include "ec_mult.saw"; // for e1_scalar_mult_alg_thms
 //import "../spec/HashToCurveE1.cry";
 import "../spec/implementation/CurveOperation.cry";
 import "../spec/implementation/HashToG1.cry";
+EC <- cryptol_load "../spec/ShortWeierstrassCurve.cry";
 
 // Specs
 
@@ -107,6 +108,39 @@ map_to_g1_nonnull_ov <- really_custom_verify "map_to_g1" overrides map_to_g1_non
       })
       z3; // override preconditions
     });
+
+// now let's prove the the multiplication-by-doubling code is correct
+let {{
+  h_eff = 0xd201000000010001 // For clearing the cofactor
+  clear_cofactor_ P = e1_scalar_mult (to_Fp h_eff) P
+}};
+
+
+// unfolding recursion by hand...
+dbl_n_add_2_unfold_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 2 q == point_dadd Fp (point_double Fp (point_double Fp p)) q Fp.field_zero True }}) w4;
+dbl_n_add_3_unfold_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 3 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp p))) q Fp.field_zero True }}) w4;
+dbl_n_add_9_unfold_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 9 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p))))))))) q Fp.field_zero True }}) w4;
+dbl_n_add_32_unfold_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 32 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))))))))))))))))))) q Fp.field_zero True }}) w4;
+dbl_n_add_16_unfold_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 16 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))) q Fp.field_zero True }}) w4;
+let dbl_n_add_unfold_thms = [dbl_n_add_2_unfold_thm, dbl_n_add_3_unfold_thm, dbl_n_add_9_unfold_thm, dbl_n_add_32_unfold_thm, dbl_n_add_16_unfold_thm];
+
+let prove_dbl_lemma n = really_custom_prove_cryptol {{ \p q -> affinify E (dbl_n_add p `n q) == add E (e1_scalar_mult (2^^(`n)) (affinify E p)) (affinify E q) }}
+  (do {
+    simplify (addsimps (foldr concat [e1_scalar_mult_alg_thms, e1_curve_op_thms, dbl_n_add_unfold_thms] []) (cryptol_ss ()));
+    simplify remove_higher_order_function_simpset;
+    w4_unint_z3 ["Fp","e1_scalar_mult"];
+  });
+
+dbl_lemmas <- for dbl_n_add_ns prove_dbl_lemma;
+
+mult_by_doubling_thm <- really_custom_prove_cryptol {{ \p -> affinify E (clear_cofactor p) == clear_cofactor_ (affinify E p) }}
+  (do {
+    unfolding ["clear_cofactor","clear_cofactor_"];
+    simplify (cryptol_ss ());
+    print_goal;
+    assume_unsat;
+  });
+
 
 let aug_len = 48; // aug_len should be 96 or 48
 let msg_len = 32;
