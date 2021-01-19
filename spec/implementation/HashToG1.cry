@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import Parameters (Fp, t_Fp, to_Fp, E)
+import Parameters (Fp, t_Fp, to_Fp, E, p)
 //import FieldExtras
 import ShortWeierstrassCurve (ProjectivePoint, AffinePoint)
 import ExpandMessage (Expandable)
 import HashToCurveE1 (hash_to_field)
-import HashToCurveE1Aux
+import HashToCurveE1Aux (A')
 import implementation::CurveOperation (point_dadd, point_add, point_double)
 
 map_to_curve_simple_swu: t_Fp -> ProjectivePoint t_Fp
@@ -24,15 +24,16 @@ iso_map p = undefined
 
 
 dbl_n_add: ProjectivePoint t_Fp -> Integer -> ProjectivePoint t_Fp -> ProjectivePoint t_Fp
-dbl_n_add out n p = point_add Fp p dn where
-  dn = if n < 1 then undefined
-    else if n == 1 then point_double Fp out
-    else point_double Fp (dbl_n_add out (n-1) p)
+dbl_n_add out n p = point_dadd Fp (db n out) p Fp.field_zero True where
+  db: Integer -> ProjectivePoint t_Fp -> ProjectivePoint t_Fp
+  db k x =
+    if k == 1 then point_double Fp x
+    else point_double Fp (db (k-1) x)
 
 clear_cofactor: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
 clear_cofactor p = out where
   out1 = point_double Fp p
-  out2 = point_add Fp out1 p // TODO: the C implementation uses add and not dadd; is this okay?
+  out2 = point_dadd Fp out1 p Fp.field_zero True // TODO: the C implementation uses add and not dadd; is this okay?
   out3 = dbl_n_add out2 2 p
   out4 = dbl_n_add out3 3 p
   out5 = dbl_n_add out4 9 p
