@@ -33,7 +33,7 @@ dbl_n_add out n p = point_dadd Fp (db n out) p Fp.field_zero True where
 clear_cofactor: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
 clear_cofactor p = out where
   out1 = point_double Fp p
-  out2 = point_add Fp out1 p // TODO: this is okay if (point_double p) != p or both are point_O, which seems to cover all cases
+  out2 = point_add Fp out1 p // NOTE: this is okay because (point_double p) != p or both are point_O
   out3 = dbl_n_add out2 2 p
   out4 = dbl_n_add out3 3 p
   out5 = dbl_n_add out4 9 p
