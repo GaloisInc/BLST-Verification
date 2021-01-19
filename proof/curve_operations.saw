@@ -414,7 +414,7 @@ let POINTonE1_dadd_nonnull_alias_1_2_spec = do {
   crucible_points_to out_ptr (crucible_term {{ POINTonE1_rep (point_dadd Fp (POINTonE1_abs out) (POINTonE1_abs p2) (fp_abs a4) False) }});
 };
 
-POINTonE1_dadd_nonnull_alias_1_2_ov <- really_custom_verify "POINTonE1_dadd"
+POINTonE1_dadd_nonnull_alias_1_2_ov <- custom_verify "POINTonE1_dadd"
                       (concat vec_overrides fp_overrides)
                       POINTonE1_dadd_nonnull_alias_1_2_spec
                       // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
@@ -666,7 +666,7 @@ POINTonE1_thms <- for
 let {{
   add' C p1 p2 = if p1 == p2 then point_O C else add C p1 p2
   }};
-  
+
 e1_curve_op_thms <- for
  [ {{ \ p1 -> affinify E (point_double Fp p1) == add E (affinify E p1) (affinify E p1) }}
  , {{ \ p1 p2 -> affinify E (point_add Fp p1 p2) == add' E (affinify E p1) (affinify E p2) }}
@@ -674,5 +674,5 @@ e1_curve_op_thms <- for
  , {{ \ p1 -> affinify E (point_neg Fp p1) == neg E (affinify E p1) }}
  , {{ \ p1 p2 a4 -> affinify E (point_dadd Fp p1 p2 a4 True) == add E (affinify E p1) (affinify E p2) }}
  , {{ \ p1 p2 -> affinify E (point_dadd_affine Fp p1 p2) == add E (affinify E p1) p2 }}
- ] 
+ ]
  admit_cryptol;

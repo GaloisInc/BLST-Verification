@@ -17,8 +17,15 @@ map_to_curve_simple_swu u = undefined
 iso_map: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
 iso_map p = undefined
 
+e1_scalar_mult: Integer -> AffinePoint t_Fp -> AffinePoint t_Fp
+e1_scalar_mult k P = if k < 0 then e1_scalar_mult (-k) (neg E P)
+                     else if k == 0 then point_O E
+                     else add E P (e1_scalar_mult (k-1) P)
+
 clear_cofactor: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
-clear_cofactor p = undefined // TODO: this is inline in the code, so needs a spec here
+h_eff = to_Fp 0xd201000000010001 // For clearing the cofactor
+clear_cofactor p = projectify E (e1_scalar_mult h_eff (affinify p))
+// TODO: this is not going to work as multiple projective points correspond to the same affine point. We don't know which one is computed by the C code.
 
 hash_to_curve_opt: {msg_len, DST_len}
                (fin msg_len, fin DST_len
