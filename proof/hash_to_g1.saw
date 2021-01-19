@@ -124,7 +124,7 @@ dbl_n_add_32_unfold_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) 
 dbl_n_add_16_unfold_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 16 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))) q Fp.field_zero True }}) w4;
 let dbl_n_add_unfold_thms = [dbl_n_add_2_unfold_thm, dbl_n_add_3_unfold_thm, dbl_n_add_9_unfold_thm, dbl_n_add_32_unfold_thm, dbl_n_add_16_unfold_thm];
 
-let prove_dbl_lemma n = really_custom_prove_cryptol {{ \p q -> affinify E (dbl_n_add p `n q) == add E (e1_scalar_mult (2^^(`n)) (affinify E p)) (affinify E q) }}
+let prove_dbl_lemma n = really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> affinify E (dbl_n_add p `n q) == add E (e1_scalar_mult (2^^(`n)) (affinify E p)) (affinify E q) }})
   (do {
     simplify (addsimps (foldr concat [e1_scalar_mult_alg_thms, e1_curve_op_thms, dbl_n_add_unfold_thms] []) (cryptol_ss ()));
     simplify remove_higher_order_function_simpset;
@@ -136,7 +136,8 @@ dbl_lemmas <- for dbl_n_add_ns prove_dbl_lemma;
 mult_by_doubling_thm <- really_custom_prove_cryptol {{ \p -> affinify E (clear_cofactor p) == clear_cofactor_ (affinify E p) }}
   (do {
     unfolding ["clear_cofactor","clear_cofactor_"];
-    simplify (cryptol_ss ());
+    simplify (addsimps (concat e1_scalar_mult_alg_thms dbl_lemmas) (cryptol_ss ())); // TODO: now rewrites the multiplicative terms; e1_scalar_mult_alg_thms does not seem to do it.
+    // TODO: also rewrite point_add to add (and not add'); also rewrite point_double to add
     print_goal;
     assume_unsat;
   });
