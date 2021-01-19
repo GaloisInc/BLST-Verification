@@ -59,7 +59,7 @@ let isogeny_map_to_E1_alias_spec = do {
 
 let dbl_n_add_spec n = do {
   (out, out_ptr) <- ptr_to_fresh "out" POINTonE1_type;
-  (p, p_ptr) <- ptr_to_fresh "out" POINTonE1_type;
+  (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE1_type;
   llvm_precond {{ POINTonE1_invariant out /\ POINTonE1_invariant p }};
   llvm_execute_func [out_ptr, llvm_term {{`n:[64]}}, p_ptr];
   llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (dbl_n_add (POINTonE1_abs out) `n (POINTonE1_abs p)) }});
@@ -70,46 +70,40 @@ let dbl_n_add_spec n = do {
 map_to_isogenous_E1_ov <- admit "map_to_isogenous_E1" map_to_isogenous_E1_spec;
 isogeny_map_to_E1_alias_ov <- admit "isogeny_map_to_E1" isogeny_map_to_E1_alias_spec;
 
-let overrides = foldr concat [curve_operations_e1_ovs] [map_to_isogenous_E1_ov, isogeny_map_to_E1_alias_ov];
-
 lemma_2 <- really_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 2 q == point_dadd Fp (point_double Fp (point_double Fp p)) q Fp.field_zero True }}) [];
 
 enable_experimental;
 
-let verify_dbl_n_add n = really_custom_verify "POINTonE1_dbl_n_add" overrides (dbl_n_add_spec n) //(do {print_goal; assume_unsat;});
+let verify_dbl_n_add n = really_custom_verify "POINTonE1_dbl_n_add" curve_operations_e1_ovs (dbl_n_add_spec n) //(do {print_goal; assume_unsat;});
   (do {
     simplify (addsimps POINTonE1_thms (cryptol_ss ()));
     goal_num_ite 3
       (do {
         unfolding ["dbl_n_add"];
-        //simplify (addsimps [lemma_2] (cryptol_ss ()));
-        //simplify basic_ss;
         simplify remove_higher_order_function_simpset;
-        print_clean_goal;
-        //assume_unsat;
         w4_unint_z3 (foldr concat [fp_unints, ec_mult_unints] ["point_double_fp","point_add_fp","POINTonE1_rep","Fp"]);
       })
-      (do {z3;});
+      z3;
   });
 
-verify_dbl_n_add 2;
+//verify_dbl_n_add 2;
 let dbl_n_add_ns = [2,3,9,32,16];
 dbl_n_add_ovs <- for dbl_n_add_ns verify_dbl_n_add;
 
 let a4_rep = parse_core "[bvNat 64 3415322872136444497, bvNat 64 9675504606121301699, bvNat 64 13284745414851768802, bvNat 64 2873609449387478652, bvNat 64 2897906769629812789, bvNat 64 1536947672689614213]"; // this is the representation of a4
 lemma_1 <- prove_cryptol {{ fp_invariant a4_rep == True}} [];
 
+let overrides = foldr concat [curve_operations_e1_ovs, dbl_n_add_ovs] [map_to_isogenous_E1_ov, isogeny_map_to_E1_alias_ov];
+
 map_to_g1_nonnull_ov <- really_custom_verify "map_to_g1" overrides map_to_g1_nonnull_spec
   (do {
     simplify (addsimps POINTonE1_thms (cryptol_ss ()));
-    goal_num_ite 70
-      (do {
-        unfolding ["map_to_g1"];
+    goal_num_ite 8
+      (do { // the main safety goal
+        unfolding ["map_to_g1","clear_cofactor"];
         simplify (addsimps [lemma_1] empty_ss);
-        print_clean_goal;
-        unfolding ["clear_cofactor"];
-        print_clean_goal;
-        assume_unsat;
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 ["point_double_fp","point_add_fp","point_dadd_fp","iso_map","dbl_n_add","map_to_curve_simple_swu"];
       })
       z3; // override preconditions
     });
