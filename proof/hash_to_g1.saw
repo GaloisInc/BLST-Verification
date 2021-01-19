@@ -33,8 +33,15 @@ let blst_hash_to_g1_spec msg_len DST_len aug_len = do {
   (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
   (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
   llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
-
   llvm_points_to p_ptr (llvm_term {{ POINTonE1_rep (hash_to_curve_opt (aug#msg, DST)) }});
+};
+
+let map_to_g1_nonnull_spec = do {
+  out_ptr <- llvm_alloc POINTonE1_type;
+  (u,u_ptr) <- ptr_to_fresh_readonly "u" vec384_type;
+  (v,v_ptr) <- ptr_to_fresh_readonly "v" vec384_type;
+  llvm_execute_func [out_ptr, u_ptr, v_ptr];
+  llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (map_to_g1 [fp_abs u, fp_abs v]) }});
 };
 
 let map_to_isogenous_E1_spec = do {
@@ -55,35 +62,30 @@ let isogeny_map_to_E1_alias_spec = do {
 map_to_isogenous_E1_ov <- admit "map_to_isogenous_E1" map_to_isogenous_E1_spec;
 isogeny_map_to_E1_alias_ov <- admit "isogeny_map_to_E1" isogeny_map_to_E1_alias_spec;
 
+let overrides = foldr concat [curve_operations_e1_ovs] [map_to_isogenous_E1_ov, isogeny_map_to_E1_alias_ov];
+
+let a4_rep = parse_core "[bvNat 64 3415322872136444497, bvNat 64 9675504606121301699, bvNat 64 13284745414851768802, bvNat 64 2873609449387478652, bvNat 64 2897906769629812789, bvNat 64 1536947672689614213 ]"; // this is the representation of a4
+lemma_1 <- prove_cryptol {{ fp_invariant a4_rep == True}} [];
+
+enable_experimental;
+
+map_to_g1_nonnull_ov <- really_custom_verify "map_to_g1" overrides map_to_g1_nonnull_spec
+  (do {
+    simplify (addsimps POINTonE1_thms (cryptol_ss ()));
+    goal_num_ite 70
+      (do {
+        unfolding ["map_to_g1"];
+        simplify (addsimps [lemma_1] empty_ss);
+        print_clean_goal;
+        assume_unsat;
+      })
+      z3; // override preconditions
+    });
+
 let aug_len = 48; // aug_len should be 96 or 48
 let msg_len = 32;
 let DST_len= 8;
 let hash_to_field_nelems = [2]; // the values of nelems for which we prove hash_to_field
 hash_to_field_ovs <- for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
 
-let overrides = foldr concat [hash_to_field_ovs, curve_operations_e1_ovs] [map_to_isogenous_E1_ov, isogeny_map_to_E1_alias_ov];
-
-let a4_rep = parse_core
-  "[  Prelude.bvNat 64 3415322872136444497
-    , Prelude.bvNat 64 9675504606121301699
-    , Prelude.bvNat 64 13284745414851768802
-    , Prelude.bvNat 64 2873609449387478652
-    , Prelude.bvNat 64 2897906769629812789
-    , Prelude.bvNat 64 1536947672689614213 ]"; // this is the representation of a4
-lemma_1 <- prove_cryptol {{ fp_invariant a4_rep == True}} [];
-
-enable_experimental;
-
-map_to_g1_ov <- really_custom_verify "blst_hash_to_g1" overrides (blst_hash_to_g1_spec msg_len DST_len aug_len)
-  (do {
-    simplify (addsimps POINTonE1_thms (cryptol_ss ()));
-    goal_num_ite 70
-      (do {
-        unfolding ["hash_to_curve_opt"];
-        simplify (addsimps [lemma_1] empty_ss);
-        print_clean_goal;
-        // TODO: apply basic algebraic rule to transform the additive term into a multiplication
-        assume_unsat;
-      })
-      z3; // override preconditions
-    });
+hash_to_g1_ov <- really_custom_verify "blst_hash_to_g1" (concat [map_to_g1_nonnull_ov] hash_to_field_ovs) (blst_hash_to_g1_spec msg_len DST_len aug_len) assume_unsat;

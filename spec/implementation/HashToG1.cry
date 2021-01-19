@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import Parameters (Fp, t_Fp, to_Fp)
+import Parameters (Fp, t_Fp, to_Fp, E)
 //import FieldExtras
-import ShortWeierstrassCurve (ProjectivePoint)
+import ShortWeierstrassCurve (ProjectivePoint, AffinePoint)
 import ExpandMessage (Expandable)
 import HashToCurveE1 (hash_to_field)
 import HashToCurveE1Aux
-import implementation::CurveOperation (point_dadd)
+import implementation::CurveOperation (point_dadd, point_add, point_double)
 
 map_to_curve_simple_swu: t_Fp -> ProjectivePoint t_Fp
 map_to_curve_simple_swu u = undefined
@@ -17,14 +17,30 @@ map_to_curve_simple_swu u = undefined
 iso_map: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
 iso_map p = undefined
 
-e1_scalar_mult: Integer -> AffinePoint t_Fp -> AffinePoint t_Fp
-e1_scalar_mult k P = if k < 0 then e1_scalar_mult (-k) (neg E P)
-                     else if k == 0 then point_O E
-                     else add E P (e1_scalar_mult (k-1) P)
+//e1_scalar_mult: Integer -> AffinePoint t_Fp -> AffinePoint t_Fp
+//e1_scalar_mult k P = if k < 0 then e1_scalar_mult (-k) (neg E P)
+                     //else if k == 0 then point_O E
+                     //else add E P (e1_scalar_mult (k-1) P)
+
+
+dbl_n_add: ProjectivePoint t_Fp -> Integer -> ProjectivePoint t_Fp -> ProjectivePoint t_Fp
+dbl_n_add out n p = point_add Fp p dn where
+  dn = if n < 1 then undefined
+    else if n == 1 then point_double Fp out
+    else point_double Fp (dbl_n_add out (n-1) p)
 
 clear_cofactor: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
-h_eff = to_Fp 0xd201000000010001 // For clearing the cofactor
-clear_cofactor p = projectify E (e1_scalar_mult h_eff (affinify p))
+clear_cofactor p = out where
+  out1 = point_double Fp p
+  out2 = point_add Fp out1 p // TODO: the C implementation uses add and not dadd; is this okay?
+  out3 = dbl_n_add out2 2 p
+  out4 = dbl_n_add out3 3 p
+  out5 = dbl_n_add out4 9 p
+  out6 = dbl_n_add out5 32 p
+  out = dbl_n_add out6 16 p
+
+//h_eff = to_Fp 0xd201000000010001 // For clearing the cofactor
+//clear_cofactor p = projectify E (e1_scalar_mult h_eff (affinify p))
 // TODO: this is not going to work as multiple projective points correspond to the same affine point. We don't know which one is computed by the C code.
 
 hash_to_curve_opt: {msg_len, DST_len}
@@ -34,10 +50,13 @@ hash_to_curve_opt: {msg_len, DST_len}
                , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384
                ) =>
                ([msg_len][8], [DST_len][8]) -> ProjectivePoint t_Fp
-hash_to_curve_opt (msg,dst) = P where
+hash_to_curve_opt (msg,dst) = map_to_g1 u where
     u = hash_to_field`{count=2} msg dst
-    Q0 = map_to_curve_simple_swu (u@0)
-    Q1 = map_to_curve_simple_swu (u@1)
+
+map_to_g1: [2]t_Fp -> ProjectivePoint t_Fp
+map_to_g1 uv = P where
+    Q0 = map_to_curve_simple_swu (uv@0)
+    Q1 = map_to_curve_simple_swu (uv@1)
     R = point_dadd Fp Q0 Q1 A' False // This is addition on the isogenous curve
     S = iso_map R
     P = clear_cofactor S
