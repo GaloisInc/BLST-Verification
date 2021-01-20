@@ -10,7 +10,7 @@ include "list_utils.saw";
 include "types.saw";
 
 m <- llvm_load_module "../build/llvm/libblst.a.bc";
-let do_prove = false;
+let do_prove = true;
 
 include "proof-helpers.saw";
 include "hash_to_field.saw";
@@ -71,11 +71,9 @@ let dbl_n_add_spec n = do {
 map_to_isogenous_E1_ov <- admit "map_to_isogenous_E1" map_to_isogenous_E1_spec;
 isogeny_map_to_E1_alias_ov <- admit "isogeny_map_to_E1" isogeny_map_to_E1_alias_spec;
 
-lemma_2 <- really_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 2 q == point_dadd Fp (point_double Fp (point_double Fp p)) q Fp.field_zero True }}) [];
-
 enable_experimental;
 
-let verify_dbl_n_add n = really_custom_verify "POINTonE1_dbl_n_add" curve_operations_e1_ovs (dbl_n_add_spec n) //(do {print_goal; assume_unsat;});
+let verify_dbl_n_add n = custom_verify "POINTonE1_dbl_n_add" curve_operations_e1_ovs (dbl_n_add_spec n)
   (do {
     simplify (addsimps POINTonE1_thms (cryptol_ss ()));
     goal_num_ite 3
@@ -96,7 +94,7 @@ lemma_1 <- prove_cryptol {{ fp_invariant a4_rep == True}} [];
 
 let overrides = foldr concat [curve_operations_e1_ovs, dbl_n_add_ovs] [map_to_isogenous_E1_ov, isogeny_map_to_E1_alias_ov];
 
-map_to_g1_nonnull_ov <- really_custom_verify "map_to_g1" overrides map_to_g1_nonnull_spec
+map_to_g1_nonnull_ov <- custom_verify "map_to_g1" overrides map_to_g1_nonnull_spec
   (do {
     simplify (addsimps POINTonE1_thms (cryptol_ss ()));
     goal_num_ite 8
@@ -117,14 +115,14 @@ let {{
 
 
 // unfolding recursion by hand...
-dbl_n_add_2_unfold_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 2 q == point_dadd Fp (point_double Fp (point_double Fp p)) q Fp.field_zero True }}) w4;
-dbl_n_add_3_unfold_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 3 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp p))) q Fp.field_zero True }}) w4;
-dbl_n_add_9_unfold_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 9 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p))))))))) q Fp.field_zero True }}) w4;
-dbl_n_add_32_unfold_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 32 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))))))))))))))))))) q Fp.field_zero True }}) w4;
-dbl_n_add_16_unfold_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 16 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))) q Fp.field_zero True }}) w4;
+dbl_n_add_2_unfold_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 2 q == point_dadd Fp (point_double Fp (point_double Fp p)) q Fp.field_zero True }}) w4;
+dbl_n_add_3_unfold_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 3 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp p))) q Fp.field_zero True }}) w4;
+dbl_n_add_9_unfold_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 9 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p))))))))) q Fp.field_zero True }}) w4;
+dbl_n_add_32_unfold_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 32 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))))))))))))))))))) q Fp.field_zero True }}) w4;
+dbl_n_add_16_unfold_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 16 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))) q Fp.field_zero True }}) w4;
 let dbl_n_add_unfold_thms = [dbl_n_add_2_unfold_thm, dbl_n_add_3_unfold_thm, dbl_n_add_9_unfold_thm, dbl_n_add_32_unfold_thm, dbl_n_add_16_unfold_thm];
 
-let prove_dbl_lemma n = really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> affinify E (dbl_n_add p `n q) == add E (e1_scalar_mult (2^^(`n)) (affinify E p)) (affinify E q) }})
+let prove_dbl_lemma n = custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> affinify E (dbl_n_add p `n q) == add E (e1_scalar_mult (2^^(`n)) (affinify E p)) (affinify E q) }})
   (do {
     simplify (addsimps (foldr concat [e1_scalar_mult_alg_thms, e1_curve_op_thms, dbl_n_add_unfold_thms] []) (cryptol_ss ()));
     simplify remove_higher_order_function_simpset;
@@ -136,9 +134,9 @@ dbl_lemmas <- for dbl_n_add_ns prove_dbl_lemma;
 // adding a point to its double can be done with POINTonE1_add (cheaper than dadd) because the double of a point is never equal to the point unless the point is point_O:
 add_double_lemma <- admit_cryptol {{ \p -> affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) }};
 
-mult_by_doubling_thm <- really_custom_prove_cryptol {{ \p -> affinify E (clear_cofactor p) == clear_cofactor_abs (affinify E p) }}
+mult_by_doubling_thm <- custom_prove_cryptol {{ \p -> affinify E (clear_cofactor p) == clear_cofactor_abs (affinify E p) }}
   (do {
-    unfolding ["clear_cofactor","clear_cofactor_"];
+    unfolding ["clear_cofactor","clear_cofactor_abs"];
     simplify (addsimps dbl_lemmas (cryptol_ss ()));
     simplify (addsimps (foldr concat [e1_curve_op_thms, e1_scalar_mult_alg_thms] [add_double_lemma]) (cryptol_ss ()));
     w4_unint_z3 ["E","e1_scalar_mult"];
@@ -155,12 +153,11 @@ let map_size_2_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y
 let map_size_2_eq_term = beta_reduce_term {{ \x -> map_size_2_term (\(y : Integer) -> fp_rep y) x == [fp_rep (x@0), fp_rep (x@1)]}};
 map_size_2_thm <- prove_cryptol map_size_2_eq_term [];
 
-hash_to_g1_ov <- really_custom_verify "blst_hash_to_g1" (concat [map_to_g1_nonnull_ov] hash_to_field_ovs) (blst_hash_to_g1_spec msg_len DST_len aug_len) (do {
+hash_to_g1_ov <- custom_verify "blst_hash_to_g1" (concat [map_to_g1_nonnull_ov] hash_to_field_ovs) (blst_hash_to_g1_spec msg_len DST_len aug_len) (do {
     unfolding ["hash_to_curve_opt"];
     unfolding ["map"];
     simplify (cryptol_ss ()); // rewrite cryptol map to SAW map
     simplify (addsimps [map_size_2_thm] empty_ss); // get rid of map
     simplify (addsimps fp_rep_thms empty_ss);// simplify (abs . rep)
-    print_goal;
     w4_unint_z3 ["map_to_g1","HashToCurveE1::hash_to_field"];}
   );
