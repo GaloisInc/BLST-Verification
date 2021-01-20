@@ -15,25 +15,33 @@ let do_prove = false;
 include "proof-helpers.saw";
 include "hash_to_field.saw";
 include "fp_overrides.saw";
-include "vect.saw";
-include "curve_operations.saw";
-include "ec_mult.saw";
+//include "vect.saw";
+//include "curve_operations.saw";
+//include "ec_mult.saw";
 
 //import "../spec/Parameters.cry";
 //import "../spec/ShortWeierstrassCurve.cry";
 //import "../spec/HashToCurveE1.cry";
 import "../spec/implementation/CurveOperation.cry";
-import "../spec/implementation/HashToG1.cry";
-EC <- cryptol_load "../spec/ShortWeierstrassCurve.cry";
+//import "../spec/implementation/HashToG1.cry";
+//EC <- cryptol_load "../spec/ShortWeierstrassCurve.cry";
 
 // Specs
 
 let blst_isogeny_map_to_E1_spec = do {
   out_ptr <- llvm_alloc POINTonE1_type;
   (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE1_type;
+  llvm_precond {{ POINTonE1_invariant p }};
   llvm_execute_func [out_ptr, p_ptr];
 };
 
 // Proofs
 
-blst_isogeny_map_to_E1_ov <- really_custom_verify "isogeny_map_to_E1" fp_overrides blst_isogeny_map_to_E1_spec assume_unsat;
+enable_experimental;
+
+blst_isogeny_map_to_E1_ov <- really_custom_verify "isogeny_map_to_E1" fp_overrides blst_isogeny_map_to_E1_spec 
+  (do {
+    unfolding ["POINTonE1_invariant"];
+    simplify (addsimps fp_rep_thms (cryptol_ss ()));
+    w4;
+  });
