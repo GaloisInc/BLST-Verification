@@ -1,0 +1,205 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+//
+// Definitions for fp12_tower.c and the proofs in fp12.saw
+//
+
+module implementation::Fp12 where
+
+import Common::Field
+import FieldExtras
+import ExtensionField
+import implementation::Types
+import implementation::Field
+import Parameters (p, Fp, t_Fp, to_Fp, from_Fp, t_Fp_2, Fp_2, t_Fp_6, Fp_6, t_Fp_12, Fp_12,
+                   u_plus_1, Fp_2_to_Fp_6)
+import Frobenius
+
+////////////////////////////////////////////////////////////////
+//
+// Frobenius_map
+
+// "nest" is just used to simplify the writing of the postcondition for the
+// frobenius_map functions.  However, there is a simpler way, which is used for
+// frobenius_map_fp12.
+nest f x (n:[64]) =
+    if n==0 then x
+     | n == 1 then f x
+     | n == 2 then f (f x)
+    else f (f (f x))
+
+
+// constants for the various Frobenius maps
+rep_v_frobenius_constant = // fp2_rep v_frobenius_constant
+    [[0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000],
+     [0xcd03c9e48671f071, 0x5dab22461fcda5d2, 0x587042afd3851b95,
+      0x8eb60ebe01bacb9e, 0x03f97d6e83d050d2, 0x18f0206554638741]]
+
+rep_v_frobenius_constant_sq =  // fp2_rep v_frobenius_constant_sq
+    [[0x890dc9e4867545c3, 0x2af322533285a5d5, 0x50880866309b7e2c,
+      0xa20d1b8c7e881024, 0x14e4f04fe2db9068, 0x14e56d3f1564853a],
+     [0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000]]
+
+rep_v_frobenius_constant_sq_const_part =  // fp_rep (v_frobenius_constant!0)
+    [0x890dc9e4867545c3, 0x2af322533285a5d5, 0x50880866309b7e2c,
+     0xa20d1b8c7e881024, 0x14e4f04fe2db9068, 0x14e56d3f1564853a]
+
+// w_frobenius_constant has the form [0,0,c], so we can multiply easily using fp2_mul,
+// and do not need to store all the zeros
+rep_w_frobenius_constant_const_part = // fp2_rep (w_frobenius_constant!0)
+    [[0x07089552b319d465, 0xc6695f92b50a8313, 0x97e83cccd117228f,
+      0xa35baecab2dc29ee, 0x1ce393ea5daace4d, 0x08f2220fb0fb66eb],
+     [0xb2f66aad4ce5d646, 0x5842a06bfc497cec, 0xcf4895d42599d394,
+      0xc11b9cba40a8e8d0, 0x2e3813cbe5a0de89, 0x110eefda88847faf]]
+
+// The double Frobenius for fp6 and fp12 have similar formulas to the single
+v_frobenius_constant_2 = F_expt f2 u_plus_1 (`((p*p-1)/3):[762])
+v_frobenius_constant_2_sq = Fp_2.sq v_frobenius_constant_2
+
+w_frobenius_constant_2_part = F_expt f2 u_plus_1 (`((p*p-1)/6):[762])
+  
+rep_v_frobenius_constant_2 = 
+    [[0x30f1361b798a64e8, 0xf3b8ddab7ece5a2a, 0x16a8ca3ac61577f7,
+      0xc26a2ff874fd029b, 0x3636b76660701c6e, 0x051ba4ab241b6160],
+     [0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000]]
+
+rep_v_frobenius_constant_2_sq_const_part =
+    [0xcd03c9e48671f071, 0x5dab22461fcda5d2, 0x587042afd3851b95,
+     0x8eb60ebe01bacb9e, 0x03f97d6e83d050d2, 0x18f0206554638741]
+
+rep_w_frobenius_constant_2_const_part =
+    [[0xecfb361b798dba3a, 0xc100ddb891865a2c, 0x0ec08ff1232bda8e,
+      0xd5c13cc6f1ca4721, 0x47222a47bf7b5c04, 0x0110f184e51c5f59],
+     [0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000]]
+
+fp6_frobenius2 [a,b,c] = [a',b',c'] where
+    a' = f2.mul (v_frobenius_constant_2_sq, fp2_frobenius (fp2_frobenius a))
+    b' = f2.mul (v_frobenius_constant_2, fp2_frobenius (fp2_frobenius b))
+    c' = fp2_frobenius (fp2_frobenius c)
+
+fp12_frobenius2 [a,b] = [a',b'] where
+    a' = Fp_6.mul (Fp_2_to_Fp_6 w_frobenius_constant_2_part,
+                   fp6_frobenius (fp6_frobenius a))
+    b' = fp6_frobenius (fp6_frobenius b)
+
+// for triple Frobenius
+v_frobenius_constant_3 = F_expt f2 u_plus_1 (`((p*p*p-1)/3):[1143])
+v_frobenius_constant_3_sq = Fp_2.sq v_frobenius_constant_3
+
+w_frobenius_constant_3_part = F_expt f2 u_plus_1 (`((p*p*p-1)/6):[1143])
+  
+rep_v_frobenius_constant_3 = 
+    [[0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000],
+     [0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba,
+      0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]]
+
+rep_v_frobenius_constant_3_sq_const_part =
+    [0x43f5fffffffcaaae, 0x32b7fff2ed47fffd, 0x07e83a49a2e99d69,
+     0xeca8f3318332bb7a, 0xef148d1ea0f4c069, 0x040ab3263eff0206]
+
+rep_w_frobenius_constant_3_const_part =
+    [[0x3e2f585da55c9ad1, 0x4294213d86c18183, 0x382844c88b623732,
+      0x92ad2afd19103e18, 0x1d794e4fac7cf0b9, 0x0bd592fc7d825ec8],
+     [0x7bcfa7a25aa30fda, 0xdc17dec12a927e7c, 0x2f088dd86b4ebef1,
+      0xd1ca2087da74d4a7, 0x2da2596696cebc1d, 0x0e2b7eedbbfd87d2]]
+
+fp6_frobenius3 [a,b,c] = [a',b',c'] where
+    a' = f2.mul (v_frobenius_constant_3_sq, fp2_frobenius a)
+    b' = f2.mul (v_frobenius_constant_3, fp2_frobenius b)
+    c' = fp2_frobenius c
+
+fp12_frobenius3 [a,b] = [a',b'] where
+    a' = Fp_6.mul (Fp_2_to_Fp_6 w_frobenius_constant_3_part,
+                   fp6_frobenius (fp6_frobenius (fp6_frobenius a)))
+    b' = fp6_frobenius (fp6_frobenius (fp6_frobenius b))
+
+////////////////////////////////////////////////////////////////
+//
+// Cyclotomic squaring
+
+/* The "cyclotomic squaring" operation is described in
+   Robert Granger amd Michael Scott,
+   "Faster Squaring in the Cyclotomic Subgroup of Sixth Degree Extensions"
+   eprint.iacr.org/2009/565
+
+  This expresses a value in Fp_12 as a cubic expension of a quadratic extension,
+  whereas in most of blst we consider it as a quadratic extension of a cubic extension of Fp_2.
+  The Fp_4 we use here is used only for the purposes of this cyclotomic squaring operation.
+
+  Fp_4 = Fp_2[y]/(y^2 - u - 1)
+  Fp_12 is isomorphic to Fp_4[x]/(x^3 - y)
+
+  Noting that in the regular Fp_12 construction of the Parameters module, we have
+  v^3 = u+1 and w^2 = v, we have w^6 = u+1 and so (w^3)^2 = u+1.  So for the alternative
+  construction we have y = w^3 and x = w.
+*/
+
+type t_Fp_4 = [2]t_Fp_2
+Fp_4 = extension_field Fp_2 [Fp_2.field_zero, u_plus_1]
+y_fp4: t_Fp_4
+y_fp4 = [Fp_2.field_unit, Fp_2.field_zero] // = poly_x Fp_4
+
+type t_Fp_12_alt = [3]t_Fp_4
+Fp_12_alt = extension_field Fp_4 [Fp_4.field_zero, Fp_4.field_zero, y_fp4]
+
+/* In the standard tower, [[a,b,c],[d,e,f]] means
+  (av^2+bv+c)w + (dv^2+ev+f), which, given v = w^2, equals aw^5 + dw^4 + bw^3 + ew^2 + cw + f
+
+  In the alternative tower , [[A,B], [C,D], [E,F]] means
+  (Ay + B)x^2 + (Cy + D)x + (Ey + F),
+  and given y = w^3 and x = w, equals Aw^5 + Cw^4 + Ew^3 + Bw^2 + Dw + F
+
+  These two are equal iff A=a, B=e, C=d, D=c, E=b, and F=f
+*/
+
+Fp_12_to_Fp_12_alt: t_Fp_12 -> t_Fp_12_alt
+Fp_12_to_Fp_12_alt [[a,b,c],[d,e,f]] = [[a,e], [d,c], [b,f]]
+
+Fp_12_alt_to_Fp_12: t_Fp_12_alt -> t_Fp_12
+Fp_12_alt_to_Fp_12 [[A,B], [C,D], [E,F]] = [[A,E,D], [C,B,F]]
+
+conjugate_fp4: t_Fp_4 -> t_Fp_4
+conjugate_fp4 [x,y] = [Fp_2.neg x, y]
+
+// definition from the paper
+
+cyclotomic_square_alt: t_Fp_12_alt -> t_Fp_12_alt
+cyclotomic_square_alt [c,b,a] = [C,B,A] where // paper has a+b+cx^2 and A + Bx + Cx^2
+    A = Fp_4.sub (x3 (Fp_4.sq a), x2 (conjugate_fp4 a))
+    B = Fp_4.add (x3 (Fp_4.mul (y_fp4, Fp_4.sq c)), x2 (conjugate_fp4 b))
+    C = Fp_4.sub (x3 (Fp_4.sq b), x2 (conjugate_fp4 c))
+    x2 x = Fp_4.add (x, x) // x+x = 2*x
+    x3 x = Fp_4.add (x, x2 x) // x + 2*x = 3*x
+
+cyclotomic_square_fp12: t_Fp_12 -> t_Fp_12
+cyclotomic_square_fp12 x =
+    Fp_12_alt_to_Fp_12 (cyclotomic_square_alt (Fp_12_to_Fp_12_alt x))
+
+// .. and as-implemented (in abstract space)
+
+cyclotomic_square_fp12_imp: t_Fp_12 -> t_Fp_12
+cyclotomic_square_fp12_imp [[a12, a11, a10], [a02, a01, a00]] = r where
+    // aij, tij, and rij names correspond to the indices of the implementation,
+    // i.e., reversed from abstract
+    [t01, t00] = Fp_4.sq [a11, a00]
+    [t11, t10] = Fp_4.sq [a02, a10]
+    [t21, t20] = Fp_4.sq [a12, a01]
+    r00 = f_sub t00 a00
+    r01 = f_sub t10 a01
+    r02 = f_sub t20 a02
+
+    r10 = f_add (Fp_2.mul (u_plus_1, t21)) a10
+    r11 = f_add t01 a11
+    r12 = f_add t11 a12
+
+    r = [[r12, r11, r10], [r02, r01, r00]]
+    f_sub x y = Fp_2.add (s, Fp_2.add (s, x)) where s = Fp_2.sub (x, y)
+    f_add x y = Fp_2.add (s, Fp_2.add (s, x)) where s = Fp_2.add (x, y)

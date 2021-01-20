@@ -7,7 +7,7 @@ let vec512_type = (llvm_array 8 (llvm_int 64));
 let vec384_type = (llvm_array 6 (llvm_int 64));
 // let vec384_type = llvm_int 384;
 let vec768_type = (llvm_array 12 (llvm_int 64));
-let vec768x_type = (llvm_array 24 (llvm_int 64));
+let vec768x_type = llvm_array 2 vec768_type;
 let vec384x_type = (llvm_array 2 vec384_type);
 
 let limb_type = (llvm_int 64);
