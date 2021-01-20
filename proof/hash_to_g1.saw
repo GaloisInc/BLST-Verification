@@ -69,6 +69,15 @@ let dbl_n_add_spec n = do {
 };
 // Proofs
 
+
+/*
+  We verify map_to_g1 in two steps: first we prove it implements a low-level
+  Cryptol specification (where clear_cofactor uses multiplication by doubling),
+  and then we prove that the low-leve Cryptol specification implements the
+  higher-lever specification (where clear_cofactor is just a multiplication).
+  This was probably unecessary, and it could have been done in a single step.
+*/
+
 map_to_isogenous_E1_ov <- admit "map_to_isogenous_E1" map_to_isogenous_E1_spec;
 isogeny_map_to_E1_alias_ov <- admit "isogeny_map_to_E1" isogeny_map_to_E1_alias_spec;
 
@@ -120,7 +129,6 @@ let {{
   clear_cofactor_abs P = e1_scalar_mult (to_Fp h_eff) P
 }};
 
-
 // unfolding recursion by hand...
 dbl_n_add_2_unfold_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 2 q == point_dadd Fp (point_double Fp (point_double Fp p)) q Fp.field_zero True }}) w4;
 dbl_n_add_3_unfold_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 3 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp p))) q Fp.field_zero True }}) w4;
@@ -148,6 +156,10 @@ mult_by_doubling_thm <- custom_prove_cryptol {{ \p -> affinify E (clear_cofactor
     simplify (addsimps (foldr concat [e1_curve_op_thms, e1_scalar_mult_alg_thms] [add_double_lemma]) (cryptol_ss ()));
     w4_unint_z3 ["E","e1_scalar_mult"];
   });
+
+// TODO: use the above thm to obtain an end-to-end proof of map_to_g1
+
+// now hash_to_g1
 
 let aug_len = 48; // aug_len should be 96 or 48
 let msg_len = 32;
