@@ -33,15 +33,24 @@ let blst_isogeny_map_to_E1_spec = do {
   (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE1_type;
   llvm_precond {{ POINTonE1_invariant p }};
   llvm_execute_func [out_ptr, p_ptr];
+  new_out <- llvm_fresh_var "new_blst_isogeny_map_to_E1_out" POINTonE1_type;
+  llvm_points_to out_ptr (llvm_term new_out);
+  llvm_postcond {{ POINTonE1_abs' new_out == HE1::iso_map (POINTonE1_abs' p) }};
 };
 
 // Proofs
 
 enable_experimental;
 
-blst_isogeny_map_to_E1_ov <- really_custom_verify "isogeny_map_to_E1" fp_overrides blst_isogeny_map_to_E1_spec 
+blst_isogeny_map_to_E1_ov <- really_custom_verify "isogeny_map_to_E1" fp_overrides blst_isogeny_map_to_E1_spec
   (do {
-    unfolding ["POINTonE1_invariant"];
-    simplify (addsimps fp_rep_thms (cryptol_ss ()));
-    w4;
+    goal_num_ite 176
+      (do { //  the main safety goal
+        assume_unsat
+      })
+      (do { // discharge simulation side-conditions
+        unfolding ["POINTonE1_invariant"];
+        simplify (addsimps fp_rep_thms (cryptol_ss ()));
+        w4;
+      });
   });
