@@ -19,11 +19,9 @@ include "vect.saw";
 include "curve_operations.saw";
 include "ec_mult.saw";
 
-let do_prove = true;
-
 //import "../spec/Parameters.cry";
 //import "../spec/ShortWeierstrassCurve.cry";
-//import "../spec/HashToCurveE1.cry";
+HE1 <- cryptol_load "../spec/HashToCurveE1Aux.cry";
 import "../spec/implementation/CurveOperation.cry";
 import "../spec/implementation/HashToG1.cry";
 EC <- cryptol_load "../spec/ShortWeierstrassCurve.cry";
@@ -123,12 +121,6 @@ map_to_g1_nonnull_ov <- custom_verify "map_to_g1" overrides map_to_g1_nonnull_sp
       z3; // override preconditions
     });
 
-// now let's prove the the multiplication-by-doubling code is correct
-let {{
-  h_eff = 0xd201000000010001 // For clearing the cofactor
-  clear_cofactor_abs P = e1_scalar_mult (to_Fp h_eff) P
-}};
-
 // unfolding recursion by hand...
 dbl_n_add_2_unfold_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 2 q == point_dadd Fp (point_double Fp (point_double Fp p)) q Fp.field_zero True }}) w4;
 dbl_n_add_3_unfold_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 3 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp p))) q Fp.field_zero True }}) w4;
@@ -149,9 +141,15 @@ dbl_lemmas <- for dbl_n_add_ns prove_dbl_lemma;
 // adding a point to its double can be done with POINTonE1_add (cheaper than dadd) because the double of a point is never equal to the point unless the point is point_O:
 add_double_lemma <- admit_cryptol {{ \p -> affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) }};
 
-mult_by_doubling_thm <- custom_prove_cryptol {{ \p -> affinify E (clear_cofactor p) == clear_cofactor_abs (affinify E p) }}
+// rewrite multl to e1_scalar_mult because the rewrite rules in ec_mult.saw use e1_scalar_mult:
+scalar_mult_lemma <-admit_cryptol (rewrite (cryptol_ss ()) {{ \p -> EC::mult HE1::C HE1::h_eff p == e1_scalar_mult (to_Fp HE1::h_eff) p }});
+
+// now let's prove the the multiplication-by-doubling code is correct
+
+mult_by_doubling_thm <- really_custom_prove_cryptol {{ \p -> affinify E (clear_cofactor p) == HE1::clear_cofactor (affinify E p) }}
   (do {
-    unfolding ["clear_cofactor","clear_cofactor_abs"];
+    unfolding ["clear_cofactor","HE1::clear_cofactor"];
+    simplify (addsimp scalar_mult_lemma empty_ss);
     simplify (addsimps dbl_lemmas (cryptol_ss ()));
     simplify (addsimps (foldr concat [e1_curve_op_thms, e1_scalar_mult_alg_thms] [add_double_lemma]) (cryptol_ss ()));
     w4_unint_z3 ["E","e1_scalar_mult"];
