@@ -10,14 +10,16 @@ include "list_utils.saw";
 include "types.saw";
 
 m <- llvm_load_module "../build/llvm/libblst.a.bc";
-let do_prove = true;
+let do_prove = false;
 
 include "proof-helpers.saw";
 include "hash_to_field.saw";
 include "fp_overrides.saw";
 include "vect.saw";
 include "curve_operations.saw";
-include "ec_mult.saw"; // for e1_scalar_mult_alg_thms
+include "ec_mult.saw";
+
+let do_prove = true;
 
 //import "../spec/Parameters.cry";
 //import "../spec/ShortWeierstrassCurve.cry";
@@ -65,7 +67,6 @@ let dbl_n_add_spec n = do {
   llvm_execute_func [out_ptr, llvm_term {{`n:[64]}}, p_ptr];
   llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (dbl_n_add (POINTonE1_abs out) `n (POINTonE1_abs p)) }});
 };
-
 // Proofs
 
 map_to_isogenous_E1_ov <- admit "map_to_isogenous_E1" map_to_isogenous_E1_spec;
@@ -89,7 +90,13 @@ let verify_dbl_n_add n = custom_verify "POINTonE1_dbl_n_add" curve_operations_e1
 let dbl_n_add_ns = [2,3,9,32,16];
 dbl_n_add_ovs <- for dbl_n_add_ns verify_dbl_n_add;
 
-let a4_rep = parse_core "[bvNat 64 3415322872136444497, bvNat 64 9675504606121301699, bvNat 64 13284745414851768802, bvNat 64 2873609449387478652, bvNat 64 2897906769629812789, bvNat 64 1536947672689614213]"; // this is the representation of a4
+let a4_rep = (rewrite (cryptol_ss ())
+    {{ [  3415322872136444497
+        , 9675504606121301699
+        , 13284745414851768802
+        , 2873609449387478652
+        , 2897906769629812789
+        , 1536947672689614213]:[6][64] }});
 lemma_1 <- prove_cryptol {{ fp_invariant a4_rep == True}} [];
 
 let overrides = foldr concat [curve_operations_e1_ovs, dbl_n_add_ovs] [map_to_isogenous_E1_ov, isogeny_map_to_E1_alias_ov];
