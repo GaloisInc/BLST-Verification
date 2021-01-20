@@ -1,0 +1,39 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+// Imports
+
+include "helpers.saw";
+include "list_utils.saw";
+include "types.saw";
+
+m <- llvm_load_module "../build/llvm/libblst.a.bc";
+let do_prove = false;
+
+include "proof-helpers.saw";
+include "hash_to_field.saw";
+include "fp_overrides.saw";
+include "vect.saw";
+include "curve_operations.saw";
+include "ec_mult.saw";
+
+//import "../spec/Parameters.cry";
+//import "../spec/ShortWeierstrassCurve.cry";
+//import "../spec/HashToCurveE1.cry";
+import "../spec/implementation/CurveOperation.cry";
+import "../spec/implementation/HashToG1.cry";
+EC <- cryptol_load "../spec/ShortWeierstrassCurve.cry";
+
+// Specs
+
+let blst_isogeny_map_to_E1_spec = do {
+  out_ptr <- llvm_alloc POINTonE1_type;
+  (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE1_type;
+  llvm_execute_func [out_ptr, p_ptr];
+};
+
+// Proofs
+
+blst_isogeny_map_to_E1_ov <- really_custom_verify "isogeny_map_to_E1" fp_overrides blst_isogeny_map_to_E1_spec assume_unsat;
