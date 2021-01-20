@@ -112,7 +112,7 @@ map_to_g1_nonnull_ov <- really_custom_verify "map_to_g1" overrides map_to_g1_non
 // now let's prove the the multiplication-by-doubling code is correct
 let {{
   h_eff = 0xd201000000010001 // For clearing the cofactor
-  clear_cofactor_ P = e1_scalar_mult (to_Fp h_eff) P
+  clear_cofactor_abs P = e1_scalar_mult (to_Fp h_eff) P
 }};
 
 
@@ -133,15 +133,16 @@ let prove_dbl_lemma n = really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ 
 
 dbl_lemmas <- for dbl_n_add_ns prove_dbl_lemma;
 
-mult_by_doubling_thm <- really_custom_prove_cryptol {{ \p -> affinify E (clear_cofactor p) == clear_cofactor_ (affinify E p) }}
+// adding a point to its double can be done with POINTonE1_add (cheaper than dadd) because the double of a point is never equal to the point unless the point is point_O:
+add_double_lemma <- admit_cryptol {{ \p -> affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) }};
+
+mult_by_doubling_thm <- really_custom_prove_cryptol {{ \p -> affinify E (clear_cofactor p) == clear_cofactor_abs (affinify E p) }}
   (do {
     unfolding ["clear_cofactor","clear_cofactor_"];
-    simplify (addsimps (concat e1_scalar_mult_alg_thms dbl_lemmas) (cryptol_ss ())); // TODO: now rewrites the multiplicative terms; e1_scalar_mult_alg_thms does not seem to do it.
-    // TODO: also rewrite point_add to add (and not add'); also rewrite point_double to add
-    print_goal;
-    assume_unsat;
+    simplify (addsimps dbl_lemmas (cryptol_ss ())); // TODO: now rewrites the multiplicative terms; e1_scalar_mult_alg_thms does not seem to do it.
+    simplify (addsimps (foldr concat [e1_curve_op_thms, e1_scalar_mult_alg_thms] [add_double_lemma]) (cryptol_ss ()));
+    w4_unint_z3 ["E","e1_scalar_mult"];
   });
-
 
 let aug_len = 48; // aug_len should be 96 or 48
 let msg_len = 32;
