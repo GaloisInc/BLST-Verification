@@ -139,7 +139,7 @@ add_double_lemma <- admit_cryptol {{ \p -> affinify E (point_add Fp (point_doubl
 mult_by_doubling_thm <- really_custom_prove_cryptol {{ \p -> affinify E (clear_cofactor p) == clear_cofactor_abs (affinify E p) }}
   (do {
     unfolding ["clear_cofactor","clear_cofactor_"];
-    simplify (addsimps dbl_lemmas (cryptol_ss ())); // TODO: now rewrites the multiplicative terms; e1_scalar_mult_alg_thms does not seem to do it.
+    simplify (addsimps dbl_lemmas (cryptol_ss ()));
     simplify (addsimps (foldr concat [e1_curve_op_thms, e1_scalar_mult_alg_thms] [add_double_lemma]) (cryptol_ss ()));
     w4_unint_z3 ["E","e1_scalar_mult"];
   });
