@@ -19,6 +19,8 @@ import "../spec/Frobenius.cry";
 import "../spec/implementation/Field.cry";
 import "../spec/implementation/Fp12.cry";
 
+let vec384fp4_type = llvm_array 2 vec384x_type; // only used in this file
+
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
@@ -93,24 +95,25 @@ let frobenius_map_fp12_alias_spec n = do {
 };
 
 
-// not done
-
 // The cyclotomic square returns the square of its input PROVIDED that input is in the
 // "cyclotomic subgroup" -- that is, its, `p^4-p^2+1` power is 1.
 let cyclotomic_sqr_fp12_spec = do {
   ret_ptr <- crucible_alloc vec384fp12_type;
-  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  crucible_precond {{ fp12_invariant a }};
   crucible_execute_func [ret_ptr, a_ptr];
-  new_cyclotomic_sqr_fp12_ret <- crucible_fresh_var "new_cyclotomic_sqr_fp12_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_cyclotomic_sqr_fp12_ret);
+  crucible_points_to ret_ptr (crucible_term {{ fp12_rep (cyclotomic_sqr_fp12 (fp12_abs a)) }});
 };
 
 let cyclotomic_sqr_fp12_alias_spec = do {
-  (_, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
+  (a, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
+  crucible_precond {{ fp12_invariant a }};
   crucible_execute_func [ret_ptr, ret_ptr];
-  new_cyclotomic_sqr_fp12_ret <- crucible_fresh_var "new_cyclotomic_sqr_fp12_alias_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_cyclotomic_sqr_fp12_ret);
+  crucible_points_to ret_ptr (crucible_term {{ fp12_rep (cyclotomic_sqr_fp12 (fp12_abs a)) }});
+
 };
+
+// not done
 
 
 let mul_by_xy00z0_fp12_spec = do {
@@ -203,6 +206,7 @@ let expand_fp2 = do {
   };
 
 let print_goal_nicely = do {
+    unfolding ["/\\", "\\/", "==>"];
     expand_fp2;
     simplify prop_simpset;
     print_goal;
@@ -302,6 +306,23 @@ let frobenius_map_fp6_alias_spec n = do {
   crucible_precond {{ fp6_invariant a }};
   crucible_execute_func [ret_ptr, ret_ptr, crucible_term {{ `n:[64] }}];
   crucible_points_to ret_ptr (crucible_term {{ fp6_rep (nest fp6_frobenius (fp6_abs a) `n) }} );
+};
+
+let sqr_fp4_spec = do {
+  ret_ptr <- crucible_alloc vec384fp4_type;
+  (a0, a0_ptr) <- ptr_to_fresh_readonly "a0" vec384x_type;
+  (a1, a1_ptr) <- ptr_to_fresh_readonly "a1" vec384x_type;
+  crucible_precond {{ fp2_invariant a0 }};
+  crucible_precond {{ fp2_invariant a1 }};
+  crucible_execute_func [ret_ptr, a0_ptr, a1_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp4_rep (Fp_4.sq (fp4_abs [a0, a1])) }});
+};
+
+let mul_by_u_plus_1_fp2_alias_spec = do {
+  (ret,ret_ptr) <- ptr_to_fresh "ret" vec384x_type;
+  crucible_precond {{ fp2_invariant ret }};
+  crucible_execute_func [ret_ptr, ret_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp2_rep (Fp_2.mul (u_plus_1, fp2_abs ret)) }});
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -654,8 +675,45 @@ frobenius_map_fp12_3_alias_ov <- custom_verify "frobenius_map_fp12"
        unfolding [ "fp12_rep", "fp12_abs", "fp12_invariant", "fp12_frobenius3", "f6"
                  , "fp6_rep", "fp6_abs", "fp6_invariant"];
        simplify (addsimps frobenius_12_3_theorems fp2_simpset);
-       w4_unint_z3 fp2_unints; };
+       w4_unint_z3 (concat ["Fp_4"] fp2_unints); };
 
+
+// Cyclotomic squaring
+
+more_fp2_alg_thms <- for
+  [ {{ \ x y -> Fp_2.add(x, Fp_2.normalize y) == Fp_2.add (x, y) }}
+  , {{ \ x y -> Fp_2.neg (Fp_2.add (x, y)) == Fp_2.add (Fp_2.neg x, Fp_2.neg y) }}
+  ] (\ t -> prove_cryptol t []);
+
+let all_fp2_alg_thms = concat fp2_alg_thms more_fp2_alg_thms;
+
+sqr_fp4_ov <- admit "sqr_fp4" sqr_fp4_spec; //TODO - prove
+mul_by_u_plus_1_fp2_alias_ov <- admit "mul_by_u_plus_1_fp2" mul_by_u_plus_1_fp2_alias_spec; // TODO
+
+fp4_mul_thm <- prove_cryptol
+  {{ \x y -> Fp_4.mul (x, y) == [ Fp_2.add (Fp_2.mul(x@0,y@1), Fp_2.mul(x@1, y@0))
+                                , Fp_2.add(Fp_2.mul(u_plus_1, Fp_2.mul(x@0, y@0)), Fp_2.mul (x@1, y@1))
+                                ] }} [];
+
+fp4_add_thm <- prove_cryptol {{ \x y -> Fp_4.add (x, y) == [Fp_2.add (x@0, y@0), Fp_2.add(x@1, y@1)] }} [];
+fp4_sub_thm <- prove_cryptol {{ \x y -> Fp_4.sub (x, y) == [Fp_2.sub (x@0, y@0), Fp_2.sub(x@1, y@1)] }} [];
+
+cyclotomic_sqr_equiv_thm <- really_custom_prove_cryptol
+  {{ \x -> cyclotomic_sqr_fp12 x == cyclotomic_sqr_fp12_imp x }}
+  do { unfolding_non ["Fp_4", "Fp_2"];
+       rw_with [fp4_mul_thm, fp4_add_thm, fp4_sub_thm];
+       rw_with all_fp2_alg_thms;  // you would think this step unnecesary, but it is not!
+       w4_unint_z3 ["Fp_4"]; /* fp2_unints; */ } ;
+
+cyclotomic_sqr_fp12_ov <- really_custom_verify "cyclotomic_sqr_fp12"
+  (concat [sqr_fp4_ov, mul_by_u_plus_1_fp2_alias_ov] fp2_overrides)
+  cyclotomic_sqr_fp12_spec
+  do { rw_with_1 cyclotomic_sqr_equiv_thm;
+       unfolding [ "cyclotomic_sqr_fp12_imp", "fp12_invariant", "fp6_invariant", "fp4_rep", "fp4_abs"
+                 , "fp12_rep", "fp6_rep", "fp12_abs", "fp6_abs"];
+       rw_with_1 fp2_invariant_alt_seq_thm;
+       simplify (addsimps fp2_alg_thms fp2_simpset);
+       w4_unint_z3 fp2_unints; } ;
 
 /*
 sqr_fp12_ov <- verify "sqr_fp12" assembly_overrides sqr_fp12_spec;

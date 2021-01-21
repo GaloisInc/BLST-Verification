@@ -147,6 +147,9 @@ Fp_4 = extension_field Fp_2 [Fp_2.field_zero, u_plus_1]
 y_fp4: t_Fp_4
 y_fp4 = [Fp_2.field_unit, Fp_2.field_zero] // = poly_x Fp_4
 
+fp4_abs [x, y] = [fp2_abs y, fp2_abs x]
+fp4_rep [x, y] = [fp2_rep y, fp2_rep x]
+
 type t_Fp_12_alt = [3]t_Fp_4
 Fp_12_alt = extension_field Fp_4 [Fp_4.field_zero, Fp_4.field_zero, y_fp4]
 
@@ -171,22 +174,22 @@ conjugate_fp4 [x,y] = [Fp_2.neg x, y]
 
 // definition from the paper
 
-cyclotomic_square_alt: t_Fp_12_alt -> t_Fp_12_alt
-cyclotomic_square_alt [c,b,a] = [C,B,A] where // paper has a+b+cx^2 and A + Bx + Cx^2
+cyclotomic_sqr_alt: t_Fp_12_alt -> t_Fp_12_alt
+cyclotomic_sqr_alt [c,b,a] = [C,B,A] where // paper has a+b+cx^2 and A + Bx + Cx^2
     A = Fp_4.sub (x3 (Fp_4.sq a), x2 (conjugate_fp4 a))
     B = Fp_4.add (x3 (Fp_4.mul (y_fp4, Fp_4.sq c)), x2 (conjugate_fp4 b))
     C = Fp_4.sub (x3 (Fp_4.sq b), x2 (conjugate_fp4 c))
     x2 x = Fp_4.add (x, x) // x+x = 2*x
     x3 x = Fp_4.add (x, x2 x) // x + 2*x = 3*x
 
-cyclotomic_square_fp12: t_Fp_12 -> t_Fp_12
-cyclotomic_square_fp12 x =
-    Fp_12_alt_to_Fp_12 (cyclotomic_square_alt (Fp_12_to_Fp_12_alt x))
+cyclotomic_sqr_fp12: t_Fp_12 -> t_Fp_12
+cyclotomic_sqr_fp12 x =
+    Fp_12_alt_to_Fp_12 (cyclotomic_sqr_alt (Fp_12_to_Fp_12_alt x))
 
 // .. and as-implemented (in abstract space)
 
-cyclotomic_square_fp12_imp: t_Fp_12 -> t_Fp_12
-cyclotomic_square_fp12_imp [[a12, a11, a10], [a02, a01, a00]] = r where
+cyclotomic_sqr_fp12_imp: t_Fp_12 -> t_Fp_12
+cyclotomic_sqr_fp12_imp [[a12, a11, a10], [a02, a01, a00]] = r where
     // aij, tij, and rij names correspond to the indices of the implementation,
     // i.e., reversed from abstract
     [t01, t00] = Fp_4.sq [a11, a00]
