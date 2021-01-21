@@ -8,27 +8,76 @@ import Parameters (Fp, t_Fp, to_Fp, E, p)
 import ShortWeierstrassCurve (ProjectivePoint, AffinePoint)
 import ExpandMessage (Expandable)
 import HashToCurveE1 (hash_to_field)
-import HashToCurveE1Aux (A', k1s)
+import HashToCurveE1Aux (A', k1s, k2s, k3s, k4s)
 import implementation::CurveOperation (point_dadd, point_add, point_double)
+
+// map_to_isogenous
 
 map_to_curve_simple_swu: t_Fp -> ProjectivePoint t_Fp
 map_to_curve_simple_swu u = undefined
 
-iso_map: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
-iso_map p = undefined
+// isogeny_map_to_E1
 
-Zz_powers : t_Fp -> [15]t_Fp
-Zz_powers Z = reverse ([ZZ] # (join ZZ_powers)) where
+iso_map: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
+iso_map (X, Y, Z) = to_jacobian xn xd yn yd where
+  xn = last xs where
+    xs = map_fp kzz X x1110
+    x1110 = Fp.add (Fp.mul (X, last k1s), last kzz)
+    kzz = map_fp_times_Zz`{n=11} k1s (Zz_powers Z)
+  xd = Fp.mul (last xs, last (Zz_powers Z)) where
+    xs = map_fp kzz X x9
+    x9 = Fp.add (X, last kzz)
+    kzz = map_fp_times_Zz`{n=10} k2s (Zz_powers Z)
+  yn = Fp.mul(last ys, Y) where
+    ys = map_fp kzz X y1514
+    y1514 = Fp.add (Fp.mul (X, last k3s), last kzz)
+    kzz = map_fp_times_Zz`{n=15} k3s (Zz_powers Z)
+  yd = Fp.mul (last ys, Fp.mul (last (Zz_powers Z),Z)) where
+    ys = map_fp kzz X y14
+    y14 = Fp.add (X, last kzz)
+    kzz = map_fp_times_Zz`{n=15} k4s (Zz_powers Z)
+
+Zz_powers : t_Fp -> [15]t_Fp // powers of ZZ in ascending order
+Zz_powers Z = [ZZ] # (join ZZ_powers) where
   ZZ = Fp.sq Z
   ZZ_powers = [[Fp.sq ZZ, Fp.sq (Fp.sq ZZ)]] # [[Fp.mul (zi@0, zi@1), Fp.sq (zi@0)] | i <- [1..6] | zi <- ZZ_powers]
 
-xn : ProjectivePoint t_Fp -> t_Fp
-xn p = last xs where
-  X = p.0
-  Z = p.2
-  xs = [x1110] # [Fp.add (Fp.mul (xi, X), kzz@(10-i)) | xi <- xs | i <- [1..10]]
-  x1110 = Fp.add (Fp.mul (X, k1s@11), kzz@10)
-  kzz = [Fp.mul (ki, zzi) | ki <- k1s | zzi <- Zz_powers Z]
+map_fp zs x r0 = rs where
+  rs = [r0] # [Fp.add (Fp.mul (ri, x), zi) | ri <- rs | zi <- tail zs]
+
+map_fp_times_Zz : {m,n,o} (fin n, fin m, fin o, m >= n, o >= n) => [m]t_Fp -> [o]t_Fp -> [n]t_Fp
+map_fp_times_Zz ks zzs = [Fp.mul (ki, zzi) | ki <- ks | zzi <- reverse (drop`{back=n}zzs)]
+
+//xn : t_Fp -> t_Fp -> t_Fp
+//xn X Z = last xs where
+  //xs = map_fp kzz X x1110
+  //x1110 = Fp.add (Fp.mul (X, last k1s), last kzz)
+  //kzz = map_fp_times_Zz`{n=11} k1s (Zz_powers Z)
+
+//xd : t_Fp -> t_Fp -> t_Fp
+//xd X Z = Fp.mul (last xs, last (Zz_powers Z)) where
+  //xs = map_fp kzz X x9
+  //x9 = Fp.add (X, last kzz)
+  //kzz = map_fp_times_Zz`{n=10} k2s (Zz_powers Z)
+
+//yn : t_Fp -> t_Fp -> t_Fp -> t_Fp
+//yn X Y Z = Fp.mul(last ys, Y) where
+  //ys = map_fp kzz X y1514
+  //y1514 = Fp.add (Fp.mul (X, last k3s), last kzz)
+  //kzz = map_fp_times_Zz`{n=15} k3s (Zz_powers Z)
+
+//yd : t_Fp -> t_Fp -> t_Fp
+//yd X Z = Fp.mul (last ys, Fp.mul (last (Zz_powers Z),Z)) where
+  //ys = map_fp kzz X y14
+  //y14 = Fp.add (X, last kzz)
+  //kzz = map_fp_times_Zz`{n=15} k4s (Zz_powers Z)
+
+to_jacobian xn xd yn yd = (X, Y, Z) where
+  Z = Fp.mul (xd, yd)
+  X = Fp.mul (Fp.mul (xn, yd) , Z)
+  Y = Fp.mul (Fp.mul (Fp.sq Z, xd) , yn)
+
+// clear_cofactor
 
 dbl_n_add: ProjectivePoint t_Fp -> Integer -> ProjectivePoint t_Fp -> ProjectivePoint t_Fp
 dbl_n_add out n p = point_dadd Fp (db n out) p Fp.field_zero True where
@@ -46,6 +95,8 @@ clear_cofactor p = out where
   out5 = dbl_n_add out4 9 p
   out6 = dbl_n_add out5 32 p
   out = dbl_n_add out6 16 p
+
+// hash_to_curve
 
 hash_to_curve_opt: {msg_len, DST_len}
                (fin msg_len, fin DST_len

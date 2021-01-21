@@ -24,7 +24,7 @@ include "fp_overrides.saw";
 HE1 <- cryptol_load "../spec/HashToCurveE1Aux.cry";
 import "../spec/implementation/CurveOperation.cry";
 import "../spec/implementation/HashToG1.cry";
-//EC <- cryptol_load "../spec/ShortWeierstrassCurve.cry";
+import "../spec/ShortWeierstrassCurve.cry";
 
 // Specs
 
@@ -38,6 +38,10 @@ let blst_isogeny_map_to_E1_spec = do {
   llvm_postcond {{ POINTonE1_abs' new_out == HE1::iso_map (POINTonE1_abs' p) }};
 };
 
+iso_map_impl_lemma <- admit_cryptol {{
+  \p -> HE1::iso_map (affinify E p) == affinify E (iso_map p)
+}};
+
 // Proofs
 
 enable_experimental;
@@ -46,7 +50,7 @@ blst_isogeny_map_to_E1_ov <- really_custom_verify "isogeny_map_to_E1" fp_overrid
   (do {
     goal_num_ite 176
       (do { //  the main safety goal
-        assume_unsat
+        assume_unsat;
       })
       (do { // discharge simulation side-conditions
         unfolding ["POINTonE1_invariant"];
