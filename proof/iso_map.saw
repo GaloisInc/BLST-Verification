@@ -21,9 +21,9 @@ include "fp_overrides.saw";
 
 //import "../spec/Parameters.cry";
 //import "../spec/ShortWeierstrassCurve.cry";
-//import "../spec/HashToCurveE1.cry";
+HE1 <- cryptol_load "../spec/HashToCurveE1Aux.cry";
 import "../spec/implementation/CurveOperation.cry";
-//import "../spec/implementation/HashToG1.cry";
+import "../spec/implementation/HashToG1.cry";
 //EC <- cryptol_load "../spec/ShortWeierstrassCurve.cry";
 
 // Specs

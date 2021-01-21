@@ -8,7 +8,7 @@ import Parameters (Fp, t_Fp, to_Fp, E, p)
 import ShortWeierstrassCurve (ProjectivePoint, AffinePoint)
 import ExpandMessage (Expandable)
 import HashToCurveE1 (hash_to_field)
-import HashToCurveE1Aux (A')
+import HashToCurveE1Aux (A', k1s)
 import implementation::CurveOperation (point_dadd, point_add, point_double)
 
 map_to_curve_simple_swu: t_Fp -> ProjectivePoint t_Fp
@@ -16,6 +16,19 @@ map_to_curve_simple_swu u = undefined
 
 iso_map: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
 iso_map p = undefined
+
+Zz_powers : t_Fp -> [15]t_Fp
+Zz_powers Z = reverse ([ZZ] # (join ZZ_powers)) where
+  ZZ = Fp.sq Z
+  ZZ_powers = [[Fp.sq ZZ, Fp.sq (Fp.sq ZZ)]] # [[Fp.mul (zi@0, zi@1), Fp.sq (zi@0)] | i <- [1..6] | zi <- ZZ_powers]
+
+xn : ProjectivePoint t_Fp -> t_Fp
+xn p = last xs where
+  X = p.0
+  Z = p.2
+  xs = [x1110] # [Fp.add (Fp.mul (xi, X), kzz@(10-i)) | xi <- xs | i <- [1..10]]
+  x1110 = Fp.add (Fp.mul (X, k1s@11), kzz@10)
+  kzz = [Fp.mul (ki, zzi) | ki <- k1s | zzi <- Zz_powers Z]
 
 dbl_n_add: ProjectivePoint t_Fp -> Integer -> ProjectivePoint t_Fp -> ProjectivePoint t_Fp
 dbl_n_add out n p = point_dadd Fp (db n out) p Fp.field_zero True where
