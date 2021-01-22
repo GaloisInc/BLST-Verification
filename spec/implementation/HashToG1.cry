@@ -40,7 +40,7 @@ iso_map (X, Y, Z) = to_jacobian xn xd yn yd where
 Zz_powers : t_Fp -> [15]t_Fp // powers of ZZ in ascending order
 Zz_powers Z = [ZZ] # (join ZZ_powers) where
   ZZ = Fp.sq Z
-  ZZ_powers = [[Fp.sq ZZ, Fp.sq (Fp.sq ZZ)]] # [[Fp.mul (zi@0, zi@1), Fp.sq (zi@0)] | i <- [1..6] | zi <- ZZ_powers]
+  ZZ_powers = [[Fp.sq ZZ, Fp.mul (ZZ, Fp.sq ZZ)]] # [[Fp.sq (zi@0), Fp.mul (zi@0, zi@1)] | i <- [1..6] | zi <- ZZ_powers]
 
 map_fp zs x r0 = rs where
   rs = [r0] # [Fp.add (Fp.mul (ri, x), zi) | ri <- rs | zi <- tail zs]
