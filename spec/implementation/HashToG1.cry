@@ -42,9 +42,10 @@ Zz_powers Z = reverse (take`{front=15} zzs) where // TODO: why does this not ter
 map_fp_times_Zz : {m1,m2,n} (fin n, fin m2, m1 >= n, m2 >= n) => [m1]t_Fp -> [m2]t_Fp -> [n]t_Fp
 map_fp_times_Zz ks zzs = zipWith (curry Fp.mul) (take`{front=n}ks) (drop`{back=n}zzs)
 
-map_fp kzzs x = foldr (\kzzi ri -> Fp.add (Fp.mul (ri, x), kzzi)) (last kzzs) (take`{back=1}kzzs)
-map_fp_ kzzs x = last rs where
+map_fp kzzs x = last rs where
   rs = [last kzzs] # [Fp.add (Fp.mul (ri, x), kzzi) | kzzi <- tail (reverse kzzs) | ri <- rs]
+// equivalently:
+map_fp_foldr kzzs x = foldr (\kzzi ri -> Fp.add (Fp.mul (ri, x), kzzi)) (last kzzs) (take`{back=1}kzzs)
 
 //map_fp kzzs x r0 = rs where
   //rs = [r0] # [Fp.add (Fp.mul (ri, x), zi) | ri <- rs | zi <- kzzs]

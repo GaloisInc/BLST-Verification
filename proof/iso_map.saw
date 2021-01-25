@@ -15,9 +15,9 @@ let do_prove = false;
 include "proof-helpers.saw";
 include "hash_to_field.saw";
 include "fp_overrides.saw";
-//include "vect.saw";
-//include "curve_operations.saw";
-//include "ec_mult.saw";
+include "vect.saw";
+include "curve_operations.saw";
+include "ec_mult.saw";
 
 //import "../spec/Parameters.cry";
 //import "../spec/ShortWeierstrassCurve.cry";
@@ -38,7 +38,16 @@ let blst_isogeny_map_to_E1_spec = do {
   llvm_postcond {{ POINTonE1_abs' new_out == HE1::iso_map (POINTonE1_abs' p) }};
 };
 
-iso_map_impl_lemma <- admit_cryptol {{
+let blst_isogeny_map_to_E1_extract_spec = do {
+  out_ptr <- llvm_alloc POINTonE1_type;
+  (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE1_type;
+  llvm_precond {{ POINTonE1_invariant p }};
+  llvm_execute_func [out_ptr, p_ptr];
+  new_out <- llvm_fresh_var "new_blst_isogeny_map_to_E1_out" POINTonE1_type;
+  llvm_points_to out_ptr (llvm_term new_out);
+};
+
+iso_map_impl_lemma <- admit_cryptol {{ // TODO
   \p -> HE1::iso_map (affinify E p) == affinify E (iso_map p)
 }};
 
@@ -46,15 +55,100 @@ iso_map_impl_lemma <- admit_cryptol {{
 
 enable_experimental;
 
+_ <- llvm_compositional_extract
+  m
+  "isogeny_map_to_E1"
+  "isogeny_map_to_E1_term"
+  fp_overrides
+  true
+  blst_isogeny_map_to_E1_extract_spec
+  (do { // discharge simulation side-conditions
+      assume_unsat;
+      //unfolding ["POINTonE1_invariant"];
+      //simplify (addsimps fp_rep_thms (cryptol_ss ()));
+      //w4;
+  });
+
+_ <- really_custom_prove_cryptol {{ \p -> POINTonE1_abs (isogeny_map_to_E1_term p) == iso_map (POINTonE1_abs p) }} (quickcheck 1);
+_ <- really_custom_prove_cryptol {{ \p -> POINTonE1_abs' (isogeny_map_to_E1_term p) == HE1::iso_map (POINTonE1_abs' p) }} (quickcheck 10);
+
+impl_thm <- really_custom_prove_cryptol {{ \p -> POINTonE1_abs (isogeny_map_to_E1_term p) == iso_map (POINTonE1_abs p) }}
+  (do {
+    unfolding ["POINTonE1_abs", "isogeny_map_to_E1_term", "iso_map"];
+    simplify (addsimps fp_rep_thms (cryptol_ss ())); // eliminte (abs. rep)
+    w4;
+  });
+
+
 blst_isogeny_map_to_E1_ov <- really_custom_verify "isogeny_map_to_E1" fp_overrides blst_isogeny_map_to_E1_spec
   (do {
     goal_num_ite 176
       (do { //  the main safety goal
-        assume_unsat;
+        unfolding ["POINTonE1_abs'"];
+        simplify (addsimp iso_map_impl_lemma empty_ss);
+        simplify (addsimps (concat fp_alg_thms fp_rep_thms) (cryptol_ss ()));
+        unfolding ["iso_map"];
+        simplify (cryptol_ss ());
+        goal_eval_unint (concat fp_unints ec_mult_unints);
+        print_goal;
+        print_goal_consts;
+        //assume_unsat;
+        w4_unint_z3 ["Fp","fp_invariant","POINTonE1_abs","POINTonE1_invariant"];
       })
       (do { // discharge simulation side-conditions
-        unfolding ["POINTonE1_invariant"];
-        simplify (addsimps fp_rep_thms (cryptol_ss ()));
-        w4;
+        assume_unsat;
+        //unfolding ["POINTonE1_invariant"];
+        //simplify (addsimps fp_rep_thms (cryptol_ss ()));
+        //w4;
       });
   });
+
+// experimenting with isogeny_map_to_E1_term:
+
+let {{
+  fp_mul = Fp.mul
+  fp_sq = Fp.sq
+  fp_add = Fp.add
+  fp_exp : t_Fp -> Integer -> t_Fp
+  fp_exp = undefined
+}};
+
+my_lemmas <- for [
+  {{ \p q -> Fp.mul (p,q) == fp_mul (p,q) }}
+, {{ \p q -> Fp.add (p,q) == fp_add (p,q) }}
+, {{ \p -> Fp.sq p == fp_sq p }}
+//, {{ \p -> fp_sq (fp_sq p) == fp_exp p 4 }}
+//, {{ \p n -> fp_sq (fp_exp p n) == fp_exp p (2*n) }}
+//, {{ \p -> fp_mul (p,p) == fp_sq p }}
+//, {{ \p -> fp_mul (fp_sq p,p) == fp_exp p 3 }}
+//, {{ \p n -> fp_mul (fp_exp p n, fp_sq p) == fp_exp p (n+2) }}
+//, {{ \p n -> fp_mul (fp_sq p, fp_exp p n ) == fp_exp p (n+2) }}
+//, {{ \p n -> fp_mul (fp_exp p n, p) == fp_exp p (n+1) }}
+//, {{ \p n m -> fp_mul (fp_exp p n, fp_exp p m) == fp_exp p (n+m) }}
+] admit_cryptol;
+
+
+let x1 = rewrite fp_simpset (unfold_term ["isogeny_map_to_E1_term"] {{isogeny_map_to_E1_term}});
+let x2 = rewrite (addsimps my_lemmas (cryptol_ss ())) x1;
+
+l1 <- admit_cryptol {{ \x y z -> fp_mul (fp_add (x,y), z) == fp_add (fp_mul (x,z), fp_mul(y,z)) }};
+
+let x3 = rewrite (addsimps [l1] (cryptol_ss ())) x2;
+
+// experimenting with the Cryptol iso_map:
+let {{
+  undef : [15]t_Fp
+  undef = undefined
+}};
+
+//let y1 = rewrite (cryptol_ss ()) (unfold_term ["Zz_powers"] {{\z -> Zz_powers z}});
+
+//_ <- really_custom_prove_cryptol {{\z -> Zz_powers z == undef }}
+  //(do {
+    //unfolding ["Zz_powers"];
+    //goal_eval_unint ["Fp", "undef"];
+    //simplify (addsimps my_lemmas empty_ss);
+    //goal_eval_unint ["Fp", "undef","fp_exp","fp_sq","fp_mul","fp_add"];
+    //print_goal;
+    //assume_unsat;
+  //});
