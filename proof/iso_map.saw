@@ -21,10 +21,11 @@ include "ec_mult.saw";
 
 //import "../spec/Parameters.cry";
 //import "../spec/ShortWeierstrassCurve.cry";
-HE1 <- cryptol_load "../spec/HashToCurveE1Aux.cry";
+import "../spec/HashToCurveE1Aux.cry";
 import "../spec/implementation/CurveOperation.cry";
 import "../spec/implementation/HashToG1.cry";
 import "../spec/ShortWeierstrassCurve.cry";
+import "../spec/FieldExtras.cry";
 
 // Specs
 
@@ -32,10 +33,11 @@ let blst_isogeny_map_to_E1_spec = do {
   out_ptr <- llvm_alloc POINTonE1_type;
   (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE1_type;
   llvm_precond {{ POINTonE1_invariant p }};
+  llvm_precond {{ ~ (is_point_O E (POINTonE1_abs' p)) }}; // Does not work for zero (division by zero etc.)
   llvm_execute_func [out_ptr, p_ptr];
   new_out <- llvm_fresh_var "new_blst_isogeny_map_to_E1_out" POINTonE1_type;
   llvm_points_to out_ptr (llvm_term new_out);
-  llvm_postcond {{ POINTonE1_abs' new_out == HE1::iso_map (POINTonE1_abs' p) }};
+  llvm_postcond {{ POINTonE1_abs' new_out == iso_map (POINTonE1_abs' p) }};
 };
 
 let blst_isogeny_map_to_E1_extract_spec = do {
@@ -48,7 +50,7 @@ let blst_isogeny_map_to_E1_extract_spec = do {
 };
 
 iso_map_impl_lemma <- admit_cryptol {{ // TODO
-  \p -> HE1::iso_map (affinify E p) == affinify E (iso_map p)
+  \p -> iso_map (affinify E p) == affinify E (iso_map_impl p)
 }};
 
 // Proofs
@@ -69,18 +71,116 @@ _ <- llvm_compositional_extract
       //w4;
   });
 
-_ <- really_custom_prove_cryptol {{ \p -> POINTonE1_abs (isogeny_map_to_E1_term p) == iso_map (POINTonE1_abs p) }} (quickcheck 1);
-_ <- really_custom_prove_cryptol {{ \p -> POINTonE1_abs' (isogeny_map_to_E1_term p) == HE1::iso_map (POINTonE1_abs' p) }} (quickcheck 10);
+// a few tests:
+_ <- custom_prove_cryptol {{ \p -> POINTonE1_abs (isogeny_map_to_E1_term p) == iso_map_impl (POINTonE1_abs p) }} (quickcheck 1);
+_ <- custom_prove_cryptol {{ \p -> POINTonE1_abs' (isogeny_map_to_E1_term p) == iso_map (POINTonE1_abs' p) }} (quickcheck 10);
 
-impl_thm <- really_custom_prove_cryptol {{ \p -> POINTonE1_abs (isogeny_map_to_E1_term p) == iso_map (POINTonE1_abs p) }}
+// Here we prove that the implementation and cryptol spec match
+impl_thm <- custom_prove_cryptol {{ \p -> POINTonE1_abs (isogeny_map_to_E1_term p) == iso_map_impl (POINTonE1_abs p) }}
   (do {
     unfolding ["POINTonE1_abs", "isogeny_map_to_E1_term", "iso_map"];
     simplify (addsimps fp_rep_thms (cryptol_ss ())); // eliminte (abs. rep)
     w4;
   });
 
+// TODO: now it remains to rewrite the arithmetic expressions to get to the high-level spec...
+_ <- custom_prove_cryptol {{ \p -> affinify E (iso_map_impl (POINTonE1_abs p)) == iso_map (affinify E (POINTonE1_abs p)) }} (quickcheck 1);
 
-blst_isogeny_map_to_E1_ov <- really_custom_verify "isogeny_map_to_E1" fp_overrides blst_isogeny_map_to_E1_spec
+// first let's not worry about z = 0...
+let {{ affinify_nz (x,y,z) = (Fp.mul(lambda2, x), Fp.mul(lambda3, y)) where lambda = Fp.div (Fp.field_unit, z); lambda2 = Fp.sq lambda; lambda3 = Fp.mul(lambda, lambda2)
+}};
+
+let {{
+  fp_mul = Fp.mul
+  fp_sq = Fp.sq
+  fp_add = Fp.add
+  fp_exp : t_Fp -> Integer -> t_Fp
+  fp_exp = undefined
+  fp_div = Fp.div
+  fp_zero = Fp.field_zero
+  fp_unit = Fp.field_unit
+}};
+
+readability_rewrites <- for [
+  {{ \p q -> Fp.mul (p,q) == fp_mul (p,q) }}
+, {{ \p q -> Fp.add (p,q) == fp_add (p,q) }}
+, {{ \p -> Fp.sq p == fp_sq p }}
+, {{ \p q -> Fp.div (p, q) == fp_div (p, q) }}
+, {{ Fp.field_zero == fp_zero }}
+, {{ Fp.field_unit == fp_unit }}
+  ] admit_cryptol;
+
+let print_readably =  do {
+    simplify (addsimps readability_rewrites empty_ss);
+    print_goal;
+};
+
+let rewrite_then_admit x = admit_cryptol (rewrite (cryptol_ss ()) x);
+
+algebra_simps <- for [\
+    {{ \p -> Fp.add (Fp.field_zero, p) == p }}\
+  , {{ \p -> Fp.mul (p, Fp.field_unit) == p }}\
+  , {{ \x -> Fp.div (x, x) == if (Fp.is_equal (x, Fp.field_zero)) then apply Fp.div (x,x) else Fp.field_unit }}\
+] rewrite_then_admit;
+
+//let {{
+  //F_sum_p = F_sum Fp
+//}};
+
+//F_sum_rewrite <- admit_cryptol {{ \(xs:[12]Integer) -> (F_sum Fp xs) == F_sum_p xs}};
+
+let{{
+  zz11 z = zzs@11 where
+    zz = Fp.sq z
+    zzs = [zz] # [Fp.mul(zzi, zz) | zzi <- zzs]
+}};
+
+let {{
+iso_map_2 (x', y', z') = (x, y) where
+  (X,Y) = affinify_nz (x', y', z')
+  x_powers = [Fp.field_unit] # [Fp.mul(X, xi) | xi <- x_powers]
+  x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- x_powers]
+  x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
+  y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- x_powers]
+  y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
+  x = Fp.mul (Fp.div (x_num, x_den), Fp.div (zz11 z', zz11 z'))
+  //x = Fp.mul (Fp.div (x_num, x_den), Fp.field_unit)
+  //x = Fp.div (x_num, x_den)
+  y = Fp.mul (Y, Fp.div(y_num, y_den))
+}};
+
+// TODO: a shortcut for now:
+zz11_nz <- admit_cryptol {{ \z -> Fp.is_equal (zz11 z, Fp.field_zero) == False }};
+
+// first make sure it's right:
+ <- really_custom_prove_cryptol {{ \p -> iso_map (affinify_nz (POINTonE1_abs p)) == iso_map_2 (POINTonE1_abs p) }} (quickcheck 10);
+
+// now prove it:
+
+// now this works
+rewrite_1 <- really_custom_prove_cryptol {{ \x y z -> iso_map (affinify_nz (x,y,z)) == iso_map_2 (x,y,z) }}
+  (do {
+    //unfolding ["iso_map_2","iso_map"];
+    unfolding ["iso_map_2"];
+    simplify (addsimps algebra_simps empty_ss);
+    simplify (add_prelude_eqs ["ite_false"] (addsimp zz11_nz (cryptol_ss ())));
+    //print_readably;
+    w4_unint_z3 fp_unints;
+  }); // TODO: stopped here
+
+_ <- really_custom_prove_cryptol {{ \x y z -> affinify_nz (iso_map_impl (x,y,z)) == iso_map (affinify_nz (x,y,z)) }}
+  (do {
+    simplify (addsimp rewrite_1 empty_ss);
+    //unfolding ["affinify_nz"];
+    //simplify (cryptol_ss ());
+    print_readably;
+    //goal_eval_unint (concat fp_unints ["iso_map"]);  // working on HE1::iso_map first
+    //simplify (addsimps algebra_simps (cryptol_ss ()));
+    //print_readably;
+    assume_unsat;
+  });
+
+blst_isogeny_map_to_E1_ov <- custom_verify "isogeny_map_to_E1" fp_overrides blst_isogeny_map_to_E1_spec
   (do {
     goal_num_ite 176
       (do { //  the main safety goal
@@ -111,44 +211,176 @@ let {{
   fp_add = Fp.add
   fp_exp : t_Fp -> Integer -> t_Fp
   fp_exp = undefined
+  fp_div = Fp.div
 }};
 
 my_lemmas <- for [
   {{ \p q -> Fp.mul (p,q) == fp_mul (p,q) }}
 , {{ \p q -> Fp.add (p,q) == fp_add (p,q) }}
 , {{ \p -> Fp.sq p == fp_sq p }}
+, {{ \p q -> Fp.div (p, q) == fp_div (p, q) }}
 //, {{ \p -> fp_sq (fp_sq p) == fp_exp p 4 }}
 //, {{ \p n -> fp_sq (fp_exp p n) == fp_exp p (2*n) }}
 //, {{ \p -> fp_mul (p,p) == fp_sq p }}
+//, {{ \p q -> fp_mul (fp_mul (p,q), q) == fp_mul (p, fp_sq q) }}
 //, {{ \p -> fp_mul (fp_sq p,p) == fp_exp p 3 }}
 //, {{ \p n -> fp_mul (fp_exp p n, fp_sq p) == fp_exp p (n+2) }}
 //, {{ \p n -> fp_mul (fp_sq p, fp_exp p n ) == fp_exp p (n+2) }}
 //, {{ \p n -> fp_mul (fp_exp p n, p) == fp_exp p (n+1) }}
 //, {{ \p n m -> fp_mul (fp_exp p n, fp_exp p m) == fp_exp p (n+m) }}
+//, {{ \p q r -> fp_mul (fp_add (p,q), r) == fp_add (fp_mul (p, r), fp_mul (q, r)) }}
 ] admit_cryptol;
 
 
 let x1 = rewrite fp_simpset (unfold_term ["isogeny_map_to_E1_term"] {{isogeny_map_to_E1_term}});
 let x2 = rewrite (addsimps my_lemmas (cryptol_ss ())) x1;
 
-l1 <- admit_cryptol {{ \x y z -> fp_mul (fp_add (x,y), z) == fp_add (fp_mul (x,z), fp_mul(y,z)) }};
+// TODO: is it going to be useful to rewrite those? No, we already lifted the C code to the low-level cryptol spec
+//let {{
+  //k10s = [
+        //0x4d18b6f3af00131c, 0x19fa219793fee28c,
+        //0x3f2885f1467f19ae, 0x23dcea34f2ffb304,
+        //0xd15b58d2ffc00054, 0x0913be200a20bef4  ];
+  //k11s = [
+        //0x898985385cdbbd8b, 0x3c79e43cc7d966aa,
+        //0x1597e193f4cd233a, 0x8637ef1e4d6623ad,
+        //0x11b22deed20d827b, 0x07097bc5998784ad  ];
+  //k12s = [
+        //0xa542583a480b664b, 0xfc7169c026e568c6,
+        //0x5ba2ef314ed8b5a6, 0x5b5491c05102f0e7,
+        //0xdf6e99707d2a0079, 0x0784151ed7605524  ];
+  //k13s = [
+        //0x494e212870f72741, 0xab9be52fbda43021,
+        //0x26f5577994e34c3d, 0x049dfee82aefbd60,
+        //0x65dadd7828505289, 0x0e93d431ea011aeb  ];
+  //k14s = [
+        //0x90ee774bd6a74d45, 0x7ada1c8a41bfb185,
+        //0x0f1a8953b325f464, 0x104c24211be4805c,
+        //0x169139d319ea7a8f, 0x09f20ead8e532bf6  ];
+  //k15s = [
+        //0x6ddd93e2f43626b7, 0xa5482c9aa1ccd7bd,
+        //0x143245631883f4bd, 0x2e0a94ccf77ec0db,
+        //0xb0282d480e56489f, 0x18f4bfcbb4368929  ];
+  //k16s = [
+        //0x23c5f0c953402dfd, 0x7a43ff6958ce4fe9,
+        //0x2c390d3d2da5df63, 0xd0df5c98e1f9d70f,
+        //0xffd89869a572b297, 0x1277ffc72f25e8fe  ];
+  //k17s = [
+        //0x79f4f0490f06a8a6, 0x85f894a88030fd81,
+        //0x12da3054b18b6410, 0xe2a57f6505880d65,
+        //0xbba074f260e400f1, 0x08b76279f621d028  ];
+  //k18s = [
+        //0xe67245ba78d5b00b, 0x8456ba9a1f186475,
+        //0x7888bff6e6b33bb4, 0xe21585b9a30f86cb,
+        //0x05a69cdcef55feee, 0x09e699dd9adfa5ac  ];
+  //k19s = [
+        //0x0de5c357bff57107, 0x0a0db4ae6b1a10b2,
+        //0xe256bb67b3b3cd8d, 0x8ad456574e9db24f,
+        //0x0443915f50fd4179, 0x098c4bf7de8b6375  ];
+  //k110s = [
+        //0xe6b0617e7dd929c7, 0xfe6e37d442537375,
+        //0x1dafdeda137a489e, 0xe4efd1ad3f767ceb,
+        //0x4a51d8667f0fe1cf, 0x054fdf4bbf1d821c  ];
+  //k111s = [
+        //0x72db2a50658d767b, 0x8abf91faa257b3d5,
+        //0xe969d6833764ab47, 0x464170142a1009eb,
+        //0xb14f01aadb30be2f, 0x18ae6a856f40715d  ]
+//}};
 
-let x3 = rewrite (addsimps [l1] (cryptol_ss ())) x2;
+//// A rewrite to get rid of a triviality (not really necessary):
+//let intLe_sym_term = parse_core "\\(x : Integer) -> intLe x x";
+//intLe_sym_thm <- prove_cryptol (beta_reduce_term {{\x -> intLe_sym_term x == True}}) [];
 
-// experimenting with the Cryptol iso_map:
-let {{
-  undef : [15]t_Fp
-  undef = undefined
-}};
+//let prove_ l = prove_cryptol l [];
 
-//let y1 = rewrite (cryptol_ss ()) (unfold_term ["Zz_powers"] {{\z -> Zz_powers z}});
+//k1s_lemmas <- for [
+    //rewrite (add_prelude_eqs ["ite_true"] (addsimps [intLe_sym_thm] (cryptol_ss ()))) (unfold_term ["k10s"] {{ fp_abs k10s == (HE1::k1s)@0 }})
+  //, {{ fp_abs (k11s) == (HE1::k1s)@1 }}
+  //, {{ fp_abs (k12s) == (HE1::k1s)@2 }}
+  //, {{ fp_abs (k13s) == (HE1::k1s)@3 }}
+  //, {{ fp_abs (k14s) == (HE1::k1s)@4 }}
+  //, {{ fp_abs (k15s) == (HE1::k1s)@5 }}
+  //] prove_;
 
-//_ <- really_custom_prove_cryptol {{\z -> Zz_powers z == undef }}
+//div_thm1 <- admit_cryptol {{ \x y z -> Fp.div (x,y) == Fp.div (Fp.mul (x,z), Fp.mul (y,z)) }};
+//div_thm2 <- admit_cryptol (rewrite (addsimps my_lemmas (cryptol_ss ())) {{ \x y z -> Fp.div (Fp.mul (x,z), Fp.mul (y,z)) == Fp.div (x,y) }});
+
+//let {{
+//iso_map_1 (x', y') = (x, y) where
+    //x_powers = [F.field_unit] # [F.mul(x', xi) | xi <- x_powers]
+    //x_num = F_sum F [F.mul(ki, xi) | ki <- k1s | xi <- x_powers]
+    //x_den = F.add (x_powers@10, F_sum F [F.mul(ki, xi) | ki <- k2s | xi <- x_powers])
+    //y_num = F_sum F [F.mul(ki, xi) | ki <- k3s | xi <- x_powers]
+    //y_den = F.add (x_powers@15, F_sum F [F.mul(ki, xi) | ki <- k4s | xi <- x_powers])
+    //x = F.div (x_num, x_den)
+    //y = F.mul (y', F.div(y_num, y_den))
+
+//}};
+
+//// TODO: prove this as excercise:
+//let test  = rewrite (addsimps my_lemmas (cryptol_ss ())) {{ \x y z -> Fp.div (Fp.div(x, Fp.mul (z, z)), Fp.div(y, Fp.mul (Fp.mul (z, z), z))) == Fp.mul (Fp.div(x,y), z) }};
+
+//// First we multiply both by Z^3/Z^3
+
+//div_thm3 <- admit_cryptol {{ \x -> Fp.div (x,x) == if Fp.is_equal(x, Fp.field_zero) then undefined else Fp.field_unit }}; // TODO: get rid of undef
+
+//lemma_1 <- custom_prove_cryptol (rewrite (addsimps my_lemmas (cryptol_ss ())) {{ \x y z -> Fp.div (Fp.div(x, Fp.mul (z, z)), Fp.div(y, Fp.mul (Fp.mul (z, z), z))) == Fp.mul(Fp.div (Fp.div(x, Fp.mul (z, z)), Fp.div(y, Fp.mul (Fp.mul (z, z), z))), Fp.div (Fp.mul (Fp.mul (z, z), z), Fp.mul (Fp.mul (z, z), z))) }})
   //(do {
-    //unfolding ["Zz_powers"];
-    //goal_eval_unint ["Fp", "undef"];
-    //simplify (addsimps my_lemmas empty_ss);
-    //goal_eval_unint ["Fp", "undef","fp_exp","fp_sq","fp_mul","fp_add"];
+    //print_goal;
+    //simplify (addsimp div_thm2 (cryptol_ss ()));
     //print_goal;
     //assume_unsat;
   //});
+
+//// First we multiply both by Z^3/Z^3
+//lemma_1 <- custom_prove_cryptol (rewrite (addsimps my_lemmas (cryptol_ss ())) {{ \x y z -> Fp.div (Fp.div(x, Fp.mul (z, z)), Fp.div(y, Fp.mul (Fp.mul (z, z), z))) ==  Fp.div (Fp.mul (Fp.div(x, Fp.mul (z, z)), Fp.mul(z, Fp.mul (z, z))), Fp.mul (Fp.div(y, Fp.mul (Fp.mul (z, z), z)), Fp.mul(z, Fp.mul (z, z)))) }})
+  //(do {
+    //print_goal;
+    //simplify (addsimps my_lemmas (cryptol_ss ()));
+    //print_goal;
+    //simplify (addsimps (concat [] [div_thm2]) (cryptol_ss ()));
+    //print_goal;
+    //w4_unint_z3 ["fp_div", "fp_mul"];
+  //});
+
+//test_thm <- custom_prove_cryptol test
+  //(do {
+    //print_goal;
+    //simplify (addsimp lemma_1 (cryptol_ss ()));
+    //print_goal;
+    //w4;
+  //});
+
+//_ <- custom_prove_cryptol {{ \x y z -> Fp.div (Fp.div(x, Fp.mul (z, z)), Fp.div(y, Fp.mul (Fp.mul (z, z), z))) ==  Fp.div (Fp.mul (Fp.div(x, Fp.mul (z, z)), Fp.mul(z, Fp.mul (z, z))), Fp.mul (Fp.div(y, Fp.mul (Fp.mul (z, z), z)), Fp.mul(z, Fp.mul (z, z)))) }}
+  //(do {
+    //print_goal;
+    //simplify (addsimps my_lemmas (cryptol_ss ()));
+    //print_goal;
+    //simplify (addsimps (concat [] [div_thm2]) (cryptol_ss ()));
+    //print_goal;
+    //w4_unint_z3 ["fp_div", "fp_mul"];
+  //});
+
+//let xx = {{ \x y z -> Fp.div (Fp.mul (Fp.div(x, Fp.mul (z, z)), Fp.mul(z, Fp.mul (z, z))), Fp.mul (Fp.div(y, Fp.mul (Fp.mul (z, z), z)), Fp.mul(z, Fp.mul (z, z)))) }};
+
+//l1 <- admit_cryptol {{ \x y z -> fp_mul (fp_add (x,y), z) == fp_add (fp_mul (x,z), fp_mul(y,z)) }};
+
+//let x3 = rewrite (addsimps [l1] (cryptol_ss ())) x2;
+
+//// experimenting with the Cryptol iso_map:
+//let {{
+  //undef : [15]t_Fp
+  //undef = undefined
+//}};
+
+////let y1 = rewrite (cryptol_ss ()) (unfold_term ["Zz_powers"] {{\z -> Zz_powers z}});
+
+////_ <- custom_prove_cryptol {{\z -> Zz_powers z == undef }}
+  ////(do {
+    ////unfolding ["Zz_powers"];
+    ////goal_eval_unint ["Fp", "undef"];
+    ////simplify (addsimps my_lemmas empty_ss);
+    ////goal_eval_unint ["Fp", "undef","fp_exp","fp_sq","fp_mul","fp_add"];
+    ////print_goal;
+    ////assume_unsat;
+  ////});

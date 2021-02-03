@@ -13,13 +13,13 @@ import implementation::CurveOperation (point_dadd, point_add, point_double)
 
 // map_to_isogenous
 
-map_to_curve_simple_swu: t_Fp -> ProjectivePoint t_Fp
-map_to_curve_simple_swu u = undefined
+map_to_curve_simple_swu_impl: t_Fp -> ProjectivePoint t_Fp
+map_to_curve_simple_swu_impl u = undefined
 
 // isogeny_map_to_E1
 
-iso_map: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
-iso_map (X, Y, Z) = to_jacobian xn xd yn yd where
+iso_map_impl: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
+iso_map_impl (X, Y, Z) = to_jacobian xn xd yn yd where
   zzs = Zz_powers Z
   xn = map_fp (kzzs#[last k1s]) X where
     kzzs = map_fp_times_Zz`{n=11} k1s zzs
@@ -112,8 +112,8 @@ hash_to_curve_opt (msg,dst) = map_to_g1 u where
 
 map_to_g1: [2]t_Fp -> ProjectivePoint t_Fp
 map_to_g1 uv = P where
-    Q0 = map_to_curve_simple_swu (uv@0)
-    Q1 = map_to_curve_simple_swu (uv@1)
+    Q0 = map_to_curve_simple_swu_impl (uv@0)
+    Q1 = map_to_curve_simple_swu_impl (uv@1)
     R = point_dadd Fp Q0 Q1 A' False // This is addition on the isogenous curve
-    S = iso_map R
+    S = iso_map_impl R
     P = clear_cofactor S
