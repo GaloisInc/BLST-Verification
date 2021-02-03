@@ -99,7 +99,10 @@ let {{
   fp_div = Fp.div
   fp_zero = Fp.field_zero
   fp_unit = Fp.field_unit
+  fp_is_equal = Fp.is_equal
 }};
+
+let rewrite_then_admit x = admit_cryptol (rewrite (cryptol_ss ()) x);
 
 readability_rewrites <- for [
   {{ \p q -> Fp.mul (p,q) == fp_mul (p,q) }}
@@ -108,19 +111,18 @@ readability_rewrites <- for [
 , {{ \p q -> Fp.div (p, q) == fp_div (p, q) }}
 , {{ Fp.field_zero == fp_zero }}
 , {{ Fp.field_unit == fp_unit }}
-  ] admit_cryptol;
+, {{ \x y -> Fp.is_equal (x,y) == fp_is_equal (x,y) }}
+  ] rewrite_then_admit;
 
 let print_readably =  do {
     simplify (addsimps readability_rewrites empty_ss);
     print_goal;
 };
 
-let rewrite_then_admit x = admit_cryptol (rewrite (cryptol_ss ()) x);
-
-algebra_simps <- for [\
-    {{ \p -> Fp.add (Fp.field_zero, p) == p }}\
-  , {{ \p -> Fp.mul (p, Fp.field_unit) == p }}\
-  , {{ \x -> Fp.div (x, x) == if (Fp.is_equal (x, Fp.field_zero)) then apply Fp.div (x,x) else Fp.field_unit }}\
+algebra_simps <- for [
+    {{ \p -> Fp.add (Fp.field_zero, p) == p }}
+  , {{ \p -> Fp.mul (p, Fp.field_unit) == p }}
+  , {{ \x -> Fp.div (x, x) == if (Fp.is_equal (x, Fp.field_zero)) then apply Fp.div (x,x) else Fp.field_unit }}
 ] rewrite_then_admit;
 
 //let {{
@@ -130,9 +132,10 @@ algebra_simps <- for [\
 //F_sum_rewrite <- admit_cryptol {{ \(xs:[12]Integer) -> (F_sum Fp xs) == F_sum_p xs}};
 
 let{{
-  zz11 z = zzs@11 where
+  zz_powers z = [zz] # [Fp.mul(zzi, zz) | zzi <- (zz_powers z)] where
     zz = Fp.sq z
-    zzs = [zz] # [Fp.mul(zzi, zz) | zzi <- zzs]
+  zz11 z = (zz_powers z)@11
+  zz15 z = (zz_powers z)@15
 }};
 
 let {{
@@ -144,29 +147,27 @@ iso_map_2 (x', y', z') = (x, y) where
   y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- x_powers]
   y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
   x = Fp.mul (Fp.div (x_num, x_den), Fp.div (zz11 z', zz11 z'))
-  //x = Fp.mul (Fp.div (x_num, x_den), Fp.field_unit)
-  //x = Fp.div (x_num, x_den)
-  y = Fp.mul (Y, Fp.div(y_num, y_den))
+  y = Fp.mul (Y, Fp.mul (Fp.div(y_num, y_den), Fp.div (zz15 z', zz15 z'))
 }};
 
 // TODO: a shortcut for now:
-zz11_nz <- admit_cryptol {{ \z -> Fp.is_equal (zz11 z, Fp.field_zero) == False }};
+zz11_nz <- rewrite_then_admit {{ \z -> Fp.is_equal (zz11 z, Fp.field_zero) == False }};
+zz15_nz <- rewrite_then_admit {{ \z -> Fp.is_equal (zz15 z, Fp.field_zero) == False }};
 
 // first make sure it's right:
- <- really_custom_prove_cryptol {{ \p -> iso_map (affinify_nz (POINTonE1_abs p)) == iso_map_2 (POINTonE1_abs p) }} (quickcheck 10);
+_ <- really_custom_prove_cryptol {{ \p -> iso_map (affinify_nz (POINTonE1_abs p)) == iso_map_2 (POINTonE1_abs p) }} (quickcheck 10);
 
 // now prove it:
 
-// now this works
 rewrite_1 <- really_custom_prove_cryptol {{ \x y z -> iso_map (affinify_nz (x,y,z)) == iso_map_2 (x,y,z) }}
   (do {
-    //unfolding ["iso_map_2","iso_map"];
     unfolding ["iso_map_2"];
     simplify (addsimps algebra_simps empty_ss);
-    simplify (add_prelude_eqs ["ite_false"] (addsimp zz11_nz (cryptol_ss ())));
+    simplify (add_prelude_eqs ["ite_false"] (addsimps [zz11_nz, zz15_nz] (cryptol_ss ())));
+    simplify (addsimps algebra_simps empty_ss);
     //print_readably;
     w4_unint_z3 fp_unints;
-  }); // TODO: stopped here
+  });
 
 _ <- really_custom_prove_cryptol {{ \x y z -> affinify_nz (iso_map_impl (x,y,z)) == iso_map (affinify_nz (x,y,z)) }}
   (do {
