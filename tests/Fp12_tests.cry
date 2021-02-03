@@ -1,0 +1,61 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+// Tests of the definitions in implementation::Fp12
+
+import implementation::Fp12
+import Parameters (Fp_12, t_Fp_12, p, u, u_plus_1, v, w)
+import FieldExtras
+import Frobenius (fp12_conjugate)
+
+// relationship between Fp_12 and Fp_12_alt (all can be proved)
+
+property fp12_alt_round_trip_1 x =
+    Fp_12_alt_to_Fp_12 (Fp_12_to_Fp_12_alt x) == x
+
+property fp12_alt_round_trip_2 x =
+    Fp_12_to_Fp_12_alt (Fp_12_alt_to_Fp_12 x) == x
+
+property fp12_alt_add x y =
+    Fp_12_alt_to_Fp_12 (Fp_12_alt.add (x, y)) == Fp_12.add (Fp_12_alt_to_Fp_12 x, Fp_12_alt_to_Fp_12 y)
+
+property fp12_alt_mul_w x =
+    Fp_12_alt_to_Fp_12 (Fp_12_alt.mul (Fp_12_to_Fp_12_alt w, x)) == Fp_12.mul (w, Fp_12_alt_to_Fp_12 x)
+
+// cyclotomic squaring.  We need values in the cyclotomic subgroup, which are the values x in Fp_12
+// satisfying x^(p^4-p^2+1) == 1.  These can be found by raising ANY nonzero element to the power
+//   (p^8 + p^6 - p^2 - 1) = (p^6 - 1)(p^2 + 1) = (p^3 + 1)(p^3 - 1)(p^2 + 1),
+// since all nonzero elements satisfy x^(p^12-1) = 1.
+
+/*
+// slow...
+to_cyclotomic x = F_expt Fp_12 (F_expt Fp_12 (F_expt Fp_12 x e1) e2) e3 where
+    e1 = `(p*p+1):[768]
+    e2 = `(p*p*p + 1):[3*384]
+    e3 = e2 - 2
+*/
+
+// to_cyclotomic: t_Fp_12 -> t_Fp_12
+to_cyclotomic_fp12 x = k_expt`{4} Fp_12 x1 e where
+    x1 = Fp_12.div (fp12_conjugate x, x) // = x^(p^6 - 1)
+    e = `(p*p+1):[2*382] // p^2 + 1
+
+is_cyclotomic_fp12 x = (Fp_12.mul(x4, x) == x2) where // x^(p^4+1) == x^(p_2), so x^(p^4-p^2+1) == 1
+    x2 = fp12_frobenius2 x // x^(p^2)
+    x4 = fp12_frobenius2 x2 // x^(p^4)
+
+cyclotomic_sqr_fp12_ok x =
+    cyclotomic_sqr_fp12 x' == Fp_12.sq x' where x' = to_cyclotomic_fp12 x
+
+test_a = [[[1,2],[3,4],[5,6]],[[7,8],[9,10],[11,12]]]: t_Fp_12
+test_b = [[[0,9],[1,8],[2,7]],[[3,6],[4,5],[5,4]]]: t_Fp_12
+
+property cyclotomic_sqr_fp12_test_a = cyclotomic_sqr_fp12_ok test_a
+property cyclotomic_sqr_fp12_test_b = cyclotomic_sqr_fp12_ok test_b
+
+// _imp matches the spec version
+
+property cyclotomic_sqr_fp12_imp_ok x =
+    cyclotomic_sqr_fp12 x == cyclotomic_sqr_fp12_imp x

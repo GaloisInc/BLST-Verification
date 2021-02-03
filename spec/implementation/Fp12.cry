@@ -17,6 +17,9 @@ import implementation::Field
 import Parameters (p, Fp, t_Fp, to_Fp, from_Fp, t_Fp_2, Fp_2, t_Fp_6, Fp_6, t_Fp_12, Fp_12,
                    u_plus_1, Fp_2_to_Fp_6)
 import Frobenius
+import PrimeField // for the ring stuff ...
+import ExtensionField
+import Polynomial
 
 ////////////////////////////////////////////////////////////////
 //
@@ -206,3 +209,33 @@ cyclotomic_sqr_fp12_imp [[a12, a11, a10], [a02, a01, a00]] = r where
     r = [[r12, r11, r10], [r02, r01, r00]]
     f_sub x y = Fp_2.add (s, Fp_2.add (s, x)) where s = Fp_2.sub (x, y)
     f_add x y = Fp_2.add (s, Fp_2.add (s, x)) where s = Fp_2.add (x, y)
+
+////////////////////////////////////////////////////////////////
+//
+// Some of the action takes place in rings:
+// Fpx2: Integers mod 2^384 * p
+// Fp2x2: Fpx2[x] / (x^2+1), a quotient ring.
+// etc.
+// We fake the rings by using the field constructors, and traking care never to call half or div
+
+
+Fpx2 = prime_field_integer (`p * 2^^384 )
+
+Fp_2x2 = extension_field Fpx2 [Fpx2.field_zero, Fpx2.neg Fpx2.field_unit] // [0,-1]
+u_plus_1x2: t_Fp_2x2
+u_plus_1x2 = Fp_2x2.add (poly_x Fpx2, poly_1 Fpx2)
+
+Fp_6x2 = extension_field Fp_2x2 [Fp_2x2.field_zero, Fp_2x2.field_zero, u_plus_1x2]
+
+// Not sure anything happens in Fp_6x2!
+
+// "optimised" form for a1 b2 + a2 b1
+// (a1+a2)(b1 + b2) - a1 b1 - a2 b2 
+fp6x2_tmp a1 a2 b1 b2 = Fp_2x2.sub (Fp_2x2.sub (t, Fp_2x2.mul (a1, b1)), Fp_2x2.mul (a2, b2)) where
+  t = Fp_2x2.mul (Fp_2.add (a1,a2), Fp_2.add (b1, b2))
+
+fp6x2_mul: [3][2]Integer -> [3][2]Integer -> [3][2]Integer
+fp6x2_mul [a2, a1, a0] [b2, b1, b0] = [r2, r1, r0] where
+  r0 = Fp_2x2.add (Fp_2x2.mul (fp6x2_tmp a1 a2 b1 b2, u_plus_1x2), Fp_2x2.mul (a0, b0))
+  r1 = Fp_2x2.add (fp6x2_tmp a0 a1 b0 b1, Fp_2x2.mul (Fp_2x2.mul (a2, b2), u_plus_1x2))
+  r2 = Fp_2x2.add (fp6x2_tmp a0 a2 b0 b2, Fp_2x2.mul (a1, b1))

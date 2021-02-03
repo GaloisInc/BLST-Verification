@@ -74,6 +74,11 @@ let custom_prove_cryptol thm script =
   then prove_print script thm
   else admit_cryptol thm;
 
+let test_cryptol thm =
+  if do_prove
+  then prove_print (quickcheck 100) thm
+  else admit_cryptol thm;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Proof commands for use in development
 
@@ -109,7 +114,11 @@ let really_prove_cryptol thm unints =
 
 let really_custom_prove_cryptol thm script =
   prove_print script thm;
- 
+
+let really_test_cryptol thm =
+   prove_print (quickcheck 100) thm;
+
+
 
 ////////////////////////////////////////////////////////////////
 //
@@ -128,6 +137,10 @@ propositional_rewrites <- for
   , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a b False) (and a b))"
   , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (and a b)) (or (not a) (not b)))"
   , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (or a b)) (and (not a) (not b)))"
+  , "(a:Bool) -> EqTrue (eq Bool (implies a False) (not a))"
+  , "(a:Bool) -> (b:Bool) -> (c:Bool) -> EqTrue (eq Bool (implies a (or b c)) (implies (and a (not b)) c))"
+  // , "(a:Bool) -> (b:Bool) -> (c:Bool) -> EqTrue (eq Bool (implies (and a b) c) (implies a (implies b c)))"
+  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (or (not a) b) (implies a b))"
    ] (prove_core abc);
 
 let prop_simpset = add_prelude_eqs
@@ -145,5 +158,3 @@ let print_clean_goal = do {
   simplify cleanup_simpset;
   print_goal;
   };
-
-

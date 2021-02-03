@@ -16,6 +16,7 @@ let size_type = (llvm_int 64);
 let pow256_type = llvm_array 32 (llvm_int 8);
 
 let vec384fp6_type = (llvm_array 3 vec384x_type);
+let vec768fp6_type = llvm_array 3 vec768x_type;
 let vec384fp12_type = (llvm_array 2 vec384fp6_type);
 
 //let POINTonE1_type = llvm_type "{i384, i384, i384}" ;

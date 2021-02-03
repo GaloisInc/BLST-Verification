@@ -52,6 +52,7 @@ fp_invariant v = vec384_abs v < `p // TODO: check!
 
 fp_normalize: Fp_rep_t -> Fp_rep_t
 fp_normalize x = vec384_rep (from_Fp (Fp.normalize (to_Fp (vec384_abs x))))
+
 ////////////////////////////////////////////////////////////////
 //
 // Fp2
@@ -70,6 +71,41 @@ fp2_invariant v = all fp_invariant v
 fp2_normalize: Fp_2_rep_t -> Fp_2_rep_t
 fp2_normalize [x,y] = [fp_normalize x, fp_normalize y]
 
+////////////////////////////////////////////////////////////////
+//
+// Fpx2 is used in the implementation of the fp_12 tower.  Here, the results of a
+// multiplication are manipulated at their double width size (768 bits), before the
+// "redc" operation has been applied.  Addition and subtraction work modulo 2^384 p,
+// so we are no longer working in a field, but a ring.
+
+// Fp_2x2 is then built from Fp2x in the same way (a polynomial quotient ring) as Fp_2 is
+// built from Fp. Fp6x2 is similar, built from Fp2x2.
+
+type Fpx2_rep_t = Vec768
+type shifted_p = p * 2^^384
+
+type t_Fpx2 = Integer
+
+fpx2_abs: Fpx2_rep_t -> t_Fpx2
+fpx2_abs x = toInteger (vec768_abs x)
+
+fpx2_rep: t_Fpx2 -> Fpx2_rep_t
+fpx2_rep x = vec768_rep (fromInteger x)
+
+fpx2_invariant v = (vec768_abs v) < `shifted_p
+
+
+type Fp_2x2_rep_t = [2]Vec768
+type t_Fp_2x2 = [2]t_Fpx2
+
+fp2x2_abs: Fp_2x2_rep_t -> t_Fp_2
+fp2x2_abs [x, y] = [fpx2_abs y, fpx2_abs x]
+
+fp2x2_rep: t_Fp_2 -> Fp_2x2_rep_t
+fp2x2_rep [x, y] = [fpx2_rep y, fpx2_rep x]
+
+fp2x2_invariant [x, y] = fpx2_invariant x /\ fpx2_invariant y
+
 // fp6
 
 type Fp_6_rep_t = [3]Fp_2_rep_t
@@ -78,6 +114,12 @@ fp6_abs [x,y,z] = [fp2_abs z, fp2_abs y, fp2_abs x]
 fp6_rep [x,y,z] = [fp2_rep z, fp2_rep y, fp2_rep x]
 fp6_invariant [x,y,z] = fp2_invariant x /\ fp2_invariant y /\ fp2_invariant z
 fp6_normalize [x,y,z] = [fp2_normalize x, fp2_normalize y, fp2_normalize z]
+
+type t_Fp_6x2 = [3]t_Fp_2x2
+fp6x2_abs [x,y,z] = [fp2x2_abs z, fp2x2_abs y, fp2x2_abs x]
+fp6x2_rep [x,y,z] = [fp2x2_rep z, fp2x2_rep y, fp2x2_rep x]
+fp6x2_invariant [x,y,z] = fp2x2_invariant x /\ fp2x2_invariant y /\ fp2x2_invariant z
+
 
 // fp12
 
