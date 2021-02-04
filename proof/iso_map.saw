@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
+// NOTE: equalities of terms involving only Fp.add and Fp.mul (and no
+// uninterpreted functions) are tractable. Of course there is the issue of some
+// simplifications like x*1 = x not being valid in the current
+// representation...
+
 // Imports
 
 include "helpers.saw";
@@ -72,11 +77,10 @@ _ <- llvm_compositional_extract
   });
 
 // a few tests:
-_ <- custom_prove_cryptol {{ \p -> POINTonE1_abs (isogeny_map_to_E1_term p) == iso_map_impl (POINTonE1_abs p) }} (quickcheck 1);
 _ <- custom_prove_cryptol {{ \p -> POINTonE1_abs' (isogeny_map_to_E1_term p) == iso_map (POINTonE1_abs' p) }} (quickcheck 10);
 
-// Here we prove that the implementation and cryptol spec match
-impl_thm <- custom_prove_cryptol {{ \p -> POINTonE1_abs (isogeny_map_to_E1_term p) == iso_map_impl (POINTonE1_abs p) }}
+// Here we prove that the implementation and low-level cryptol spec match
+impl_thm <- really_custom_prove_cryptol {{ \p -> POINTonE1_abs (isogeny_map_to_E1_term p) == iso_map_impl (POINTonE1_abs p) }}
   (do {
     unfolding ["POINTonE1_abs", "isogeny_map_to_E1_term", "iso_map"];
     simplify (addsimps fp_rep_thms (cryptol_ss ())); // eliminte (abs. rep)
@@ -84,16 +88,20 @@ impl_thm <- custom_prove_cryptol {{ \p -> POINTonE1_abs (isogeny_map_to_E1_term 
   });
 
 // TODO: now it remains to rewrite the arithmetic expressions to get to the high-level spec...
-_ <- custom_prove_cryptol {{ \p -> affinify E (iso_map_impl (POINTonE1_abs p)) == iso_map (affinify E (POINTonE1_abs p)) }} (quickcheck 1);
+_ <- custom_prove_cryptol {{ \p -> affinify E (iso_map_impl (POINTonE1_abs p)) == iso_map (affinify E (POINTonE1_abs p)) }} (quickcheck 10);
 
 // first let's not worry about z = 0...
-let {{ affinify_nz (x,y,z) = (Fp.mul(lambda2, x), Fp.mul(lambda3, y)) where
-  lambda = Fp.div (Fp.field_unit, z);
-  lambda2 = Fp.sq lambda;
-  lambda3 = Fp.mul(lambda, lambda2)
+let {{
+  affinify_nz (x,y,z) = (Fp.mul(lambda2, x), Fp.mul(lambda3, y)) where
+    lambda = Fp.div (Fp.field_unit, z)
+    lambda2 = Fp.sq lambda
+    lambda3 = Fp.mul(lambda, lambda2)
 }};
 
+// sometimes, rewrite rules do not apply if they are not first simplified with cryptol_ss
 let simp_then_admit r = admit_cryptol (rewrite (cryptol_ss ()) r);
+
+// some rewrites for printing things readably:
 
 let {{
   fp_mul = Fp.mul
@@ -122,64 +130,49 @@ let print_readably =  do {
     print_goal;
 };
 
-algebra_simps <- for [ // true only if we use modular types
+basic_algebra_simps <- for [ // true only if we use modular types
     {{ \p -> Fp.add (Fp.field_zero, p) == p }}
   , {{ \p -> Fp.add (p, Fp.field_zero) == p }}
   , {{ \p -> Fp.mul (p, Fp.field_unit) == p }}
   , {{ \p -> Fp.mul (Fp.field_unit, p) == p }}
-  , {{ \x -> Fp.div (x, x) == if (Fp.is_equal (x, Fp.field_zero)) then apply Fp.div (x,x) else Fp.field_unit }}
+  //, {{ \x -> Fp.div (x, x) == if (Fp.is_equal (x, Fp.field_zero)) then apply Fp.div (x,x) else Fp.field_unit }}
+  , {{ \x y z -> Fp.div (Fp.mul (x,z), Fp.mul(y,z)) == Fp.div (x,y) }} // this rule seems better than the previous because it is unconditional
 ] simp_then_admit;
 
-//let {{
-  //F_sum_p = F_sum Fp
-//}};
-
-//F_sum_rewrite <- admit_cryptol {{ \(xs:[12]Integer) -> (F_sum Fp xs) == F_sum_p xs}};
-
-let{{
-  zz_powers z = [zz] # [Fp.mul(zzi, zz) | zzi <- (zz_powers z)] where
-    zz = Fp.sq z
-  zz11 z = (zz_powers z)@10
-  zz15 z = (zz_powers z)@14
+// TODO: why not use a common definition of powers everywhere?
+let {{
+  powers x = ps where
+    ps = [Fp.field_unit] # [Fp.mul(x, pi) | pi <- ps]
+  //zz_powers z = [zz] # [Fp.mul(zzi, zz) | zzi <- (zz_powers z)] where
+    //zz = Fp.sq z
+  zz11 z = (powers (Fp.sq z))@11
+  zz15 z = (powers (Fp.sq z))@15
 }};
 
 let {{
-iso_map_2 (x', y', z') = (x, y) where
-  (X,Y) = affinify_nz (x', y', z')
-  x_powers = [Fp.field_unit] # [Fp.mul(X, xi) | xi <- x_powers]
-  x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- x_powers]
-  x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
-  y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- x_powers]
-  y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
-  x = Fp.mul (Fp.div (x_num, x_den), Fp.div (zz11 z', zz11 z'))
-  y = Fp.mul (Y, Fp.mul (Fp.div(y_num, y_den), Fp.div (zz15 z', zz15 z')))
+  iso_map_2 (x', y', z') = (x, y) where
+    (X,Y) = affinify E (x', y', z')
+    x_powers = powers X
+    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- x_powers]
+    x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
+    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- x_powers]
+    y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
+    x =Fp.div (Fp.mul (x_num, zz11 z'), Fp.mul (x_den, zz11 z'))
+    y = Fp.mul (Y, Fp.div(Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z')))
 }};
 
-// TODO: a shortcut for now:
-zz11_nz <- simp_then_admit {{ \z -> Fp.is_equal (zz11 z, Fp.field_zero) == False }};
-zz15_nz <- simp_then_admit {{ \z -> Fp.is_equal (zz15 z, Fp.field_zero) == False }};
-
-// first test that it's right:
-_ <- really_custom_prove_cryptol {{ \p -> iso_map (affinify_nz (POINTonE1_abs p)) == iso_map_2 (POINTonE1_abs p) }} (quickcheck 10);
-
-// now prove it:
-
-rewrite_1 <- really_custom_prove_cryptol {{ \x y z -> iso_map (affinify_nz (x,y,z)) == iso_map_2 (x,y,z) }}
+rewrite_1 <- really_custom_prove_cryptol {{ \x y z -> iso_map (affinify E (x,y,z)) == iso_map_2 (x,y,z) }}
   (do {
     unfolding ["iso_map_2"];
-    simplify (addsimps algebra_simps empty_ss);
-    simplify (add_prelude_eqs ["ite_false"] (addsimps [zz11_nz, zz15_nz] (cryptol_ss ())));
-    simplify (addsimps algebra_simps empty_ss);
-    //print_readably;
+    simplify (addsimps basic_algebra_simps empty_ss);
     w4_unint_z3 fp_unints;
   });
 
-let more_alg_eqs = [
+let more_algebra_eqs = [
    // push division to the outermost scope:
     {{ \x y a b -> Fp.mul (Fp.div (x,y), Fp.div (a,b)) == Fp.div (Fp.mul (x,a), Fp.mul (y,b)) }}
   , {{ \x y z -> Fp.mul (Fp.div (x,y), z) == Fp.div (Fp.mul (x,z), y) }}
   , {{ \x y z -> Fp.mul (z, Fp.div (x,y)) == Fp.div (Fp.mul (x,z), y) }}
-  , {{ \a b c -> Fp.mul (Fp.div (a, b), c) == Fp.div (Fp.mul (a,c), b) }}
   // convert to sum of products:
   , {{ \a b c -> Fp.mul (Fp.add (a, b), c) == Fp.add (Fp.mul (a,c), Fp.mul (b,c)) }}
   , {{ \a b c -> Fp.mul (c, Fp.add (a, b)) == Fp.add (Fp.mul (a,c), Fp.mul (b,c)) }}
@@ -190,46 +183,19 @@ let more_alg_eqs = [
   , {{ \x y -> Fp.div (Fp.mul (y,x), x) == y }}
 ];
 
-more_alg_rewrites <- for more_alg_eqs simp_then_admit;
+more_algebra_rewrites <- for more_algebra_eqs simp_then_admit;
 
-// NOTE: it is hopeless to have Z3 prove anything about division, but it can prove basic properties of multiplication and addition:
-really_custom_prove_cryptol (elem_at 4 more_alg_eqs) w4;
-really_custom_prove_cryptol (elem_at 5 more_alg_eqs) w4;
-// unfortunately, it cannot even do this:
-//really_custom_prove_cryptol (rewrite (addsimps readability_rewrites empty_ss) {{ \a b c d -> Fp.div(d, Fp.mul (c, Fp.add (a, b))) == Fp.div(d, Fp.add (Fp.mul (a,c), Fp.mul (b,c))) }}) (do {print_goal; w4_unint_z3 ["fp_div"];});
+// Rewrite rule for x_num
 
-// Let's try something else
 let {{
-  xs_1 X = F_sum Fp xs where
-    xs = [Fp.field_unit] # [Fp.mul(X, xi) | xi <- xs | i <- [0..12]]
-  xs_2 X = F_sum Fp xs where
-    xs = [Fp.field_unit] # [Fp.mul(xi, X) | xi <- xs | i <- [0..12]]
-}};
-really_custom_prove_cryptol {{ \x -> xs_1 x == xs_2 x }} w4; // This works!
-
-// another experiment
-let {{
-  t_1 X = F_sum Fp kxs where
-    kxs = [Fp.mul(ki, xi) | ki <- k1s | xi <- xs]
-    xs = [Fp.field_unit] # [Fp.mul(X, xi) | xi <- xs]
-  t_2 X = last xs where
-    xs = [last k1s] # [Fp.add (Fp.mul (xi, X), ki) | ki <- tail (reverse k1s) | xi <- xs]
-}};
-really_custom_prove_cryptol {{ \(x:[9]) -> t_1 (toInteger x) == t_2 (toInteger x) }} (quickcheck 10);
-really_custom_prove_cryptol {{ \x -> t_1 x == t_2 x }} w4; // Works too!
-
-// The conclusion of those last two experiments is that equalities of terms involving only add and mul (and no uninterpreted functions) are tractable. Of course there is the issue of some simplifications like x*1 = x not being valid in the current representation...
-
-// Now let's try a useful rule:
-let {{
-  x_num_times_z11 x' z' = Fp.mul (x_num, zz11 z') where
+  x_num_times_zz11 x' z' = Fp.mul (x_num, zz11 z') where
     X = Fp.mul(lambda2, x') where
       lambda2 = Fp.sq lambda
       lambda = Fp.div (Fp.field_unit, z')
     X_powers = [Fp.field_unit] # [Fp.mul(X, xi) | xi <- X_powers]
     x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- X_powers]
   // here we don't want any divisions:
-  x_num_times_z11_2 x' z' = x_num where
+  x_num_times_zz11_nodiv x' z' = x_num where
     powers a = ps where
       ps = [Fp.field_unit] # [Fp.mul(a, pi) | pi <- ps | i <- [1..11]]
     x'_powers = powers x'
@@ -238,66 +204,58 @@ let {{
     x_num = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- k1s | xi <- x'_powers | zzi <- reverse (zz'_powers)]
 }};
 
-// If we get something higher than the modulus then it might fail...
-really_custom_prove_cryptol {{ \(x:[4]) (y:[4]) -> x_num_times_z11 (toInteger x) (toInteger y) == x_num_times_z11_2 (toInteger x) (toInteger y) }} (quickcheck 10);
+really_custom_prove_cryptol {{ \x z -> x_num_times_zz11 x z == x_num_times_zz11_nodiv x z }}
+  (do { // we must get rid of the divisions by rewriting
+    goal_eval_unint (concat fp_unints ["k1s","x_num_times_zz11_nodiv"]);
+    //simplify (addsimps (concat more_algebra_rewrites basic_algebra_simps) empty_ss); // that also works
+    simplify (addsimps basic_algebra_simps empty_ss); // get rid of 1*x etc.
+    simplify (addsimps (elems_at [5] more_algebra_rewrites) empty_ss); // get rid of square
+    simplify (addsimps (elems_at [3,4] more_algebra_rewrites) empty_ss); // rewrite to sum of products
+    simplify (addsimps (concat_all [(elems_at [0,1,2] more_algebra_rewrites), basic_algebra_simps]) empty_ss); // push division to the outermost scope:
+    simplify (addsimps (elems_at [6] more_algebra_rewrites) empty_ss); // reorganize mul terms to obtain a left fold everywhere
+    simplify (addsimps (elems_at [7] more_algebra_rewrites) empty_ss); // eliminate divisions
+    print_readably;
+    w4;
+  });
 
-// now if we have the above, we can try to automatically prove equivalence with the implementation:
+// now let's prove that the nodiv term is equivalent to the implementation term:
+
 let {{
-  x_num_times_z11_impl x' z' = xn where
+  x_num_times_zz11_impl x' z' = xn where
     zzs = Zz_powers z'
     ks = take`{front=12}k1s
     xn = map_fp (kzzs#[last ks]) x' where // k0 to k11
       kzzs = map_fp_times_Zz`{n=11} ks zzs // k0 to k10
 }};
 
-really_custom_prove_cryptol {{ \(x:[3]) (y:[3]) -> x_num_times_z11_impl (toInteger x) (toInteger y) == x_num_times_z11_2 (toInteger x) (toInteger y) }} (quickcheck 10);
-
-// that works!:
-really_custom_prove_cryptol {{ \x z -> x_num_times_z11_impl x z == x_num_times_z11_2 x z }}
+really_custom_prove_cryptol {{ \x z -> x_num_times_zz11_impl x z == x_num_times_zz11_nodiv x z }}
   (do {
-    unfolding ["x_num_times_z11_impl", "x_num_times_z11_2"];
+    unfolding ["x_num_times_zz11_impl", "x_num_times_zz11_nodiv"];
     goal_eval_unint (concat fp_unints ["k1s"]);
-    //simplify (addsimps algebra_simps empty_ss);
-    //print_readably;
     w4;
   });
 
-// NOTE: at this point, it looks like there is a reasonable chance that, after getting rid of the zz^i/zz^j terms, things will work out.
-// So, we need to show:
-really_custom_prove_cryptol {{ \x z -> x_num_times_z11 x z == x_num_times_z11_2 x z }}
-  (do { // we must get rid of the divisions by rewriting
-    goal_eval_unint (concat fp_unints ["k1s","x_num_times_z11_2"]);
-    simplify (addsimps algebra_simps empty_ss); // get rid of 1*x etc.
-    simplify (addsimps (elems_at [6] more_alg_rewrites) empty_ss); // get rid of square
-    simplify (addsimps (elems_at [4,5] more_alg_rewrites) empty_ss); // rewrite to sum of products
-    simplify (addsimps (concat_all [(elems_at [0,1,2] more_alg_rewrites), algebra_simps]) empty_ss); // push division to the outermost scope:
-    simplify (addsimps (elems_at [7] more_alg_rewrites) empty_ss); // reorganize mul terms to obtain a left fold everywhere
-    simplify (addsimps (elems_at [8] more_alg_rewrites) empty_ss); // eliminate divisions
-    print_readably;
-    w4; // SUCCESS!
-  });
-
-rewrite_2 <- really_custom_prove_cryptol {{ \x y z -> iso_map_2 (x,y,z) == affinify_nz (iso_map_impl (x,y,z)) }}
+rewrite_2 <- really_custom_prove_cryptol {{ \x y z -> iso_map_2 (x,y,z) == affinify E (iso_map_impl (x,y,z)) }}
   (do {
     unfolding ["iso_map_2"];
-    simplify (addsimp (elem_at 0 more_alg_rewrites) empty_ss);
+    simplify (addsimp (elem_at 0 more_algebra_rewrites) empty_ss);
     goal_eval_unint (concat fp_unints ["k1s","k2s","k3s","k4s","iso_map_impl"]);
-    //simplify (addsimps more_alg_rewrites empty_ss);
-    simplify (addsimps algebra_simps empty_ss);
+    //simplify (addsimps more_algebra_rewrites empty_ss);
+    simplify (addsimps basic_algebra_simps empty_ss);
     print_readably;
     assume_unsat;
     //w4;
     //w4_unint_z3 fp_unints;
   });
 
-_ <- really_custom_prove_cryptol {{ \x y z -> affinify_nz (iso_map_impl (x,y,z)) == iso_map (affinify_nz (x,y,z)) }}
+_ <- really_custom_prove_cryptol {{ \x y z -> affinify E (iso_map_impl (x,y,z)) == iso_map (affinify E (x,y,z)) }}
   (do {
     simplify (addsimp rewrite_1 empty_ss);
     //unfolding ["affinify_nz"];
     //simplify (cryptol_ss ());
     print_readably;
     //goal_eval_unint (concat fp_unints ["iso_map"]);  // working on HE1::iso_map first
-    //simplify (addsimps algebra_simps (cryptol_ss ()));
+    //simplify (addsimps basic_algebra_simps (cryptol_ss ()));
     //print_readably;
     assume_unsat;
   });
