@@ -223,17 +223,38 @@ really_custom_prove_cryptol {{ \x z -> x_num_times_zz11 x z == x_num_times_zz11_
 let {{
   x_num_times_zz11_impl x' z' = xn where
     zzs = Zz_powers z'
-    ks = take`{front=12}k1s
-    xn = map_fp (kzzs#[last ks]) x' where // k0 to k11
-      kzzs = map_fp_times_Zz`{n=11} ks zzs // k0 to k10
+    xn = map_fp (kzzs#[last k1s]) x' where // k0 to k11
+      kzzs = map_fp_times_Zz`{n=11} k1s zzs // k0 to k10
 }};
 
-really_custom_prove_cryptol {{ \x z -> x_num_times_zz11_impl x z == x_num_times_zz11_nodiv x z }}
+x_num_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["x_num_times_zz11_impl"] {{ \x z -> x_num_times_zz11_impl x z == x_num_times_zz11_nodiv x z }}))
   (do {
-    unfolding ["x_num_times_zz11_impl", "x_num_times_zz11_nodiv"];
+    unfolding ["x_num_times_zz11_nodiv"];
     goal_eval_unint (concat fp_unints ["k1s"]);
     w4;
   });
+
+// now let's make sure we can rewrite the implementation term:
+rewrite (addsimp x_num_rewrite empty_ss) (rewrite (cryptol_ss ()) (unfold_term ["iso_map_impl"] {{ iso_map_impl }})); // works: the nodiv term appears. Note how we need to rewrite with cryptol_ss first
+
+// TODO: rewrite rule for x_den
+
+//let {{
+  //x_den_times_zz11 x' z' = Fp.mul (x_num, zz11 z') where
+    //X = Fp.mul(lambda2, x') where
+      //lambda2 = Fp.sq lambda
+      //lambda = Fp.div (Fp.field_unit, z')
+    //X_powers = [Fp.field_unit] # [Fp.mul(X, xi) | xi <- X_powers]
+    //x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- X_powers]
+  //// here we don't want any divisions:
+  //x_den_times_zz11_nodiv x' z' = x_num where
+    //powers a = ps where
+      //ps = [Fp.field_unit] # [Fp.mul(a, pi) | pi <- ps | i <- [1..11]]
+    //x'_powers = powers x'
+    //zz'_powers = powers zz'
+    //zz' = Fp.sq z'
+    //x_num = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- k1s | xi <- x'_powers | zzi <- reverse (zz'_powers)]
+//}};
 
 rewrite_2 <- really_custom_prove_cryptol {{ \x y z -> iso_map_2 (x,y,z) == affinify E (iso_map_impl (x,y,z)) }}
   (do {
