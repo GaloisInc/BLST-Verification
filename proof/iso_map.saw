@@ -149,6 +149,8 @@ let {{
   zz15 z = (powers (Fp.sq z))@15
 }};
 
+// we will first rewrite iso_map to get rid of div terms
+// first we multiply x_num and x_den by zz11, and y_num and y_den by zz15
 let {{
   iso_map_2 (x', y', z') = (x, y) where
     (X,Y) = affinify E (x', y', z')
@@ -157,7 +159,7 @@ let {{
     x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
     y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- x_powers]
     y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
-    x =Fp.div (Fp.mul (x_num, zz11 z'), Fp.mul (x_den, zz11 z'))
+    x = Fp.div (Fp.mul (x_num, zz11 z'), Fp.mul (x_den, zz11 z'))
     y = Fp.mul (Y, Fp.div(Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z')))
 }};
 
@@ -192,19 +194,16 @@ let {{
     X = Fp.mul(lambda2, x') where
       lambda2 = Fp.sq lambda
       lambda = Fp.div (Fp.field_unit, z')
-    X_powers = [Fp.field_unit] # [Fp.mul(X, xi) | xi <- X_powers]
-    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- X_powers]
+    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- (powers X)]
   // here we don't want any divisions:
   x_num_times_zz11_nodiv x' z' = x_num where
-    powers a = ps where
-      ps = [Fp.field_unit] # [Fp.mul(a, pi) | pi <- ps | i <- [1..11]]
-    x'_powers = powers x'
-    zz'_powers = powers zz'
+    x'_powers = take`{front=12}(powers x')
+    zz'_powers = take`{front=12}(powers zz')
     zz' = Fp.sq z'
     x_num = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- k1s | xi <- x'_powers | zzi <- reverse (zz'_powers)]
 }};
 
-really_custom_prove_cryptol {{ \x z -> x_num_times_zz11 x z == x_num_times_zz11_nodiv x z }}
+elim_div_rewrite <- really_custom_prove_cryptol {{ \x z -> x_num_times_zz11 x z == x_num_times_zz11_nodiv x z }}
   (do { // we must get rid of the divisions by rewriting
     goal_eval_unint (concat fp_unints ["k1s","x_num_times_zz11_nodiv"]);
     //simplify (addsimps (concat more_algebra_rewrites basic_algebra_simps) empty_ss); // that also works
@@ -239,22 +238,51 @@ rewrite (addsimp x_num_rewrite empty_ss) (rewrite (cryptol_ss ()) (unfold_term [
 
 // TODO: rewrite rule for x_den
 
-//let {{
-  //x_den_times_zz11 x' z' = Fp.mul (x_num, zz11 z') where
-    //X = Fp.mul(lambda2, x') where
-      //lambda2 = Fp.sq lambda
-      //lambda = Fp.div (Fp.field_unit, z')
-    //X_powers = [Fp.field_unit] # [Fp.mul(X, xi) | xi <- X_powers]
-    //x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- X_powers]
-  //// here we don't want any divisions:
-  //x_den_times_zz11_nodiv x' z' = x_num where
-    //powers a = ps where
-      //ps = [Fp.field_unit] # [Fp.mul(a, pi) | pi <- ps | i <- [1..11]]
-    //x'_powers = powers x'
-    //zz'_powers = powers zz'
-    //zz' = Fp.sq z'
-    //x_num = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- k1s | xi <- x'_powers | zzi <- reverse (zz'_powers)]
-//}};
+let {{
+  x_den_times_zz11 x' z' = Fp.mul (x_den, zz11 z') where
+    X = Fp.mul(lambda2, x') where
+      lambda2 = Fp.sq lambda
+      lambda = Fp.div (Fp.field_unit, z')
+    x_den = F.add ((powers X)@10, F_sum F [F.mul(ki, xi) | ki <- k2s | xi <- (powers X)])
+  // here we don't want any divisions:
+  x_den_times_zz11_nodiv x' z' = x_den where
+    x'_powers = take`{front=11}(powers x')
+    zz'_powers = tail (take`{front=12}(powers zz'))
+    zz' = Fp.sq z'
+    x_den = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- (k2s#[Fp.field_unit]) | xi <- x'_powers | zzi <- reverse (zz'_powers)]
+}};
+
+really_custom_prove_cryptol {{ \(x:[8]) (z:[8]) -> x_den_times_zz11 (toInteger x) (toInteger z) == x_den_times_zz11_nodiv (toInteger x) (toInteger z) }} (quickcheck 20);
+
+elim_div_rewrite <- really_custom_prove_cryptol {{ \x z -> x_den_times_zz11 x z == x_den_times_zz11_nodiv x z }}
+  (do { // we must get rid of the divisions by rewriting
+    goal_eval_unint (concat fp_unints ["k2s","x_den_times_zz11_nodiv"]);
+    simplify (addsimps (concat more_algebra_rewrites basic_algebra_simps) empty_ss);
+    w4;
+  });
+
+// now let's prove that the nodiv term is equivalent to the implementation term:
+
+let {{
+  x_den_times_zz11_impl x' z' = xd where
+    zzs = Zz_powers z'
+    xd = Fp.mul (xs, last zzs)
+    xs = map_fp ((take`{front=9}kzzs)#[xkzz9]) x'
+    xkzz9 = Fp.add (x', last kzzs)
+    kzzs = map_fp_times_Zz`{n=10} k2s zzs
+}};
+
+x_den_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["x_den_times_zz11_impl"] {{ \x z -> x_den_times_zz11_impl x z == x_den_times_zz11_nodiv x z }}))
+  (do {
+    unfolding ["x_den_times_zz11_nodiv"];
+    goal_eval_unint (concat fp_unints ["k1s"]);
+    w4;
+  });
+
+// now let's make sure we can rewrite the implementation term:
+rewrite (addsimp x_den_rewrite empty_ss) (rewrite (cryptol_ss ()) (unfold_term ["iso_map_impl"] {{ iso_map_impl }})); // works: the nodiv term appears. Note how we need to rewrite with cryptol_ss first
+
+// TODO: y_num
 
 rewrite_2 <- really_custom_prove_cryptol {{ \x y z -> iso_map_2 (x,y,z) == affinify E (iso_map_impl (x,y,z)) }}
   (do {
