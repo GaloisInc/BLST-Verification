@@ -235,13 +235,46 @@ ffx2_uncover_thms <- for
  , {{ \x -> ff_neg_fp2x2 x == Fp_2x2.neg x }}
  ] ( \t -> prove_cryptol t [] );
 
+let {{
+  ff_zero_fpx2 = Fpx2.field_zero
+  ff_unit_fpx2 = Fpx2.field_unit
+  ff_mul_fpx2 = Fpx2.mul
+  ff_sq_fpx2  = Fpx2.sq
+  ff_add_fpx2 = Fpx2.add
+  ff_sub_fpx2 = Fpx2.sub
+  ff_neg_fpx2 = Fpx2.neg
+  }};
+
+ffx_cover_thms <- for
+ [ {{ Fpx2.field_zero == ff_zero_fpx2 }}
+ , {{ Fpx2.field_unit == ff_unit_fpx2 }}
+ , {{ \x -> Fpx2.mul x == ff_mul_fpx2 x}}
+ , {{ \x -> Fpx2.add x == ff_add_fpx2 x }}
+ , {{ \x -> Fpx2.sub x == ff_sub_fpx2 x }}
+ , {{ \x -> Fpx2.sq x == ff_sq_fpx2 x }}
+ , {{ \x -> Fpx2.neg x == ff_neg_fpx2 x }}
+ ] ( \t -> prove_cryptol t [] );
+
+ffx_uncover_thms <- for
+ [ {{ ff_zero_fpx2 == Fpx2.field_zero }}
+ , {{ ff_unit_fpx2 == Fpx2.field_unit }}
+ , {{ \x -> ff_mul_fpx2 x == Fpx2.mul x }}
+ , {{ \x -> ff_add_fpx2 x == Fpx2.add x }}
+ , {{ \x -> ff_sub_fpx2 x == Fpx2.sub x }}
+ , {{ \x -> ff_sq_fpx2 x == Fpx2.sq x }}
+ , {{ \x -> ff_neg_fpx2 x == Fpx2.neg x }}
+ ] ( \t -> prove_cryptol t [] );
+
+
 let print_goal_nicely = do {
     unfolding ["/\\", "\\/", "==>"];
     expand_fp2;
+    simplify (addsimps ffx_cover_thms (cryptol_ss ()));
     simplify (addsimps ffx2_cover_thms (cryptol_ss ()));
     simplify prop_simpset;
     print_goal;
     simplify (addsimps ffx2_uncover_thms (cryptol_ss ()));
+    simplify (addsimps ffx_uncover_thms (cryptol_ss ()));
     simplify (addsimps ff_uncover_thms (cryptol_ss ())); // put things back. ish
     };
 
@@ -413,18 +446,51 @@ let mul_fp6x2_spec a_aliased = do {
 let {{
   fp2_abs_nom [x, y] = [abs_384 y, abs_384 x]
   fp6_abs_nom [x,y,z] = [fp2_abs_nom z, fp2_abs_nom y, fp2_abs_nom x]
+
+  fp2_rep_nom [x, y] = [rep_384 y, rep_384 x]
+  fp6_rep_nom [x,y,z] = [fp2_rep_nom z, fp2_rep_nom y, fp2_rep_nom x]
   }};
 
-let mul_fp6x2_spec a_aliased = do {
+let mul_fp6x2_spec = do {
   ret_ptr <- crucible_alloc vec768fp6_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp6_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384fp6_type;
   crucible_precond {{ fp6_invariant a }};
   crucible_precond {{ fp6_invariant b }};
   crucible_execute_func [ret_ptr, a_ptr, b_ptr];
-  // crucible_points_to ret_ptr (crucible_term {{ fp6x2_rep (Fp_6x2.mul (fp6_abs_nom a, fp6_abs_nom b)) }});
   crucible_points_to ret_ptr (crucible_term {{ fp6x2_rep (fp6x2_mul (fp6_abs_nom a) (fp6_abs_nom b)) }});
 };
+
+let redc_fp6x2_spec = do {
+  ret_ptr <- crucible_alloc vec384fp6_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec768fp6_type;
+  crucible_execute_func [ret_ptr, a_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp6_rep_nom (redc_mont_fp6 (fp6x2_abs a)) }});
+  };
+
+// TODO: remove warm-up exercise:
+/*
+let redc_fp2x2_spec = do {
+  ret_ptr <- crucible_alloc vec384x_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec768x_type;
+  crucible_execute_func [ret_ptr, a_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp2_rep_nom (redc_mont_fp2 (fp2x2_abs a)) }});
+  };
+*/
+
+let mul_fp6_spec a_aliased = do {
+  (ret, ret_ptr) <- if a_aliased
+                    then ptr_to_fresh "a" vec384fp6_type
+                    else do { r <- crucible_alloc vec384fp6_type;
+                              return ( {{ zero: [3][2]Vec384 }}, r ); } ; // TODO fix Cryptol type?
+  (a, a_ptr) <- if a_aliased then return (ret, ret_ptr) else ptr_to_fresh_readonly "a" vec384fp6_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384fp6_type;
+  crucible_precond {{ fp6_invariant a }};
+  crucible_precond {{ fp6_invariant b }};
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp6_rep (Fp_6.mul (fp6_abs a, fp6_abs b)) }});
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Proofs
@@ -487,11 +553,8 @@ sqr_fp2x2_ov <- custom_verify "sqr_fp2x2"
   sqr_fp2x2_spec
   do {
    rw_with_1 mul_382x_equiv_thm; // eliminate Fp_2x2.mul
-   print_goal;
    w4_unint_z3 ["mul_382x", "fp2x2_rep", "abs_384x"];
    };
-
-
 
 sub_fp6x2_ov <- custom_verify "sub_fp6x2"
   all_384x384_ovs
@@ -539,7 +602,7 @@ fpx2_val_thms <- for
   [ {{ Fpx2.add }}, {{ Fpx2.sub }}, {{Fpx2.mul}} ]
   ( \ f -> prove_cryptol {{ \ x y -> Fpx2.is_val (f (x,y)) == True }} [] );
 
-
+// see vec_384x384_thms
 fpx2_abs_rep_lemma <- custom_prove_cryptol
   {{ \x -> fpx2_abs (fpx2_rep x) == x % 2^^768}}
   do { unfolding ["fpx2_abs", "fpx2_rep"];
@@ -552,10 +615,12 @@ fpx2_abs_rep_thms <- for
   ( \ f -> custom_prove_cryptol {{ \ x y -> fpx2_abs (fpx2_rep (f (x,y))) == f (x,y) }}
     do { rw_with_1 fpx2_abs_rep_lemma; z3; } );
 
+// see vec_384x384_thms
 fpx2_abs_rep_thm <- custom_prove_cryptol
     {{ \x -> fpx2_abs (fpx2_rep x) == if Fpx2.is_val x then x else x % 2^^768 }}
     do { rw_with_1 fpx2_abs_rep_lemma; z3; };
 
+// see vec_384x384_thms
 fpx2_rep_abs_thm <- custom_prove_cryptol {{ \x -> fpx2_rep (fpx2_abs x) == x }}
   do { unfolding ["fpx2_abs", "fpx2_rep"];
        simplify (addsimp vec768_rep_abs_thm (addsimps bv768_thms empty_ss));
@@ -617,6 +682,7 @@ sub_fp2x2_ovs <- for possible_aliases
 
 // and fp6x2
 // TODO: maybe not needed:
+/*
 fp6x2_mul_expansion_thm <- prove_cryptol
  {{ \ x y -> ( Fp_6x2.mul(x, y) ==
      [ R.add (R.mul (a, f), R.add (R.mul(b, e), R.mul(c,d)))
@@ -628,30 +694,16 @@ fp6x2_mul_expansion_thm <- prove_cryptol
        [a,b,c] = x
        [d,e,f] = y
        R = Fp_2x2 ) }} [] ;
-
+*/
 reabstracted_add_thm <- test_cryptol
   {{ \ x y -> abs_384x (fp2_rep (Fp_2.add (fp2_abs x, fp2_abs y))) == Fp_2.add (fp2_abs_nom x, fp2_abs_nom y) }};
 
+// TODO: do not use fp2_abs_nom, it is redundant
 fp2_abs_nom_thm <- prove_cryptol {{ \x -> fp2_abs_nom x == abs_384x x }} [];
 
 mul_fp6x2_ov <- really_custom_verify "mul_fp6x2"
   (concat_all [[mul_fp2x2_ov, sqr_fp2x2_ov, mul_by_u_plus_1_fp2x2_ov], add_fp2x2_ovs, sub_fp2x2_ovs, fp2_overrides])
-  (mul_fp6x2_spec false) // not aliased
-  do {
-   //rw_with_1 fp6x2_mul_expansion_thm;
-   // unfolding ["fp6_invariant", "fp2x2_rep", "fp6x2_rep"];
-   unfolding ["fp6_invariant", "fp6x2_rep", "fp6_abs_nom", "fp6x2_mul", "fp6x2_tmp"];
-   // simplify fp_simpset;
-   simplify fp2_simpset;
-   rw_with (concat_all [fpx2_thms, fp2x2_thms, [reabstracted_add_thm, fp2_abs_nom_thm]]);
-   // goal_eval_unint ["Fp_2x2", "Fp_2"];
-   // print_goal_nicely;
-   z3; // w4_unint_z3 ["Fp_2x2"];
-   };
-
-mul_fp6x2_aliased_ov <- really_custom_verify "mul_fp6x2"
-  (concat_all [[mul_fp2x2_ov, sqr_fp2x2_ov, mul_by_u_plus_1_fp2x2_ov], add_fp2x2_ovs, sub_fp2x2_ovs, fp2_overrides])
-  (mul_fp6x2_spec true) // aliased
+  mul_fp6x2_spec
   do {
    unfolding ["fp6_invariant", "fp6x2_rep", "fp6_abs_nom", "fp6x2_mul", "fp6x2_tmp"];
    simplify fp2_simpset;
@@ -659,14 +711,206 @@ mul_fp6x2_aliased_ov <- really_custom_verify "mul_fp6x2"
    z3;
    };
 
+// ...now the payoff, using redc_mont_384 to get back into Fp6
 
-// sub_mod_384x
+let {{ redc_mont_fp2 [x, y] = [redc_mont_384 x, redc_mont_384 y] }};
+let {{ redc_mont_fp6 [x, y, z] = [redc_mont_fp2 x, redc_mont_fp2 y, redc_mont_fp2 z] }};
+
+redc_mont_lemma_1 <- prove_cryptol (rewrite (cryptol_ss ())
+    {{ \ (x:Integer) -> (x % `shifted_p)%`p == x%`p }}) [];
+redc_mont_lemma_2 <- prove_cryptol (rewrite (cryptol_ss ())
+   {{ \ x (y:Integer) -> (x * y)%`p == apply (%) (x*(y%`p)) `p }}) [];
+
+redc_mont_add_thm <- custom_prove_cryptol
+  {{ \ x y -> redc_mont_fp2 (Fp_2x2.add (x, y)) == Fp_2.add(redc_mont_fp2 x, redc_mont_fp2 y) }}
+  do { goal_eval; rw_with [redc_mont_lemma_1, redc_mont_lemma_2]; z3; };
+
+// HANGS:
 /*
-sub_mod_384x384_ovs <-
-  for [ sub_mod_384x384_spec, sub_mod_384x384_alias_ret_a_spec,  sub_mod_384x384_alias_ret_b_spec
-      , sub_mod_384x384_alias_a_b_spec, sub_mod_384x384_alias_ret_a_b_spec]
-      (\ s -> admit "sub_mod_384x384" s);
+redc_mont_sub_thm <- custom_prove_cryptol
+  {{ \ x y -> redc_mont_fp2 (Fp_2x2.sub (x, y)) == Fp_2.sub(redc_mont_fp2 x, redc_mont_fp2 y) }}
+  do { goal_eval; rw_with [redc_mont_lemma_1, redc_mont_lemma_2]; goal_eval; print_goal; z3; };
+
+redc_mont_mul_2x2_lemma <- prove_cryptol
+  {{ \ x y -> redc_mont_fp2 (Fp_2x2.mul (x, y)) == Fp_2.mul(redc_mont_fp2 x, redc_mont_fp2 y) }} [];
+
+// FAILS: -- needs fp2_invariant?
+redc_mont_mul_2x2_thm <- test_cryptol
+  {{ \ x y -> redc_mont_fp2 (Fp_2x2.mul (abs_384x x, abs_384x y)) == Fp_2.mul(fp2_abs x, fp2_abs y) }};
 */
+//////////////// ... new idea
+
+let {{ toM: Integer -> Integer
+       toM x = (x*2^^384) % `p
+       toM_2 [x, y] = [toM x, toM y]
+       toM_6 [x,y,z] = [toM_2 x, toM_2 y, toM_2 z]
+       }};
+
+// prove_cryptol {{ \x -> Fp.is_val x ==> fp_rep (redc_mont_384 x) == rep_384 x }} [];
+rep_redc_thm <- admit_cryptol {{ \x -> rep_384 (redc_mont_384 x) == fp_rep (redc_mont_384 (redc_mont_384 x)) }};
+
+redc_Fp_add_thm <- prove_cryptol {{ \x y -> redc_mont_384 (Fp.add (x,y)) == Fp.add (redc_mont_384 x, redc_mont_384 y) }} [] ;
+redc_Fp_sub_thm <- prove_cryptol {{ \x y -> redc_mont_384 (Fp.sub (x,y)) == Fp.sub (redc_mont_384 x, redc_mont_384 y) }} [] ;
+
+redc_Fpx2_add_thm <- prove_cryptol {{ \x y -> redc_mont_384 (Fpx2.add (x,y)) == Fp.add (redc_mont_384 x, redc_mont_384 y) }} [] ;
+redc_Fpx2_sub_thm <- prove_cryptol {{ \x y -> redc_mont_384 (Fpx2.sub (x,y)) == Fp.sub (redc_mont_384 x, redc_mont_384 y) }} [] ;
+redc_Fpx2_zero_thm <- prove_cryptol {{ redc_mont_384 Fpx2.field_zero == Fp.field_zero }} [] ;
+
+toM_Fp_add_thm <- prove_cryptol {{ \x y -> toM (Fp.add (x,y)) == Fp.add (toM x, toM y) }} [] ;
+toM_Fp_sub_thm <- prove_cryptol {{ \x y -> toM (Fp.sub (x,y)) == Fp.sub (toM x, toM y) }} [] ;
+toM_Fp_zero_thm <- prove_cryptol {{ toM Fp.field_zero == Fp.field_zero }} [] ;
+
+
+
+/*
+redc_Fpx2_mul_thm <- test_cryptol  {{ \ x y -> rep_384 (redc_mont_384 (Fpx2.mul (abs_384 x, abs_384 y))) == fp_rep (Fp.mul (fp_abs x, fp_abs y)) }};
+
+redc_Fpx2_mul_thm2 <- test_cryptol  {{ \ x y -> redc_mont_384 (Fpx2.mul (abs_384 x, abs_384 y)) == abs_384 (fp_rep (Fp.mul (fp_abs x, fp_abs y))) }};
+
+redc_Fpx2_mul_thm2a <- test_cryptol  {{ \ x y -> redc_mont_384 (Fpx2.mul (abs_384 x, abs_384 y)) == toM (Fp.mul (fp_abs x, fp_abs y)) }};
+*/
+
+// Integer not testable, so admit
+redc_Fpx2_mul_thm2b <- admit_cryptol  {{ \ x y -> redc_mont_384 (Fpx2.mul (x, y)) == toM (Fp.mul (redc_mont_384 x, redc_mont_384 y)) }};
+
+
+// may need conditions
+redc_Fpx2_mul_thm3 <- admit_cryptol  {{ \ x y -> redc_mont_384 (Fpx2.mul (x, y)) == abs_384 (fp_rep (Fp.mul (fp_abs (rep_384 x), fp_abs (rep_384 y)))) }};
+
+// redc_Fpx2_mul_thm <- prove_cryptol {{ \x y -> redc_mont_384 (Fpx2.mul (x,y)) == Fp.mul (x, y) }} [] ;
+  
+// start at Fp_2x2
+// ... as an exercise, don't need theis layer!
+redc_mont_mul_2x2_thm <- custom_prove_cryptol
+  {{ \ x y -> redc_mont_fp2 (Fp_2x2.mul (fp2_abs_nom x, fp2_abs_nom y)) == toM_2 (Fp_2.mul(fp2_abs x, fp2_abs y)) }}
+  do { goal_eval_unint ["Fpx2", "Fp", "redc_mont_384", "fp_abs", "abs_384", "toM"];
+       rw_with (concat_all [ fpx2_val_thms, vec384x384_thms
+                           , [fpx2_abs_rep_thm, redc_Fpx2_add_thm, redc_Fpx2_sub_thm
+                             , redc_Fpx2_zero_thm, redc_Fpx2_mul_thm2b
+                             , toM_Fp_add_thm, toM_Fp_sub_thm, toM_Fp_zero_thm
+                             ]]);
+       //print_goal_nicely;
+       z3; };
+
+
+/*
+redc_mont_mul_6x2_thm <- custom_prove_cryptol
+  {{ \ x y -> redc_mont_fp6 (Fp_6x2.mul (fp6_abs_nom x, fp6_abs_nom y)) == toM_6 (Fp_6.mul(fp6_abs x, fp6_abs y)) }}
+  do { goal_eval_unint ["Fp_2x2", "Fp_2", "redc_mont_384", "abs_384", "toM_2"];
+       rw_with [redc_mont_mul_2x2_thm, fp2_unrip_thm];
+       print_goal_nicely;
+       z3; };
+*/
+redc_mont_mul_6x2_thm <- custom_prove_cryptol
+  {{ \ x y -> redc_mont_fp6 (Fp_6x2.mul (fp6_abs_nom x, fp6_abs_nom y)) == toM_6 (Fp_6.mul(fp6_abs x, fp6_abs y)) }}
+  do { goal_eval_unint ["Fpx2", "Fp", "redc_mont_384", "fp_abs", "abs_384", "toM"];
+       rw_with (concat_all [ fpx2_val_thms, vec384x384_thms
+                           , [fpx2_abs_rep_thm, redc_Fpx2_add_thm, redc_Fpx2_sub_thm
+                             , redc_Fpx2_zero_thm, redc_Fpx2_mul_thm2b
+                             , toM_Fp_add_thm, toM_Fp_sub_thm, toM_Fp_zero_thm
+                             ]]);
+       // print_goal_nicely;
+       z3; };
+
+// NOW. need fp6_rep_nom X = fp6_rep (toM_6 x).  Start at Fp
+
+fp_rep_nom_thm <- admit_cryptol {{ \x -> rep_384 (toM x) == fp_rep x }};
+
+/*
+fp6_rep_nom_thm <- custom_prove_cryptol {{ \x -> fp6_rep_nom (toM_6 x) == fp6_rep x }}
+  do { unfolding ["fp6_rep_nom", "fp2_rep_nom", "fp6_rep", "fp2_rep", "toM_6", "toM_2"];
+       rw_with_1 fp_rep_nom_thm;
+       w4_unint_z3 ["rep_384", "fp_rep", "toM"]; };
+*/
+fp6_rep_nom_thm <- custom_prove_cryptol {{ \x -> fp6_rep x == fp6_rep_nom (toM_6 x) }}
+  do { unfolding ["fp6_rep_nom", "fp2_rep_nom", "fp6_rep", "fp2_rep", "toM_6", "toM_2"];
+       rw_with_1 fp_rep_nom_thm;
+       w4_unint_z3 ["rep_384", "fp_rep", "toM"]; };
+
+
+// valid:
+custom_prove_cryptol
+  {{ \x -> Fp_6x2.is_val x ==> fp6x2_abs (fp6x2_rep x) ==  x }}
+  do { unfolding ["fp6x2_rep", "fp6x2_abs"];
+       rw_with_1 fp2x2_abs_rep_thm;
+       w4_unint_z3 ["Fp_2x2", "fp2x2_abs", "fp2x2_rep"]; };
+
+// struggle !?
+/*
+fp6x2_abs_rep_thm <- custom_prove_cryptol
+  {{ \x -> fp6x2_abs (fp6x2_rep x) == if Fp_6x2.is_val x then x else apply fp6x2_abs (fp6x2_rep x) }}
+  do { unfolding ["fp6x2_rep", "fp6x2_abs"];
+       rw_with_1 fp2x2_abs_rep_thm;
+       unfolding ["apply"]; beta_reduce_goal;
+       print_goal;
+       // z3; };   //
+       w4_unint_z3 ["Fp_2x2", "fp2x2_abs", "fp2x2_rep"]; };
+*/
+fp6x2_abs_rep_thm <- admit_cryptol
+  {{ \x -> fp6x2_abs (fp6x2_rep x) == if Fp_6x2.is_val x then x else apply fp6x2_abs (fp6x2_rep x) }};
+
+fp6x2_mul_is_val_thm <- prove_cryptol {{ \x y -> Fp_6x2.is_val (fp6x2_mul x y) == True}} [];
+/*
+redc_fp2x2_ov <- custom_verify "redc_fp2x2"
+  [redcx_mont_384_alt_ov]
+  redc_fp2x2_spec
+  do {print_goal_nicely; z3; };
+*/
+
+// And we need to show fp6x2_mul equivalent (mod p) to Fp_6x2.mul.  And that recd_mont_384 respects mod p equivalents
+let {{ fp2_reduce_mod_p [x1:Integer, x2] = [x1%`p, x2%`p]
+       fp6_reduce_mod_p [x1:[2]Integer,x2,x3] = [fp2_reduce_mod_p x1, fp2_reduce_mod_p x2, fp2_reduce_mod_p x3]
+    }};
+
+// algebraically true; assumed
+fp6x2_mul_equiv_thm <- admit_cryptol
+  {{ \x y -> fp6_reduce_mod_p (fp6x2_mul x y) == fp6_reduce_mod_p (Fp_6x2.mul (x, y)) }};
+
+
+// redc_fp_mod_p_thm <- prove_cryptol {{ \x -> redc_mont_384 (x%`p) == redc_mont_384 x }} [];
+// redc_fp6_mod_p_thm <- prove_cryptol {{ \x -> redc_mont_fp6 (fp6_reduce_mod_p x) == redc_mont_fp6 x }} [];
+// inserts a mod p reduction; `apply` prevents it from looping.
+redc_fp6_mod_p_thm <- prove_cryptol
+  {{ \x -> redc_mont_fp6 x == apply redc_mont_fp6 (fp6_reduce_mod_p x) }} [];
+// and need to take it out again
+redc_fp6_mod_p_rev_thm <- prove_cryptol
+  {{ \x ->  redc_mont_fp6 (fp6_reduce_mod_p x) == redc_mont_fp6 x }} [];
+
+
+redc_fp6x2_ov <- custom_verify "redc_fp6x2"
+  [redcx_mont_384_alt_ov]
+  redc_fp6x2_spec
+  z3;
+
+/*
+mul_fp6_ov <- custom_verify "mul_fp6"
+  [mul_fp6x2_ov, redc_fp6x2_ov]
+  (mul_fp6_spec false) // not aliased
+  do { rw_with_1 redc_fp6_mod_p_thm; // get the mod_fp reduction in place
+       unfolding ["apply"];
+       rw_with [fp6x2_mul_equiv_thm, fp6x2_abs_rep_thm];
+       rw_with_1 redc_fp6_mod_p_rev_thm;
+       print_goal;
+       simplify (addsimps [fp6_rep_nom_thm, redc_mont_mul_6x2_thm, fp6x2_abs_rep_thm, fp6x2_mul_is_val_thm]
+                          prop_simpset);
+       print_goal; z3; };
+*/
+mul_fp6_ov <- custom_verify "mul_fp6"
+  [mul_fp6x2_ov, redc_fp6x2_ov]
+  (mul_fp6_spec false) // not aliased
+  do { simplify (addsimps [fp6x2_mul_is_val_thm, fp6x2_abs_rep_thm] prop_simpset);
+       rw_with_1 redc_fp6_mod_p_thm;
+       unfolding ["apply"];
+       rw_with_1 fp6x2_mul_equiv_thm;
+       rw_with_1 redc_fp6_mod_p_rev_thm;
+       // print_goal;
+       //simplify (addsimps [fp6_rep_nom_thm, redc_mont_mul_6x2_thm, fp6x2_abs_rep_thm, fp6x2_mul_is_val_thm]
+       //                   prop_simpset);
+       rw_with [fp6_rep_nom_thm, redc_mont_mul_6x2_thm];
+       // print_goal;
+       z3; };
+
+
 
 conjugate_fp12_ov <- custom_verify "conjugate_fp12"
   fp2_overrides

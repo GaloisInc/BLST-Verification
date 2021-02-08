@@ -53,7 +53,8 @@ let {{ // type shifted_p = p * 2^^384
 
        sqr_382x x = mul_382x x x
 
-       R_inverse = 756932377023786838651550925592541459659721362320071439453990269266980078978837212705482375457041822473487776934882: Integer
+       // R_inverse = 756932377023786838651550925592541459659721362320071439453990269266980078978837212705482375457041822473487776934882: Integer
+       R_inverse = 3231460744492646417066832100176244795738767926513225105051837195607029917124509527734802654356338138714468589979680 : Integer
        redc_mont_384 x = (x*R_inverse) % `p
     }};
 
@@ -161,6 +162,16 @@ let redcx_mont_384_spec = do {
   crucible_points_to ret_ptr (crucible_term {{ rep_384 (redc_mont_384 (fpx2_abs a)) }});
 };
 
+let redcx_mont_384_alt_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  crucible_precond {{  b == vec384_rep `p }};
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p0_term];
+  crucible_points_to ret_ptr (crucible_term {{ rep_384 (redc_mont_384 (fpx2_abs a)) }});
+};
+
+
 let sqr_382x_spec = do {
   ret_ptr <- crucible_alloc vec768x_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
@@ -215,6 +226,7 @@ mul_382x_ov <- admit "mulx_382x" mul_382x_spec;
 sqr_382x_ov <- admit "sqrx_382x" sqr_382x_spec;
 
 redcx_mont_384_ov <- admit "redcx_mont_384" redcx_mont_384_spec;
+redcx_mont_384_alt_ov <- admit "redcx_mont_384" redcx_mont_384_alt_spec;
 
 let all_384x384_ovs = concat_all [ add_mod_384x384_ovs, sub_mod_384x384_ovs
                                  , [mul_382x_ov, sqr_382x_ov, redcx_mont_384_ov]];

@@ -216,7 +216,7 @@ cyclotomic_sqr_fp12_imp [[a12, a11, a10], [a02, a01, a00]] = r where
 // Fpx2: Integers mod 2^384 * p
 // Fp2x2: Fpx2[x] / (x^2+1), a quotient ring.
 // etc.
-// We fake the rings by using the field constructors, and traking care never to call half or div
+// We fake the rings by using the field constructors, and taking care never to call `half` or `div`
 
 
 Fpx2 = prime_field_integer (`p * 2^^384 )
