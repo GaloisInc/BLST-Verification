@@ -136,7 +136,6 @@ zero_unit_rewrites <- for [ // here we are cheating: this is true only if we use
   //, {{ \x y z -> Fp.div (Fp.mul (x,z), Fp.mul(y,z)) == Fp.div (x,y) }} // this rule seems better than the previous because it is unconditional
 ] simp_then_admit;
 
-// Hopefully this is confluent, given further normalization of mul terms
 // NOTE: I'm assuming that rules are applied in the order they appear; if not, we will likely mess up the order of variables in products and, since we can't use commutativity as it would loop, we're in trouble
 push_div_out_rewrites <- for [
     {{ \x y a b -> Fp.mul (Fp.div (x,y), Fp.div (a,b)) == Fp.div (Fp.mul (x,a), Fp.mul (y,b)) }}
@@ -163,7 +162,6 @@ elim_div_rewrites <- for [
   ,  {{ \x y z -> Fp.div (Fp.mul (x,y), Fp.mul(x,z)) == Fp.div (y,z) }}
 ] simp_then_admit;
 
-
 let algebra_simpset = addsimps (concat_all [zero_unit_rewrites, [unsquare_rewrite], [left_fold_mul], sum_of_prods_rewrites, push_div_out_rewrites, elim_div_rewrites]) empty_ss;
 
 let {{
@@ -184,13 +182,39 @@ let {{
     y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- x_powers]
     y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
     x = Fp.div (Fp.mul (x_num, zz11 z'), Fp.mul (x_den, zz11 z'))
-    y = Fp.mul (Y, Fp.div(Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z')))
+    y = Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z')))
 }};
 
 rewrite_1 <- really_custom_prove_cryptol {{ \x y z -> iso_map (affinify E (x,y,z)) == iso_map_2 (x,y,z) }}
   (do {
     unfolding ["iso_map_2"];
     simplify (addsimps (concat_all [zero_unit_rewrites, elim_div_rewrites]) empty_ss);
+    w4_unint_z3 fp_unints;
+  });
+
+// then we massage y a bit more:
+let {{
+  iso_map_3 (x', y', z') = (x, y) where
+    (X,Y) = affinify E (x', y', z')
+    x_powers = powers X
+    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- x_powers]
+    x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
+    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- x_powers]
+    y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
+    x = Fp.div (Fp.mul (x_num, zz11 z'), Fp.mul (x_den, zz11 z'))
+    y = Fp.div (Fp.mul (y', Fp.mul (y_num, zz15 z')), Fp.mul (Fp.mul (Fp.sq z', z'),  Fp.mul (y_den, zz15 z')))
+}};
+
+aux_rewrite <- really_custom_prove_cryptol {{
+}};
+
+rewrite_2 <- really_custom_prove_cryptol {{ \x y z -> ~(is_zero Fp z) ==> iso_map_2 (x,y,z) == iso_map_3 (x,y,z) }}
+  (do {
+    unfolding ["iso_map_2", "affinify"];
+    simplify (cryptol_ss ());
+    //simplify algebra_simpset;
+    print_readably;
+    //simplify (addsimp left_fold_mul empty_ss);
     w4_unint_z3 fp_unints;
   });
 
@@ -213,7 +237,7 @@ let {{
 elim_div_rewrite_x_num_times_zz11 <- really_custom_prove_cryptol {{ \x z -> x_num_times_zz11 x z == x_num_times_zz11_nodiv x z }}
   (do { // we must get rid of the divisions by rewriting
     goal_eval_unint (concat fp_unints ["k1s","x_num_times_zz11_nodiv"]);
-    simplify algebra_simpset; // that also works
+    simplify algebra_simpset;
     w4;
   });
 
@@ -228,7 +252,6 @@ let {{
 
 x_num_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["x_num_times_zz11_impl"] {{ \x z -> x_num_times_zz11_impl x z == x_num_times_zz11_nodiv x z }}))
   (do {
-    unfolding ["x_num_times_zz11_nodiv"];
     goal_eval_unint (concat fp_unints ["k1s"]);
     w4;
   });
@@ -274,7 +297,6 @@ let {{
 
 x_den_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["x_den_times_zz11_impl"] {{ \x z -> x_den_times_zz11_impl x z == x_den_times_zz11_nodiv x z }}))
   (do {
-    unfolding ["x_den_times_zz11_nodiv"];
     goal_eval_unint (concat fp_unints ["k1s"]);
     w4;
   });
@@ -282,19 +304,103 @@ x_den_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_te
 // now let's make sure we can rewrite the implementation term:
 rewrite (addsimp x_den_rewrite empty_ss) (rewrite (cryptol_ss ()) (unfold_term ["iso_map_impl"] {{ iso_map_impl }})); // works: the nodiv term appears. Note how we need to rewrite with cryptol_ss first
 
-// TODO: y_num
-// TODO: y_den
+// rewrite rule for y_num
+
+let {{
+  y_num_times_zz15 x' z' = Fp.mul (y_num, zz15 z') where
+    X = Fp.mul(lambda2, x') where
+      lambda2 = Fp.sq lambda
+      lambda = Fp.div (Fp.field_unit, z')
+    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- (powers X)]
+  // here we don't want any divisions:
+  y_num_times_zz15_nodiv x' z' = y_num where
+    x'_powers = take`{front=16}(powers x')
+    zz'_powers = take`{front=16}(powers zz')
+    zz' = Fp.sq z'
+    y_num = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- k3s | xi <- x'_powers | zzi <- reverse (zz'_powers)]
+}};
+
+elim_div_rewrite_y_num_times_zz15 <- really_custom_prove_cryptol {{ \x z -> y_num_times_zz15 x z == y_num_times_zz15_nodiv x z }}
+  (do { // we must get rid of the divisions by rewriting
+    goal_eval_unint (concat fp_unints ["k1s","y_num_times_zz15_nodiv"]);
+    simplify algebra_simpset;
+    w4;
+  });
+
+let {{
+  y_num_times_zz15_impl x' z' = xn where
+    zzs = Zz_powers z'
+    xn = map_fp (kzzs#[last k3s]) x' where
+      kzzs = map_fp_times_Zz`{n=15} k3s zzs
+}};
+
+y_num_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["y_num_times_zz15_impl"] {{ \x z -> y_num_times_zz15_impl x z == y_num_times_zz15_nodiv x z }}))
+  (do {
+    goal_eval_unint (concat fp_unints ["k3s"]);
+    w4;
+  });
+
+// now let's make sure we can rewrite the implementation term:
+rewrite (addsimp y_num_rewrite empty_ss) (rewrite (cryptol_ss ()) (unfold_term ["iso_map_impl"] {{ iso_map_impl }})); // works: the nodiv term appears. Note how we need to rewrite with cryptol_ss first
+
+// rewrite rule for y_den
+
+let {{
+  y_den_times_zz15 x' z' = Fp.mul (y_den, zz15 z') where
+    X = Fp.mul(lambda2, x') where
+      lambda2 = Fp.sq lambda
+      lambda = Fp.div (Fp.field_unit, z')
+    y_den = F.add ((powers X)@15, F_sum F [F.mul(ki, xi) | ki <- k4s | xi <- (powers X)])
+  // here we don't want any divisions:
+  y_den_times_zz15_nodiv x' z' = y_den where
+    x'_powers = take`{front=16}(powers x')
+    zz'_powers = take`{front=16}(powers zz')
+    zz' = Fp.sq z'
+    y_den = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- (k4s#[Fp.field_unit]) | xi <- x'_powers | zzi <- reverse (zz'_powers)]
+}};
+
+really_custom_prove_cryptol {{ \(x:[8]) (z:[8]) -> y_den_times_zz15 (toInteger x) (toInteger z) == y_den_times_zz15_nodiv (toInteger x) (toInteger z) }} (quickcheck 20);
+
+elim_div_rewrite <- really_custom_prove_cryptol {{ \x z -> y_den_times_zz15 x z == y_den_times_zz15_nodiv x z }}
+  (do { // we must get rid of the divisions by rewriting
+    goal_eval_unint (concat fp_unints ["k4s","y_den_times_zz15_nodiv"]);
+    simplify algebra_simpset;
+    w4;
+  });
+
+// now let's prove that the nodiv term is equivalent to the implementation term:
+
+let {{
+  y_den_times_zz15_impl x' z' = xs where
+    zzs = Zz_powers z'
+    //yd = Fp.mul (Fp.mul (xs, z'), last zzs)
+    xs = map_fp ((take`{front=14}kzzs)#[ykzz14]) x'
+    ykzz14 = Fp.add (x', last kzzs)
+    kzzs = map_fp_times_Zz`{n=15} k4s zzs
+}};
+
+y_den_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["y_den_times_zz15_impl"] {{ \x z -> y_den_times_zz15_impl x z == y_den_times_zz15_nodiv x z }}))
+  (do {
+    unfolding ["y_den_times_zz15_nodiv"];
+    goal_eval_unint (concat fp_unints ["k4s"]);
+    w4;
+  });
+
+// now let's make sure we can rewrite the implementation term:
+rewrite (addsimp y_den_rewrite empty_ss) (rewrite (cryptol_ss ()) (unfold_term ["iso_map_impl"] {{ iso_map_impl }})); // works: the nodiv term appears. Note how we need to rewrite with cryptol_ss first
 
 // TODO: we are also going to use this:
-really_custom_prove_cryptol {{ \y xn xd yn yd -> affinify E (to_jacobian xn xd (Fp.mul (yn,y)) yd) == (F.div (xn, xd), F.mul (y, F.div(yn, yd))) }}
+really_custom_prove_cryptol {{ \xn xd yn yd -> ~(is_zero Fp (Fp.mul (xd,yd))) ==> affinify E (to_jacobian xn xd yn yd) == (F.div (xn, xd), F.div(yn, yd)) }}
   (do {
     unfolding ["to_jacobian", "affinify", "F", "E"];
     simplify algebra_simpset;
     simplify (addsimp right_fold_mul empty_ss);
     simplify (addsimps elim_div_rewrites empty_ss);
-    print_readably; // TODO: now we're just missing the point_O case, which should be excluded.
-    w4;
+    print_readably;
+    w4_unint_z3 fp_unints;
   });
+
+//////////////////////
 
 rewrite_2 <- really_custom_prove_cryptol {{ \x y z -> iso_map_2 (x,y,z) == affinify E (iso_map_impl (x,y,z)) }}
   (do {
