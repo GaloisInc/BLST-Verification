@@ -141,7 +141,7 @@ push_div_out_rewrites <- for [
     {{ \x y a b -> Fp.mul (Fp.div (x,y), Fp.div (a,b)) == Fp.div (Fp.mul (x,a), Fp.mul (y,b)) }}
   , {{ \x y z -> Fp.mul (Fp.div (x,y), z) == Fp.div (Fp.mul (x,z), y) }}
   , {{ \x y z -> Fp.mul (z, Fp.div (x,y)) == Fp.div (Fp.mul (x,z), y) }}
-  , {{ \x y -> Fp.div (Fp.div (Fp.field_unit, x), y) == Fp.div (Fp.field_unit, Fp.mul (x,y)) }} // this will mess up the order of terms if the first rule is not applied with higher priority; TODO: we might not need this rule at all
+  , {{ \x y z -> Fp.div (Fp.div (z, x), y) == Fp.div (z, Fp.mul (x,y)) }} // this will mess up the order of terms if the first rule is not applied with higher priority; TODO: we might not need this rule at all
 ] simp_then_admit;
 
 sum_of_prods_rewrites <- for [
@@ -156,13 +156,13 @@ left_fold_mul <- simp_then_admit {{ \x y z -> Fp.mul (x, Fp.mul (y,z)) == Fp.mul
 // this one is not included in algebra_simpset below:
 right_fold_mul <- simp_then_admit {{ \x y z -> Fp.mul (Fp.mul (x, y),z) == Fp.mul (x, Fp.mul (y,z)) }};
 
-elim_div_rewrites <- for [
-  {{ \x y -> Fp.div (Fp.mul (y,x), x) == y }}
-  ,  {{ \x y z -> Fp.div (Fp.mul (y,x), Fp.mul(z,x)) == Fp.div (y,z) }}
-  ,  {{ \x y z -> Fp.div (Fp.mul (x,y), Fp.mul(x,z)) == Fp.div (y,z) }}
+simp_div_rewrites <- for [
+    {{ \x y -> Fp.div (Fp.mul (y,x), x) == y }}
+  , {{ \x y z -> Fp.div (Fp.mul (y,x), Fp.mul(z,x)) == Fp.div (y,z) }}
+  , {{ \x y z -> Fp.div (Fp.mul (x,y), Fp.mul(x,z)) == Fp.div (y,z) }}
 ] simp_then_admit;
 
-let algebra_simpset = addsimps (concat_all [zero_unit_rewrites, [unsquare_rewrite], [left_fold_mul], sum_of_prods_rewrites, push_div_out_rewrites, elim_div_rewrites]) empty_ss;
+let algebra_simpset = addsimps (concat_all [zero_unit_rewrites, [unsquare_rewrite], [left_fold_mul], sum_of_prods_rewrites, push_div_out_rewrites, simp_div_rewrites]) empty_ss;
 
 let {{
   powers x = ps where
@@ -188,7 +188,7 @@ let {{
 rewrite_1 <- really_custom_prove_cryptol {{ \x y z -> iso_map (affinify E (x,y,z)) == iso_map_2 (x,y,z) }}
   (do {
     unfolding ["iso_map_2"];
-    simplify (addsimps (concat_all [zero_unit_rewrites, elim_div_rewrites]) empty_ss);
+    simplify (addsimps (concat_all [zero_unit_rewrites, simp_div_rewrites]) empty_ss);
     w4_unint_z3 fp_unints;
   });
 
@@ -205,16 +205,25 @@ let {{
     y = Fp.div (Fp.mul (y', Fp.mul (y_num, zz15 z')), Fp.mul (Fp.mul (Fp.sq z', z'),  Fp.mul (y_den, zz15 z')))
 }};
 
-aux_rewrite <- really_custom_prove_cryptol {{
-}};
+hoist_if_mul_1 <- really_custom_prove_cryptol (rewrite (cryptol_ss()) {{ \x a b c -> Fp.mul(if a then b else c, x) == if a then Fp.mul (b,x) else Fp.mul (c,x) }}) w4;
+hoist_if_mul_2 <- really_custom_prove_cryptol (rewrite (cryptol_ss()) {{ \x a b c -> Fp.mul(x, if a then b else c) == if a then Fp.mul (x,b) else Fp.mul (x,c) }}) w4;
+hoist_if_proj_2 <- really_custom_prove_cryptol (rewrite (cryptol_ss()) {{ \a (b:(Integer,Integer)) (c:(Integer,Integer))-> (if a then b else c).1 == if a then b.1 else c.1 }}) w4;
+
+aux_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{
+  \y_num y_den x' y' z' -> (Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z'))) == if ~(is_zero Fp z') then Fp.div (Fp.mul (y', Fp.mul (y_num, zz15 z')), Fp.mul (Fp.mul (Fp.sq z', z'),  Fp.mul (y_den, zz15 z'))) else apply Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z')))
+  where (X,Y) = affinify E (x', y', z'))
+}})
+ (do {
+    unfolding ["affinify","E","apply"];
+    simplify (addsimps [hoist_if_proj_2,hoist_if_mul_1,hoist_if_mul_2] empty_ss);
+    simplify algebra_simpset;
+    w4_unint_z3 fp_unints;
+ });
 
 rewrite_2 <- really_custom_prove_cryptol {{ \x y z -> ~(is_zero Fp z) ==> iso_map_2 (x,y,z) == iso_map_3 (x,y,z) }}
   (do {
-    unfolding ["iso_map_2", "affinify"];
-    simplify (cryptol_ss ());
-    //simplify algebra_simpset;
-    print_readably;
-    //simplify (addsimp left_fold_mul empty_ss);
+    unfolding ["iso_map_2"];
+    simplify (addsimp aux_rewrite empty_ss);
     w4_unint_z3 fp_unints;
   });
 
@@ -395,8 +404,7 @@ really_custom_prove_cryptol {{ \xn xd yn yd -> ~(is_zero Fp (Fp.mul (xd,yd))) ==
     unfolding ["to_jacobian", "affinify", "F", "E"];
     simplify algebra_simpset;
     simplify (addsimp right_fold_mul empty_ss);
-    simplify (addsimps elim_div_rewrites empty_ss);
-    print_readably;
+    simplify (addsimps simp_div_rewrites empty_ss);
     w4_unint_z3 fp_unints;
   });
 
