@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-// NOTE: equalities of terms involving only Fp.add and Fp.mul (and no
-// uninterpreted functions) are tractable. Of course there is the issue of some
-// simplifications like x*1 = x not being valid in the current
-// representation...
-
 // Imports
 
 include "helpers.saw";
@@ -24,8 +19,6 @@ include "vect.saw";
 include "curve_operations.saw";
 include "ec_mult.saw";
 
-//import "../spec/Parameters.cry";
-//import "../spec/ShortWeierstrassCurve.cry";
 import "../spec/HashToCurveE1Aux.cry";
 import "../spec/implementation/CurveOperation.cry";
 import "../spec/implementation/HashToG1.cry";
@@ -38,7 +31,8 @@ let blst_isogeny_map_to_E1_spec = do {
   out_ptr <- llvm_alloc POINTonE1_type;
   (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE1_type;
   llvm_precond {{ POINTonE1_invariant p }};
-  llvm_precond {{ ~ (is_point_O E (POINTonE1_abs' p)) }}; // Does not work for zero (division by zero etc.)
+  llvm_precond {{ ~ (is_point_O E (POINTonE1_abs' p)) }}; // p must not be the point at infinity
+  // TODO: the above is not sufficient, because this does not exclude x = y = 0
   llvm_execute_func [out_ptr, p_ptr];
   new_out <- llvm_fresh_var "new_blst_isogeny_map_to_E1_out" POINTonE1_type;
   llvm_points_to out_ptr (llvm_term new_out);
@@ -54,10 +48,6 @@ let blst_isogeny_map_to_E1_extract_spec = do {
   llvm_points_to out_ptr (llvm_term new_out);
 };
 
-iso_map_impl_lemma <- admit_cryptol {{ // TODO
-  \p -> iso_map (affinify E p) == affinify E (iso_map_impl p)
-}};
-
 // Proofs
 
 enable_experimental;
@@ -69,20 +59,21 @@ _ <- llvm_compositional_extract
   fp_overrides
   true
   blst_isogeny_map_to_E1_extract_spec
-  (do { // discharge simulation side-conditions
+  (do {
       assume_unsat;
       //unfolding ["POINTonE1_invariant"];
       //simplify (addsimps fp_rep_thms (cryptol_ss ()));
       //w4;
   });
 
-// a few tests:
-_ <- custom_prove_cryptol {{ \p -> POINTonE1_abs' (isogeny_map_to_E1_term p) == iso_map (POINTonE1_abs' p) }} (quickcheck 10);
+// NOTE:
+really_custom_prove_cryptol {{ POINTonE1_abs' (isogeny_map_to_E1_term zero) == (0,0) }} w4;
+really_custom_prove_cryptol {{ iso_map (0,0) != (0,0) }} w4;
 
 // Here we prove that the implementation and low-level cryptol spec match
-impl_thm <- really_custom_prove_cryptol {{ \p -> POINTonE1_abs (isogeny_map_to_E1_term p) == iso_map_impl (POINTonE1_abs p) }}
+impl_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["isogeny_map_to_E1_term"] {{ \p -> POINTonE1_abs (isogeny_map_to_E1_term p) == iso_map_impl (POINTonE1_abs p) }}))
   (do {
-    unfolding ["POINTonE1_abs", "isogeny_map_to_E1_term", "iso_map"];
+    unfolding ["POINTonE1_abs", "iso_map"];
     simplify (addsimps fp_rep_thms (cryptol_ss ())); // eliminte (abs. rep)
     w4;
   });
@@ -127,21 +118,19 @@ let print_readably =  do {
 // rules. The big problem is that we cannot use commutativity or associativity,
 // which would make the rewriter loop....
 
-zero_unit_rewrites <- for [ // here we are cheating: this is true only if we use modular types
+zero_unit_rewrites <- for [ // here we are cheating: this is true only if we use the (Z p) type
     {{ \p -> Fp.add (Fp.field_zero, p) == p }}
   , {{ \p -> Fp.add (p, Fp.field_zero) == p }}
   , {{ \p -> Fp.mul (p, Fp.field_unit) == p }}
   , {{ \p -> Fp.mul (Fp.field_unit, p) == p }}
-  //, {{ \x -> Fp.div (x, x) == if (Fp.is_equal (x, Fp.field_zero)) then apply Fp.div (x,x) else Fp.field_unit }}
-  //, {{ \x y z -> Fp.div (Fp.mul (x,z), Fp.mul(y,z)) == Fp.div (x,y) }} // this rule seems better than the previous because it is unconditional
 ] simp_then_admit;
 
-// NOTE: I'm assuming that rules are applied in the order they appear; if not, we will likely mess up the order of variables in products and, since we can't use commutativity as it would loop, we're in trouble
+// NOTE: those rules should be sound since we have `Fp.div (x,0) == 0`
 push_div_out_rewrites <- for [
     {{ \x y a b -> Fp.mul (Fp.div (x,y), Fp.div (a,b)) == Fp.div (Fp.mul (x,a), Fp.mul (y,b)) }}
   , {{ \x y z -> Fp.mul (Fp.div (x,y), z) == Fp.div (Fp.mul (x,z), y) }}
   , {{ \x y z -> Fp.mul (z, Fp.div (x,y)) == Fp.div (Fp.mul (x,z), y) }}
-  , {{ \x y z -> Fp.div (Fp.div (z, x), y) == Fp.div (z, Fp.mul (x,y)) }} // this will mess up the order of terms if the first rule is not applied with higher priority; TODO: we might not need this rule at all
+  , {{ \x y z -> Fp.div (Fp.div (z, x), y) == Fp.div (z, Fp.mul (x,y)) }} // this will mess up the order of terms if the first rule is not applied with higher priority
 ] simp_then_admit;
 
 sum_of_prods_rewrites <- for [
@@ -411,14 +400,16 @@ to_jacobian_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ())
   });
 
 // For now we assume this property. TODO: is there something better to do?
+// It is a property of the isogeny map: it never maps a non-zero point to zero
 x_den_times_y_den_nz <- simp_then_admit {{
   \(p:(Integer,Integer,Integer)) -> is_zero Fp (Fp.mul (x_den_times_zz11 p.0 p.2, y_den_times_zz15 p.0 p.2)) == if ~(is_zero Fp p.2) then False else apply is_zero Fp (Fp.mul (x_den_times_zz11 p.0 p.2, y_den_times_zz15 p.0 p.2))
 }};
 
-iso_map_impl_lemma <- really_custom_prove_cryptol {{
-  \p -> ~(is_zero Fp p.2) ==> iso_map (affinify E p) == affinify E (iso_map_impl p)
-}}
+//\p -> ~(is_zero Fp p.2) ==> affinify E (iso_map_impl p) == iso_map (affinify E p) }}
+iso_map_impl_lemma <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{
+  \p -> affinify E (iso_map_impl p) == if ~(is_zero Fp p.2) then iso_map (affinify E p) else apply affinify E (iso_map_impl p) }})
   (do {
+    unfolding ["apply"]; // TODO: why is this needed? The conditional version doesn't need this
     simplify (addsimps [rewrite_1, rewrite_2] empty_ss);
     unfolding ["iso_map_impl"];
     simplify (cryptol_ss ());
@@ -429,3 +420,33 @@ iso_map_impl_lemma <- really_custom_prove_cryptol {{
     simplify (addsimp x_den_times_y_den_nz empty_ss);
     w4_unint_z3 fp_unints;
   });
+
+is_zero_rewrite <- really_custom_prove_cryptol {{ \p -> is_zero Fp (p.2) == if ~(is_point_O E (affinify E p)) then False else  apply is_zero Fp (p.2) }}
+  do {
+    // unfortunately, there is no way to unfold those without unfolding Fp completely:
+    let temp_rewrites = run (for [
+          {{ \x y -> Fp.is_equal (x, y) == (x==y) }}
+        , {{ Fp.field_zero == 0 }}
+      ] (\ x -> really_custom_prove_cryptol x w4));
+    unfolding ["apply"];
+    unfolding ["affinify", "is_zero", "point_O", "is_point_O", "same_point_affine", "E"];
+    simplify (addsimps temp_rewrites (cryptol_ss ()));
+    w4_unint_z3 fp_unints;
+  };
+
+// finally, the main override:
+iso_map_ov <- really_custom_verify "isogeny_map_to_E1"
+  fp_overrides
+  blst_isogeny_map_to_E1_spec
+  (goal_num_ite 176 // 176 is the main safety goal
+    (do {
+      unfolding ["POINTonE1_abs'"];
+      simplify (addsimps [impl_thm, iso_map_impl_lemma, is_zero_rewrite] empty_ss);
+      w4_unint_z3 fp_unints;
+    })
+    (do { // discharge simulation side-conditions:
+        unfolding ["POINTonE1_invariant"];
+        simplify (addsimps fp_rep_thms (cryptol_ss ()));
+        w4_unint_z3 ["POINTonE1_abs'"]; // z3 diverges without abstracting over POINTonE1_abs'
+    })
+  );
