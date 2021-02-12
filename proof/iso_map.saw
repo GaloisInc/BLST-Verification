@@ -3,6 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
+// Here we prove that the function isogeny_map_to_E1 satisfies its
+// specification. The main difficulty is that the implementation rearranges the
+// computation in order to avoid divisions, and SAW cannot reason automatically
+// about (simple) algebraic rearrangements involving division. Instead, we have
+// to manually rewrite the terms.
+
+// Link to the specification:
+// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-09#appendix-C.2
+
 // Imports
 
 include "helpers.saw";
@@ -32,7 +41,6 @@ let blst_isogeny_map_to_E1_spec = do {
   (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE1_type;
   llvm_precond {{ POINTonE1_invariant p }};
   llvm_precond {{ ~ (is_point_O E (POINTonE1_abs' p)) }}; // p must not be the point at infinity
-  // TODO: the above is not sufficient, because this does not exclude x = y = 0
   llvm_execute_func [out_ptr, p_ptr];
   new_out <- llvm_fresh_var "new_blst_isogeny_map_to_E1_out" POINTonE1_type;
   llvm_points_to out_ptr (llvm_term new_out);
@@ -52,6 +60,10 @@ let blst_isogeny_map_to_E1_extract_spec = do {
 
 enable_experimental;
 
+// First we prove that the C code implements a low-level Cryptol specification.
+// We do this by extracting a term corresponding to what the C code does, and
+// then showing that this term is equivalent to `iso_map_impl`.
+
 _ <- llvm_compositional_extract
   m
   "isogeny_map_to_E1"
@@ -60,28 +72,26 @@ _ <- llvm_compositional_extract
   true
   blst_isogeny_map_to_E1_extract_spec
   (do {
-      assume_unsat;
-      //unfolding ["POINTonE1_invariant"];
-      //simplify (addsimps fp_rep_thms (cryptol_ss ()));
-      //w4;
+      unfolding ["POINTonE1_invariant"];
+      simplify (addsimps fp_rep_thms (cryptol_ss ()));
+      w4;
   });
 
-// NOTE:
+// NOTE we'll have to exclude the `point_O` case, as implementation and specification do not agree:
 really_custom_prove_cryptol {{ POINTonE1_abs' (isogeny_map_to_E1_term zero) == (0,0) }} w4;
 really_custom_prove_cryptol {{ iso_map (0,0) != (0,0) }} w4;
 
-// Here we prove that the implementation and low-level cryptol spec match
+// Here we prove that the implementation and low-level Cryptol spec match
+// TODO: should be define iso_map_impl in this SAW file?
 impl_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["isogeny_map_to_E1_term"] {{ \p -> POINTonE1_abs (isogeny_map_to_E1_term p) == iso_map_impl (POINTonE1_abs p) }}))
   (do {
     unfolding ["POINTonE1_abs", "iso_map"];
-    simplify (addsimps fp_rep_thms (cryptol_ss ())); // eliminte (abs. rep)
+    simplify (addsimps fp_rep_thms (cryptol_ss ())); // eliminate `abs . rep`
     w4;
   });
 
-// TODO: now it remains to rewrite the arithmetic expressions to get to the high-level spec...
-_ <- custom_prove_cryptol {{ \p -> affinify E (iso_map_impl (POINTonE1_abs p)) == iso_map (affinify E (POINTonE1_abs p)) }} (quickcheck 10);
-
-// sometimes, rewrite rules do not apply if they are not first simplified with cryptol_ss
+// sometimes, rewrite rules do not apply if they are not first simplified with
+// `cryptol_ss`, so we use this:
 let simp_then_admit r = admit_cryptol (rewrite (cryptol_ss ()) r);
 
 // some rewrites for printing things readably:
@@ -111,18 +121,23 @@ readability_rewrites <- for [
 let print_readably =  do {
     simplify (addsimps readability_rewrites empty_ss);
     print_goal;
-};
+}; // NOTE this modifies the goal
 
-// We will need to prove that some expression of the field Fp are equivalent.
-// To do so, we will try to rewrite them to a normal form with the following
-// rules. The big problem is that we cannot use commutativity or associativity,
-// which would make the rewriter loop....
+// We will need to prove that some expression involving field Fp operations are
+// equivalent.  To do so, we will try to rewrite them to a normal form with the
+// following rules. The problem is that we cannot use commutativity or
+// associativity, which would make the rewriter loop....
 
-zero_unit_rewrites <- for [ // here we are cheating: this is true only if we use the (Z p) type
+zero_unit_rewrites <- for [ // TODO: here we are cheating: this is true only if we use the (Z p) type
     {{ \p -> Fp.add (Fp.field_zero, p) == p }}
   , {{ \p -> Fp.add (p, Fp.field_zero) == p }}
   , {{ \p -> Fp.mul (p, Fp.field_unit) == p }}
   , {{ \p -> Fp.mul (Fp.field_unit, p) == p }}
+  , {{ \p -> Fp.mul (p, Fp.field_zero) == Fp.field_zero }}
+  , {{ \p -> Fp.mul (Fp.field_zero, p) == Fp.field_zero }}
+  , {{ \p -> Fp.div (p, Fp.field_zero) == Fp.field_zero }}
+  , {{ \p -> Fp.div (p, Fp.field_unit) == Fp.field_unit }}
+  , {{ \p -> Fp.div (Fp.field_zero, p) == Fp.field_zero }}
 ] simp_then_admit;
 
 // NOTE: those rules should be sound since we have `Fp.div (x,0) == 0`
@@ -130,7 +145,7 @@ push_div_out_rewrites <- for [
     {{ \x y a b -> Fp.mul (Fp.div (x,y), Fp.div (a,b)) == Fp.div (Fp.mul (x,a), Fp.mul (y,b)) }}
   , {{ \x y z -> Fp.mul (Fp.div (x,y), z) == Fp.div (Fp.mul (x,z), y) }}
   , {{ \x y z -> Fp.mul (z, Fp.div (x,y)) == Fp.div (Fp.mul (x,z), y) }}
-  , {{ \x y z -> Fp.div (Fp.div (z, x), y) == Fp.div (z, Fp.mul (x,y)) }} // this will mess up the order of terms if the first rule is not applied with higher priority
+  , {{ \x y z -> Fp.div (Fp.div (z, x), y) == Fp.div (z, Fp.mul (x,y)) }}
 ] simp_then_admit;
 
 sum_of_prods_rewrites <- for [
@@ -153,6 +168,7 @@ simp_div_rewrites <- for [
 
 let algebra_simpset = addsimps (concat_all [zero_unit_rewrites, [unsquare_rewrite], [left_fold_mul], sum_of_prods_rewrites, push_div_out_rewrites, simp_div_rewrites]) empty_ss;
 
+// an auxiliary definition that will be useful:
 let {{
   powers x = ps where
     ps = [Fp.field_unit] # [Fp.mul(x, pi) | pi <- ps]
@@ -181,7 +197,7 @@ rewrite_1 <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> iso_m
     w4_unint_z3 fp_unints;
   });
 
-// then we massage y a bit more:
+// now we use the fact that Y = y'/z'^3
 let {{
   iso_map_3 (x', y', z') = (x, y) where
     (X,Y) = affinify E (x', y', z')
@@ -194,17 +210,19 @@ let {{
     y = Fp.div (Fp.mul (y', Fp.mul (y_num, zz15 z')), Fp.mul (Fp.mul (Fp.sq z', z'),  Fp.mul (y_den, zz15 z')))
 }};
 
-hoist_if_mul_1 <- really_custom_prove_cryptol (rewrite (cryptol_ss()) {{ \x a b c -> Fp.mul(if a then b else c, x) == if a then Fp.mul (b,x) else Fp.mul (c,x) }}) w4;
-hoist_if_mul_2 <- really_custom_prove_cryptol (rewrite (cryptol_ss()) {{ \x a b c -> Fp.mul(x, if a then b else c) == if a then Fp.mul (x,b) else Fp.mul (x,c) }}) w4;
-hoist_if_proj_2 <- really_custom_prove_cryptol (rewrite (cryptol_ss()) {{ \a (b:(Integer,Integer)) (c:(Integer,Integer))-> (if a then b else c).1 == if a then b.1 else c.1 }}) w4;
-
+// we are going to rewrite y with this rule:
 aux_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{
   \y_num y_den x' y' z' -> (Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z'))) == if ~(is_zero Fp z') then Fp.div (Fp.mul (y', Fp.mul (y_num, zz15 z')), Fp.mul (Fp.mul (Fp.sq z', z'),  Fp.mul (y_den, zz15 z'))) else apply Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z')))
-  where (X,Y) = affinify E (x', y', z'))
-}})
+  where (_,Y) = affinify E (x', y', z'))
+}}) // NOTE: this holds unconditionally, but rewriting it to get to that will be tedious and not useful since at the end we assume that z' is non-zero
  (do {
+    let hoist_ifs_rewrites = run (for [
+          {{ \x a b c -> Fp.mul(if a then b else c, x) == if a then Fp.mul (b,x) else Fp.mul (c,x) }}
+        , {{ \x a b c -> Fp.mul(x, if a then b else c) == if a then Fp.mul (x,b) else Fp.mul (x,c) }}
+        , {{ \a (b:(Integer,Integer)) (c:(Integer,Integer))-> (if a then b else c).1 == if a then b.1 else c.1 }}
+      ] (\ x -> really_custom_prove_cryptol (rewrite (cryptol_ss()) x) w4));
     unfolding ["affinify","E","apply"];
-    simplify (addsimps [hoist_if_proj_2,hoist_if_mul_1,hoist_if_mul_2] empty_ss);
+    simplify (addsimps hoist_ifs_rewrites algebra_simpset);
     simplify algebra_simpset;
     w4_unint_z3 fp_unints;
  });
@@ -215,6 +233,8 @@ rewrite_2 <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> iso_m
     simplify (addsimp aux_rewrite empty_ss);
     w4_unint_z3 fp_unints;
   });
+
+// now we rewrite x_num, x_den, y_num, and y_den independently:
 
 // Rewrite rule for x_num
 
@@ -253,9 +273,6 @@ x_num_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_te
     goal_eval_unint (concat fp_unints ["k1s"]);
     w4;
   });
-
-// now let's make sure we can rewrite the implementation term:
-rewrite (addsimp x_num_rewrite empty_ss) (rewrite (cryptol_ss ()) (unfold_term ["iso_map_impl"] {{ iso_map_impl }})); // works: the nodiv term appears. Note how we need to rewrite with cryptol_ss first
 
 // rewrite rule for x_den
 
@@ -299,9 +316,6 @@ x_den_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_te
     w4;
   });
 
-// now let's make sure we can rewrite the implementation term:
-rewrite (addsimp x_den_rewrite empty_ss) (rewrite (cryptol_ss ()) (unfold_term ["iso_map_impl"] {{ iso_map_impl }})); // works: the nodiv term appears. Note how we need to rewrite with cryptol_ss first
-
 // rewrite rule for y_num
 
 let {{
@@ -337,9 +351,6 @@ y_num_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_te
     goal_eval_unint (concat fp_unints ["k3s"]);
     w4;
   });
-
-// now let's make sure we can rewrite the implementation term:
-rewrite (addsimp y_num_rewrite empty_ss) (rewrite (cryptol_ss ()) (unfold_term ["iso_map_impl"] {{ iso_map_impl }})); // works: the nodiv term appears. Note how we need to rewrite with cryptol_ss first
 
 // rewrite rule for y_den
 
@@ -383,9 +394,6 @@ y_den_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_te
     w4;
   });
 
-// now let's make sure we can rewrite the implementation term:
-rewrite (addsimp y_den_rewrite empty_ss) (rewrite (cryptol_ss ()) (unfold_term ["iso_map_impl"] {{ iso_map_impl }})); // works: the nodiv term appears. Note how we need to rewrite with cryptol_ss first
-
 // we are also going to use this:
 to_jacobian_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ())
   {{
@@ -405,7 +413,6 @@ x_den_times_y_den_nz <- simp_then_admit {{
   \(p:(Integer,Integer,Integer)) -> is_zero Fp (Fp.mul (x_den_times_zz11 p.0 p.2, y_den_times_zz15 p.0 p.2)) == if ~(is_zero Fp p.2) then False else apply is_zero Fp (Fp.mul (x_den_times_zz11 p.0 p.2, y_den_times_zz15 p.0 p.2))
 }};
 
-//\p -> ~(is_zero Fp p.2) ==> affinify E (iso_map_impl p) == iso_map (affinify E p) }}
 iso_map_impl_lemma <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{
   \p -> affinify E (iso_map_impl p) == if ~(is_zero Fp p.2) then iso_map (affinify E p) else apply affinify E (iso_map_impl p) }})
   (do {
