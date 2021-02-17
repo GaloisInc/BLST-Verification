@@ -121,7 +121,7 @@ invariant_POINTonE1_times_c_thm <- custom_prove_cryptol
 // That's not true, though, as the projective point (0,0,1) affinifies to (0,0), which is currently
 // used as the affine representation of the point at infinity.
 //
-// We deal with this by restricting out interest to points on the curve; since (0,0,1) is not on
+// We deal with this by restricting our interest to points on the curve; since (0,0,1) is not on
 // any of the curves we use, (*) holds at the time we need it (where p in on the curve).
 //
 // Unfortunately this makes for a complicated proof where we need to show that all the point operations

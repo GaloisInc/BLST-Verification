@@ -18,61 +18,34 @@ map_to_curve_simple_swu_impl u = undefined
 
 // isogeny_map_to_E1
 
-iso_map_impl: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
-iso_map_impl (X, Y, Z) = to_jacobian xn xd yn yd where
-  zzs = Zz_powers Z
-  xn = map_fp (kzzs#[last k1s]) X where
-    kzzs = map_fp_times_Zz`{n=11} k1s zzs
-  xd = Fp.mul (xs, last zzs) where
-    xs = map_fp ((take`{front=9}kzzs)#[xkzz9]) X
-    xkzz9 = Fp.add (X, last kzzs)
-    kzzs = map_fp_times_Zz`{n=10} k2s zzs
-  yn = Fp.mul (map_fp (kzzs#[last k3s]) X, Y) where
-    kzzs = map_fp_times_Zz`{n=15} k3s zzs
-  yd = Fp.mul (Fp.mul (xs, Z), last zzs) where
-    xs = map_fp ((take`{front=14}kzzs)#[xkzz14]) X
-    xkzz14 = Fp.add (X, last kzzs)
-    kzzs = map_fp_times_Zz`{n=15} k4s zzs
+//iso_map_impl: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
+//iso_map_impl (X, Y, Z) = to_jacobian xn xd yn yd where
+  //zzs = Zz_powers Z
+  //xn = map_fp (kzzs#[last k1s]) X where
+    //kzzs = map_fp_times_Zz`{n=11} k1s zzs
+  //xd = Fp.mul (xs, last zzs) where
+    //xs = map_fp ((take`{front=9}kzzs)#[xkzz9]) X
+    //xkzz9 = Fp.add (X, last kzzs)
+    //kzzs = map_fp_times_Zz`{n=10} k2s zzs
+  //yn = Fp.mul (map_fp (kzzs#[last k3s]) X, Y) where
+    //kzzs = map_fp_times_Zz`{n=15} k3s zzs
+  //yd = Fp.mul (Fp.mul (xs, Z), last zzs) where
+    //xs = map_fp ((take`{front=14}kzzs)#[xkzz14]) X
+    //xkzz14 = Fp.add (X, last kzzs)
+    //kzzs = map_fp_times_Zz`{n=15} k4s zzs
 
-Zz_powers : t_Fp -> [15]t_Fp // powers of ZZ in descending order
-Zz_powers Z = reverse (take`{front=15} zzs) where // TODO: why does this not terminate when "inlining" zzs?
-    zzs = [Fp.sq Z, Fp.sq (Fp.sq Z)]
-      # (join`{parts=inf} [[Fp.mul (zi0, zi1), Fp.sq zi1] | zi0 <- zzs | zi1 <- tail zzs]) // TODO: why is parts=inf necessary here?
+//Zz_powers : t_Fp -> [15]t_Fp // powers of ZZ in descending order
+//Zz_powers Z = reverse (take`{front=15} zzs) where
+    //zzs = [Fp.sq Z, Fp.sq (Fp.sq Z)]
+      //# (join`{parts=inf} [[Fp.mul (zi0, zi1), Fp.sq zi1] | zi0 <- zzs | zi1 <- tail zzs]) // TODO: why is parts=inf necessary here?
 
-map_fp_times_Zz : {m1,m2,n} (fin n, fin m2, m1 >= n, m2 >= n) => [m1]t_Fp -> [m2]t_Fp -> [n]t_Fp
-map_fp_times_Zz ks zzs = zipWith (curry Fp.mul) (take`{front=n}ks) (drop`{back=n}zzs)
+//map_fp_times_Zz : {m1,m2,n} (fin n, fin m2, m1 >= n, m2 >= n) => [m1]t_Fp -> [m2]t_Fp -> [n]t_Fp
+//map_fp_times_Zz ks zzs = zipWith (curry Fp.mul) (take`{front=n}ks) (drop`{back=n}zzs)
 
-map_fp kzzs x = last rs where
-  rs = [last kzzs] # [Fp.add (Fp.mul (ri, x), kzzi) | kzzi <- tail (reverse kzzs) | ri <- rs]
-// equivalently:
-map_fp_foldr kzzs x = foldr (\kzzi ri -> Fp.add (Fp.mul (ri, x), kzzi)) (last kzzs) (take`{back=1}kzzs)
-
-//map_fp kzzs x r0 = rs where
-  //rs = [r0] # [Fp.add (Fp.mul (ri, x), zi) | ri <- rs | zi <- kzzs]
-
-//xn : t_Fp -> t_Fp -> t_Fp
-//xn X Z = last xs where
-  //xs = map_fp kzz X x1110
-  //x1110 = Fp.add (Fp.mul (X, last k1s), last kzz)
-  //kzz = map_fp_times_Zz`{n=11} k1s (Zz_powers Z)
-
-//xd : t_Fp -> t_Fp -> t_Fp
-//xd X Z = Fp.mul (last xs, last (Zz_powers Z)) where
-  //xs = map_fp kzz X x9
-  //x9 = Fp.add (X, last kzz)
-  //kzz = map_fp_times_Zz`{n=10} k2s (Zz_powers Z)
-
-//yn : t_Fp -> t_Fp -> t_Fp -> t_Fp
-//yn X Y Z = Fp.mul(last ys, Y) where
-  //ys = map_fp kzz X y1514
-  //y1514 = Fp.add (Fp.mul (X, last k3s), last kzz)
-  //kzz = map_fp_times_Zz`{n=15} k3s (Zz_powers Z)
-
-//yd : t_Fp -> t_Fp -> t_Fp
-//yd X Z = Fp.mul (last ys, Fp.mul (last (Zz_powers Z),Z)) where
-  //ys = map_fp kzz X y14
-  //y14 = Fp.add (X, last kzz)
-  //kzz = map_fp_times_Zz`{n=15} k4s (Zz_powers Z)
+//map_fp kzzs x = last rs where
+  //rs = [last kzzs] # [Fp.add (Fp.mul (ri, x), kzzi) | kzzi <- tail (reverse kzzs) | ri <- rs]
+//// equivalently:
+//map_fp_foldr kzzs x = foldr (\kzzi ri -> Fp.add (Fp.mul (ri, x), kzzi)) (last kzzs) (take`{back=1}kzzs)
 
 to_jacobian xn xd yn yd = (X, Y, Z) where
   Z = Fp.mul (xd, yd)
@@ -100,20 +73,20 @@ clear_cofactor p = out where
 
 // hash_to_curve
 
-hash_to_curve_opt: {msg_len, DST_len}
-               (fin msg_len, fin DST_len
-               , DST_len <= 255
-               , Expandable msg_len DST_len
-               , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384
-               ) =>
-               ([msg_len][8], [DST_len][8]) -> ProjectivePoint t_Fp
-hash_to_curve_opt (msg,dst) = map_to_g1 u where
-    u = hash_to_field`{count=2} msg dst
+//hash_to_curve_opt: {msg_len, DST_len}
+               //(fin msg_len, fin DST_len
+               //, DST_len <= 255
+               //, Expandable msg_len DST_len
+               //, 8 *( ((lg2 p) + 128) /^ 8 ) >= 384
+               //) =>
+               //([msg_len][8], [DST_len][8]) -> ProjectivePoint t_Fp
+//hash_to_curve_opt (msg,dst) = map_to_g1 u where
+    //u = hash_to_field`{count=2} msg dst
 
-map_to_g1: [2]t_Fp -> ProjectivePoint t_Fp
-map_to_g1 uv = P where
-    Q0 = map_to_curve_simple_swu_impl (uv@0)
-    Q1 = map_to_curve_simple_swu_impl (uv@1)
-    R = point_dadd Fp Q0 Q1 A' False // This is addition on the isogenous curve
-    S = iso_map_impl R
-    P = clear_cofactor S
+//map_to_g1: [2]t_Fp -> ProjectivePoint t_Fp
+//map_to_g1 uv = P where
+    //Q0 = map_to_curve_simple_swu_impl (uv@0)
+    //Q1 = map_to_curve_simple_swu_impl (uv@1)
+    //R = point_dadd Fp Q0 Q1 A' False // This is addition on the isogenous curve
+    //S = iso_map_impl R
+    //P = clear_cofactor S
