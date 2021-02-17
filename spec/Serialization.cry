@@ -17,9 +17,11 @@ import BLSFieldExtras (sqrt_fp, is_square_fp, sqrt_fp2, is_square_fp2)
 
 //// Serialization (with compression)
 
+// TODO: draft 7 changed this
 sign_F_p: t_Fp -> Bit
 sign_F_p y = y > `((p - 1)/2)
 
+// TODO: draft 7 changed this
 sign_F_p_2: t_Fp_2 -> Bit
 sign_F_p_2(y') = if y'_1 == 0 then sign_F_p(y'_0) else y'_1 > `((p - 1)/2) where
     [y'_1, y'_0] = y'
