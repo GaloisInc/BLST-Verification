@@ -5,7 +5,7 @@
 
 /* NOTE: used in pairing.c:
   mul_by_xy00z0_fp12,
-  sqr_fp12,
+  sqr_fp12 [Done],
   conjugate_fp12, [Done]
   mul_fp12, [Done]
   cyclotomic_sqr_fp12, [Done, except for some subroutines]
@@ -37,6 +37,7 @@ let sqr_fp12_spec = do {
 
 let sqr_fp12_alias_spec = do {
   (a, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
+  crucible_precond {{ fp12_invariant a }};
   crucible_execute_func [ret_ptr, ret_ptr];
   crucible_points_to ret_ptr (crucible_term {{ fp12_rep (Fp_12.sq (fp12_abs a)) }});
 };
@@ -199,6 +200,14 @@ let sqr_fp4_spec = do {
   crucible_precond {{ fp2_invariant a1 }};
   crucible_execute_func [ret_ptr, a0_ptr, a1_ptr];
   crucible_points_to ret_ptr (crucible_term {{ fp4_rep (Fp_4.sq (fp4_abs [a0, a1])) }});
+};
+
+let mul_by_u_plus_1_fp2_spec = do {
+  ret_ptr <- crucible_alloc vec384x_type;
+  (a,a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
+  crucible_precond {{ fp2_invariant a }};
+  crucible_execute_func [ret_ptr, a_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp2_rep (Fp_2.mul (u_plus_1, fp2_abs a)) }});
 };
 
 let mul_by_u_plus_1_fp2_alias_spec = do {
@@ -462,9 +471,7 @@ fpx2_abs_rep_lemma <- custom_prove_cryptol
        simplify (addsimp vec768_abs_rep_thm (addsimps bv768_thms empty_ss));
        z3; };
 
-// TODO: eliminate?
-
-// see vec_384x384_thms
+// TODO: see vec_384x384_thms - but here we can prove it.
 fpx2_abs_rep_thm <- custom_prove_cryptol
     {{ \x -> fpx2_abs (fpx2_rep x) == if Fpx2.is_val x then x else x % 2^^768 }}
     do { rw_with_1 fpx2_abs_rep_lemma; z3; };
@@ -523,20 +530,6 @@ sub_fp2x2_ovs <- for possible_aliases
   (\ (ar, br) -> custom_verify "sub_fp2x2" all_384x384_ovs (sub_fp2x2_spec ar br) z3);
 
 // and fp6x2
-// TODO: maybe not needed:
-/*
-fp6x2_mul_expansion_thm <- prove_cryptol
- {{ \ x y -> ( Fp_6x2.mul(x, y) ==
-     [ R.add (R.mul (a, f), R.add (R.mul(b, e), R.mul(c,d)))
-     , R.add (R.mul(R.mul(a, d), u_plus_1x2),
-              R.add(R.mul(b,f), R.mul(c,e)))
-     , R.add (R.mul (R.add (R.mul(a, e), R.mul(b,d)), u_plus_1x2),
-               R.mul(c, f))
-     ] where
-       [a,b,c] = x
-       [d,e,f] = y
-       R = Fp_2x2 ) }} [] ;
-*/
 
 reabstracted_add_thm <- test_cryptol
   {{ \ x y -> abs_384x (fp2_rep (Fp_2.add (fp2_abs x, fp2_abs y))) == Fp_2.add (fp2_abs_nom x, fp2_abs_nom y) }};
@@ -596,8 +589,8 @@ redc_mont_mul_6x2_thm <- custom_prove_cryptol
 
 // NOW. need fp6_rep_nom X = fp6_rep (toM_6 x).  Start at Fp
 
-// TODO: prove
-fp_rep_nom_thm <- admit_cryptol {{ \x -> rep_384 (toM x) == fp_rep x }};
+// "prove_cryptol", which uses w4_unint_z3, does mnot succeed in this proof:
+fp_rep_nom_thm <- custom_prove_cryptol {{ \x -> rep_384 (toM x) == fp_rep x }} z3;
 
 fp6_rep_nom_thm <- custom_prove_cryptol {{ \x -> fp6_rep x == fp6_rep_nom (toM_6 x) }}
   do { unfolding ["fp6_rep_nom", "fp2_rep_nom", "fp6_rep", "fp2_rep", "toM_6", "toM_2"];
@@ -700,6 +693,20 @@ add_fp6_ov <-custom_verify "add_fp6"
   add_fp6_spec
   (w4_unint_z3 ["Fp_2", "fp2_abs", "fp2_rep"]);
 
+sub_fp6_spec <- do {
+  ret_ptr <- crucible_alloc vec384fp6_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp6_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384fp6_type;
+  crucible_precond {{ fp6_invariant a }};
+  crucible_precond {{ fp6_invariant b }};
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp6_rep (Fp_6.sub (fp6_abs a, fp6_abs b)) }});
+  };
+
+sub_fp6_ov <-custom_verify "sub_fp6"
+  fp2_overrides
+  sub_fp6_spec
+  (w4_unint_z3 ["Fp_2", "fp2_abs", "fp2_rep"]);
 
 // Algebraic
 add_fp_nom_thm <- test_cryptol
@@ -867,8 +874,7 @@ fp12_rep_nom_thm <- custom_prove_cryptol {{ \x -> fp12_rep x == fp12_rep_nom (to
        rw_with_1 fp6_rep_nom_thm;
        w4_unint_z3 ["fp6_rep", "fp6_rep_nom", "toM_6"]; };
 
-// fp12_redc_abs_nom_thm TODO
-fp_redc_abs_nom_thm <- test_cryptol {{ \x -> redc_mont_384 (abs_384 x) == fp_abs x }};
+fp_redc_abs_nom_thm <- prove_cryptol {{ \x -> redc_mont_384 (abs_384 x) == fp_abs x }} [];
 
 fp2_redc_abs_nom_thm <- custom_prove_cryptol
   {{ \x -> redc_mont_fp2 (fp2_abs_nom x) == fp2_abs x }}
@@ -1351,7 +1357,9 @@ more_fp2_alg_thms <- for
 let all_fp2_alg_thms = concat fp2_alg_thms more_fp2_alg_thms;
 
 sqr_fp4_ov <- admit "sqr_fp4" sqr_fp4_spec; //TODO - prove
+
 mul_by_u_plus_1_fp2_alias_ov <- admit "mul_by_u_plus_1_fp2" mul_by_u_plus_1_fp2_alias_spec; // TODO
+mul_by_u_plus_1_fp2_ov <- admit "mul_by_u_plus_1_fp2" mul_by_u_plus_1_fp2_spec; // TODO
 
 fp4_mul_thm <- prove_cryptol
   {{ \x y -> Fp_4.mul (x, y) == [ Fp_2.add (Fp_2.mul(x@0,y@1), Fp_2.mul(x@1, y@0))
@@ -1380,6 +1388,25 @@ cyclotomic_sqr_fp12_ov <- really_custom_verify "cyclotomic_sqr_fp12"
        simplify (addsimps fp2_alg_thms fp2_simpset);
        w4_unint_z3 fp2_unints; } ;
 
+// squaring in fp_12
+
+fp12_sqr_equiv_thm <-  prove_cryptol {{ \ x -> Fp_12.sq x == fp12_sqr x }} [];
+
+sqr_fp12_ovs <- for [sqr_fp12_spec, sqr_fp12_alias_spec]
+ ( \ s -> custom_verify "sqr_fp12"
+  (concat [ add_fp6_ov , sub_fp6_ov, mul_fp6_ov, mul_fp6_aliased_ov, mul_by_u_plus_1_fp2_ov
+          , mul_by_u_plus_1_fp2_alias_ov
+          ]  fp2_overrides)
+  s // the spec
+  do { rw_with_1 fp12_sqr_equiv_thm;
+       goal_num_when 13 do { // for the final goal: we return the correct expression.
+           unfolding ["fp12_sqr", "fp12_rep", "fp12_abs", "fp6_rep", "fp6_abs"];
+           // (unfolding fp6_abs and _rep because we do not have the abs_rep rules..)
+           simplify fp2_simpset;
+           rw_with_1 fp6_unrip_thm;
+           };
+       w4_unint_z3 ["Fp_6", "Fp_2", "u_plus_1"];
+       });
 /*
 sqr_fp12_ov <- verify "sqr_fp12" assembly_overrides sqr_fp12_spec;
 sqr_fp12_alias_ov <- verify "sqr_fp12" assembly_overrides sqr_fp12_alias_spec;

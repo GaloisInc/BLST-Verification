@@ -272,3 +272,36 @@ fp12_mul: [2][3][2]Integer -> [2][3][2]Integer -> [2][3][2]Integer
 fp12_mul [a1, a0] [b1, b0] = [r1, r0] where
   r0 = fp12_mul_0 a0 a1 b0 b1
   r1 = fp12_mul_1 a0 a1 b0 b1
+
+////////////////////////////////////////////////////////////////
+//
+// sqr_fp12
+//
+
+// The as-implemented sqr_fp12 algorithm, in our abstractspace and so wih indexing
+// reversed from the code:
+
+fp12_sqr: t_Fp_12 -> t_Fp_12
+fp12_sqr a = ret where
+    [a1, a0] = a
+    [a12, a11, a10] = a1
+    [a02, a01, a00] = a0
+
+    t0 = Fp_6.add (a0, a1)               // add_fp6(t0, a[0], a[1]);
+    t12 = Fp_2.mul (u_plus_1, a12)       // mul_by_u_plus_1_fp2(t1[2], a[1][2]);
+    t1 = [ Fp_2.add (a02, a11)           //  /- add_fp2(t1[0], a[0][0], t1[2]);
+         , Fp_2.add (a01, a10)           // <|-  add_fp2(t1[1], a[0][1], a[1][0]);
+         , Fp_2.add (a00, t12)]          //  \- add_fp2(t1[2], a[0][2], a[1][1]);
+    t0_a = Fp_6.mul (t0, t1)             // mul_fp6(t0, t0, t1);
+    t1_a = Fp_6.mul (a0, a1)             // mul_fp6(t1, a[0], a[1]);
+    [t12_a, t11_a, t10_a] = t1_a
+
+    r1 = Fp_6.add (t1_a, t1_a)           // add_fp6(ret[1], t1, t1);
+    [r02, r01, r00] = Fp_6.sub (t0_a, t1_a) // sub_fp6(ret[0], t0, t1);
+
+    t12_b = Fp_2.mul (u_plus_1, t12_a)   // mul_by_u_plus_1_fp2(t1[2], t1[2]);
+
+    r00_a = Fp_2.sub (r00, t12_b)        // sub_fp2(ret[0][0], ret[0][0], t1[2]);
+    r01_a = Fp_2.sub (r01, t10_a)        // sub_fp2(ret[0][1], ret[0][1], t1[0]);
+    r02_a = Fp_2.sub (r02, t11_a)        // sub_fp2(ret[0][2], ret[0][2], t1[1]);
+    ret = [r1, [r02_a, r01_a, r00_a]]
