@@ -28,7 +28,27 @@ EC <- cryptol_load "../spec/ShortWeierstrassCurve.cry";
 
 // Specs
 
-let blst_hash_to_g1_spec msg_len DST_len aug_len = do {
+let {{
+  hash_to_curve_opt_impl: {msg_len, DST_len}
+                 (fin msg_len, fin DST_len
+                 , DST_len <= 255
+                 , Expandable msg_len DST_len
+                 , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384
+                 ) =>
+                 ([msg_len][8], [DST_len][8]) -> ProjectivePoint t_Fp
+  hash_to_curve_opt_impl (msg,dst) = map_to_g1 u where
+      u = hash_to_field`{count=2} msg dst
+
+  map_to_g1_impl: [2]t_Fp -> ProjectivePoint t_Fp
+  map_to_g1_impl uv = P where
+      Q0 = map_to_curve_simple_swu_impl (uv@0)
+      Q1 = map_to_curve_simple_swu_impl (uv@1)
+      R = point_dadd Fp Q0 Q1 A' False // This is addition on the isogenous curve
+      S = iso_map_impl R
+      P = clear_cofactor S
+}};
+
+let blst_hash_to_g1_impl_spec msg_len DST_len aug_len = do {
   p_ptr <- llvm_alloc POINTonE1_type;
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
@@ -65,7 +85,13 @@ let dbl_n_add_spec n = do {
   llvm_execute_func [out_ptr, llvm_term {{`n:[64]}}, p_ptr];
   llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (dbl_n_add (POINTonE1_abs out) `n (POINTonE1_abs p)) }});
 };
+
 // Proofs
+
+// sometimes, rewrite rules do not apply if they are not first simplified with
+// `cryptol_ss`, so we use this:
+let simp_then_admit r = admit_cryptol (rewrite (cryptol_ss ()) r);
+
 
 
 /*
@@ -121,13 +147,14 @@ map_to_g1_nonnull_ov <- custom_verify "map_to_g1" overrides map_to_g1_nonnull_sp
       z3; // override preconditions
     });
 
-// unfolding recursion by hand...
-dbl_n_add_2_unfold_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 2 q == point_dadd Fp (point_double Fp (point_double Fp p)) q Fp.field_zero True }}) w4;
-dbl_n_add_3_unfold_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 3 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp p))) q Fp.field_zero True }}) w4;
-dbl_n_add_9_unfold_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 9 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p))))))))) q Fp.field_zero True }}) w4;
-dbl_n_add_32_unfold_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 32 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))))))))))))))))))) q Fp.field_zero True }}) w4;
-dbl_n_add_16_unfold_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> dbl_n_add p 16 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))) q Fp.field_zero True }}) w4;
-let dbl_n_add_unfold_thms = [dbl_n_add_2_unfold_thm, dbl_n_add_3_unfold_thm, dbl_n_add_9_unfold_thm, dbl_n_add_32_unfold_thm, dbl_n_add_16_unfold_thm];
+// Here we unfold the recursion in dbl_n_add by hand; we could also have used `goal_eval` to do it for us.
+let dbl_n_add_unfold_thms = for [
+      {{ \p q -> dbl_n_add p 2 q == point_dadd Fp (point_double Fp (point_double Fp p)) q Fp.field_zero True }}
+    , {{ \p q -> dbl_n_add p 3 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp p))) q Fp.field_zero True }}
+    , {{ \p q -> dbl_n_add p 9 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p))))))))) q Fp.field_zero True }}
+    , {{ \p q -> dbl_n_add p 32 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))))))))))))))))))) q Fp.field_zero True }}
+    , {{ \p q -> dbl_n_add p 16 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))) q Fp.field_zero True }}
+  ] simp_then_admit;
 
 let prove_dbl_lemma n = custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> affinify E (dbl_n_add p `n q) == add E (e1_scalar_mult (2^^(`n)) (affinify E p)) (affinify E q) }})
   (do {
@@ -141,10 +168,10 @@ dbl_lemmas <- for dbl_n_add_ns prove_dbl_lemma;
 // adding a point to its double can be done with POINTonE1_add (cheaper than dadd) because the double of a point is never equal to the point unless the point is point_O:
 add_double_lemma <- admit_cryptol {{ \p -> affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) }};
 
-// rewrite multl to e1_scalar_mult because the rewrite rules in ec_mult.saw use e1_scalar_mult:
+// rewrite mult to e1_scalar_mult because the rewrite rules in ec_mult.saw use e1_scalar_mult:
 scalar_mult_lemma <-admit_cryptol (rewrite (cryptol_ss ()) {{ \p -> EC::mult HE1::C HE1::h_eff p == e1_scalar_mult (to_Fp HE1::h_eff) p }});
 
-// now let's prove the the multiplication-by-doubling code is correct
+// now let's prove the multiplication-by-doubling code is correct
 
 mult_by_doubling_thm <- really_custom_prove_cryptol {{ \p -> affinify E (clear_cofactor p) == HE1::clear_cofactor (affinify E p) }}
   (do {
@@ -154,8 +181,6 @@ mult_by_doubling_thm <- really_custom_prove_cryptol {{ \p -> affinify E (clear_c
     simplify (addsimps (foldr concat [e1_curve_op_thms, e1_scalar_mult_alg_thms] [add_double_lemma]) (cryptol_ss ()));
     w4_unint_z3 ["E","e1_scalar_mult"];
   });
-
-// TODO: use the above thm to obtain an end-to-end proof of map_to_g1
 
 // now hash_to_g1
 
