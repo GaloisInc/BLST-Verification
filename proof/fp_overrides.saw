@@ -80,7 +80,6 @@ let binop_spec name llvm_type inv rep abs op = do {
   else crucible_points_to ret_ptr (crucible_term {{ op x y }});
 };
 
-// generic binary operation specification, pass-by-reference, aliasing return with first arg
 let binop_alias_1_2_spec name llvm_type inv rep abs op = do {
   (x, x_ptr) <- ptr_to_fresh "x" llvm_type;
   (y, y_ptr) <- ptr_to_fresh_readonly "y" llvm_type;

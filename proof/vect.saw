@@ -82,12 +82,14 @@ vec_select_Fp_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_spec 48 v
 
 vec_select_Fp_alias_1_3_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_alias_1_3_spec 48 vec384_type);
 
+vec_select_Fp_alias_1_2_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_alias_1_2_spec 48 vec384_type);
+
 vec_select_2Fp_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_spec 96 (llvm_array 2 vec384_type));
 
 vec_select_2Fp_alias_1_3_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_alias_1_3_spec 96 (llvm_array 2 vec384_type));
 
 let vec_select_overrides = [vec_select_POINTonE1_ov, vec_select_alias_1_2_POINTonE1_ov, vec_select_alias_1_3_POINTonE1_ov
-                           , vec_select_Fp_ov, vec_select_Fp_alias_1_3_ov
+                           , vec_select_Fp_ov, vec_select_Fp_alias_1_3_ov, vec_select_Fp_alias_1_2_ov
                            , vec_select_2Fp_ov, vec_select_2Fp_alias_1_3_ov
                            ];
 

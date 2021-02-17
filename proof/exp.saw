@@ -56,7 +56,7 @@ let exp_mont_384_spec n_bytes <- do {
 */
 
 // reciprocal and recip_sqrt_3_mod_4 are computed using addition chains.
-// We can use rewriting to show that they compute the correctv power.
+// We can use rewriting to show that they compute the correct power.
 
 // We then assume as axioms that these powers compute the appropriate functions.
 
@@ -166,9 +166,30 @@ let recip_sqrt_fp_spec = do {
     crucible_return (crucible_term {{ if is_square_fp (fp_abs inp) then 1:Limb else 0 }});
     };
 
+let recip_sqrt_fp_alias_spec = do {
+    (out, out_ptr) <- ptr_to_fresh "out" vec384_type;
+    crucible_precond {{ fp_invariant out }};
+    crucible_execute_func [out_ptr, out_ptr];
+    // crucible_points_to out_ptr (crucible_term {{ fp_rep (fp_exp (fp_abs inp) ((`p-3)/4)) }});
+    crucible_points_to out_ptr (crucible_term {{fp_rep (Fp.div (Fp.field_unit, sqrt_fp (fp_abs out))) }});
+    crucible_return (crucible_term {{ if is_square_fp (fp_abs out) then 1:Limb else 0 }});
+    };
+
 recip_sqrt_fp_ov <- custom_verify "recip_sqrt_fp"
                     ovs_for_reciprocal
                     recip_sqrt_fp_spec
+                    do {
+                      simplify (addsimp recip_sqrt_fp_algebra_thm empty_ss);
+                      unfolding ["sqr_n_mul"];
+                      simplify (addsimps [is_square_fp_thm, sqrt_fp_alg_thm] empty_ss);
+                      simplify fp_exp_simps;
+                      w4_unint_z3 (concat ["fp_exp"] fp_unints);
+                      };
+
+
+recip_sqrt_fp_alias_ov <- custom_verify "recip_sqrt_fp"
+                    ovs_for_reciprocal
+                    recip_sqrt_fp_alias_spec
                     do {
                       simplify (addsimp recip_sqrt_fp_algebra_thm empty_ss);
                       unfolding ["sqr_n_mul"];
