@@ -108,9 +108,9 @@ _ <- llvm_compositional_extract
 // TODO:
 really_custom_prove_cryptol {{ \x -> POINTonE1_abs' (map_to_isogenous_E1_term (fp_rep x)) == (HE1::map_to_curve_simple_swu x) }} assume_unsat;
 // testing it:
-really_custom_prove_cryptol {{ \(x:[384]) -> toInteger x < `(P::p) ==> POINTonE1_abs' (map_to_isogenous_E1_term (fp_rep (toInteger x))) == (HE1::map_to_curve_simple_swu (toInteger x)) }} (quickcheck 10);
+really_custom_prove_cryptol {{ \(x:[380]) -> POINTonE1_abs' (map_to_isogenous_E1_term (fp_rep (toInteger x))) == (HE1::map_to_curve_simple_swu (toInteger x)) }} (quickcheck 20);
 // testing the impl spec:
-really_custom_prove_cryptol {{ \(x:[384]) -> toInteger x < `(P::p) ==> POINTonE1_abs (map_to_isogenous_E1_term (fp_rep (toInteger x))) == (map_to_curve_simple_swu_impl (toInteger x)) }} (quickcheck 10);
+really_custom_prove_cryptol {{ \(x:[380]) -> POINTonE1_abs (map_to_isogenous_E1_term (fp_rep (toInteger x))) == (map_to_curve_simple_swu_impl (toInteger x)) }} (quickcheck 20);
 
 // We rewrite the constants appearing in the C code (mostly for readability of the goals when debugging; this just saves unfolding Fp.field_unit):
 constants_rewrites <- for [
@@ -135,7 +135,7 @@ impl_lemma <- really_custom_prove_cryptol {{ \x -> POINTonE1_abs (map_to_isogeno
     );
     unfolding ["map_to_curve_simple_swu_impl", "map_to_isogenous_E1_term", "select", "POINTonE1_abs'", "POINTonE1_abs"];
     simplify fp_simpset;
-    simplify (addsimps local_rewrites constants_rewrites) empty_ss);
+    simplify (addsimps (concat local_rewrites constants_rewrites) empty_ss);
     goal_eval_unint (concat fp_unints ["sqrt_fp","sqrt"]); // TODO: the proof fails without this.. why? Alternatively, enabling hash consing in What4 also works...
     w4_unint_z3 (concat ["Fp"] ["sqrt_fp","sqrt"]);
   };
@@ -150,12 +150,21 @@ let {{
     tv4 = Fp.mul (Fp.sq gxd, Fp.mul (gx1, gxd)))
 }};
 
-e2_lemma <- simp_then_admit (unfold_term ["e2_eqn"] {{ e2_eqn }});
+e2_lemma <- simp_then_admit (unfold_term ["e2_eqn"] {{ e2_eqn }}); // TODO: this is a trivial simplification, which unfortunately would be pretty tedious in SAW. Not sure it's worth it...
 
 // testing reveals no errors:
-_ <- custom_prove_cryptol {{
-  \(gx1:[6]) (gxd:[6]) -> gx1 != zero /\ gxd != zero ==> (imp_term == spec_term where
-    spec_term = Fp.is_equal (Fp.mul (Fp.sq (Fp.mul (Fp.div (Fp.field_unit, sqrt_fp tv4), Fp.mul ((toInteger gx1), (toInteger gxd)))), (toInteger gxd)), (toInteger gx1))
-    imp_term = Fp.is_equal (Fp.sq (Fp.mul (Fp.div (Fp.field_unit, sqrt_fp tv4), tv4)), tv4)
+_ <- really_custom_prove_cryptol {{
+  \(gx1:[380]) (gxd:[380]) -> gx1 != zero /\ gxd != zero ==> (imp_term == spec_term where
+    spec_term = Fp.is_equal (Fp.mul (Fp.sq (Fp.mul (Fp.div (Fp.field_unit, sqrt_fp tv4), Fp.mul ((toInteger gx1), (toInteger gxd)))), (toInteger gxd)), (toInteger gx1));
+    imp_term = Fp.is_equal (Fp.sq (Fp.mul (Fp.div (Fp.field_unit, sqrt_fp tv4), tv4)), tv4);
     tv4 = Fp.mul (Fp.sq (toInteger gxd), Fp.mul ((toInteger gx1), (toInteger gxd))))
-}} (quickcheck 128);
+}} (quickcheck 20);
+
+// the final proof:
+really_custom_prove_cryptol {{ \u -> map_to_curve_simple_swu_impl u == map_to_curve_simple_swu_3mod4 u }}
+  do {
+    unfolding ["map_to_curve_simple_swu_impl", "map_to_curve_simple_swu_3mod4"];
+    simplify (addsimp e2_lemma empty_ss);
+    goal_eval_unint (concat fp_unints ["sqrt_fp","sqrt"]); // TODO: the proof fails without this.. why? Alternatively, enabling hash consing in What4 also works...
+    w4_unint_z3 (concat ["Fp"] ["sqrt_fp","sqrt"]);
+  };

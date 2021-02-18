@@ -24,11 +24,11 @@ map_to_curve_simple_swu_3mod4 u = res where
   x1n = Fp.add (xd, Fp.field_unit)
   x1n_a = Fp.mul (x1n, B')
   xd_a = Fp.mul(Fp.neg A', xd)
-  e1 = Fp.is_equal(xd, Fp.field_zero)
-  xd_b = if Fp.is_equal(xd_a, Fp.field_zero) then Fp.mul(Z, A') else xd_a // TODO: is this not if e1 ...?
+  e1 = Fp.is_equal(xd_a, Fp.field_zero)
+  xd_b = if e1 then Fp.mul(Z, A') else xd_a
 
   tv2_a = Fp.sq xd_b
-  gxd = Fp.mul(xd_b, tv2_a) // commuted to match the implementation
+  gxd = Fp.mul(xd_b, tv2_a) // NOTE: commuted, to match the implementation
   tv2_b = Fp.mul(A',  tv2_a)
   gx1 = Fp.sq x1n_a
   gx1_a = Fp.add(gx1, tv2_b)
@@ -38,7 +38,7 @@ map_to_curve_simple_swu_3mod4 u = res where
   tv4 = Fp.sq gxd
   tv2_d = Fp.mul (gx1_c, gxd)
   tv4_b = Fp.mul (tv4, tv2_d)
-  y1 = Fp.div (Fp.field_unit, sqrt_fp tv4_b) // this ^((p-3)/4) (exponentition) in the spec; see exp.saw for the rewrite
+  y1 = Fp.div (Fp.field_unit, sqrt_fp tv4_b) // TODO: this ^((p-3)/4) (exponentition) in the spec; we have a rewrite in exp.saw
   y1_b = Fp.mul(y1, tv2_d)
   x2n = Fp.mul(tv3, x1n_a)
   y2 = Fp.mul(y1_b, c2)
@@ -47,10 +47,12 @@ map_to_curve_simple_swu_3mod4 u = res where
   tv2_e = Fp.sq y1_b
   tv2_f = Fp.mul(tv2_e, gxd)
   e2 = Fp.is_equal(tv2_f, gx1_c)
+
   xn = if e2 then  x1n_a else x2n
   y = if e2 then y1_b else y2_c
   e3 = sgn0(u) == sgn0(y)
   y_a = if e3 then y else Fp.neg y
+
   // convert to Jacobian coordinates:
   res = (Fp.mul (xn, xd_b), Fp.mul (y_a, gxd), xd_b)
 
@@ -93,7 +95,7 @@ map_to_curve_simple_swu_impl u = res where
   xn = if e2 then  x1n else x2n
   y = if e2 then y1_b else y2_c
 
-  y_a = if sgn0(u) != sgn0(y) then Fp.neg y else y // TODO: can Z3 handle that? (C code uses xor)
+  y_a = if sgn0(u) != sgn0(y) then Fp.neg y else y
 
   // convert to Jacobian coordinates:
   res = (Fp.mul (xn, xd_b), Fp.mul (y_a, gxd), xd_b)
