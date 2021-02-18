@@ -25,6 +25,7 @@ import "../spec/implementation/CurveOperation.cry";
 import "../spec/ShortWeierstrassCurve.cry";
 import "../spec/FieldExtras.cry";
 import "../spec/implementation/swu_map_E1.cry";
+P <- cryptol_load "../spec/Parameters.cry";
 
 // Specs
 
@@ -72,12 +73,14 @@ let {{
   fp_zero = Fp.field_zero
   fp_unit = Fp.field_unit
   fp_is_equal = Fp.is_equal
+  fp_neg = Fp.neg
 }};
 
 readability_rewrites <- for [
   {{ \p q -> Fp.mul (p,q) == fp_mul (p,q) }}
 , {{ \p q -> Fp.add (p,q) == fp_add (p,q) }}
 , {{ \p -> Fp.sq p == fp_sq p }}
+, {{ \p -> Fp.neg p == fp_neg p }}
 , {{ \p q -> Fp.div (p, q) == fp_div (p, q) }}
 , {{ Fp.field_zero == fp_zero }}
 , {{ Fp.field_unit == fp_unit }}
@@ -89,21 +92,11 @@ let print_readably =  do {
     print_goal;
 };
 
-// custom version of this:
-let vec_is_equal_48_spec_2 = do {
-  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
-  crucible_execute_func [a_ptr, b_ptr, crucible_term {{ (48:Size_t) }}]; // Non-portable
-  crucible_return (crucible_term {{ bool_to_limb (Fp.is_equal (fp_abs a, fp_abs b)) }});
-  };
-
-vec_is_equal_48_ov_2 <- verify "vec_is_equal" []  vec_is_equal_48_spec_2;
-
 _ <- llvm_compositional_extract
   m
   "map_to_isogenous_E1"
   "map_to_isogenous_E1_term"
-  (concat_all [fp_overrides, vec_overrides, [recip_sqrt_fp_3mod4_ov , sgn0x_pty_mont_384_ov, vec_is_equal_48_ov_2]])
+  (concat_all [fp_overrides, vec_overrides, [recip_sqrt_fp_3mod4_ov , sgn0x_pty_mont_384_ov]])
   true
   map_to_isogenous_E1_extract_spec
   do {
@@ -115,15 +108,49 @@ _ <- llvm_compositional_extract
 // TODO:
 really_custom_prove_cryptol {{ \x -> POINTonE1_abs' (map_to_isogenous_E1_term (fp_rep x)) == (HE1::map_to_curve_simple_swu x) }} assume_unsat;
 // testing it:
-custom_prove_cryptol {{ \(x:[3]) -> POINTonE1_abs' (map_to_isogenous_E1_term (fp_rep (toInteger x))) == (HE1::map_to_curve_simple_swu (toInteger x)) }} (quickcheck 8);
+really_custom_prove_cryptol {{ \(x:[384]) -> toInteger x < `(P::p) ==> POINTonE1_abs' (map_to_isogenous_E1_term (fp_rep (toInteger x))) == (HE1::map_to_curve_simple_swu (toInteger x)) }} (quickcheck 10);
+// testing the impl spec:
+really_custom_prove_cryptol {{ \(x:[384]) -> toInteger x < `(P::p) ==> POINTonE1_abs (map_to_isogenous_E1_term (fp_rep (toInteger x))) == (map_to_curve_simple_swu_impl (toInteger x)) }} (quickcheck 10);
+
+// We rewrite the constants appearing in the C code (mostly for readability of the goals when debugging; this just saves unfolding Fp.field_unit):
+constants_rewrites <- for [
+      {{ fp_abs [ 4878930887265312543 , 14750521259635781058 , 8371497156570714123 , 15793066378700994603 , 16433423527091015560 , 32548497384448767 ] == sqrt (Fp.neg (Fp.mul (Fp.sq Z, Z))) }}
+    , {{ fp_abs [ 9830232086645309404 , 1112389714365644829 , 8603885298299447491 , 11361495444721768256 , 5788602283869803809 , 543934104870762216 ] == Z }}
+    , {{ fp_abs [ 9180392817347875192 , 12752300768841235045 , 5424152106454515062 , 3349150446948955809 , 1614784533401171638 , 42236840757897548 ] == Fp.mul (Z, A') }}
+    ,  {{ fp_abs [ 9987108143941419098 , 10981380979105458492 , 12597673232421864513 , 4365728511027233858 , 2514197008840889506 , 336850944957925653 ] == Fp.neg(A') }}
+    , {{ fp_abs [ 3415322872136444497 , 9675504606121301699 , 13284745414851768802 , 2873609449387478652 , 2897906769629812789 , 1536947672689614213 ] == A' }}
+    , {{ fp_abs [ 18129637713272545760 , 11144507692959411567 , 10108153527111632324 , 9745270364868568433 , 14587922135379007624 , 469008097655535723 ] == B' }}
+    , {{ fp_abs [ 8505329371266088957 , 17002214543764226050 , 6865905132761471162 , 8632934651105793861 , 6631298214892334189 , 1582556514881692819 ] == Fp.field_unit }}
+  ] (\ eq -> really_custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
+
+//enable_what4_hash_consing;
+impl_lemma <- really_custom_prove_cryptol {{ \x -> POINTonE1_abs (map_to_isogenous_E1_term (fp_rep x)) == map_to_curve_simple_swu_impl x }}
+  do {
+    // the only difference between spec and code is the use of `vec_select` and `vec_is_equal`
+    let local_rewrites = run (
+      for [
+            {{ \x y -> Fp.is_equal (x, y) == (x == y) }}
+          , {{ Fp.field_zero == 0 }}
+      ] (\ eq -> really_custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4)
+    );
+    unfolding ["map_to_curve_simple_swu_impl", "map_to_isogenous_E1_term", "select", "POINTonE1_abs'", "POINTonE1_abs"];
+    simplify fp_simpset;
+    simplify (addsimps local_rewrites constants_rewrites) empty_ss);
+    goal_eval_unint (concat fp_unints ["sqrt_fp","sqrt"]); // TODO: the proof fails without this.. why? Alternatively, enabling hash consing in What4 also works...
+    w4_unint_z3 (concat ["Fp"] ["sqrt_fp","sqrt"]);
+  };
+
+// Now it remains to prove that the implementation spec is equivalent to the IETF spec
 
 // We need to rewrite `e2`, which is computed differently in the C code compared to the specification
-e2_lemma <- simp_then_admit {{
-  \gx1 gxd -> (imp_term == spec_term where
+let {{
+  e2_eqn = \gx1 gxd -> (imp_term == spec_term where
     spec_term = Fp.is_equal (Fp.mul (Fp.sq (Fp.mul (Fp.div (Fp.field_unit, sqrt_fp tv4), Fp.mul (gx1, gxd))), gxd), gx1)
     imp_term = Fp.is_equal (Fp.sq (Fp.mul (Fp.div (Fp.field_unit, sqrt_fp tv4), tv4)), tv4)
     tv4 = Fp.mul (Fp.sq gxd, Fp.mul (gx1, gxd)))
 }};
+
+e2_lemma <- simp_then_admit (unfold_term ["e2_eqn"] {{ e2_eqn }});
 
 // testing reveals no errors:
 _ <- custom_prove_cryptol {{
@@ -132,59 +159,3 @@ _ <- custom_prove_cryptol {{
     imp_term = Fp.is_equal (Fp.sq (Fp.mul (Fp.div (Fp.field_unit, sqrt_fp tv4), tv4)), tv4)
     tv4 = Fp.mul (Fp.sq (toInteger gxd), Fp.mul ((toInteger gx1), (toInteger gxd))))
 }} (quickcheck 128);
-
-// TODO: now can we apply it to the actual term?
-// First we have to deal with `vec_is_equal`
-
-really_custom_prove_cryptol {{ \x -> POINTonE1_abs' (map_to_isogenous_E1_term (fp_rep x)) == (HE1::map_to_curve_simple_swu x) }}
-  do {
-    unfolding ["map_to_isogenous_E1_term"];
-    simplify fp_simpset;
-    print_readably;
-    simplify (addsimp e2_lemma empty_ss);
-    print_readably;
-    assume_unsat;
-  };
-
-///////////////////////
-
-P <- cryptol_load "../spec/Parameters.cry";
-
-let {{
-  ex1_expected_us =
-     [ P::to_Fp 0x0ba14bd907ad64a016293ee7c2d276b8eae71f25a4b941eece7b0d89f17f75cb3ae5438a614fb61d6835ad59f29c564f
-     , P::to_Fp 0x019b9bd7979f12657976de2884c7cce192b82c177c80e0ec604436a7f538d231552f0d96d9f7babe5fa3b19b3ff25ac9
-     ]
-  map_to_curve_test_1_1_a =
-      is_point_affine HE1::Curve_E' (POINTonE1_abs' (map_to_isogenous_E1_term (fp_rep 3)))
-  map_to_curve_test_1_1_a_ =
-      is_point_affine HE1::Curve_E' (HE1::map_to_curve_simple_swu 3)
-  map_to_curve_test_1_1_b =
-      is_point_affine HE1::Curve_E' (POINTonE1_abs' (map_to_isogenous_E1_term (fp_rep (ex1_expected_us@1))))
-}};
-
-let {{
-  fixed_impl u = (x,y) where
-    y = if sgn0 u != sgn0 y' then y' else Fp.neg y'
-    (x,y') = POINTonE1_abs' (map_to_isogenous_E1_term (fp_rep u))
-}};
-
-//really_custom_prove_cryptol {{ map_to_curve_test_1_1_a }} w4;
-//really_custom_prove_cryptol {{ map_to_curve_test_1_1_b }} w4;
-//really_custom_prove_cryptol {{ \x y -> HE1::map_to_curve_simple_swu 3 == x /\ POINTonE1_abs' (map_to_isogenous_E1_term (fp_rep 3)) == y ==> x == y }} w4;
-
-//really_custom_prove_cryptol {{ \x y -> HE1::map_to_curve_simple_swu 3 == x /\ fixed_impl 3 == y ==> x == y }} w4;
-
-//let {{
-  //map_to_curve u = (Fp.div(xn,xd), Fp.div(yn,yd)) where
-    //(xn,xd,yn,yd) = map_to_curve_simple_swu_impl u
-//}};
-
-//really_custom_prove_cryptol {{ \(u:[3]) -> sgn0 ((HE1::map_to_curve_simple_swu (toInteger u)).1) == sgn0 (toInteger u) }} (quickcheck 10);
-
-//really_custom_prove_cryptol {{ \x y -> HE1::map_to_curve_simple_swu 3 == x /\ map_to_curve 3 == y ==> x == y }} w4;
-//really_custom_prove_cryptol {{ \x y -> fixed_impl 3 == x /\ map_to_curve 3 == y ==> x == y }} w4;
-//really_custom_prove_cryptol {{ \x y -> HE1::map_to_curve_simple_swu 4637 == x /\ map_to_curve 4637 == y ==> x == y }} w4;
-//really_custom_prove_cryptol {{ \x y -> fixed_impl 4637 == x /\ map_to_curve 4637 == y ==> x == y }} w4;
-
-//really_custom_prove_cryptol {{ \(x:[3]) -> x != 0 ==> ((toInteger x)%2) != ((Fp.neg (toInteger x))%2) }} w4;
