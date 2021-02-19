@@ -67,8 +67,6 @@ let {{
   fp_mul = Fp.mul
   fp_sq = Fp.sq
   fp_add = Fp.add
-  fp_exp : t_Fp -> Integer -> t_Fp
-  fp_exp = undefined
   fp_div = Fp.div
   fp_zero = Fp.field_zero
   fp_unit = Fp.field_unit
@@ -155,16 +153,20 @@ e2_lemma <- simp_then_admit (unfold_term ["e2_eqn"] {{ e2_eqn }}); // TODO: this
 // testing reveals no errors:
 _ <- really_custom_prove_cryptol {{
   \(gx1:[380]) (gxd:[380]) -> gx1 != zero /\ gxd != zero ==> (imp_term == spec_term where
-    spec_term = Fp.is_equal (Fp.mul (Fp.sq (Fp.mul (Fp.div (Fp.field_unit, sqrt_fp tv4), Fp.mul ((toInteger gx1), (toInteger gxd)))), (toInteger gxd)), (toInteger gx1));
-    imp_term = Fp.is_equal (Fp.sq (Fp.mul (Fp.div (Fp.field_unit, sqrt_fp tv4), tv4)), tv4);
+    spec_term = Fp.is_equal (Fp.mul (Fp.sq (Fp.mul (Fp.div (Fp.field_unit, sqrt_fp tv4), Fp.mul ((toInteger gx1), (toInteger gxd)))), (toInteger gxd)), (toInteger gx1))
+    imp_term = Fp.is_equal (Fp.sq (Fp.mul (Fp.div (Fp.field_unit, sqrt_fp tv4), tv4)), tv4)
     tv4 = Fp.mul (Fp.sq (toInteger gxd), Fp.mul ((toInteger gx1), (toInteger gxd))))
 }} (quickcheck 20);
 
+// we need this:
+recip_sqrt_fp_algebra_thm <- simp_then_admit {{ \x -> Fp.div (Fp.field_unit, sqrt_fp x) == fp_exp x ((`P::p-3)/4) }};
+
 // the final proof:
-really_custom_prove_cryptol {{ \u -> map_to_curve_simple_swu_impl u == map_to_curve_simple_swu_3mod4 u }}
+impl_eq_swu_3mod4 <- really_custom_prove_cryptol {{ \u -> map_to_curve_simple_swu_impl u == map_to_curve_simple_swu_3mod4 u }}
   do {
     unfolding ["map_to_curve_simple_swu_impl", "map_to_curve_simple_swu_3mod4"];
     simplify (addsimp e2_lemma empty_ss);
-    goal_eval_unint (concat fp_unints ["sqrt_fp","sqrt"]); // TODO: the proof fails without this.. why? Alternatively, enabling hash consing in What4 also works...
-    w4_unint_z3 (concat ["Fp"] ["sqrt_fp","sqrt"]);
+    simplify (cryptol_ss ());
+    simplify (addsimp recip_sqrt_fp_algebra_thm empty_ss);
+    w4_unint_z3 (concat ["Fp"] ["sqrt","fp_exp"]);
   };

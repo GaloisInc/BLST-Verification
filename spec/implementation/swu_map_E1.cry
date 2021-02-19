@@ -6,12 +6,11 @@
 import Parameters (Fp, t_Fp, to_Fp, E, p)
 import Common::Field
 import FieldExtras
-import BLSFieldExtras (sqrt_fp)
-import HashToCurveE1Aux (Z, A', B', sqrt, sgn0)
+import BLSFieldExtras (sqrt_fp, fp_exp)
+import HashToCurveE1Aux (Z, A', B', sqrt, sgn0) // TODO: why do we have sqrt_fp and sqrt?
 import ShortWeierstrassCurve (ProjectivePoint)
 
 // This is a formalization of map_to_curve_simple_swu_3mod4 as described at https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-09#appendix-E.2
-// TODO: can we use +, -, *, etc. here?
 map_to_curve_simple_swu_3mod4 : t_Fp -> ProjectivePoint t_Fp
 map_to_curve_simple_swu_3mod4 u = res where
   //c1 = Fp.div(Fp.sub(`p,3),4)
@@ -38,7 +37,8 @@ map_to_curve_simple_swu_3mod4 u = res where
   tv4 = Fp.sq gxd
   tv2_d = Fp.mul (gx1_c, gxd)
   tv4_b = Fp.mul (tv4, tv2_d)
-  y1 = Fp.div (Fp.field_unit, sqrt_fp tv4_b) // TODO: this ^((p-3)/4) (exponentition) in the spec; we have a rewrite in exp.saw
+  //y1 = Fp.div (Fp.field_unit, sqrt_fp tv4_b) // TODO: this ^((p-3)/4) (exponentition) in the spec; we have a rewrite in exp.saw
+  y1 = fp_exp tv4_b ((`p-3)/4)
   y1_b = Fp.mul(y1, tv2_d)
   x2n = Fp.mul(tv3, x1n_a)
   y2 = Fp.mul(y1_b, c2)
@@ -88,6 +88,7 @@ map_to_curve_simple_swu_impl u = res where
   y1 = Fp.div (Fp.field_unit, sqrt_fp tv4_b)
   e2 = Fp.is_equal (Fp.sq (Fp.mul (y1, tv4_b)), tv4_b) // this appears in the body of recip_sqrt
   y1_b = Fp.mul(y1, tv2_d)
+
   y2 = Fp.mul(y1_b, c2)
   y2_b = Fp.mul(y2, tv1)
   y2_c = Fp.mul(y2_b, u)

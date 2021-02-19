@@ -64,11 +64,6 @@ let exp_mont_384_spec n_bytes <- do {
 // We can use algebraic rules relating multiplication to exponentiation to show that these chains
 // computes the correct values.
 
-// fp_exp is for positive exponents only, avoiding the need for rewriting x*1 to x
-let {{ fp_exp: t_Fp -> Integer -> t_Fp
-       fp_exp x e = if e == 1 then x else Fp.mul (x, fp_exp x (e-1))
-       }};
-
 me_1 <- prove_cryptol {{\x -> Fp.mul (x, x) == fp_exp x 2 }} [] ;
 me_2 <- admit_cryptol {{ \x k -> Fp.mul (x, fp_exp x k) == fp_exp x (k+1) }};
 me_3 <- admit_cryptol {{ \x k -> Fp.mul (fp_exp x k, x) == fp_exp x (k+1) }};
