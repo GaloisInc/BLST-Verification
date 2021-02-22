@@ -233,13 +233,10 @@ let map_size_2_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y
 let map_size_2_eq_term = beta_reduce_term {{ \x -> map_size_2_term (\(y : Integer) -> fp_rep y) x == [fp_rep (x@0), fp_rep (x@1)]}};
 map_size_2_thm <- really_prove_cryptol map_size_2_eq_term [];
 
-// TODO: fix this
 hash_to_g1_ov <- really_custom_verify "blst_hash_to_g1" (concat [map_to_g1_nonnull_ov] hash_to_field_ovs) (blst_hash_to_g1_spec msg_len DST_len aug_len) (do {
-    unfolding ["hash_to_curve_opt_impl"];
-    unfolding ["map"];
-    simplify (cryptol_ss ()); // rewrite cryptol map to SAW map
+    unfolding ["hash_to_curve_opt_impl","map"];
+    simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
     simplify (addsimps [map_size_2_thm] empty_ss); // get rid of map
     simplify (addsimps fp_rep_thms empty_ss);// simplify (abs . rep)
-    print_goal;
     w4_unint_z3 ["map_to_g1_impl","hash_to_field"];
   });

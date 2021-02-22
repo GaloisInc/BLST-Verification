@@ -24,7 +24,7 @@ let expand_message_spec len_in_bytes aug_len msg_len DST_len = do {
   crucible_points_to bytes_ptr (crucible_term {{ expand_message_xmd`{len_in_bytes=len_in_bytes} (aug # msg) DST }});
 };
 
-HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
+HE1 <- cryptol_load "../spec/HashToCurveE1_standalone.cry";
 HE2 <- cryptol_load "../spec/HashToCurveE2.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/Field.cry";

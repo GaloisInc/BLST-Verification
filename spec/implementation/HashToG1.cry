@@ -4,48 +4,152 @@
 */
 
 import Parameters (Fp, t_Fp, to_Fp, E, p)
-//import FieldExtras
 import ShortWeierstrassCurve (ProjectivePoint, AffinePoint)
+import BLSFieldExtras (sqrt_fp, fp_exp)
 import ExpandMessage (Expandable)
-import HashToCurveE1 (hash_to_field)
-import HashToCurveE1Aux (A', k1s, k2s, k3s, k4s)
 import implementation::CurveOperation (point_dadd, point_add, point_double)
+import HashToCurveE1_standalone (hash_to_field, hash_to_curve_opt, A', B', Z, k1s, k2s, k3s, k4s, h_eff, sqrt, sgn0) // TODO: why do we have sqrt_fp and sqrt?
 
-// map_to_isogenous
+// There are three levels of specification: high-level, optimization-level, and
+// implementation specs. The first two are taken from the IETF Draft or
+// references papers, while the third type are specifications written to match
+// the C implementations as closely as possible.
 
-map_to_curve_simple_swu_impl: t_Fp -> ProjectivePoint t_Fp
-map_to_curve_simple_swu_impl u = undefined
+// a) we define optimization-level specifications (for example, the IETF Draft gives a
+// optimization-level spec for map_to_curve_simple_swu), which we assume are equivalent
+// to their high-level counterparts.
+
+// b) we define implementation specifications, which follows the C
+// implementations very closely, and we prove that those are equivalent to
+// their optimization-level spec counterparts.
+
+// c) we tie everything together to obtain a proof that hash_to_g1 implements
+// its high-level specifications. This often involves assuming that that
+// optimization-level specs are quivalent to the high-level ones (those proofs
+// would be too hard in SAW)
+
+// the SWU map:
+
+// TODO: it would be great if you could use better notation for field ops, e.g. + instead of Fp.add
+
+// This is a formalization of map_to_curve_simple_swu_3mod4 as described at https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-09#appendix-E.2
+map_to_curve_simple_swu_3mod4 : t_Fp -> ProjectivePoint t_Fp
+map_to_curve_simple_swu_3mod4 u = res where
+  //c1 = Fp.div(Fp.sub(`p,3),4)
+  c2 = sqrt (Fp.neg (Fp.mul (Fp.sq Z, Z)))
+
+  tv1 = Fp.sq u
+  tv3 = Fp.mul (Z, tv1)
+  tv2 = Fp.sq tv3
+  xd = Fp.add (tv2, tv3)
+  x1n = Fp.add (xd, Fp.field_unit)
+  x1n_a = Fp.mul (x1n, B')
+  xd_a = Fp.mul(Fp.neg A', xd)
+  e1 = Fp.is_equal(xd_a, Fp.field_zero)
+  xd_b = if e1 then Fp.mul(Z, A') else xd_a
+
+  tv2_a = Fp.sq xd_b
+  gxd = Fp.mul(xd_b, tv2_a) // NOTE: commuted, to match the implementation
+  tv2_b = Fp.mul(A',  tv2_a)
+  gx1 = Fp.sq x1n_a
+  gx1_a = Fp.add(gx1, tv2_b)
+  gx1_b = Fp.mul(gx1_a,  x1n_a)
+  tv2_c = Fp.mul(B', gxd)
+  gx1_c = Fp.add(gx1_b, tv2_c)
+  tv4 = Fp.sq gxd
+  tv2_d = Fp.mul (gx1_c, gxd)
+  tv4_b = Fp.mul (tv4, tv2_d)
+  y1 = fp_exp tv4_b ((`p-3)/4)
+  y1_b = Fp.mul(y1, tv2_d)
+  x2n = Fp.mul(tv3, x1n_a)
+  y2 = Fp.mul(y1_b, c2)
+  y2_b = Fp.mul(y2, tv1)
+  y2_c = Fp.mul(y2_b, u)
+  tv2_e = Fp.sq y1_b
+  tv2_f = Fp.mul(tv2_e, gxd)
+  e2 = Fp.is_equal(tv2_f, gx1_c)
+
+  xn = if e2 then  x1n_a else x2n
+  y = if e2 then y1_b else y2_c
+  e3 = sgn0(u) == sgn0(y)
+  y_a = if e3 then y else Fp.neg y
+
+  // convert to Jacobian coordinates:
+  res = (Fp.mul (xn, xd_b), Fp.mul (y_a, gxd), xd_b)
+
+// This is what the implementation does:
+map_to_curve_simple_swu_impl : t_Fp -> ProjectivePoint t_Fp
+map_to_curve_simple_swu_impl u = res where
+  c2 = sqrt (Fp.neg (Fp.mul (Fp.sq Z, Z))) // sqrt(-Z^3)
+
+  // x numerator
+  tv1 = Fp.sq u
+  tv3 = Fp.mul (Z, tv1)
+  tv2 = Fp.add (Fp.sq tv3, tv3)
+  x1n = Fp.mul (Fp.add (tv2, Fp.field_unit), B')
+  x2n = Fp.mul(tv3, x1n)
+
+  // x denumerator
+  xd = Fp.mul(Fp.neg A', tv2)
+  e1 = Fp.is_equal(xd, Fp.field_zero)
+  xd_b = if e1 then Fp.mul(Z, A') else xd
+
+  // y numerator
+  tv2_a = Fp.sq xd_b
+  gxd = Fp.mul(xd_b, tv2_a)
+  tv2_b = Fp.mul(A',  tv2_a)
+  gx1 = Fp.sq x1n
+  gx1_a = Fp.add(gx1, tv2_b)
+  gx1_b = Fp.mul(gx1_a,  x1n)
+  tv2_c = Fp.mul(B', gxd)
+  gx1_c = Fp.add(gx1_b, tv2_c)
+  tv4 = Fp.sq gxd
+  tv2_d = Fp.mul (gx1_c, gxd)
+  tv4_b = Fp.mul (tv4, tv2_d)
+  y1 = Fp.div (Fp.field_unit, sqrt_fp tv4_b) // note this is an exponentiation in the spec
+  e2 = Fp.is_equal (Fp.sq (Fp.mul (y1, tv4_b)), tv4_b) // this appears in the body of recip_sqrt
+  y1_b = Fp.mul(y1, tv2_d)
+
+  y2 = Fp.mul(y1_b, c2)
+  y2_b = Fp.mul(y2, tv1)
+  y2_c = Fp.mul(y2_b, u)
+
+  xn = if e2 then  x1n else x2n
+  y = if e2 then y1_b else y2_c
+
+  y_a = if sgn0(u) != sgn0(y) then Fp.neg y else y
+
+  // convert to Jacobian coordinates:
+  res = (Fp.mul (xn, xd_b), Fp.mul (y_a, gxd), xd_b)
 
 // isogeny_map_to_E1
 
-//iso_map_impl: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
-//iso_map_impl (X, Y, Z) = to_jacobian xn xd yn yd where
-  //zzs = Zz_powers Z
-  //xn = map_fp (kzzs#[last k1s]) X where
-    //kzzs = map_fp_times_Zz`{n=11} k1s zzs
-  //xd = Fp.mul (xs, last zzs) where
-    //xs = map_fp ((take`{front=9}kzzs)#[xkzz9]) X
-    //xkzz9 = Fp.add (X, last kzzs)
-    //kzzs = map_fp_times_Zz`{n=10} k2s zzs
-  //yn = Fp.mul (map_fp (kzzs#[last k3s]) X, Y) where
-    //kzzs = map_fp_times_Zz`{n=15} k3s zzs
-  //yd = Fp.mul (Fp.mul (xs, Z), last zzs) where
-    //xs = map_fp ((take`{front=14}kzzs)#[xkzz14]) X
-    //xkzz14 = Fp.add (X, last kzzs)
-    //kzzs = map_fp_times_Zz`{n=15} k4s zzs
+iso_map_impl: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
+iso_map_impl (X, Y, Z) = to_jacobian xn xd yn yd where
+  zzs = Zz_powers Z
+  xn = map_fp (kzzs#[last k1s]) X where
+    kzzs = map_fp_times_Zz`{n=11} k1s zzs
+  xd = Fp.mul (xs, last zzs) where
+    xs = map_fp ((take`{front=9}kzzs)#[xkzz9]) X
+    xkzz9 = Fp.add (X, last kzzs)
+    kzzs = map_fp_times_Zz`{n=10} k2s zzs
+  yn = Fp.mul (map_fp (kzzs#[last k3s]) X, Y) where
+    kzzs = map_fp_times_Zz`{n=15} k3s zzs
+  yd = Fp.mul (Fp.mul (xs, Z), last zzs) where
+    xs = map_fp ((take`{front=14}kzzs)#[xkzz14]) X
+    xkzz14 = Fp.add (X, last kzzs)
+    kzzs = map_fp_times_Zz`{n=15} k4s zzs
 
-//Zz_powers : t_Fp -> [15]t_Fp // powers of ZZ in descending order
-//Zz_powers Z = reverse (take`{front=15} zzs) where
-    //zzs = [Fp.sq Z, Fp.sq (Fp.sq Z)]
-      //# (join`{parts=inf} [[Fp.mul (zi0, zi1), Fp.sq zi1] | zi0 <- zzs | zi1 <- tail zzs]) // TODO: why is parts=inf necessary here?
+Zz_powers : t_Fp -> [15]t_Fp // powers of ZZ in descending order
+Zz_powers Z = reverse (take`{front=15} zzs) where
+    zzs = [Fp.sq Z, Fp.sq (Fp.sq Z)]
+      # (join`{parts=inf} [[Fp.mul (zi0, zi1), Fp.sq zi1] | zi0 <- zzs | zi1 <- tail zzs]) // TODO: why is parts=inf necessary here?
 
-//map_fp_times_Zz : {m1,m2,n} (fin n, fin m2, m1 >= n, m2 >= n) => [m1]t_Fp -> [m2]t_Fp -> [n]t_Fp
-//map_fp_times_Zz ks zzs = zipWith (curry Fp.mul) (take`{front=n}ks) (drop`{back=n}zzs)
+map_fp_times_Zz : {m1,m2,n} (fin n, fin m2, m1 >= n, m2 >= n) => [m1]t_Fp -> [m2]t_Fp -> [n]t_Fp
+map_fp_times_Zz ks zzs = zipWith (curry Fp.mul) (take`{front=n}ks) (drop`{back=n}zzs)
 
-//map_fp kzzs x = last rs where
-  //rs = [last kzzs] # [Fp.add (Fp.mul (ri, x), kzzi) | kzzi <- tail (reverse kzzs) | ri <- rs]
-//// equivalently:
-//map_fp_foldr kzzs x = foldr (\kzzi ri -> Fp.add (Fp.mul (ri, x), kzzi)) (last kzzs) (take`{back=1}kzzs)
+map_fp kzzs x = last rs where
+  rs = [last kzzs] # [Fp.add (Fp.mul (ri, x), kzzi) | kzzi <- tail (reverse kzzs) | ri <- rs]
 
 to_jacobian xn xd yn yd = (X, Y, Z) where
   Z = Fp.mul (xd, yd)
@@ -61,8 +165,8 @@ dbl_n_add out n p = point_dadd Fp (db n out) p Fp.field_zero True where
     if k == 1 then point_double Fp x
     else point_double Fp (db (k-1) x)
 
-clear_cofactor: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
-clear_cofactor p = out where
+clear_cofactor_impl: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
+clear_cofactor_impl p = out where
   out1 = point_double Fp p
   out2 = point_add Fp out1 p // NOTE: this is okay because (point_double p) != p or both are point_O
   out3 = dbl_n_add out2 2 p
@@ -73,20 +177,20 @@ clear_cofactor p = out where
 
 // hash_to_curve
 
-//hash_to_curve_opt: {msg_len, DST_len}
-               //(fin msg_len, fin DST_len
-               //, DST_len <= 255
-               //, Expandable msg_len DST_len
-               //, 8 *( ((lg2 p) + 128) /^ 8 ) >= 384
-               //) =>
-               //([msg_len][8], [DST_len][8]) -> ProjectivePoint t_Fp
-//hash_to_curve_opt (msg,dst) = map_to_g1 u where
-    //u = hash_to_field`{count=2} msg dst
+hash_to_curve_opt_impl: {msg_len, DST_len}
+               (fin msg_len, fin DST_len
+               , DST_len <= 255
+               , Expandable msg_len DST_len
+               , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384
+               ) =>
+               ([msg_len][8], [DST_len][8]) -> ProjectivePoint t_Fp
+hash_to_curve_opt_impl (msg,dst) = map_to_g1_impl u where
+    u = hash_to_field`{count=2} msg dst
 
-//map_to_g1: [2]t_Fp -> ProjectivePoint t_Fp
-//map_to_g1 uv = P where
-    //Q0 = map_to_curve_simple_swu_impl (uv@0)
-    //Q1 = map_to_curve_simple_swu_impl (uv@1)
-    //R = point_dadd Fp Q0 Q1 A' False // This is addition on the isogenous curve
-    //S = iso_map_impl R
-    //P = clear_cofactor S
+map_to_g1_impl: [2]t_Fp -> ProjectivePoint t_Fp
+map_to_g1_impl uv = P where
+    Q0 = map_to_curve_simple_swu_impl (uv@0)
+    Q1 = map_to_curve_simple_swu_impl (uv@1)
+    R = point_dadd Fp Q0 Q1 A' False // This is addition on the isogenous curve E'
+    S = iso_map_impl R
+    P = clear_cofactor_impl S
