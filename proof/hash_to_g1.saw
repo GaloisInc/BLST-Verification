@@ -84,9 +84,10 @@ let map_to_isogenous_E1_impl_spec = do {
   (u, u_ptr) <- ptr_to_fresh_readonly "u" vec384_type;
   llvm_precond {{ fp_invariant u }};
   llvm_execute_func [out_ptr, u_ptr];
-  new_out <- llvm_fresh_var "map_to_isogenous_E1_out" POINTonE1_type;
-  llvm_points_to out_ptr (llvm_term new_out);
-  llvm_postcond {{ POINTonE1_abs new_out == map_to_curve_simple_swu_impl (fp_abs u) }};
+  llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (map_to_curve_simple_swu_impl (fp_abs u)) }});
+  //new_out <- llvm_fresh_var "map_to_isogenous_E1_out" POINTonE1_type;
+  //llvm_points_to out_ptr (llvm_term new_out);
+  //llvm_postcond {{ POINTonE1_abs new_out == map_to_curve_simple_swu_impl (fp_abs u) }};
 };
 
 let dbl_n_add_spec n = do {
@@ -524,13 +525,14 @@ constants_rewrites <- for [
       {{ fp_abs [ 4878930887265312543 , 14750521259635781058 , 8371497156570714123 , 15793066378700994603 , 16433423527091015560 , 32548497384448767 ] == sqrt (Fp.neg (Fp.mul (Fp.sq Z, Z))) }}
     , {{ fp_abs [ 9830232086645309404 , 1112389714365644829 , 8603885298299447491 , 11361495444721768256 , 5788602283869803809 , 543934104870762216 ] == Z }}
     , {{ fp_abs [ 9180392817347875192 , 12752300768841235045 , 5424152106454515062 , 3349150446948955809 , 1614784533401171638 , 42236840757897548 ] == Fp.mul (Z, A') }}
+    , {{ [ 9180392817347875192 , 12752300768841235045 , 5424152106454515062 , 3349150446948955809 , 1614784533401171638 , 42236840757897548 ] == fp_rep (Fp.mul (Z, A')) }}
     ,  {{ fp_abs [ 9987108143941419098 , 10981380979105458492 , 12597673232421864513 , 4365728511027233858 , 2514197008840889506 , 336850944957925653 ] == Fp.neg(A') }}
     , {{ fp_abs [ 3415322872136444497 , 9675504606121301699 , 13284745414851768802 , 2873609449387478652 , 2897906769629812789 , 1536947672689614213 ] == A' }}
     , {{ fp_abs [ 18129637713272545760 , 11144507692959411567 , 10108153527111632324 , 9745270364868568433 , 14587922135379007624 , 469008097655535723 ] == B' }}
     , {{ fp_abs [ 8505329371266088957 , 17002214543764226050 , 6865905132761471162 , 8632934651105793861 , 6631298214892334189 , 1582556514881692819 ] == Fp.field_unit }}
-  ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
+  ] (\ eq -> really_custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
 
-map_to_isogenous_E1_lemma <- really_custom_prove_cryptol (beta_reduce_term (unfold_term ["map_to_isogenous_E1_term"] {{ \x -> POINTonE1_abs (map_to_isogenous_E1_term x) == map_to_curve_simple_swu_impl (fp_abs x) }})) // why do we have to beta-reduce map_to_isogenous_E1_term to make it equal to the term produced when verifying the override below?
+map_to_isogenous_E1_lemma <- really_custom_prove_cryptol (beta_reduce_term (unfold_term ["map_to_isogenous_E1_term"] {{ \x -> map_to_isogenous_E1_term x == POINTonE1_rep (map_to_curve_simple_swu_impl (fp_abs x)) }})) // why do we have to beta-reduce map_to_isogenous_E1_term to make it equal to the term produced when verifying the override below?
   do {
     // the only difference between spec and code is the use of `vec_select` and `vec_is_equal`
     let local_rewrites = run (
@@ -539,11 +541,12 @@ map_to_isogenous_E1_lemma <- really_custom_prove_cryptol (beta_reduce_term (unfo
           , {{ Fp.field_zero == 0 }}
       ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4)
     );
-    unfolding ["map_to_curve_simple_swu_impl", "select", "POINTonE1_abs'", "POINTonE1_abs"];
+    unfolding ["map_to_curve_simple_swu_impl", "select", "POINTonE1_rep"];
+    simplify (addsimps constants_rewrites empty_ss);
     simplify fp_simpset;
-    simplify (addsimps (concat local_rewrites constants_rewrites) empty_ss);
-    goal_eval_unint (concat fp_unints ["sqrt_fp","sqrt"]); // TODO: the proof fails without this.. why? Alternatively, enabling hash consing in What4 also works...
-    w4_unint_z3 (concat ["Fp"] ["sqrt_fp","sqrt"]);
+    simplify (addsimps local_rewrites empty_ss);
+    print_readably;
+    w4_unint_z3 (concat ["Fp"] ["sqrt_fp","sqrt","fp_rep"]);
   };
 
 map_to_isogenous_E1_impl_ov <- really_custom_verify
@@ -627,10 +630,11 @@ map_to_g1_nonnull_ov <- really_custom_verify "map_to_g1" overrides map_to_g1_non
       })
       do {
         unfolding ["POINTonE1_invariant"];
-        simplify (addsimps fp_rep_thms empty_ss);
-        // We are missing that isogeny_map and map_to_isogenous satisfy the invariants...
-        assume_unsat;
-        //w4; // override preconditions
+        simplify fp_simpset;
+        // TODO: We are missing that isogeny_map and map_to_isogenous satisfy the invariants...
+        print_goal;
+        //assume_unsat;
+        w4; // override preconditions
       };
     });
 
