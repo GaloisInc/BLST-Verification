@@ -48,16 +48,18 @@ let map_to_g1_nonnull_spec = do {
   out_ptr <- llvm_alloc POINTonE1_type;
   (u,u_ptr) <- ptr_to_fresh_readonly "u" vec384_type;
   (v,v_ptr) <- ptr_to_fresh_readonly "v" vec384_type;
+  llvm_precond {{ fp_invariant u }};
+  llvm_precond {{ fp_invariant v }};
   llvm_execute_func [out_ptr, u_ptr, v_ptr];
   llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (map_to_g1_impl [fp_abs u, fp_abs v]) }});
 };
 
-let map_to_isogenous_E1_spec = do {
-  p_ptr <- llvm_alloc POINTonE1_type;
-  (u, u_ptr) <- ptr_to_fresh_readonly "u" vec384_type;
-  llvm_execute_func [p_ptr, u_ptr];
-  llvm_points_to p_ptr (llvm_term {{ POINTonE1_rep (map_to_curve_simple_swu_impl (fp_abs u)) }});
-};
+//let map_to_isogenous_E1_spec = do {
+  //p_ptr <- llvm_alloc POINTonE1_type;
+  //(u, u_ptr) <- ptr_to_fresh_readonly "u" vec384_type;
+  //llvm_execute_func [p_ptr, u_ptr];
+  //llvm_points_to p_ptr (llvm_term {{ POINTonE1_rep (map_to_curve_simple_swu_impl (fp_abs u)) }});
+//};
 
 let isogeny_map_to_E1_alias_spec = do {
   (out, out_ptr) <- ptr_to_fresh "out" POINTonE1_type;
@@ -77,22 +79,22 @@ let blst_isogeny_map_to_E1_impl_alias_spec = do {
   //llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (iso_map_impl (POINTonE1_abs p)) }} );
 };
 
+let map_to_isogenous_E1_impl_spec = do {
+  out_ptr <- llvm_alloc POINTonE1_type;
+  (u, u_ptr) <- ptr_to_fresh_readonly "u" vec384_type;
+  llvm_precond {{ fp_invariant u }};
+  llvm_execute_func [out_ptr, u_ptr];
+  new_out <- llvm_fresh_var "map_to_isogenous_E1_out" POINTonE1_type;
+  llvm_points_to out_ptr (llvm_term new_out);
+  llvm_postcond {{ POINTonE1_abs new_out == map_to_curve_simple_swu_impl (fp_abs u) }};
+};
+
 let dbl_n_add_spec n = do {
   (out, out_ptr) <- ptr_to_fresh "out" POINTonE1_type;
   (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE1_type;
   llvm_precond {{ POINTonE1_invariant out /\ POINTonE1_invariant p }};
   llvm_execute_func [out_ptr, llvm_term {{`n:[64]}}, p_ptr];
   llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (dbl_n_add (POINTonE1_abs out) `n (POINTonE1_abs p)) }});
-};
-
-// TODO: do we need this?
-let map_to_isogenous_E1_extract_spec = do {
-  out_ptr <- llvm_alloc POINTonE1_type;
-  (u, u_ptr) <- ptr_to_fresh_readonly "u" vec384_type;
-  llvm_precond {{ fp_invariant u }};
-  llvm_execute_func [out_ptr, u_ptr];
-  new_out <- llvm_fresh_var "map_to_isogenous_extract_out" POINTonE1_type;
-  llvm_points_to out_ptr (llvm_term new_out);
 };
 
 // the code calls this assembly function:
@@ -154,7 +156,7 @@ let print_readably =  do {
 
 // isogeny_map_to_E1
 
-isogeny_map_to_E1_alias_ov <- custom_verify "isogeny_map_to_E1"
+isogeny_map_to_E1_impl_alias_ov <- custom_verify "isogeny_map_to_E1"
   fp_overrides
   blst_isogeny_map_to_E1_impl_alias_spec
   (goal_num_ite 176 // 176 is the main safety goal
@@ -445,19 +447,16 @@ y_den_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_te
     w4;
   });
 
-// TODO: broken...
 // we are also going to use this:
 to_jacobian_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ())
   {{
     \xn xd yn yd -> affinify E (to_jacobian xn xd yn yd) == if ~(is_zero Fp (Fp.mul (xd,yd))) then (Fp.div (xn, xd), Fp.div(yn, yd)) else apply affinify E (to_jacobian xn xd yn yd)
   }})
   (do {
-    unfolding ["to_jacobian", "affinify", "Fp", "E", "apply"];
+    unfolding ["to_jacobian", "affinify", "E", "apply"];
     simplify algebra_simpset;
-    simplify (addsimp right_fold_mul empty_ss);
-    simplify (addsimps simp_div_rewrites empty_ss);
-    print_goal_consts;
-    //w4;
+    //simplify (addsimp right_fold_mul empty_ss);
+    //simplify (addsimps simp_div_rewrites empty_ss);
     w4_unint_z3 fp_unints;
   });
 
@@ -478,7 +477,6 @@ iso_map_abs_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{
     simplify (addsimps [x_num_rewrite, elim_div_rewrite_x_num_times_zz11, x_den_rewrite, elim_div_rewrite_x_den_times_zz11, y_num_rewrite, elim_div_rewrite_y_num_times_zz15, y_den_rewrite, elim_div_rewrite_y_den_times_zz15] empty_ss);
     simplify (cryptol_ss ());
     simplify (addsimp to_jacobian_rewrite empty_ss);
-    unfolding ["Fp"];
     simplify (addsimp x_den_times_y_den_nz empty_ss);
     w4_unint_z3 fp_unints;
   });
@@ -498,6 +496,15 @@ is_zero_rewrite <- really_custom_prove_cryptol {{ \p -> is_zero Fp (p.2) == if ~
   };
 
 // map_to_isogenous_E1
+
+let map_to_isogenous_E1_extract_spec = do {
+  out_ptr <- llvm_alloc POINTonE1_type;
+  (u, u_ptr) <- ptr_to_fresh_readonly "u" vec384_type;
+  llvm_precond {{ fp_invariant u }};
+  llvm_execute_func [out_ptr, u_ptr];
+  new_out <- llvm_fresh_var "map_to_isogenous_extract_out" POINTonE1_type;
+  llvm_points_to out_ptr (llvm_term new_out);
+};
 
 _ <- llvm_compositional_extract
   m
@@ -523,8 +530,7 @@ constants_rewrites <- for [
     , {{ fp_abs [ 8505329371266088957 , 17002214543764226050 , 6865905132761471162 , 8632934651105793861 , 6631298214892334189 , 1582556514881692819 ] == Fp.field_unit }}
   ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
 
-//enable_what4_hash_consing;
-impl_lemma <- custom_prove_cryptol {{ \x -> POINTonE1_abs (map_to_isogenous_E1_term (fp_rep x)) == map_to_curve_simple_swu_impl x }}
+map_to_isogenous_E1_lemma <- really_custom_prove_cryptol (beta_reduce_term (unfold_term ["map_to_isogenous_E1_term"] {{ \x -> POINTonE1_abs (map_to_isogenous_E1_term x) == map_to_curve_simple_swu_impl (fp_abs x) }})) // why do we have to beta-reduce map_to_isogenous_E1_term to make it equal to the term produced when verifying the override below?
   do {
     // the only difference between spec and code is the use of `vec_select` and `vec_is_equal`
     let local_rewrites = run (
@@ -533,14 +539,32 @@ impl_lemma <- custom_prove_cryptol {{ \x -> POINTonE1_abs (map_to_isogenous_E1_t
           , {{ Fp.field_zero == 0 }}
       ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4)
     );
-    unfolding ["map_to_curve_simple_swu_impl", "map_to_isogenous_E1_term", "select", "POINTonE1_abs'", "POINTonE1_abs"];
+    unfolding ["map_to_curve_simple_swu_impl", "select", "POINTonE1_abs'", "POINTonE1_abs"];
     simplify fp_simpset;
     simplify (addsimps (concat local_rewrites constants_rewrites) empty_ss);
     goal_eval_unint (concat fp_unints ["sqrt_fp","sqrt"]); // TODO: the proof fails without this.. why? Alternatively, enabling hash consing in What4 also works...
     w4_unint_z3 (concat ["Fp"] ["sqrt_fp","sqrt"]);
   };
 
-// Now it remains to prove that the implementation spec is equivalent to the IETF spec
+map_to_isogenous_E1_impl_ov <- really_custom_verify
+  "map_to_isogenous_E1"
+  (concat_all [fp_overrides, vec_overrides, [recip_sqrt_fp_3mod4_ov , sgn0x_pty_mont_384_ov]])
+  map_to_isogenous_E1_impl_spec
+  (do {
+    goal_num_ite 31
+      do { // main safety goal:
+        print_readably;
+        simplify (addsimp map_to_isogenous_E1_lemma (cryptol_ss ()));
+        assume_unsat;
+      }
+      do { // simulation side-conditions
+        unfolding ["select"];
+        simplify fp_simpset;
+        w4;
+      };
+  });
+
+// Now it remains to prove that the map_to_isogenous_E1 implementation spec is equivalent to the IETF spec
 
 // We need to rewrite `e2`, which is computed differently in the C code compared to the specification
 let {{
@@ -590,9 +614,9 @@ let verify_dbl_n_add n = custom_verify "POINTonE1_dbl_n_add" curve_operations_e1
 let dbl_n_add_ns = [2,3,9,32,16];
 dbl_n_add_ovs <- for dbl_n_add_ns verify_dbl_n_add;
 
-let overrides = foldr concat [curve_operations_e1_ovs, dbl_n_add_ovs] [map_to_isogenous_E1_ov, isogeny_map_to_E1_alias_ov];
+let overrides = foldr concat [curve_operations_e1_ovs, dbl_n_add_ovs] [map_to_isogenous_E1_impl_ov, isogeny_map_to_E1_impl_alias_ov];
 
-map_to_g1_nonnull_ov <- custom_verify "map_to_g1" overrides map_to_g1_nonnull_spec
+map_to_g1_nonnull_ov <- really_custom_verify "map_to_g1" overrides map_to_g1_nonnull_spec
   (do {
     simplify (addsimps POINTonE1_thms (cryptol_ss ()));
     goal_num_ite 8
@@ -601,7 +625,13 @@ map_to_g1_nonnull_ov <- custom_verify "map_to_g1" overrides map_to_g1_nonnull_sp
         simplify remove_higher_order_function_simpset;
         w4_unint_z3 ["point_double_fp","point_add_fp","point_dadd_fp","iso_map_impl","dbl_n_add","map_to_curve_simple_swu_impl"];
       })
-      w4; // override preconditions
+      do {
+        unfolding ["POINTonE1_invariant"];
+        simplify (addsimps fp_rep_thms empty_ss);
+        // We are missing that isogeny_map and map_to_isogenous satisfy the invariants...
+        assume_unsat;
+        //w4; // override preconditions
+      };
     });
 
 // now we prove that the implementation spec is equivalent to the high-level spec
