@@ -33,7 +33,7 @@ let do_prove = false;
 
 // Specs
 
-let blst_hash_to_g1_spec msg_len DST_len aug_len = do {
+let blst_hash_to_g1_impl_spec msg_len DST_len aug_len = do {
   p_ptr <- llvm_alloc POINTonE1_type;
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
@@ -42,6 +42,14 @@ let blst_hash_to_g1_spec msg_len DST_len aug_len = do {
   llvm_points_to p_ptr (llvm_term {{ (POINTonE1_rep (hash_to_curve_opt_impl (aug#msg, DST))) }});
 };
 
+let blst_hash_to_g1_spec msg_len DST_len aug_len = do {
+  p_ptr <- llvm_alloc POINTonE1_type;
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
+  (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
+  llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
+  // TODO: postcond saying abs (out) = ...
+};
 // now we give specifications that we will use to make overrides for those functions:
 
 let map_to_g1_nonnull_spec = do {
@@ -54,29 +62,16 @@ let map_to_g1_nonnull_spec = do {
   llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (map_to_g1_impl [fp_abs u, fp_abs v]) }});
 };
 
-//let map_to_isogenous_E1_spec = do {
-  //p_ptr <- llvm_alloc POINTonE1_type;
-  //(u, u_ptr) <- ptr_to_fresh_readonly "u" vec384_type;
-  //llvm_execute_func [p_ptr, u_ptr];
-  //llvm_points_to p_ptr (llvm_term {{ POINTonE1_rep (map_to_curve_simple_swu_impl (fp_abs u)) }});
-//};
-
-let isogeny_map_to_E1_alias_spec = do {
-  (out, out_ptr) <- ptr_to_fresh "out" POINTonE1_type;
-  llvm_execute_func [out_ptr, out_ptr];
-  llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (iso_map_impl (POINTonE1_abs out)) }});
-};
-
-let blst_isogeny_map_to_E1_impl_alias_spec = do {
-  //out_ptr <- llvm_alloc POINTonE1_type;
+let isogeny_map_to_E1_impl_alias_spec = do {
   (out, out_ptr) <- ptr_to_fresh "out" POINTonE1_type;
   llvm_precond {{ POINTonE1_invariant out }};
   llvm_execute_func [out_ptr, out_ptr];
-  new_out <- llvm_fresh_var "new_blst_isogeny_map_to_E1_out" POINTonE1_type;
-  llvm_points_to out_ptr (llvm_term new_out);
-  llvm_postcond {{ POINTonE1_abs new_out == iso_map_impl (POINTonE1_abs out) }};
+  //new_out <- llvm_fresh_var "new_isogeny_map_to_E1_out" POINTonE1_type;
   // This is unusual but the proof doesn't work for the following (not sure why...):
-  //llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (iso_map_impl (POINTonE1_abs p)) }} );
+  llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (iso_map_impl (POINTonE1_abs out)) }} );
+  //llvm_points_to out_ptr (llvm_term new_out);
+  //llvm_postcond {{ POINTonE1_abs new_out == iso_map_impl (POINTonE1_abs out) }};
+  //llvm_postcond {{ POINTonE1_invariant new_out }};
 };
 
 let map_to_isogenous_E1_impl_spec = do {
@@ -85,9 +80,6 @@ let map_to_isogenous_E1_impl_spec = do {
   llvm_precond {{ fp_invariant u }};
   llvm_execute_func [out_ptr, u_ptr];
   llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (map_to_curve_simple_swu_impl (fp_abs u)) }});
-  //new_out <- llvm_fresh_var "map_to_isogenous_E1_out" POINTonE1_type;
-  //llvm_points_to out_ptr (llvm_term new_out);
-  //llvm_postcond {{ POINTonE1_abs new_out == map_to_curve_simple_swu_impl (fp_abs u) }};
 };
 
 let dbl_n_add_spec n = do {
@@ -157,18 +149,21 @@ let print_readably =  do {
 
 // isogeny_map_to_E1
 
-isogeny_map_to_E1_impl_alias_ov <- custom_verify "isogeny_map_to_E1"
+// TODO:
+isogeny_map_to_E1_impl_alias_ov <- really_custom_verify "isogeny_map_to_E1"
   fp_overrides
-  blst_isogeny_map_to_E1_impl_alias_spec
+  isogeny_map_to_E1_impl_alias_spec
   (goal_num_ite 176 // 176 is the main safety goal
     (do {
-      unfolding ["POINTonE1_abs"];
-      simplify (addsimps fp_rep_thms (cryptol_ss ())); // eliminate `abs . rep`
-      w4; // NOTE: no idea why this works so well...
+      assume_unsat;
+      // TODO: doesn't work.
+      //unfolding ["POINTonE1_abs"];
+      //simplify (addsimps fp_rep_thms (cryptol_ss ())); // eliminate `abs . rep`
+      //w4;
     })
     (do { // discharge simulation side-conditions:
         unfolding ["POINTonE1_invariant"];
-        simplify (addsimps fp_rep_thms (cryptol_ss ()));
+        simplify fp_simpset;
         w4_unint_z3 ["Fp"];
     })
   );
@@ -524,7 +519,7 @@ _ <- llvm_compositional_extract
 constants_rewrites <- for [
       {{ fp_abs [ 4878930887265312543 , 14750521259635781058 , 8371497156570714123 , 15793066378700994603 , 16433423527091015560 , 32548497384448767 ] == sqrt (Fp.neg (Fp.mul (Fp.sq Z, Z))) }}
     , {{ fp_abs [ 9830232086645309404 , 1112389714365644829 , 8603885298299447491 , 11361495444721768256 , 5788602283869803809 , 543934104870762216 ] == Z }}
-    , {{ fp_abs [ 9180392817347875192 , 12752300768841235045 , 5424152106454515062 , 3349150446948955809 , 1614784533401171638 , 42236840757897548 ] == Fp.mul (Z, A') }}
+    //, {{ fp_abs [ 9180392817347875192 , 12752300768841235045 , 5424152106454515062 , 3349150446948955809 , 1614784533401171638 , 42236840757897548 ] == Fp.mul (Z, A') }}
     , {{ [ 9180392817347875192 , 12752300768841235045 , 5424152106454515062 , 3349150446948955809 , 1614784533401171638 , 42236840757897548 ] == fp_rep (Fp.mul (Z, A')) }}
     ,  {{ fp_abs [ 9987108143941419098 , 10981380979105458492 , 12597673232421864513 , 4365728511027233858 , 2514197008840889506 , 336850944957925653 ] == Fp.neg(A') }}
     , {{ fp_abs [ 3415322872136444497 , 9675504606121301699 , 13284745414851768802 , 2873609449387478652 , 2897906769629812789 , 1536947672689614213 ] == A' }}
@@ -582,7 +577,7 @@ e2_lemma <- simp_then_admit (unfold_term ["e2_eqn"] {{ e2_eqn }}); // TODO: this
 // we need this:
 recip_sqrt_fp_algebra_thm <- simp_then_admit {{ \x -> Fp.div (Fp.field_unit, sqrt_fp x) == fp_exp x ((`p-3)/4) }};
 
-// the final proof for the swu map:
+// the last but one step for the swu map:
 impl_eq_swu_3mod4 <- custom_prove_cryptol {{ \u -> map_to_curve_simple_swu_impl u == map_to_curve_simple_swu_3mod4 u }}
   do {
     unfolding ["map_to_curve_simple_swu_impl", "map_to_curve_simple_swu_3mod4"];
@@ -591,6 +586,8 @@ impl_eq_swu_3mod4 <- custom_prove_cryptol {{ \u -> map_to_curve_simple_swu_impl 
     simplify (addsimp recip_sqrt_fp_algebra_thm empty_ss);
     w4_unint_z3 (concat ["Fp"] ["sqrt","fp_exp"]);
   };
+
+// TODO: now we're missing the fact that swu_3mod4 implements the higher-level spec
 
 /*
   We verify map_to_g1 in two steps: first we prove it implements a low-level
@@ -622,8 +619,9 @@ let overrides = foldr concat [curve_operations_e1_ovs, dbl_n_add_ovs] [map_to_is
 map_to_g1_nonnull_ov <- really_custom_verify "map_to_g1" overrides map_to_g1_nonnull_spec
   (do {
     simplify (addsimps POINTonE1_thms (cryptol_ss ()));
-    goal_num_ite 8
+    goal_num_ite 11
       (do { // the main safety goal
+        print_goal;
         unfolding ["map_to_g1_impl","clear_cofactor_impl"];
         simplify remove_higher_order_function_simpset;
         w4_unint_z3 ["point_double_fp","point_add_fp","point_dadd_fp","iso_map_impl","dbl_n_add","map_to_curve_simple_swu_impl"];
@@ -631,10 +629,9 @@ map_to_g1_nonnull_ov <- really_custom_verify "map_to_g1" overrides map_to_g1_non
       do {
         unfolding ["POINTonE1_invariant"];
         simplify fp_simpset;
-        // TODO: We are missing that isogeny_map and map_to_isogenous satisfy the invariants...
-        print_goal;
-        //assume_unsat;
-        w4; // override preconditions
+        goal_num_ite 2
+          (w4_unint_z3 ["Fp","map_to_curve_simple_swu_impl","iso_map_impl"])
+          (w4_unint_z3 (concat ["map_to_curve_simple_swu_impl","iso_map_impl"] fp_unints));
       };
     });
 
@@ -686,10 +683,16 @@ let map_size_2_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y
 let map_size_2_eq_term = beta_reduce_term {{ \x -> map_size_2_term (\(y : Integer) -> fp_rep y) x == [fp_rep (x@0), fp_rep (x@1)]}};
 map_size_2_thm <- prove_cryptol map_size_2_eq_term [];
 
-hash_to_g1_ov <- custom_verify "blst_hash_to_g1" (concat [map_to_g1_nonnull_ov] hash_to_field_ovs) (blst_hash_to_g1_spec msg_len DST_len aug_len) (do {
+hash_to_g1_ov <- really_custom_verify
+  "blst_hash_to_g1"
+  (concat [map_to_g1_nonnull_ov] hash_to_field_ovs)
+  (blst_hash_to_g1_impl_spec msg_len DST_len aug_len)
+  (do {
     unfolding ["hash_to_curve_opt_impl","map"];
     simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
     simplify (addsimps [map_size_2_thm] empty_ss); // get rid of map
     simplify (addsimps fp_rep_thms empty_ss);// simplify (abs . rep)
     w4_unint_z3 ["map_to_g1_impl","hash_to_field"];
   });
+
+// TODO: now relate to high-level spec
