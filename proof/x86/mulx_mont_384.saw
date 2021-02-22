@@ -43,7 +43,7 @@ let mulx_mont_384x_alias_ret_a_ret_spec = do {
 // sqrx_mont_384x
 let sqrx_mont_384x_spec = do {
   ret_ptr <- crucible_alloc vec384x_type;
-  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
   n0 <- crucible_fresh_var "n0" limb_type;
   crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term n0];
@@ -195,38 +195,36 @@ let sqrx_mont_384_alias_spec = do {
 };
 
 // sqrx_n_mul_mont_384
-let sqrx_n_mul_mont_384_spec  = do {
-  ret_ptr <- crucible_alloc vec384_type;
-  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  count <- crucible_fresh_var "count" size_type;
-  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  n0 <- crucible_fresh_var "n0" limb_type;
-  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
-  crucible_execute_func [ret_ptr, a_ptr, crucible_term count, p_ptr, crucible_term n0, b_ptr];
-  new_sqr_n_mul_mont_384_ret <- crucible_fresh_var "new_sqr_n_mul_mont_384_ret" vec384_type;
-  crucible_points_to ret_ptr (crucible_term new_sqr_n_mul_mont_384_ret);
-};
+// let sqrx_n_mul_mont_384_spec  = do {
+//   ret_ptr <- crucible_alloc vec384_type;
+//   (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+//   count <- crucible_fresh_var "count" size_type;
+//   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+//   n0 <- crucible_fresh_var "n0" limb_type;
+//   (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+//   crucible_execute_func [ret_ptr, a_ptr, crucible_term count, p_ptr, crucible_term n0, b_ptr];
+//   new_sqr_n_mul_mont_384_ret <- crucible_fresh_var "new_sqr_n_mul_mont_384_ret" vec384_type;
+//   crucible_points_to ret_ptr (crucible_term new_sqr_n_mul_mont_384_ret);
+// };
 
 // sqrx_n_mul_mont_383
-let sqrx_n_mul_mont_383_spec  = do {
+let sqrx_n_mul_mont_383_spec count = do {
   ret_ptr <- crucible_alloc vec384_type;
   (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  count <- crucible_fresh_var "count" size_type;
   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
   n0 <- crucible_fresh_var "n0" limb_type;
   (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
-  crucible_execute_func [ret_ptr, a_ptr, crucible_term count, p_ptr, crucible_term n0, b_ptr];
+  crucible_execute_func [ret_ptr, a_ptr, crucible_term {{ `count : [64] }}, p_ptr, crucible_term n0, b_ptr];
   new_sqr_n_mul_mont_383_ret <- crucible_fresh_var "new_sqr_n_mul_mont_383_ret" vec384_type;
   crucible_points_to ret_ptr (crucible_term new_sqr_n_mul_mont_383_ret);
 };
 
-let sqrx_n_mul_mont_383_alias_1_2_spec  = do {
+let sqrx_n_mul_mont_383_alias_1_2_spec count = do {
   (_, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
-  count <- crucible_fresh_var "count" size_type;
   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
   n0 <- crucible_fresh_var "n0" limb_type;
   (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
-  crucible_execute_func [ret_ptr, ret_ptr, crucible_term count, p_ptr, crucible_term n0, b_ptr];
+  crucible_execute_func [ret_ptr, ret_ptr, crucible_term {{ `count : [64] }}, p_ptr, crucible_term n0, b_ptr];
   new_sqr_n_mul_mont_383_alias_1_2_ret <- crucible_fresh_var "new_sqr_n_mul_mont_383_alias_1_2_ret" vec384_type;
   crucible_points_to ret_ptr (crucible_term new_sqr_n_mul_mont_383_alias_1_2_ret);
 };
@@ -234,7 +232,7 @@ let sqrx_n_mul_mont_383_alias_1_2_spec  = do {
 // sqrx_mont_382x
 let sqrx_mont_382x_spec = do {
   ret_ptr <- crucible_alloc vec384x_type;
-  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
   n0 <- crucible_fresh_var "n0" limb_type;
   crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term n0];
@@ -261,10 +259,8 @@ mulx_mont_384x_alias_ret_ret_ov <- verify_x86 "mulx_mont_384x" mulx_mont_384x_al
 mulx_mont_384x_alias_ret_a_ret_ov <- verify_x86 "mulx_mont_384x" mulx_mont_384x_alias_ret_a_ret_spec;
 
 // sqrx_mont_384x - counterexample for internal var
-let do_prove_x86 = false;
 sqrx_mont_384x_ov <- verify_x86 "sqrx_mont_384x" sqrx_mont_384x_spec;
 sqrx_mont_384x_alias_ov <- verify_x86 "sqrx_mont_384x" sqrx_mont_384x_alias_spec;
-let do_prove_x86 = true;
 
 // mulx_382x
 mulx_382x_ov <- verify_x86 "mulx_382x" mulx_382x_spec;
@@ -285,29 +281,48 @@ sgn0x_pty_mont_384_ov <- verify_x86 "sgn0x_pty_mont_384" sgn0x_pty_mont_384_spec
 sgn0x_pty_mont_384x_ov <- verify_x86 "sgn0x_pty_mont_384x" sgn0x_pty_mont_384x_spec;
 
 // mulx_mont_384 - counterexample for var_macaw_reg55
-let do_prove_x86 = false;
 mulx_mont_384_ov <- verify_x86 "mulx_mont_384" mulx_mont_384_spec;
 mulx_mont_384_ret_ret_ov <- verify_x86 "mulx_mont_384" mulx_mont_384_ret_ret_spec;
 mulx_mont_384_ret_a_ret_ov <- verify_x86 "mulx_mont_384" mulx_mont_384_ret_a_ret_spec;
-let do_prove_x86 = true;
 
 // sqrx_mont_384 - counterexample for internal var
-let do_prove_x86 = false;
 sqrx_mont_384_ov <- verify_x86 "sqrx_mont_384" sqrx_mont_384_spec;
 sqrx_mont_384_alias_ov <- verify_x86 "sqrx_mont_384" sqrx_mont_384_alias_spec;
-let do_prove_x86 = true;
 
-// sqrx_n_mul_mont_383 - performance issue
-let do_prove_x86 = false;
-sqrx_n_mul_mont_383_ov <- verify_x86 "sqrx_n_mul_mont_383" sqrx_n_mul_mont_383_spec;
-sqrx_n_mul_mont_383_alias_1_2_ov <- verify_x86 "sqrx_n_mul_mont_383" sqrx_n_mul_mont_383_alias_1_2_spec;
-let do_prove_x86 = true;
+// sqrx_n_mul_mont_384 - doesn't exist in bitcode, never called?
+// sqrx_n_mul_mont_384_ov <- verify_x86 "sqrx_n_mul_mont_384" sqrx_n_mul_mont_384_spec;
+// sqrx_n_mul_mont_384_alias_1_2_ov <- verify_x86 "sqrx_n_mul_mont_384" sqrx_n_mul_mont_384_alias_1_2_spec;
 
-// sqrx_mont_382x - counterexample for internal var
-let do_prove_x86 = false;
+// sqrx_n_mul_mont_383
+sqrx_n_mul_mont_383_count1_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 1);
+sqrx_n_mul_mont_383_count2_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 2);
+sqrx_n_mul_mont_383_count3_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 3);
+sqrx_n_mul_mont_383_count4_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 4);
+sqrx_n_mul_mont_383_count5_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 5);
+sqrx_n_mul_mont_383_count6_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 6);
+sqrx_n_mul_mont_383_count7_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 7);
+sqrx_n_mul_mont_383_count8_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 8);
+sqrx_n_mul_mont_383_count9_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 9);
+sqrx_n_mul_mont_383_count10_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 10);
+sqrx_n_mul_mont_383_count11_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 11);
+sqrx_n_mul_mont_383_count12_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 12);
+
+sqrx_n_mul_mont_383_alias_1_2_count1_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 1);
+sqrx_n_mul_mont_383_alias_1_2_count2_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 2);
+sqrx_n_mul_mont_383_alias_1_2_count3_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 3);
+sqrx_n_mul_mont_383_alias_1_2_count4_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 4);
+sqrx_n_mul_mont_383_alias_1_2_count5_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 5);
+sqrx_n_mul_mont_383_alias_1_2_count6_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 6);
+sqrx_n_mul_mont_383_alias_1_2_count7_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 7);
+sqrx_n_mul_mont_383_alias_1_2_count8_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 8);
+sqrx_n_mul_mont_383_alias_1_2_count9_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 9);
+sqrx_n_mul_mont_383_alias_1_2_count10_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 10);
+sqrx_n_mul_mont_383_alias_1_2_count11_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 11);
+sqrx_n_mul_mont_383_alias_1_2_count12_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 12);
+
+// sqrx_mont_382x
 sqrx_mont_382x_ov <- verify_x86 "sqrx_mont_382x" sqrx_mont_382x_spec;
 sqrx_mont_382x_alias_ov <- verify_x86 "sqrx_mont_382x" sqrx_mont_382x_alias_spec;
-let do_prove_x86 = true;
 
 let mulx_mont_384_overrides =
   [ mulx_mont_384x_ov
@@ -336,8 +351,31 @@ let mulx_mont_384_overrides =
   , sqrx_mont_384_ov
   , sqrx_mont_384_alias_ov
 
-  , sqrx_n_mul_mont_383_ov
-  , sqrx_n_mul_mont_383_alias_1_2_ov
+  , sqrx_n_mul_mont_383_count1_ov
+  , sqrx_n_mul_mont_383_count2_ov
+  , sqrx_n_mul_mont_383_count3_ov
+  , sqrx_n_mul_mont_383_count4_ov
+  , sqrx_n_mul_mont_383_count5_ov
+  , sqrx_n_mul_mont_383_count6_ov
+  , sqrx_n_mul_mont_383_count7_ov
+  , sqrx_n_mul_mont_383_count8_ov
+  , sqrx_n_mul_mont_383_count9_ov
+  , sqrx_n_mul_mont_383_count10_ov
+  , sqrx_n_mul_mont_383_count11_ov
+  , sqrx_n_mul_mont_383_count12_ov
+
+  , sqrx_n_mul_mont_383_alias_1_2_count1_ov
+  , sqrx_n_mul_mont_383_alias_1_2_count2_ov
+  , sqrx_n_mul_mont_383_alias_1_2_count3_ov
+  , sqrx_n_mul_mont_383_alias_1_2_count4_ov
+  , sqrx_n_mul_mont_383_alias_1_2_count5_ov
+  , sqrx_n_mul_mont_383_alias_1_2_count6_ov
+  , sqrx_n_mul_mont_383_alias_1_2_count7_ov
+  , sqrx_n_mul_mont_383_alias_1_2_count8_ov
+  , sqrx_n_mul_mont_383_alias_1_2_count9_ov
+  , sqrx_n_mul_mont_383_alias_1_2_count10_ov
+  , sqrx_n_mul_mont_383_alias_1_2_count11_ov
+  , sqrx_n_mul_mont_383_alias_1_2_count12_ov
 
   , sqrx_mont_382x_ov
   , sqrx_mont_382x_alias_ov

@@ -7,6 +7,8 @@ set -e
     cp -r blst build/x86
     cd build/x86
 
+    patch -f -p1 -t < ../../patches/noxmmptr.patch
+
     export CFLAGS='-g -fPIC -Wall -Wextra -Werror -D__ADX__'
     export CC=clang
     sed -i'' 's/^trap/# trap/' build.sh
@@ -19,6 +21,8 @@ set -e
     rm -r build/x86_noadx
     cp -r blst build/x86_noadx
     cd build/x86_noadx
+
+    patch -f -p1 -t < ../../patches/noxmmptr.patch
 
     export CFLAGS='-g -fPIC -Wall -Wextra -Werror'
     export CC=clang
