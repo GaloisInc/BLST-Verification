@@ -145,7 +145,7 @@ let print_readably =  do {
 // isogeny_map_to_E1
 
 // constants
-// NOTE: this was not useful...
+// NOTE: this is not used...
 
 k1s_rewrites <- for [
   {{ fp_abs [ 0x4d18b6f3af00131c, 0x19fa219793fee28c,
@@ -317,46 +317,6 @@ k4s_rewrites <- for [
     0x55ba77a9a2f76493, 0xfd04e3dfc6086467,
     0xfb95832e7d78742e, 0x0ef9c24eccaf5e0e ] == k4s@14 }}
 ] (\ e -> really_prove_cryptol (rewrite (cryptol_ss ()) e) []);
-
-let isogeny_map_to_E1_extract_spec = do {
-  (out, out_ptr) <- ptr_to_fresh "out" POINTonE1_type;
-  llvm_precond {{ POINTonE1_invariant out }};
-  llvm_execute_func [out_ptr, out_ptr];
-  new_out <- llvm_fresh_var "new_isogeny_map_to_E1_out" POINTonE1_type;
-  llvm_points_to out_ptr (llvm_term new_out);
-};
-
-_ <- llvm_compositional_extract
-  m
-  "isogeny_map_to_E1"
-  "isogeny_map_to_E1_term"
-  fp_overrides
-  true
-  isogeny_map_to_E1_extract_spec
-  do {
-    unfolding ["POINTonE1_invariant"];
-    simplify fp_simpset;
-    w4_unint_z3 ["Fp"];
-  };
-
-let term_1 = (rewrite fp_simpset (unfold_term ["isogeny_map_to_E1_term"] {{isogeny_map_to_E1_term }}));
-let term_2 = rewrite (addsimps (concat_all [k1s_rewrites,k2s_rewrites,k3s_rewrites,k4s_rewrites]) empty_ss) term_1;
-
-really_custom_prove_cryptol {{ \x -> term_2 x == POINTonE1_rep (iso_map_impl (POINTonE1_abs x)) }} (quickcheck 100)
-
-// TODO: why do those rules loop?
-hoist_ifs <- for [
-    {{ \c x y z -> Fp.mul (if c then x else y, z) == if c then Fp.mul (x,z) else Fp.mul (y,z) }}
-  , {{ \c x y z -> Fp.mul (z, if c then x else y) == if c then Fp.mul (z,x) else Fp.mul (z,y) }}
-  , {{ \c x y z -> Fp.add (if c then x else y, z) == if c then Fp.add (x,z) else Fp.add (y,z) }}
-  , {{ \c x y z -> Fp.add (z, if c then x else y) == if c then Fp.add (z,x) else Fp.add (z,y) }}
-  ] (\ e -> really_custom_prove_cryptol e w4);
-
-test <- really_custom_prove_cryptol {{ \x -> term_2 x == POINTonE1_rep (iso_map_impl (POINTonE1_abs x)) }}
-  do {
-    simplify fp_simpset;
-    w4_unint_z3 ["k1s","k2s","k3s","k4s","fp_rep"];
-  };
 
 isogeny_map_to_E1_impl_alias_ov <- really_custom_verify "isogeny_map_to_E1"
   fp_overrides
@@ -791,7 +751,8 @@ impl_eq_swu_3mod4 <- custom_prove_cryptol {{ \u -> map_to_curve_simple_swu_impl 
     w4_unint_z3 (concat ["Fp"] ["sqrt","fp_exp"]);
   };
 
-// TODO: now we're missing the fact that swu_3mod4 implements the higher-level spec
+// this is a property beyond the reach of SAW:
+swu_3mod4_correct <- admit_cryptol {{ \u -> affinify E (map_to_curve_simple_swu_3mod4 u) == map_to_curve_simple_swu u }};
 
 /*
   We verify map_to_g1 in two steps: first we prove it implements a low-level
@@ -820,27 +781,22 @@ dbl_n_add_ovs <- for dbl_n_add_ns verify_dbl_n_add;
 
 let overrides = foldr concat [curve_operations_e1_ovs, dbl_n_add_ovs] [map_to_isogenous_E1_impl_ov, isogeny_map_to_E1_impl_alias_ov];
 
-temp <- admit_cryptol (rewrite empty_ss {{ \x y -> (POINTonE1_abs x == iso_map_impl (POINTonE1_abs y)) == (x == POINTonE1_rep (iso_map_impl (POINTonE1_abs y))) }});
-
 map_to_g1_nonnull_ov <- really_custom_verify "map_to_g1" overrides map_to_g1_nonnull_spec
   (do {
-    simplify basic_ss;
+    simplify (addsimps POINTonE1_thms (cryptol_ss ()));
     goal_num_ite 11
       (do { // the main safety goal
-        simplify (addsimp temp empty_ss);
         print_goal;
         unfolding ["map_to_g1_impl","clear_cofactor_impl"];
         simplify remove_higher_order_function_simpset;
         w4_unint_z3 ["point_double_fp","point_add_fp","point_dadd_fp","iso_map_impl","dbl_n_add","map_to_curve_simple_swu_impl"];
       })
       do {
-        //simplify (addsimps POINTonE1_thms (cryptol_ss ()));
-        assume_unsat;
-        //unfolding ["POINTonE1_invariant"];
-        //simplify fp_simpset;
-        //goal_num_ite 2
-          //(w4_unint_z3 ["Fp","map_to_curve_simple_swu_impl","iso_map_impl"])
-          //(w4_unint_z3 (concat ["map_to_curve_simple_swu_impl","iso_map_impl"] fp_unints));
+        unfolding ["POINTonE1_invariant"];
+        simplify fp_simpset;
+        goal_num_ite 2
+          (w4_unint_z3 ["Fp","map_to_curve_simple_swu_impl","iso_map_impl"])
+          (w4_unint_z3 (concat ["map_to_curve_simple_swu_impl","iso_map_impl"] fp_unints));
       };
     });
 
@@ -904,4 +860,20 @@ hash_to_g1_ov <- really_custom_verify
     w4_unint_z3 ["map_to_g1_impl","hash_to_field"];
   });
 
-// TODO: now relate to high-level spec
+// finally:
+
+// TODO: why would this be true?
+iso_map_arg_nz <- admit_cryptol {{ \u v -> is_zero Fp (point_dadd Fp (map_to_curve_simple_swu_impl u) (map_to_curve_simple_swu_impl v) A' False).2 == False }};
+dadd_thm <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ p1 p2 -> affinify E (point_dadd Fp p1 p2 A' False) == add Curve_E' (affinify E p1) (affinify E p2) }});
+
+let msg_len = 64;
+let dst_len = 32;
+
+final_thm <- really_custom_prove_cryptol {{ \(msg:[msg_len][8]) (dst:[dst_len][8]) -> affinify E (hash_to_curve_opt_impl (msg,dst)) == hash_to_curve_opt (msg, dst) }}
+  do {
+    unfolding ["hash_to_curve_opt_impl","map_to_g1_impl"];
+    simplify (addsimps [iso_map_abs_thm,iso_map_arg_nz,mult_by_doubling_thm] (cryptol_ss ()));
+    simplify (addsimps [impl_eq_swu_3mod4,dadd_thm,swu_3mod4_correct] (cryptol_ss ()));
+    print_readably;
+    w4_unint_z3 (concat fp_unints ["iso_map","map_to_curve_simple_swu","clear_cofactor","hash_to_field"]);
+  };
