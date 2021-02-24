@@ -48,7 +48,7 @@ h_eff = 0xd201000000010001 // For clearing the cofactor
 clear_cofactor P = EC::mult E h_eff P
 
 iso_map: (t_Fp, t_Fp) -> (t_Fp, t_Fp)
-iso_map (x', y') = (x, y) where
+iso_map (x', y') = if EC::is_point_O E (x',y') then EC::point_O E else (x, y) where
     x_powers = [Fp.field_unit] # [Fp.mul(x', xi) | xi <- x_powers]
     x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- x_powers]
     x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
