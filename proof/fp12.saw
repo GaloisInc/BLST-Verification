@@ -354,6 +354,15 @@ add_fp6_spec <- do {
   crucible_points_to ret_ptr (crucible_term {{ fp6_rep (Fp_6.add (fp6_abs a, fp6_abs b)) }});
   };
 
+add_fp6_aliased_1_3_spec <- do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp6_type;
+  (b, ret_ptr) <- ptr_to_fresh "b" vec384fp6_type;
+  crucible_precond {{ fp6_invariant a }};
+  crucible_precond {{ fp6_invariant b }};
+  crucible_execute_func [ret_ptr, a_ptr, ret_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp6_rep (Fp_6.add (fp6_abs a, fp6_abs b)) }});
+  };
+
 sub_fp6_spec <- do {
   ret_ptr <- crucible_alloc vec384fp6_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp6_type;
@@ -738,6 +747,13 @@ add_fp6_ov <-custom_verify "add_fp6"
   fp2_overrides
   add_fp6_spec
   (w4_unint_z3 ["Fp_2", "fp2_abs", "fp2_rep"]);
+
+add_fp6_aliased_1_3_ov <-custom_verify "add_fp6"
+  fp2_overrides
+  add_fp6_aliased_1_3_spec
+  (w4_unint_z3 ["Fp_2", "fp2_abs", "fp2_rep"]);
+
+// add_fp6_aliased_1_3_ov <-admit "add_fp6" add_fp6_aliased_1_3_spec; // TODO
 
 sub_fp6_ov <-custom_verify "sub_fp6"
   fp2_overrides
@@ -1214,11 +1230,12 @@ fp6x2_rep_seq_thm <- prove_cryptol
   {{ \ x y z -> fp6x2_abs [x, y, z] == [fp2x2_abs z, fp2x2_abs y, fp2x2_abs x] }} [];
 
 // and finally the proof of mul_by_xy00z0_fp12
-mul_by_xy00z0_fp12_ov <- custom_verify "mul_by_xy00z0_fp12"
+mul_by_xy00z0_fp12_ovs <- for [mul_by_xy00z0_fp12_spec, mul_by_xy00z0_fp12_alias_spec]
+ (\ spec -> custom_verify "mul_by_xy00z0_fp12"
   (concat [ mul_by_xy0_fp6x2_ov, mul_by_0y0_fp6x2_ov
-          , mul_fp6x2_ov, redc_fp6x2_ov, add_fp6_ov, sub_fp6x2_ov, sub_fp6x2_alias_ov]
+          , mul_fp6x2_ov, redc_fp6x2_ov, add_fp6_ov, add_fp6_aliased_1_3_ov, sub_fp6x2_ov, sub_fp6x2_alias_ov]
           (concat fp2_overrides fp2x2_overrides))
-  mul_by_xy00z0_fp12_spec
+  spec
   do { goal_num_ite 11
          do { // for the main postcondition goal
               rw_with_1 mul_by_xy00z0_fp12_equiv_lemma; // get the post in a moreamenable form
@@ -1241,7 +1258,7 @@ mul_by_xy00z0_fp12_ov <- custom_verify "mul_by_xy00z0_fp12"
             rw_with fp2x2_thms;
             w4_unint_z3 fp2_unints;
             };
-         };
+         });
 
 // ... conjugate_fp12
 
