@@ -424,22 +424,24 @@ let {{
 
 // we are going to rewrite y with this rule:
 aux_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{
-  \y_num y_den x' y' z' -> (Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z'))) == if ~(is_zero Fp z') then Fp.div (Fp.mul (y', Fp.mul (y_num, zz15 z')), Fp.mul (Fp.mul (Fp.sq z', z'),  Fp.mul (y_den, zz15 z'))) else apply Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z')))
-  where (_,Y) = affinify E (x', y', z'))
-}}) // NOTE: this holds unconditionally, but rewriting it to get to that will be tedious and not useful
+  \y_num y_den x' y' z' -> (Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z'))) == if ~(EC::is_point_O E (X,Y)) then Fp.div (Fp.mul (y', Fp.mul (y_num, zz15 z')), Fp.mul (Fp.mul (Fp.sq z', z'),  Fp.mul (y_den, zz15 z'))) else apply Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z')))
+  where (X,Y) = affinify E (x', y', z'))
+}})
  (do {
-    let hoist_ifs_rewrites = run (for [
+    let local_rewrites = run (for [
           {{ \x a b c -> Fp.mul(if a then b else c, x) == if a then Fp.mul (b,x) else Fp.mul (c,x) }}
         , {{ \x a b c -> Fp.mul(x, if a then b else c) == if a then Fp.mul (x,b) else Fp.mul (x,c) }}
+        , {{ \x a b c -> Fp.is_equal(if a then b else c, x) == if a then Fp.is_equal (b,x) else Fp.is_equal (c,x) }}
+        , {{ \x a b c -> Fp.is_equal(x, if a then b else c) == if a then Fp.is_equal (x,b) else Fp.is_equal (x,c) }}
+        , {{ \c (x:(Integer,Integer)) y -> (if c then x else y).0 == if c then x.0 else y.0 }}
         , {{ \a (b:(Integer,Integer)) (c:(Integer,Integer))-> (if a then b else c).1 == if a then b.1 else c.1 }}
+        , {{ \(x:Integer) -> Fp.is_equal (x, x) == True }}
       ] (\ x -> really_custom_prove_cryptol (rewrite (cryptol_ss()) x) w4));
-    unfolding ["affinify","E","apply"];
-    simplify (addsimps hoist_ifs_rewrites algebra_simpset);
-    simplify algebra_simpset;
+    unfolding ["affinify","E","apply","is_point_O","same_point_affine","is_zero"];
+    simplify (addsimps local_rewrites algebra_simpset);
     w4_unint_z3 fp_unints;
  });
 
-// TODO
 rewrite_2 <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> iso_map_2 p == iso_map_3 p }})
   (do {
     unfolding ["iso_map_2","apply"];
@@ -608,7 +610,7 @@ y_den_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_te
 // we are also going to use this:
 to_jacobian_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ())
   {{
-    \xn xd yn yd -> affinify E (to_jacobian xn xd yn yd) == if ~(is_zero Fp (Fp.mul (xd,yd))) then (Fp.div (xn, xd), Fp.div(yn, yd)) else apply affinify E (to_jacobian xn xd yn yd)
+    \xn xd yn yd -> affinify E (to_jacobian xn xd yn yd) == if ~(is_zero Fp (Fp.mul (xd,yd))) then (Fp.div (xn, xd), Fp.div(yn, yd)) else EC::point_O E
   }})
   (do {
     unfolding ["to_jacobian", "affinify", "E", "apply"];
@@ -618,23 +620,40 @@ to_jacobian_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ())
     w4_unint_z3 fp_unints;
   });
 
-// For now we assume this property. TODO: is there something better to do?
-// It is a property of the isogeny map: it never maps a non-zero point to zero
-//x_den_times_y_den_nz <- simp_then_admit {{
-  //\(p:(Integer,Integer,Integer)) -> is_zero Fp (Fp.mul (x_den_times_zz11 p.0 p.2, y_den_times_zz15 p.0 p.2)) == if ~(is_zero Fp p.2) then False else apply is_zero Fp (Fp.mul (x_den_times_zz11 p.0 p.2, y_den_times_zz15 p.0 p.2))
-//}};
+test_rewrite <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> affinify E (iso_map_impl p) == if EC::is_point_O E (affinify E p) then EC::point_O E else apply affinify E (iso_map_impl p) }})
+  do {
+    unfolding ["apply"];
+    //w4_unint_z3 fp_unints;
+    assume_unsat;
+  };
 
 // finally:
+// TODO:
 iso_map_abs_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{
-  \p -> affinify E (iso_map_impl p) == iso_map (affinify E p) else apply affinify E (iso_map_impl p) }})
+  \p -> affinify E (iso_map_impl p) == iso_map (affinify E p) }})
   (do {
-    unfolding ["apply"]; // NOTE: we need to get rid of apply, otherwise further rewrites apply to one side and not the other.
+    let local_rewrites = run (for [
+          {{ \x a b c -> Fp.mul(if a then b else c, x) == if a then Fp.mul (b,x) else Fp.mul (c,x) }}
+        , {{ \x a b c -> Fp.mul(x, if a then b else c) == if a then Fp.mul (x,b) else Fp.mul (x,c) }}
+        , {{ \x a b c -> Fp.is_equal(if a then b else c, x) == if a then Fp.is_equal (b,x) else Fp.is_equal (c,x) }}
+        , {{ \x a b c -> Fp.is_equal(x, if a then b else c) == if a then Fp.is_equal (x,b) else Fp.is_equal (x,c) }}
+        , {{ \c (x:(Integer,Integer)) y -> (if c then x else y).0 == if c then x.0 else y.0 }}
+        , {{ \a (b:(Integer,Integer)) (c:(Integer,Integer))-> (if a then b else c).1 == if a then b.1 else c.1 }}
+        , {{ \(x:Integer) -> Fp.is_equal (x, x) == True }}
+      ] (\ x -> really_custom_prove_cryptol (rewrite (cryptol_ss()) x) w4));
+    simplify (addsimps [test_rewrite] empty_ss);
+    unfolding ["apply"];
     simplify (addsimps [rewrite_1, rewrite_2] empty_ss);
     unfolding ["iso_map_impl"];
     simplify (cryptol_ss ());
     simplify (addsimps [x_num_rewrite, elim_div_rewrite_x_num_times_zz11, x_den_rewrite, elim_div_rewrite_x_den_times_zz11, y_num_rewrite, elim_div_rewrite_y_num_times_zz15, y_den_rewrite, elim_div_rewrite_y_den_times_zz15] empty_ss);
     simplify (cryptol_ss ());
     simplify (addsimp to_jacobian_rewrite empty_ss);
+    unfolding ["is_point_O","is_zero","same_point_affine","E"];
+    simplify (addsimps local_rewrites (cryptol_ss ()));
+    print_readably;
+    //unfolding ["is_zero"];
+    //w4;
     //simplify (addsimp x_den_times_y_den_nz empty_ss);
     w4_unint_z3 fp_unints;
   });
