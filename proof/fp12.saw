@@ -112,26 +112,29 @@ let cyclotomic_sqr_fp12_alias_spec = do {
   crucible_points_to ret_ptr (crucible_term {{ fp12_rep (cyclotomic_sqr_fp12 (fp12_abs a)) }});
 };
 
-// not done
-
 
 let mul_by_xy00z0_fp12_spec = do {
   ret_ptr <- crucible_alloc vec384fp12_type;
-  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
-  (_, xy00z0_ptr) <- ptr_to_fresh_readonly "xy00z0" vec384fp6_type;
-  crucible_execute_func [ret_ptr, a_ptr, xy00z0_ptr];
-  new_mul_by_xy00z0_fp12_ret <- crucible_fresh_var "new_mul_by_xy00z0_fp12_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_mul_by_xy00z0_fp12_ret);
-};
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+  (xyz, xyz_ptr) <- ptr_to_fresh_readonly "xyz" vec384fp6_type;
+  crucible_precond {{ fp12_invariant a }};
+  crucible_precond {{ fp6_invariant xyz }};
+  crucible_execute_func [ret_ptr, a_ptr, xyz_ptr];
+  crucible_points_to ret_ptr (crucible_term
+    {{ fp12_rep (Fp_12.mul (fp12_abs a, fp12_abs (xy00z0_expander xyz))) }});
+  };
 
 let mul_by_xy00z0_fp12_alias_spec = do {
-  (_, ret_ptr) <- ptr_to_fresh "a" vec384fp12_type;
-  (_, xy00z0_ptr) <- ptr_to_fresh_readonly "xy00z0" vec384fp6_type;
-  crucible_execute_func [ret_ptr, ret_ptr, xy00z0_ptr];
-  new_mul_by_xy00z0_fp12_alias_ret <- crucible_fresh_var "new_mul_by_xy00z0_fp12_alias_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_mul_by_xy00z0_fp12_alias_ret);
-};
+  (a, ret_ptr) <- ptr_to_fresh "a" vec384fp12_type;
+  (xyz, xyz_ptr) <- ptr_to_fresh_readonly "xyz" vec384fp6_type;
+  crucible_precond {{ fp12_invariant a }};
+  crucible_precond {{ fp6_invariant xyz }};
+  crucible_execute_func [ret_ptr, ret_ptr, xyz_ptr];
+  crucible_points_to ret_ptr (crucible_term
+    {{ fp12_rep (Fp_12.mul (fp12_abs a, fp12_abs (xy00z0_expander xyz))) }});
+  };
 
+// not done
 
 let inverse_fp12_spec = do {
   ret_ptr <- crucible_alloc vec384fp12_type;
@@ -339,6 +342,59 @@ let mul_fp6_spec a_aliased = do {
   crucible_precond {{ fp6_invariant b }};
   crucible_execute_func [ret_ptr, a_ptr, b_ptr];
   crucible_points_to ret_ptr (crucible_term {{ fp6_rep (Fp_6.mul (fp6_abs a, fp6_abs b)) }});
+};
+
+add_fp6_spec <- do {
+  ret_ptr <- crucible_alloc vec384fp6_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp6_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384fp6_type;
+  crucible_precond {{ fp6_invariant a }};
+  crucible_precond {{ fp6_invariant b }};
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp6_rep (Fp_6.add (fp6_abs a, fp6_abs b)) }});
+  };
+
+sub_fp6_spec <- do {
+  ret_ptr <- crucible_alloc vec384fp6_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp6_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384fp6_type;
+  crucible_precond {{ fp6_invariant a }};
+  crucible_precond {{ fp6_invariant b }};
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp6_rep (Fp_6.sub (fp6_abs a, fp6_abs b)) }});
+  };
+
+// ... two subroutines for mul-by_xy00z0
+
+let mul_by_0y0_fp6x2_spec = do {
+  ret_ptr <- crucible_alloc vec768fp6_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp6_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384x_type;
+  crucible_precond {{ fp6_invariant a }};
+  crucible_precond {{ fp2_invariant b }};
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp6x2_rep (mul_by_0y0_fp6x2 (fp6_abs_nom a) (fp2_abs_nom b)) }});
+};
+
+// mul_by_xy0_fp6x2 is peculiar in one way: we get a Fp_6 input, but
+// only read two of the three elements in it.  Some calls do not
+// initialize that third element.  so in this spec we do not insist on
+// the whole 3-element array being initialized; just the part we use.
+
+let mul_by_xy0_fp6x2_spec = do {
+  ret_ptr <- crucible_alloc vec768fp6_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp6_type;
+  x <- crucible_fresh_var "x" vec384x_type;
+  y <- crucible_fresh_var "y" vec384x_type;
+  xy0_ptr <- crucible_alloc_readonly (llvm_array 2 vec384x_type);
+  crucible_points_to (crucible_elem xy0_ptr 0) (crucible_term x);
+  crucible_points_to (crucible_elem xy0_ptr 1) (crucible_term y);
+  crucible_precond {{ fp6_invariant a }};
+  crucible_precond {{ fp2_invariant x }};
+  crucible_precond {{ fp2_invariant y }};
+  crucible_execute_func [ret_ptr, a_ptr, xy0_ptr];
+  crucible_points_to ret_ptr (crucible_term
+    {{ fp6x2_rep (mul_by_xy0_fp6x2 (fp6_abs_nom a) (fp2_abs_nom y) (fp2_abs_nom x)) }});
 };
 
 
@@ -623,7 +679,7 @@ fp6x2_inv_rep_thm2 <- custom_prove_cryptol
        goal_eval_unint ["Fp_2x2", "fp2x2_rep", "fp2x2_invariant"];
        z3; };
 
-
+// redundant -- see fp6x2_is_val_op_thms 
 fp6x2_val_thms <- for
   [ {{ Fp_6x2.add }}, {{ Fp_6x2.sub }}, {{Fp_6x2.mul}} ]
   ( \ f -> prove_cryptol {{ \ x y -> Fp_6x2.is_val (f (x,y)) == True }} []);
@@ -678,30 +734,10 @@ mul_fp6_aliased_ov <- custom_verify "mul_fp6"
        z3; };
 
 
-add_fp6_spec <- do {
-  ret_ptr <- crucible_alloc vec384fp6_type;
-  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp6_type;
-  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384fp6_type;
-  crucible_precond {{ fp6_invariant a }};
-  crucible_precond {{ fp6_invariant b }};
-  crucible_execute_func [ret_ptr, a_ptr, b_ptr];
-  crucible_points_to ret_ptr (crucible_term {{ fp6_rep (Fp_6.add (fp6_abs a, fp6_abs b)) }});
-  };
-
 add_fp6_ov <-custom_verify "add_fp6"
   fp2_overrides
   add_fp6_spec
   (w4_unint_z3 ["Fp_2", "fp2_abs", "fp2_rep"]);
-
-sub_fp6_spec <- do {
-  ret_ptr <- crucible_alloc vec384fp6_type;
-  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp6_type;
-  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384fp6_type;
-  crucible_precond {{ fp6_invariant a }};
-  crucible_precond {{ fp6_invariant b }};
-  crucible_execute_func [ret_ptr, a_ptr, b_ptr];
-  crucible_points_to ret_ptr (crucible_term {{ fp6_rep (Fp_6.sub (fp6_abs a, fp6_abs b)) }});
-  };
 
 sub_fp6_ov <-custom_verify "sub_fp6"
   fp2_overrides
@@ -913,10 +949,11 @@ fp2x2_abs_at_thms <- for [0,1,2]
             rw_with_1 fp2x2_abs_rep_thm;
             w4_unint_z3 ["Fp_2x2"]; } );
 
+// TODO: see whether these are used
 fp2x2_abs_at_thms' <- for [0,1,2]
   (\ i -> custom_prove_cryptol (rewrite (cryptol_ss())
        {{ \ x -> fp2x2_abs ((fp6x2_rep x) @ (`i:[2])) == fp2x2_abs (fp2x2_rep (x @ ((2-`i):[2]))) }})
-       do { unfolding ["fp6x2_rep"]; print_goal;
+       do { unfolding ["fp6x2_rep"];
             w4_unint_z3 ["fp2x2_abs", "fp2x2_rep"]; } );
 
 
@@ -940,6 +977,7 @@ x_lemma_2 <- custom_prove_cryptol
        rw_with_1 redc_fp6_mod_p_rev_thm;
        w4_unint_z3 ["redc_mont_fp6", "fp6_reduce_mod_p", "fp12_mul"]; };
 
+// TODO: use fp12_rep_nom?
 x_lemma_3 <- custom_prove_cryptol
     {{ \ a b -> fp12_rep (Fp_12.mul (fp12_abs a, fp12_abs b)) ==
                ([f y, f x] where
@@ -1020,22 +1058,193 @@ custom_verify "mul_fp12"
        w4_unint_z3 ["fp2x2_rep", "fp2x2_invariant", "fp2_rep", "fp2_invariant"]; // , "Fp_6x2", "Fp_6"];
        });
 */
-/*
-mul_fp12_ov <- custom_verify "mul_fp12"
-  (concat_all [[mul_fp6x2_ov, redc_fp6x2_ov, mul_by_u_plus_1_fp2x2_ov]
-              , add_fp2x2_ovs, sub_fp2x2_ovs, fp2_overrides])
-  mul_fp12_spec
-  do { unfolding ["fp12_invariant", "fp6_invariant", "fp6x2_rep"];
-       //simplify (addsimp fp6x2_inv_rep_thm (addsimps fp2x2_inv_at_thms fp2_simpset)); // also Fp6x2.is_val OP thms
-       simplify (addsimps (concat_all [fp6x2_val_thms,  fp2x2_inv_at_thms, fp2x2_val_thms
-                                      , [fp6x2_val_mul_thm, fp6x2_inv_rep_thm, fp2x2_inv_rep_lemma2]])
-                fp2_simpset);
-       unfolding ["apply"];
-       print_goal_nicely;
-       // z3;
-       w4_unint_z3 ["fp2x2_rep", "fp2x2_invariant", "fp2_rep", "fp2_invariant"];
-       };
+
+// ... mul_xy00z0_fp12
+
+/*  The proof of mul_xy00z0_fp12 has quite a few parts:
+  1. we specify and prove the two main subroutines
+  2. We show that these subroutines do soemthing reasonable abstractly
+  3. we define a Cryptol function `mul_by_xy00z0_fp12` that corresponds to the algorithm used in the code
+  4. we show that this algorithm implements Fp_12 multiplication (itself a multi-step proof)
+  5. we then use the theorem from (4) to rewrite the postcondition of `mul_xy00z0_fp12` to
+     refer to `mul_by_xy00z0_fp12` rather than `Fp_12.mul`, and prove that the code implements that.
+
+  Step 4 is where we deal with the Montgomery reduction, using the same strategy as applied for `mul_fp12`
 */
+
+let fp2x2_overrides = concat_all [ add_fp2x2_ovs, sub_fp2x2_ovs
+                                 , [mul_fp2x2_ov, sqr_fp2x2_ov, mul_by_u_plus_1_fp2x2_ov]];
+
+mul_by_0y0_fp6x2_ov <- custom_verify "mul_by_0y0_fp6x2"
+  fp2x2_overrides
+  mul_by_0y0_fp6x2_spec
+  do { rw_with fp2x2_thms;
+       z3; };
+
+mul_by_0y0_fp6x2_thm <- prove_cryptol
+  {{ \ x y -> fp6_reduce_mod_p (mul_by_0y0_fp6x2 x y) ==
+              Fp_6.mul (x, [Fp_2.field_zero, y, Fp_2.field_zero]) }} [];
+
+
+mul_by_xy0_fp6x2_thm <- custom_prove_cryptol
+  {{ \ a x y -> fp6_reduce_mod_p (mul_by_xy0_fp6x2 a x y) == Fp_6.mul (a, [Fp_2.field_zero, x, y]) }}
+  do { goal_eval_unint ["Fp_2", "Fp_2x2", "u_plus_1", "u_plus_1x2", "fp2_reduce_mod_p"];
+       simplify (addsimp fp2_unrip_thm (addsimps reduce_fp2x2_thms fp2_simpset));
+       z3; };
+
+// That theorem needs the fp6_reduction:
+// fails(
+//  custom_prove_cryptol
+//   {{ \ a x y -> (mul_by_xy0_fp6x2 a x y) == Fp_6.mul (a, [Fp_2.field_zero, x, y]) }}
+//   do { goal_eval_unint ["Fp_2", "Fp_2x2", "u_plus_1", "u_plus_1x2", "fp2_reduce_mod_p"];
+//        simplify (addsimp fp2_unrip_thm (addsimps reduce_fp2x2_thms fp2_simpset));
+//        z3; });
+
+add_fp2_nom_thm <- custom_prove_cryptol
+  {{ \x y -> fp2_rep (Fp_2.add (fp2_abs x, fp2_abs y)) ==
+             fp2_rep_nom (Fp_2.add (fp2_abs_nom x, fp2_abs_nom y)) }}
+   do { goal_eval_unint ["fp_rep", "fp_abs", "Fp", "rep_384", "abs_384"];
+        rw_with_1 add_fp_nom_thm;
+        w4_unint_z3 ["fp_rep", "fp_abs", "Fp", "rep_384", "abs_384"];
+        };
+
+fp2_abs_rep_nom_thm_2 <- prove_cryptol
+  {{ \ args -> abs_384x (fp2_rep_nom (Fp_2.add args)) == Fp_2.add args }} [];
+
+mul_by_xy0_fp6x2_ov <- custom_verify "mul_by_xy0_fp6x2"
+  (concat fp2_overrides fp2x2_overrides)
+  mul_by_xy0_fp6x2_spec
+  do { rw_with fp2x2_thms;
+       simplify fp2_simpset;
+       goal_num_ite 12
+         do { // for the final "points_to" goal
+           unfolding ["mul_by_xy0_fp6x2", "fp6x2_rep", "fp6_abs_nom"];
+           rw_with [add_fp2_nom_thm, fp2_abs_rep_nom_thm_2, fp2_abs_nom_thm];
+           w4_unint_z3 fp2_unints; }
+         (w4_unint_z3 fp2_unints); // the precondition goals
+       };
+
+
+fp6_abs_rep_add_thm <-prove_cryptol
+ {{ \ x y -> fp6_invariant (fp6_rep (Fp_6.add (x, y))) == True }} [];
+
+// Need fp_2x2.is_val (x@i) == if Fp_6x2.is_val x then True ... (see Fpx2_val_at ...
+// Need Fp_6x2.is_val (mul_by ...) for the two subroutines
+
+fpx2x2_val_at_thms <- for [0,1,2]
+  (\ i -> prove_cryptol (rewrite (cryptol_ss())
+       {{ \ x -> Fp_2x2.is_val (x @ (`i:[2])) ==
+          if Fp_6x2.is_val x then True else apply Fp_2x2.is_val (x @ (`i:[2]))}}) []);
+
+mul_by_xy0_fp6x2_is_val_thm <- prove_cryptol
+  {{ \ x y z -> Fp_6x2.is_val (mul_by_xy0_fp6x2 x y z) == True }} [];
+
+mul_by_0y0_fp6x2_is_val_thm <- prove_cryptol
+  {{ \ x y -> Fp_6x2.is_val (mul_by_0y0_fp6x2 x y) == True }} [];
+
+fp2x2_is_val_op_thms <- for [{{ Fp_2x2.mul }} , {{ Fp_2x2.add }}, {{ Fp_2x2.sub }} ]
+  (\ t -> prove_cryptol {{ \ p -> Fp_2x2.is_val (t p) == True }} []);
+
+let {{ fp12_reduce_mod_p [x, y] = [fp6_reduce_mod_p x, fp6_reduce_mod_p y] }};
+fp2_reduce_at_thms <- for
+  [ {{ \x -> (fp2_reduce_mod_p x0 == (fp6_reduce_mod_p x) @ 0 where [x0,x1,x2] = x )}}
+  , {{ \x -> (fp2_reduce_mod_p x1 == (fp6_reduce_mod_p x) @ 1 where [x0,x1,x2] = x )}}
+  , {{ \x -> (fp2_reduce_mod_p x2 == (fp6_reduce_mod_p x) @ 2 where [x0,x1,x2] = x )}}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss()) t) []);
+
+mul_by_xy00z0_fp12_thm <-
+ custom_prove_cryptol {{ \ a xyz  ->
+    fp12_reduce_mod_p (mul_by_xy00z0_fp12 a xyz) == Fp_12.mul(a,  fp6_to_fp12_xy00z0 xyz) }}
+ do { goal_eval_unint ["Fp_2", "Fp_2x2", "u_plus_1", "u_plus_1x2", "fp6_reduce_mod_p", "Fp_6"
+                       , "mul_by_0y0_fp6x2", "mul_by_xy0_fp6x2"];
+      simplify (addsimps (concat [fp2_unrip_thm, fp6_unrip_thm] (concat fp2_alg_thms fp6_alg_thms))
+                         (cryptol_ss()));
+      unfolding ["fp6_reduce_mod_p"];
+      rw_with reduce_fp2x2_thms;
+      rw_with (concat fp2_reduce_at_thms [mul_by_xy0_fp6x2_thm, mul_by_0y0_fp6x2_thm]);
+      z3; };
+
+fp6_to_fp12_xy00z0_abs_nom_thm <- prove_cryptol
+  {{ \ xyz -> (fp6_to_fp12_xy00z0 (fp6_abs_nom xyz)) == (fp12_abs_nom (xy00z0_expander xyz)) }} [];
+
+redc_fp12_mod_p_thm <- prove_cryptol
+  {{ \x -> redc_mont_fp12 x == apply redc_mont_fp12 (fp12_reduce_mod_p x) }} [];
+
+/* proof plan for mul_by_xy00z0_fp12_equiv_lemma:
+
+    fp12_rep_nom (redc_mont_fp12 (mul_by_xy00z0_fp12' (fp12_abs_nom a) (fp6_abs_nom xyz)))
+  ~~> redc_fp6_mod_p_thm, unfold `apply`
+    fp12_rep_nom (redc_mont_fp12 (fp12_reduce_mod_p (mul_by_xy00z0_fp12' (fp12_abs_nom a) (fp6_abs_nom xyz))))
+  ~~> mul_by_xy00z0_fp12_thm
+    fp12_rep_nom (redc_mont_fp12 (Fp_12.mul (fp12_abs_nom a) (fp6_to_fp12_xy00z0 (fp6_abs_nom xyz))))
+  ~~> fp6_to_fp12_xy00z0_abs_nom_thm
+    fp12_rep_nom (redc_mont_fp12 (Fp_12.mul (fp12_abs_nom a) (fp12_abs_nom (xy00z0_expander xyz))))
+  ~~> redc_mont_mul_12_thm
+    fp12_rep_nom (toM_12 (Fp_12.mul (fp12_abs a, fp12_abs (xy00z0_expander xyz))))
+   ~~> fp12_rep_nom_thm (reversed)
+     fp12_rep (Fp_12.mul (fp12_abs a, fp12_abs (xy00z0_expander xyz)))
+*/
+
+mul_by_xy00z0_fp12_equiv_lemma <- custom_prove_cryptol
+  {{ \ a xyz -> fp12_rep (Fp_12.mul (fp12_abs a, fp12_abs (xy00z0_expander xyz))) ==
+         fp12_rep_nom (redc_mont_fp12 (mul_by_xy00z0_fp12 (fp12_abs_nom a) (fp6_abs_nom xyz))) }}
+   do { rw_with [redc_fp12_mod_p_thm];
+        unfolding ["apply"];
+        rw_with_1 mul_by_xy00z0_fp12_thm;
+        rw_with_1 fp6_to_fp12_xy00z0_abs_nom_thm;
+        rw_with_1 redc_mont_mul_12_thm;
+        rw_with_1 fp12_rep_nom_thm;
+        // print_goal_nicely;
+        w4_unint_z3 ["fp12_rep_nom", "toM_12", "Fp_12", "fp12_abs", "xy00z0_expander"];
+        };
+
+select_from_fp6_abs_nom_thms <- for
+  [ {{ \ x -> (r0 == fp2_abs_nom (x@2) where [r0,r1,r2] = fp6_abs_nom x) }}
+  , {{ \ x -> (r1 == fp2_abs_nom (x@1) where [r0,r1,r2] = fp6_abs_nom x) }}
+  , {{ \ x -> (r2 == fp2_abs_nom (x@0) where [r0,r1,r2] = fp6_abs_nom x) }}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss()) t) ["fp2_abs_nom"] );
+
+select_from_fp6_rep_nom_thms <- for
+  [ {{ \ x -> (r0 == fp2_rep_nom (x@2) where [r0,r1,r2] = fp6_rep_nom x) }}
+  , {{ \ x -> (r1 == fp2_rep_nom (x@1) where [r0,r1,r2] = fp6_rep_nom x) }}
+  , {{ \ x -> (r2 == fp2_rep_nom (x@0) where [r0,r1,r2] = fp6_rep_nom x) }}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss()) t) ["fp2_rep_nom"] );
+
+fp6x2_rep_seq_thm <- prove_cryptol
+  {{ \ x y z -> fp6x2_abs [x, y, z] == [fp2x2_abs z, fp2x2_abs y, fp2x2_abs x] }} [];
+
+// and finally the proof of mul_by_xy00z0_fp12
+mul_by_xy00z0_fp12_ov <- custom_verify "mul_by_xy00z0_fp12"
+  (concat [ mul_by_xy0_fp6x2_ov, mul_by_0y0_fp6x2_ov
+          , mul_fp6x2_ov, redc_fp6x2_ov, add_fp6_ov, sub_fp6x2_ov, sub_fp6x2_alias_ov]
+          (concat fp2_overrides fp2x2_overrides))
+  mul_by_xy00z0_fp12_spec
+  do { goal_num_ite 11
+         do { // for the main postcondition goal
+              rw_with_1 mul_by_xy00z0_fp12_equiv_lemma; // get the post in a moreamenable form
+              rw_with [add_fp2_nom_thm, add_fp6_nom_thm]; // get rid of the non-nom abs/rep functions
+              simplify (cryptol_ss ());
+              rw_with (concat_all [ [ fp6x2_rep_seq_thm, fp6x2_abs_rep_thm, fp2x2_abs_rep_thm
+                                    , mul_by_xy0_fp6x2_is_val_thm, mul_by_0y0_fp6x2_is_val_thm
+                                    , fp2_abs_rep_nom_thm, fp6_abs_rep_nom_thm]
+                                  , fp6x2_is_val_op_thms, fp2x2_is_val_op_thms, fpx2x2_val_at_thms
+                                  , fp2x2_abs_at_thms
+                                  , select_from_fp6_rep_nom_thms, select_from_fp6_abs_nom_thms
+                                  ]);
+              unfolding ["fp12_rep_nom", "fp12_abs_nom", "mul_by_xy00z0_fp12", "fp6_abs_nom", "fp6_rep_nom"];
+              z3;
+            }
+         do { // for establishing preconditions of called functions
+            rw_with (concat [fp6_abs_rep_add_thm, fp6x2_inv_rep_thm, fp6x2_inv_rep_thm2] fp2x2_thms);
+            simplify fp2_simpset;
+            unfolding ["fp6x2_rep"];
+            rw_with fp2x2_thms;
+            w4_unint_z3 fp2_unints;
+            };
+         };
+
+// ... conjugate_fp12
+
 conjugate_fp12_ov <- custom_verify "conjugate_fp12"
   fp2_overrides
   conjugate_fp12_spec
@@ -1051,6 +1260,8 @@ conjugate_fp12_ov <- custom_verify "conjugate_fp12"
   conjugate_fp12_spec
   (w4_unint_z3 fp2_unints);
 */
+
+// ... frobenius_map_fp12
 
 frobenius_map_fp2_1_ov <- custom_verify "frobenius_map_fp2"
     (concat fp_overrides fp2_overrides)
@@ -1347,7 +1558,7 @@ frobenius_map_fp12_3_alias_ov <- custom_verify "frobenius_map_fp12"
        w4_unint_z3 (concat ["Fp_4"] fp2_unints); };
 
 
-// Cyclotomic squaring
+// ... cyclotomic squaring
 
 more_fp2_alg_thms <- for
   [ {{ \ x y -> Fp_2.add(x, Fp_2.normalize y) == Fp_2.add (x, y) }}
@@ -1388,7 +1599,7 @@ cyclotomic_sqr_fp12_ov <- really_custom_verify "cyclotomic_sqr_fp12"
        simplify (addsimps fp2_alg_thms fp2_simpset);
        w4_unint_z3 fp2_unints; } ;
 
-// squaring in fp_12
+// ... squaring in fp_12
 
 fp12_sqr_equiv_thm <-  prove_cryptol {{ \ x -> Fp_12.sq x == fp12_sqr x }} [];
 
@@ -1398,8 +1609,9 @@ sqr_fp12_ovs <- for [sqr_fp12_spec, sqr_fp12_alias_spec]
           , mul_by_u_plus_1_fp2_alias_ov
           ]  fp2_overrides)
   s // the spec
-  do { rw_with_1 fp12_sqr_equiv_thm;
+  do { 
        goal_num_when 13 do { // for the final goal: we return the correct expression.
+           rw_with_1 fp12_sqr_equiv_thm;
            unfolding ["fp12_sqr", "fp12_rep", "fp12_abs", "fp6_rep", "fp6_abs"];
            // (unfolding fp6_abs and _rep because we do not have the abs_rep rules..)
            simplify fp2_simpset;
@@ -1407,6 +1619,7 @@ sqr_fp12_ovs <- for [sqr_fp12_spec, sqr_fp12_alias_spec]
            };
        w4_unint_z3 ["Fp_6", "Fp_2", "u_plus_1"];
        });
+
 /*
 sqr_fp12_ov <- verify "sqr_fp12" assembly_overrides sqr_fp12_spec;
 sqr_fp12_alias_ov <- verify "sqr_fp12" assembly_overrides sqr_fp12_alias_spec;

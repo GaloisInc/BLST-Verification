@@ -305,3 +305,65 @@ fp12_sqr a = ret where
     r01_a = Fp_2.sub (r01, t10_a)        // sub_fp2(ret[0][1], ret[0][1], t1[0]);
     r02_a = Fp_2.sub (r02, t11_a)        // sub_fp2(ret[0][2], ret[0][2], t1[1]);
     ret = [r1, [r02_a, r01_a, r00_a]]
+
+////////////////////////////////////////////////////////////////
+//
+// mul_by_xy00z0
+//
+
+xy00z0_expander: Fp_6_rep_t -> Fp_12_rep_t
+xy00z0_expander [x,y,z] = [[x, y, zero], [zero, z, zero]] // in rep space
+
+fp6_to_fp12_xy00z0: t_Fp_6 -> t_Fp_12
+fp6_to_fp12_xy00z0 [z,y,x] = [[zero, z, zero], [zero, y, x]] // in abs space, reversed.
+
+
+mul_by_0y0_fp6x2: t_Fp_6 -> t_Fp_2 -> t_Fp_6
+mul_by_0y0_fp6x2 a b = [r2, r1, r0] where
+    [a2,a1,a0] = a
+    t = Fp_2x2.mul (a2, b)
+    r0 = Fp_2x2.mul (t, u_plus_1x2)
+    r1 = Fp_2x2.mul (a0, b)
+    r2 = Fp_2x2.mul (a1, b)
+
+mul_by_xy0_fp6x2: t_Fp_6 -> t_Fp_2 -> t_Fp_2 -> t_Fp_6
+mul_by_xy0_fp6x2 a b1 b0 = [r2_a, r1_b, r0_a] where
+    [a2, a1, a0] = a
+    t0 = Fp_2x2.mul (a0, b0)     // mul_fp2x2(t0, a[0], b[0]);
+    t1 = Fp_2x2.mul (a1, b1)     // mul_fp2x2(t1, a[1], b[1]);
+
+    t2 = Fp_2x2.mul (a2, b1)     // mul_fp2x2(ret[1], a[2], b[1]);  (renaming to t2 here)
+    r0 = Fp_2x2.mul (t2, u_plus_1x2) // mul_by_u_plus_1_fp2x2(ret[0], ret[1]);
+    r0_a = Fp_2x2.add (r0, t0)   // add_fp2x2(ret[0], ret[0], t0);
+
+    aa = Fp_2.add (a0, a1)       // add_fp2(aa, a[0], a[1]);
+    bb = Fp_2.add (b0, b1)       // add_fp2(bb, b[0], b[1]);
+    r1 = Fp_2x2.mul (aa, bb)     // mul_fp2x2(ret[1], aa, bb);
+    r1_a = Fp_2x2.sub (r1, t0)   // sub_fp2x2(ret[1], ret[1], t0);
+    r1_b = Fp_2x2.sub (r1_a, t1) // sub_fp2x2(ret[1], ret[1], t1);
+
+    r2 = Fp_2x2.mul (a2, b0)     // mul_fp2x2(ret[2], a[2], b[0]);
+    r2_a = Fp_2x2.add (r2, t1)   // add_fp2x2(ret[2], ret[2], t1);
+
+mul_by_xy00z0_fp12: t_Fp_12 -> t_Fp_6 -> t_Fp_12
+mul_by_xy00z0_fp12 a xy00z0 = [r1_a, r0] where
+    [a1, a0] = a
+    [b2, b1, b0] = xy00z0
+    t0 =  mul_by_xy0_fp6x2 a0 b1 b0     // mul_by_xy0_fp6x2(t0, a[0], xy00z0);
+    t1 = mul_by_0y0_fp6x2 a1 b2         // mul_by_0y0_fp6x2(t1, a[1], xy00z0[2]);
+
+    t2_0 = b0                           // vec_copy(t2[0], xy00z0[0], sizeof(t2[0]));
+    t2_1 = Fp_2.add (b1, b2)            // add_fp2(t2[1], xy00z0[1], xy00z0[2]);
+    r1 = Fp_6.add (a0, a1)              // add_fp6(ret[1], a[0], a[1]);
+    rr = mul_by_xy0_fp6x2 r1 t2_1 t2_0  //  mul_by_xy0_fp6x2(rr, ret[1], t2);
+    rr_a = Fp_6x2.sub (rr, t0)          // sub_fp6x2(rr, rr, t0);
+    rr_b = Fp_6x2.sub (rr_a, t1)        // sub_fp6x2(rr, rr, t1);
+    r1_a = rr_b                         // redc_fp6x2(ret[1], rr);
+
+    [t0_2, t0_1, t0_0] = t0
+    [t1_2, t1_1, t1_0] = t1
+    rr0 = Fp_2x2.mul (t1_2, u_plus_1x2) // mul_by_u_plus_1_fp2x2(rr[0], t1[2]);
+    rr0_a = Fp_2x2.add (t0_0, rr0)      // add_fp2x2(rr[0], t0[0], rr[0]);
+    rr1 = Fp_2x2.add (t0_1, t1_0)       // add_fp2x2(rr[1], t0[1], t1[0]);
+    rr2 = Fp_2x2.add (t0_2, t1_1)       // add_fp2x2(rr[2], t0[2], t1[1]);
+    r0 = [rr2, rr1, rr0_a]              // redc_fp6x2(ret[0], rr);
