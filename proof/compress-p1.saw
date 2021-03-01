@@ -1,0 +1,30 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+import "../spec/Parameters.cry";
+import "../spec/Serialization.cry";
+import "../spec/ShortWeierstrassCurve.cry";
+
+import "../spec/implementation/CurveOperation.cry";
+
+// Have the "Z=0 <=> infinity" issue again; see the notes in `map_to_g1.saw`.
+// So, passing in a value (0,0,1) would give a result not agreeing with
+// the specification.
+
+let blst_p1_compress_spec = do {
+  out_ptr <- crucible_alloc (llvm_array 48 (llvm_int 8));
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE1_type;
+  crucible_precond {{ POINTonE1_invariant inp }};
+  crucible_precond {{ inp.2 == zero }};
+  /*
+  crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
+  */
+
+  crucible_execute_func [out_ptr, inp_ptr];
+  //crucible_points_to out_ptr (crucible_term {{ serialize_E1 (affinify E (POINTonE1_abs inp)) }});
+  crucible_points_to out_ptr (crucible_term {{ split`{48,8} (0xc0 # zero) }});
+};
+
+blst_p1_compress_ov <- really_verify "blst_p1_compress" [vec_is_zero_fp_ov] blst_p1_compress_spec;
