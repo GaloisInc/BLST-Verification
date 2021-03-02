@@ -1,0 +1,50 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+include "helpers.saw";
+include "list_utils.saw";
+include "types.saw";
+
+m <- llvm_load_module "../build/llvm/libblst.a.bc";
+
+let do_prove = true;
+include "proof-helpers.saw";
+
+enable_experimental;
+
+let x86_tactic = do {
+  print_goal;
+  (quickcheck 100);
+};
+
+let do_prove_x86 = true;
+
+let verify_x86 name spec =
+  if do_prove_x86
+  then
+  crucible_llvm_verify_x86 m "../build/x86/libblst.so" name
+    []
+    false
+    spec
+    x86_tactic
+  else
+  crucible_llvm_unsafe_assume_spec m name spec;
+
+import "../spec/implementation/Field.cry";
+import "../spec/Parameters.cry";
+
+let sgn0x_pty_mont_384_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  llvm_precond {{ fp_invariant a }};
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [a_ptr, p_ptr, crucible_term n0];
+  ret <- llvm_fresh_var "ret" limb_type;
+  llvm_return (crucible_term ret);
+  //crucible_return (crucible_term {{ (zext [2*(fp_abs a)<`p, (fp_abs a)%2 == 1]):[64] }});
+  llvm_postcond {{ ret!0 == ((fp_abs a)%2 == 1) }};
+};
+
+sgn0x_pty_mont_384_ov <- verify_x86 "sgn0x_pty_mont_384" sgn0x_pty_mont_384_spec;
