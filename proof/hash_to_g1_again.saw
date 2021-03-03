@@ -143,10 +143,10 @@ let {{
 }};
 
 // this holds because a projective point on on ef the curves cannot be of the form (0,0,z) with z != 0
-affinify_on_curve_thms <- for [
-    {{ \p -> is_point_projective isogenous_E p ==> is_zero Fp p.2 == is_point_O isogenous_E (affinify E p) }}
-    {{ \p -> is_point_projective E p ==> is_zero Fp p.2 == is_point_O E (affinify E p) }}
-  ] simp_then_admit;
+//affinify_on_curve_thms <- for [
+    //{{ \p -> is_point_projective isogenous_E p ==> is_zero Fp p.2 == is_point_O isogenous_E (affinify E p) }}
+    //{{ \p -> is_point_projective E p ==> is_zero Fp p.2 == is_point_O E (affinify E p) }}
+  //] simp_then_admit;
 
 is_point_equiv_thm <- simp_then_admit {{ \p -> is_point_projective isogenous_E p == (is_point_affine isogenous_E (affinify isogenous_E p) /\ ~( Fp.is_equal (p.0, Fp.field_zero) /\ Fp.is_equal (p.1, Fp.field_zero) )) }};
 
@@ -156,6 +156,10 @@ is_point_equiv_thm <- simp_then_admit {{ \p -> is_point_projective isogenous_E p
 swu_xd_nz_thm <- simp_then_admit {{ \u -> (is_zero Fp xd == False where (_, xd, _, _) = map_to_curve_simple_swu_3mod4 u) }};
 
 is_affine_swu <- simp_then_admit {{ \u -> is_point_affine isogenous_E (map_to_curve_simple_swu u) == True }};
+
+dadd_thm <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ p1 p2 -> affinify E (point_dadd Fp p1 p2 A' False) == add Curve_E' (affinify E p1) (affinify E p2) }});
+
+point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective isogenous_E (point_dadd Fp p q A' False) == if is_point_projective isogenous_E p /\ is_point_projective isogenous_E q then True else apply is_point_projective isogenous_E (point_dadd Fp p q A' False) }};
 
 // We will need to prove that some expression involving field Fp operations are
 // equivalent.  To do so, we will try to rewrite them to a normal form with the
