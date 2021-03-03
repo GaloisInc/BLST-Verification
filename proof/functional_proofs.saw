@@ -16,11 +16,12 @@ include "proof-helpers.saw";
 include "fp_overrides.saw";
 //include "fp2_overrides.saw";
 include "vect.saw";
-/*
-include "exp.saw";
+//include "exp.saw";
 include "curve_operations.saw";
 include "ec_mult.saw";
 include "map_to_g1.saw";
+include "compress-p1.saw";
+/*
 include "exp2.saw";
 include "curve_operations_e2.saw";
 include "ec_mult2.saw";
@@ -30,4 +31,3 @@ include "deserialize-p1.saw";
 include "deserialize-p2.saw";
 include "api-extra-for-release-2.saw";
 */
-include "compress-p1.saw";

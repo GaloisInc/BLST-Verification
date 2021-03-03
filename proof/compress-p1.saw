@@ -17,14 +17,43 @@ let blst_p1_compress_spec = do {
   out_ptr <- crucible_alloc (llvm_array 48 (llvm_int 8));
   (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE1_type;
   crucible_precond {{ POINTonE1_invariant inp }};
-  crucible_precond {{ inp.2 == zero }};
-  /*
+  //crucible_precond {{ inp.2 == zero }};
+  crucible_precond {{ fp_abs (inp.2) == Fp.field_zero }};
   crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
-  */
 
   crucible_execute_func [out_ptr, inp_ptr];
-  //crucible_points_to out_ptr (crucible_term {{ serialize_E1 (affinify E (POINTonE1_abs inp)) }});
-  crucible_points_to out_ptr (crucible_term {{ split`{48,8} (0xc0 # zero) }});
+  //crucible_postcond {{ is_point_O E (affinify E (POINTonE1_abs inp)) }};
+  crucible_points_to out_ptr (crucible_term {{ serialize_E1 (affinify E (POINTonE1_abs inp)) }});
+  //crucible_points_to out_ptr (crucible_term {{ split`{48,8} (0xc0 # zero) }});
 };
 
-blst_p1_compress_ov <- really_verify "blst_p1_compress" [vec_is_zero_fp_ov] blst_p1_compress_spec;
+// This is the conditional rule showing that the Z coordinate check does the right thing
+// This may be provable in SAW but for now we assume it as an algebraic fact.
+is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \p -> peq (fp_abs(p.2)) (Fp.field_zero) ==
+           if is_point_projective E (POINTonE1_abs p)
+           then is_point_O E (affinify E (POINTonE1_abs p))
+           else apply peq (fp_abs(p.2)) (Fp.field_zero) }});
+
+// TODO: Almost certianly don't need most of these simplifications / overrides
+blst_p1_compress_ov <- really_custom_verify "blst_p1_compress"
+    (concat [sigma_ov, POINTonE1_times_zz_minus_1_div_by_3_ov] point_op_overrides)
+  
+  blst_p1_compress_spec
+    do {
+     simplify (addsimps [sigma_call_thm, vec_is_zero_call_thm, invariant_POINTonE1_times_c_thm]
+                        (addsimps POINTonE1_thms empty_ss)); // for the safety conditions
+     unfolding ["is_in_g1_impl", "bool_to_limb", "sub"];
+     (print_goal);
+     simplify (addsimp is_point_O_thm'' (cryptol_ss()));
+     // use the rules and lemmas on is_point_projective
+     /*
+     simplify (addsimps [ is_point_affine_sigma_thm, is_point_projective_POINTonE1_times_c_thm
+                        , affinify_projectify_thm, affinify_POINTonE1_times_c_thm, in_G1_lemma
+                        , is_point_projective_projectify_thm, is_point_O_sigma_thm, is_point_O_sigma2_thm]
+                        (addsimps is_point_projective_thms big_simpset));
+     simplify remove_higher_order_function_simpset;
+     */
+     (print_goal);
+     w4_unint_z3 ec_mult_unints;
+  };
