@@ -32,10 +32,9 @@ import HashToCurveE1_standalone (hash_to_field, hash_to_curve_opt, A', B', Z, k1
 
 // TODO: it would be great if you could use better notation for field ops, e.g. + instead of Fp.add
 
-// This is a formalization of map_to_curve_simple_swu_3mod4 as described at https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-09#appendix-E.2
-map_to_curve_simple_swu_3mod4 : t_Fp -> ProjectivePoint t_Fp
-map_to_curve_simple_swu_3mod4 u = res where
-  //c1 = Fp.div(Fp.sub(`p,3),4)
+map_to_curve_simple_swu_3mod4_impl : t_Fp -> ProjectivePoint t_Fp
+map_to_curve_simple_swu_3mod4_impl u = res where
+  c1 = (`p-3)/4
   c2 = sqrt (Fp.neg (Fp.mul (Fp.sq Z, Z)))
 
   tv1 = Fp.sq u
@@ -59,7 +58,7 @@ map_to_curve_simple_swu_3mod4 u = res where
   tv4 = Fp.sq gxd
   tv2_d = Fp.mul (gx1_c, gxd)
   tv4_b = Fp.mul (tv4, tv2_d)
-  y1 = fp_exp tv4_b ((`p-3)/4)
+  y1 = fp_exp tv4_b c1
   y1_b = Fp.mul(y1, tv2_d)
   x2n = Fp.mul(tv3, x1n_a)
   y2 = Fp.mul(y1_b, c2)
@@ -124,8 +123,8 @@ map_to_curve_simple_swu_impl u = res where
 
 // isogeny_map_to_E1
 
-iso_map_impl: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
-iso_map_impl (X, Y, Z) = to_jacobian xn xd yn yd where
+isogeny_map_to_E1_impl: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
+isogeny_map_to_E1_impl (X, Y, Z) = to_jacobian xn xd yn yd where
   zzs = Zz_powers Z
   xn = map_fp (kzzs#[last k1s]) X where
     kzzs = map_fp_times_Zz`{n=11} k1s zzs
@@ -192,5 +191,5 @@ map_to_g1_impl uv = P where
     Q0 = map_to_curve_simple_swu_impl (uv@0)
     Q1 = map_to_curve_simple_swu_impl (uv@1)
     R = point_dadd Fp Q0 Q1 A' False // This is addition on the isogenous curve E'
-    S = iso_map_impl R
+    S = isogeny_map_to_E1_impl R
     P = clear_cofactor_impl S

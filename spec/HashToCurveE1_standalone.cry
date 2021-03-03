@@ -15,6 +15,7 @@ import Primitive::Keyless::Hash::SHA256 as SHA256
 import Common::Field
 import Parameters (p, t_Fp, Fp, to_Fp, from_Fp, E)
 import FieldExtras
+import BLSFieldExtras
 import ShortWeierstrassCurve as EC
 import ExpandMessage
 import Common::bv
