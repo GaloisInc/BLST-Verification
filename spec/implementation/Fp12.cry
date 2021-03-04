@@ -367,3 +367,76 @@ mul_by_xy00z0_fp12 a xy00z0 = [r1_a, r0] where
     rr1 = Fp_2x2.add (t0_1, t1_0)       // add_fp2x2(rr[1], t0[1], t1[0]);
     rr2 = Fp_2x2.add (t0_2, t1_1)       // add_fp2x2(rr[2], t0[2], t1[1]);
     r0 = [rr2, rr1, rr0_a]              // redc_fp6x2(ret[0], rr);
+
+////////////////////////////////////////////////////////////////
+//
+// inverse_fp12
+
+inverse_fp2_imp: t_Fp_2 -> t_Fp_2
+inverse_fp2_imp [a1,a0] = [r1,r0] where
+    t = Fp.div(Fp.field_unit, Fp.add (Fp.sq a0, Fp.sq a1))
+    r0 = Fp.mul (a0,t)
+    r1 = Fp.neg (Fp.mul (a1,t))
+
+inverse_fp6_imp: t_Fp_6 -> t_Fp_6
+inverse_fp6_imp [a2,a1,a0] = [r2,r1,r0] where 
+    c0 = Fp_2.sub (Fp_2.sq a0, Fp_2.mul (u_plus_1,Fp_2.mul (a1,a2)))
+    c1 = Fp_2.sub (Fp_2.mul (u_plus_1, Fp_2.sq a2), Fp_2.mul(a0,a1))
+    c2 = Fp_2.sub (Fp_2.sq a1, Fp_2.mul (a0, a2))
+    t0 = Fp_2.add (Fp_2.mul (c1, a2), Fp_2.mul (c2, a1))
+    t1 = Fp_2.add (Fp_2.mul (u_plus_1, t0), Fp_2.mul (c0, a0))
+    t  = inverse_fp2_imp t1 // or  Fp_2.div(Fp_2.field_unit, t1)
+    r2 = Fp_2.mul(c2, t)
+    r1 = Fp_2.mul(c1, t)
+    r0 = Fp_2.mul(c0, t)
+
+inverse_fp12_imp: t_Fp_12 -> t_Fp_12
+inverse_fp12_imp [a1,a0] = [r1,r0] where
+    [t0_2, t0_1, t0_0]  = Fp_6.sq a0 // sqr_fp6(t0, a[0]);
+    [t1_2, t1_1, t1_0] = Fp_6.sq a1  // sqr_fp6(t1, a[1]);
+    t1_2a = Fp_2.mul (t1_2, u_plus_1) // mul_by_u_plus_1_fp2(t1[2], t1[2]);
+    t0_0a = Fp_2.sub (t0_0, t1_2a)  // sub_fp2(t0[0], t0[0], t1[2]);
+    t0_1a = Fp_2.sub (t0_1, t1_0)   // sub_fp2(t0[1], t0[1], t1[0]);
+    t0_2a = Fp_2.sub (t0_2, t1_1)   // sub_fp2(t0[2], t0[2], t1[1]);
+
+    t1_a = inverse_fp6_imp [t0_2a, t0_1a, t0_0a] // inverse_fp6(t1, t0);
+    r0 = Fp_6.mul (a0, t1_a)        // mul_fp6(ret[0], a[0], t1);
+    r1 = Fp_6.neg (Fp_6.mul (a1, t1_a)) // mul_fp6(ret[1], a[1], t1); neg_fp6(ret[1], ret[1]);
+
+
+fp6_sqr: t_Fp_6 -> t_Fp_6
+fp6_sqr a = ret where
+    [a2, a1, a0] = a
+    s0 = Fp_2x2.mul (a0, a0) // sqr_fp2x2(s0, a[0]);
+
+    m01 = Fp_2x2.mul (a0, a1) // mul_fp2x2(m01, a[0], a[1]);
+    m01_a = Fp_2x2.add (m01, m01) // add_fp2x2(m01, m01, m01);
+
+    m12 = Fp_2x2.mul (a1, a2) // mul_fp2x2(m12, a[1], a[2]);
+    m12_a = Fp_2x2.add (m12, m12) // add_fp2x2(m12, m12, m12);
+
+    s2 = Fp_2x2.mul (a2,a2) // sqr_fp2x2(s2, a[2]);
+
+    /* ret[2] = (a0 + a1 + a2)^2 - a0^2 - a2^2 - 2*(a0*a1) - 2*(a1*a2)
+              = a1^2 + 2*(a0*a2) */
+    ret2 = Fp_2.add (a2, a1) // add_fp2(ret[2], a[2], a[1]);
+    ret2_a = Fp_2.add (ret2, a0) // add_fp2(ret[2], ret[2], a[0]);
+    rx = Fp_2x2.mul (ret2_a, ret2_a) // sqr_fp2x2(rx, ret[2]);
+    rx_a = Fp_2x2.sub (rx, s0) // sub_fp2x2(rx, rx, s0);
+    rx_b = Fp_2x2.sub (rx_a, s2) // sub_fp2x2(rx, rx, s2);
+    rx_c = Fp_2x2.sub (rx_b, m01_a) // sub_fp2x2(rx, rx, m01);
+    rx_d = Fp_2x2.sub (rx_c, m12_a) // sub_fp2x2(rx, rx, m12);
+    ret2_b = rx_d // we apply redc outside this Cryptol function //  redc_fp2x2(ret[2], rx);
+
+    /* ret[0] = a0^2 + 2*(a1*a2)*(u+1) */
+    rx_e = Fp_2x2.mul (m12_a, u_plus_1x2) //  mul_by_u_plus_1_fp2x2(rx, m12);
+    rx_f = Fp_2x2.add (rx_e, s0) // add_fp2x2(rx, rx, s0);
+    ret0 = rx_f // redc_fp2x2(ret[0], rx);
+
+    /* ret[1] = a2^2*(u+1) + 2*(a0*a1) */
+    rx_g = Fp_2x2.mul (s2, u_plus_1x2) //  mul_by_u_plus_1_fp2x2(rx, s2);
+    rx_h = Fp_2x2.add (rx_g, m01_a) // (add_fp2x2(rx, rx, m01);
+    ret1 = rx_h // redc_fp2x2(ret[1], rx);
+
+    ret = [ret2_b, ret1, ret0]
+

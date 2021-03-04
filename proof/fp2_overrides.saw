@@ -68,6 +68,13 @@ let binop_alias_1_3_spec name llvm_type inv rep abs op = do {
   crucible_points_to y_ptr (crucible_term {{ rep (op (abs x, abs y)) }});
 };
 
+let binop_alias_1_2_3_spec name llvm_type inv rep abs op = do {
+  (x, x_ptr) <- ptr_to_fresh "x" llvm_type;
+  crucible_precond {{ inv x }};
+  crucible_execute_func [x_ptr, x_ptr, x_ptr];
+  crucible_points_to x_ptr (crucible_term {{ rep (op (abs x, abs x)) }});
+};
+
 let fp2_binop_ovs name op = do {
   let plain_spec = binop_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
   plain_ov <- admit name plain_spec;
@@ -78,7 +85,10 @@ let fp2_binop_ovs name op = do {
   let alias_1_3_spec = binop_alias_1_3_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
   alias_1_3_ov <- admit name alias_1_3_spec;
 
-  return [plain_ov, alias_1_2_ov, alias_1_3_ov];
+  let alias_1_2_3_spec = binop_alias_1_2_3_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
+  alias_1_2_3_ov <- admit name alias_1_2_3_spec;
+
+  return [plain_ov, alias_1_2_ov, alias_1_3_ov, alias_1_2_3_ov];
   };
 
 add_fp2_ovs <- fp2_binop_ovs "add_fp2" {{Fp_2.add}} ;
