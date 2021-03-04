@@ -134,8 +134,6 @@ let mul_by_xy00z0_fp12_alias_spec = do {
     {{ fp12_rep (Fp_12.mul (fp12_abs a, fp12_abs (xy00z0_expander xyz))) }});
   };
 
-// not done
-
 let inverse_fp12_spec = do {
   ret_ptr <- crucible_alloc vec384fp12_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
@@ -144,7 +142,6 @@ let inverse_fp12_spec = do {
   crucible_points_to ret_ptr (crucible_term
    {{ fp12_rep (Fp_12.div (Fp_12.field_unit, fp12_abs a)) }});
 };
-
 
 // non-top-level specifications
 
@@ -742,7 +739,7 @@ fp6x2_val_mul_thm <- prove_cryptol
 
 
 // And we need to show fp6x2_mul equivalent (mod p) to Fp_6x2.mul.
-// Also that recd_mont_384 respects mod p equivalents
+// Also that redc_mont_384 respects mod p equivalents
 let {{ fp2_reduce_mod_p [x1:Integer, x2] = [x1%`p, x2%`p]
        fp6_reduce_mod_p [x1:[2]Integer,x2,x3] = [fp2_reduce_mod_p x1, fp2_reduce_mod_p x2, fp2_reduce_mod_p x3]
     }};
@@ -1084,7 +1081,7 @@ mul_fp12_ovs <- for [mul_fp12_spec, mul_fp12_alias_spec]
 
 /*  The proof of mul_xy00z0_fp12 has quite a few parts:
   1. we specify and prove the two main subroutines
-  2. We show that these subroutines do soemthing reasonable abstractly
+  2. We show that these subroutines do something reasonable abstractly
   3. we define a Cryptol function `mul_by_xy00z0_fp12` that corresponds to the algorithm used in the code
   4. we show that this algorithm implements Fp_12 multiplication (itself a multi-step proof)
   5. we then use the theorem from (4) to rewrite the postcondition of `mul_xy00z0_fp12` to
@@ -1575,14 +1572,93 @@ frobenius_map_fp12_3_alias_ov <- custom_verify "frobenius_map_fp12"
 
 // ... cyclotomic squaring
 
+// we need to start with the subroutine sqr_fp4
+
+let {{ redc_mont_fp4 [x, y] = [redc_mont_fp2 x, redc_mont_fp2 y] }};
+let {{ fp4_rep_nom [x, y] = [fp2_rep_nom y, fp2_rep_nom x] }};
+
+let redc_fp2x2_spec = do {
+  ret_ptr <- crucible_alloc vec384x_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec768x_type;
+  crucible_execute_func [ret_ptr, a_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp2_rep_nom (redc_mont_fp2 (fp2x2_abs a)) }});
+  };
+
+redc_fp2x2_ov <- custom_verify "redc_fp2x2" [redcx_mont_384_alt_ov] redc_fp2x2_spec z3;
+
+// we can now want to use the postcondition points_to term
+//  {{ fp4_rep_nom (redc_mont_fp4 (sqr_fp4_imp (fp2_abs_nom a0) (fp2_abs_nom a1))) }}
+
+/*  Proof plan: (similar to mul_by_xy00z0_fp12_equiv_lemma)
+
+  fp4_rep_nom (redc_mont_fp4 (sqr_fp4_imp (fp2_abs_nom a0) (fp2_abs_nom a1)))
+~~> redc_fp4_mod_p_thm, unfold `apply`
+  fp4_rep_nom (redc_mont_fp4 (fp4_reduce_mod_p (sqr_fp4_imp (fp2_abs_nom a0) (fp2_abs_nom a1))))
+~~> reduce_sqr_fp4_thm
+  fp4_rep_nom (redc_mont_fp4 (Fp_4.sq [fp2_abs_nom a1, fp2_abs_nom a0]))
+<~~ unfold fp4_abs_nom
+  fp4_rep_nom (redc_mont_fp4 (Fp_4.sq (fp4_abs_nom [a0, a1])))
+<~~ redc_sq_fp4_thm (TODO)
+  fp4_rep_nom (toM_4 (Fp_4.sq fp4_abs [a0,a1]))
+<~~ fp4_rep_nom_thm
+  fp4_rep (Fp_4.sq (fp4_abs [a1, a0]))
+*/
+
+let {{ fp4_reduce_mod_p [x, y] = [fp2_reduce_mod_p x, fp2_reduce_mod_p y] }};
+
+expand_sq_fp2x2_thm <- prove_cryptol {{ \x -> Fp_2x2.sq x == Fp_2x2.mul (x,x) }} [];
+
+reduce_sqr_fp4_thm <- custom_prove_cryptol {{ \ a0 a1 -> fp4_reduce_mod_p (sqr_fp4_imp a0 a1) == Fp_4.sq [a1,a0] }}
+  do { unfolding ["fp4_reduce_mod_p", "sqr_fp4_imp"];
+       rw_with (concat_all [[expand_sq_fp2x2_thm], fp2_alg_thms, reduce_fp2x2_thms]);
+       z3; };
+
+let {{ toM_4 [x, y] = [toM_2 x, toM_2 y] }};
+let {{ fp4_abs_nom [x,y] =[fp2_abs_nom y, fp2_abs_nom x] }};
+let {{ fp4_rep_nom [x, y] = [fp2_rep_nom y, fp2_rep_nom x] }};
+
+// inserts a mod p reduction; `apply` prevents it from looping.
+redc_fp4_mod_p_thm <- prove_cryptol
+  {{ \x -> redc_mont_fp4 x == apply redc_mont_fp4 (fp4_reduce_mod_p x) }} [];
+
+redc_sq_fp4_thm <- test_cryptol
+  {{ \ x -> toM_4 (Fp_4.sq (fp4_abs x)) == redc_mont_fp4 (Fp_4.sq (fp4_abs_nom x))  }};
+
+fp4_rep_nom_thm <- custom_prove_cryptol {{ \x -> fp4_rep x == fp4_rep_nom (toM_4 x) }}
+  do { unfolding ["fp4_rep_nom", "fp4_rep", "toM_4", "fp2_rep_nom", "fp2_rep", "toM_2"];
+       rw_with_1 fp_rep_nom_thm;
+       w4_unint_z3 ["fp_rep", "rep_384", "toM"]; };
+
+
+sqr_fp4_equiv_lemma <- custom_prove_cryptol
+  {{ \ a0 a1 -> fp4_rep (Fp_4.sq (fp4_abs [a0, a1])) ==
+     fp4_rep_nom (redc_mont_fp4 (sqr_fp4_imp (fp2_abs_nom a0) (fp2_abs_nom a1))) }}
+  do { rw_with_1 redc_fp4_mod_p_thm;
+       unfolding ["apply"];
+       rw_with [reduce_sqr_fp4_thm, redc_sq_fp4_thm, fp4_rep_nom_thm ];
+       unfolding ["fp4_abs_nom"];
+       w4_unint_z3 ["fp4_rep_nom", "redc_mont_fp4", "Fp_4", "fp2_abs_nom"];
+       };
+
+sqr_fp4_ov <- custom_verify "sqr_fp4"
+  (concat_all [[mul_fp2x2_ov, sqr_fp2x2_ov, mul_by_u_plus_1_fp2x2_ov, redc_fp2x2_ov]
+              , add_fp2x2_ovs, sub_fp2x2_ovs, fp2_overrides])
+  sqr_fp4_spec
+  do { rw_with_1 sqr_fp4_equiv_lemma;
+       unfolding ["sqr_fp4_imp", "redc_mont_fp4", "fp4_rep_nom"];
+       simplify fp2_simpset;
+       rw_with (concat_all [fpx2_thms, fp2x2_thms, [reabstracted_add_thm, fp2_abs_nom_thm]]);
+       z3;
+       };
+
+// and now on to cyclotomic squaring
+
 more_fp2_alg_thms <- for
   [ {{ \ x y -> Fp_2.add(x, Fp_2.normalize y) == Fp_2.add (x, y) }}
   , {{ \ x y -> Fp_2.neg (Fp_2.add (x, y)) == Fp_2.add (Fp_2.neg x, Fp_2.neg y) }}
   ] (\ t -> prove_cryptol t []);
 
 let all_fp2_alg_thms = concat fp2_alg_thms more_fp2_alg_thms;
-
-sqr_fp4_ov <- admit "sqr_fp4" sqr_fp4_spec; //TODO - prove
 
 // mul_by_u_plus_1_fp2 directly calls an assembly-language subroutine
 mul_by_u_plus_1_fp2_alias_ov <- admit "mul_by_u_plus_1_fp2" mul_by_u_plus_1_fp2_alias_spec;

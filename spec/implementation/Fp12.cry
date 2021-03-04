@@ -210,6 +210,18 @@ cyclotomic_sqr_fp12_imp [[a12, a11, a10], [a02, a01, a00]] = r where
     f_sub x y = Fp_2.add (s, Fp_2.add (s, x)) where s = Fp_2.sub (x, y)
     f_add x y = Fp_2.add (s, Fp_2.add (s, x)) where s = Fp_2.add (x, y)
 
+sqr_fp4_imp a0 a1 = [ret1, ret0] where
+    t0 = Fp_2x2.sq a0 // sqr_fp2x2(t0, a0);
+    t1 = Fp_2x2.sq a1 // sqr_fp2x2(t1, a1);
+    t3 = Fp_2.add (a0, a1) // add_fp2(ret[1], a0, a1);
+
+    t2 = Fp_2x2.mul (t1, u_plus_1x2) // mul_by_u_plus_1_fp2x2(t2, t1);
+    ret0 = Fp_2x2.add (t2, t0) // add_fp2x2(t2, t2, t0); redc_fp2x2(ret[0], t2);
+
+    t2_b = Fp_2x2.sq t3 // sqr_fp2x2(t2, ret[1]);
+    ret1 = Fp_2x2.sub (Fp_2x2.sub (t2_b, t0), t1) // sub_fp2x2(t2, t2, t0); sub_fp2x2(t2, t2, t1);
+    // redc_fp2x2(ret[1], t2);
+
 ////////////////////////////////////////////////////////////////
 //
 // mul_fp6, mul_fp12, and friends
