@@ -58,22 +58,6 @@ one_mont_fp2_rep_thm <- prove_cryptol (rewrite (cryptol_ss ())
 
 let fp2_simpset = addsimps (concat fp2_rep_thms [one_mont_fp2_rep_thm, fp2_abs_ite_thm, fp2_invariant_ite_thm, fp2_rep_ite_thm]) (cryptol_ss ());
 
-// generic binary operation specification, pass-by-reference, aliasing return with second arg
-// (concrete method only)
-let binop_alias_1_3_spec name llvm_type inv rep abs op = do {
-  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
-  (y, y_ptr) <- ptr_to_fresh "y" llvm_type;
-  crucible_precond {{ inv x /\ inv y }};
-  crucible_execute_func [y_ptr, x_ptr, y_ptr];
-  crucible_points_to y_ptr (crucible_term {{ rep (op (abs x, abs y)) }});
-};
-
-let binop_alias_1_2_3_spec name llvm_type inv rep abs op = do {
-  (x, x_ptr) <- ptr_to_fresh "x" llvm_type;
-  crucible_precond {{ inv x }};
-  crucible_execute_func [x_ptr, x_ptr, x_ptr];
-  crucible_points_to x_ptr (crucible_term {{ rep (op (abs x, abs x)) }});
-};
 
 let fp2_binop_ovs name op = do {
   let plain_spec = binop_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
