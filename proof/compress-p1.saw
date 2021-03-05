@@ -30,11 +30,10 @@ let POINTonE1_from_Jacobian_spec = do {
 };
 
 // TODO: Verify
-blst_p1_compress_ov <- really_test "POINTonE1_from_Jacobian"
+POINTonE1_from_Jacobian_ov <- really_test "POINTonE1_from_Jacobian"
   (concat [reciprocal_fp_ov] (concat vec_select_asm_ovs fp_overrides))
   POINTonE1_from_Jacobian_spec;
 
-  /*
 // Have the "Z=0 <=> infinity" issue again; see the notes in `map_to_g1.saw`.
 // So, passing in a value (0,0,1) would give a result not agreeing with
 // the specification.
@@ -63,11 +62,10 @@ is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
 
 blst_p1_compress_ov <- really_custom_verify "blst_p1_compress"
   //(concat [reciprocal_fp_ov] (concat point_op_overrides fp_overrides))
-  (concat [reciprocal_fp_ov, sqr_fp_ov] (concat mul_fp_ovs point_op_overrides))
+  (concat [POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov] (concat mul_fp_ovs point_op_overrides))
   blst_p1_compress_spec
     do {
      simplify (addsimp vec_is_zero_call_thm empty_ss);
      simplify (addsimp is_point_O_thm'' (cryptol_ss()));
      w4_unint_z3 ec_mult_unints;
   };
-  */
