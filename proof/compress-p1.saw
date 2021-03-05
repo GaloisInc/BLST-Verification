@@ -9,6 +9,32 @@ import "../spec/ShortWeierstrassCurve.cry";
 
 import "../spec/implementation/CurveOperation.cry";
 
+let POINTonE1_from_Jacobian_spec = do {
+  out_ptr <- crucible_alloc POINTonE1_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE1_type;
+
+  // TODO: Do I need this invariant?
+  crucible_precond {{ POINTonE1_invariant inp }};
+
+  crucible_execute_func [out_ptr, inp_ptr];
+
+  // TODO: Does having the "POINTonE1_abs" here break the claim that this
+  // function is equivalent to affinify?
+  let out = {{ POINTonE1_affine_rep (affinify E (POINTonE1_abs inp)) }};
+
+  //crucible_postcond {{ out.0 == expected_out.0 }};
+
+  crucible_points_to (crucible_field out_ptr "X") (crucible_term {{ out.0 }});
+  crucible_points_to (crucible_field out_ptr "Y") (crucible_term {{ out.1 }});
+  // Leave Z unspecified because we don't use it.
+};
+
+// TODO: Verify
+blst_p1_compress_ov <- really_test "POINTonE1_from_Jacobian"
+  (concat [reciprocal_fp_ov] (concat vec_select_asm_ovs fp_overrides))
+  POINTonE1_from_Jacobian_spec;
+
+  /*
 // Have the "Z=0 <=> infinity" issue again; see the notes in `map_to_g1.saw`.
 // So, passing in a value (0,0,1) would give a result not agreeing with
 // the specification.
@@ -18,7 +44,7 @@ let blst_p1_compress_spec = do {
   (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE1_type;
   crucible_precond {{ POINTonE1_invariant inp }};
   //crucible_precond {{ inp.2 == zero }};
-  crucible_precond {{ fp_abs (inp.2) == Fp.field_zero }};
+  //crucible_precond {{ fp_abs (inp.2) == Fp.field_zero }};
   crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
 
   crucible_execute_func [out_ptr, inp_ptr];
@@ -36,10 +62,12 @@ is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
            else apply peq (fp_abs(p.2)) (Fp.field_zero) }});
 
 blst_p1_compress_ov <- really_custom_verify "blst_p1_compress"
-  point_op_overrides
+  //(concat [reciprocal_fp_ov] (concat point_op_overrides fp_overrides))
+  (concat [reciprocal_fp_ov, sqr_fp_ov] (concat mul_fp_ovs point_op_overrides))
   blst_p1_compress_spec
     do {
      simplify (addsimp vec_is_zero_call_thm empty_ss);
      simplify (addsimp is_point_O_thm'' (cryptol_ss()));
      w4_unint_z3 ec_mult_unints;
   };
+  */
