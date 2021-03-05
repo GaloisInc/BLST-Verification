@@ -416,8 +416,8 @@ inverse_fp12_imp [a1,a0] = [r1,r0] where
     r1 = Fp_6.neg (Fp_6.mul (a1, t1_a)) // mul_fp6(ret[1], a[1], t1); neg_fp6(ret[1], ret[1]);
 
 
-fp6_sqr: t_Fp_6 -> t_Fp_6
-fp6_sqr a = ret where
+sqr_fp6_imp: t_Fp_6 -> t_Fp_6
+sqr_fp6_imp a = ret where
     [a2, a1, a0] = a
     s0 = Fp_2x2.mul (a0, a0) // sqr_fp2x2(s0, a[0]);
 
