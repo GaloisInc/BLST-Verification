@@ -549,105 +549,105 @@
     "status": "assumed",
     "method": "add_fp",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:320:20",
+    "loc": "/workdir/proof/deserialize-p1.saw:336:20",
     "type": "method"
   },
   {
     "status": "assumed",
     "method": "sgn0x_pty_mont_384",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:322:25",
+    "loc": "/workdir/proof/deserialize-p1.saw:338:25",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "limbs_from_be_bytes",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:324:30",
+    "loc": "/workdir/proof/deserialize-p1.saw:340:30",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "blst_p1_deserialize",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:326:31",
+    "loc": "/workdir/proof/deserialize-p1.saw:342:31",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress_BE",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:336:36",
+    "loc": "/workdir/proof/deserialize-p1.saw:352:36",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress_BE",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:379:36",
+    "loc": "/workdir/proof/deserialize-p1.saw:395:36",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress_BE",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:388:34",
+    "loc": "/workdir/proof/deserialize-p1.saw:404:34",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:401:36",
+    "loc": "/workdir/proof/deserialize-p1.saw:417:36",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:404:35",
+    "loc": "/workdir/proof/deserialize-p1.saw:420:35",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:406:31",
+    "loc": "/workdir/proof/deserialize-p1.saw:422:31",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:415:32",
+    "loc": "/workdir/proof/deserialize-p1.saw:431:32",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:424:33",
+    "loc": "/workdir/proof/deserialize-p1.saw:440:33",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "blst_p1_uncompress",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:446:29",
+    "loc": "/workdir/proof/deserialize-p1.saw:462:29",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Deserialize_BE",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:459:37",
+    "loc": "/workdir/proof/deserialize-p1.saw:475:37",
     "type": "method"
   },
   {
     "status": "verified",
     "method": "POINTonE1_Deserialize_BE",
     "specification": "unknown",
-    "loc": "/workdir/proof/deserialize-p1.saw:471:38",
+    "loc": "/workdir/proof/deserialize-p1.saw:487:38",
     "type": "method"
   },
   {
@@ -2010,6 +2010,83 @@
   },
   {
     "status": "assumed",
+    "method": "sqrx_mont_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulx_mont_384.saw:265:22",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqrx_mont_384x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulx_mont_384.saw:266:28",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mulx_mont_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulx_mont_384.saw:289:21",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mulx_mont_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulx_mont_384.saw:290:29",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "mulx_mont_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulx_mont_384.saw:291:31",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqrx_mont_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulx_mont_384.saw:296:21",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqrx_mont_384",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulx_mont_384.saw:297:27",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqrx_n_mul_mont_383",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulx_mont_384.saw:302:27",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqrx_n_mul_mont_383",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulx_mont_384.saw:303:37",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqrx_mont_382x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulx_mont_384.saw:308:22",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
+    "method": "sqrx_mont_382x",
+    "specification": "unknown",
+    "loc": "/workdir/proof/x86/mulx_mont_384.saw:309:28",
+    "type": "method"
+  },
+  {
+    "status": "assumed",
     "method": "add_mod_384",
     "specification": "unknown",
     "loc": "0x17980",
@@ -2164,13 +2241,6 @@
   },
   {
     "status": "assumed",
-    "method": "mul_mont_384x",
-    "specification": "unknown",
-    "loc": "0x190c0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
     "method": "mulx_mont_384x",
     "specification": "unknown",
     "loc": "0x190c0",
@@ -2178,37 +2248,9 @@
   },
   {
     "status": "assumed",
-    "method": "sqr_mont_384x",
-    "specification": "unknown",
-    "loc": "0x191e0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sqrx_mont_384x",
-    "specification": "unknown",
-    "loc": "0x191e0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_382x",
-    "specification": "unknown",
-    "loc": "0x19320",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
     "method": "mulx_382x",
     "specification": "unknown",
     "loc": "0x19340",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sqr_382x",
-    "specification": "unknown",
-    "loc": "0x19480",
     "type": "method"
   },
   {
@@ -2227,30 +2269,9 @@
   },
   {
     "status": "assumed",
-    "method": "sqr_mont_384",
-    "specification": "unknown",
-    "loc": "0x19bc0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
     "method": "fromx_mont_384",
     "specification": "unknown",
     "loc": "0x19c00",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "redc_mont_384",
-    "specification": "unknown",
-    "loc": "0x19c40",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "from_mont_384",
-    "specification": "unknown",
-    "loc": "0x19ca0",
     "type": "method"
   },
   {
@@ -2269,83 +2290,6 @@
   },
   {
     "status": "assumed",
-    "method": "sgn0_pty_mont_384",
-    "specification": "unknown",
-    "loc": "0x1a140",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sgn0_pty_mont_384x",
-    "specification": "unknown",
-    "loc": "0x1a1e0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mulx_mont_384",
-    "specification": "unknown",
-    "loc": "0x1a200",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_mont_384",
-    "specification": "unknown",
-    "loc": "0x1a300",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sqrx_mont_384",
-    "specification": "unknown",
-    "loc": "0x1aa00",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sqr_n_mul_mont_383",
-    "specification": "unknown",
-    "loc": "0x1ab00",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sqrx_n_mul_mont_383",
-    "specification": "unknown",
-    "loc": "0x1ab40",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sqr_mont_382x",
-    "specification": "unknown",
-    "loc": "0x1b240",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sqrx_mont_382x",
-    "specification": "unknown",
-    "loc": "0x1b2c0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "mul_mont_sparse_256",
-    "specification": "unknown",
-    "loc": "0x1b440",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "sqr_mont_sparse_256",
-    "specification": "unknown",
-    "loc": "0x1b4a0",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
     "method": "mulx_mont_sparse_256",
     "specification": "unknown",
     "loc": "0x1b4e0",
@@ -2356,20 +2300,6 @@
     "method": "sqrx_mont_sparse_256",
     "specification": "unknown",
     "loc": "0x1b540",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "from_mont_256",
-    "specification": "unknown",
-    "loc": "0x1b820",
-    "type": "method"
-  },
-  {
-    "status": "assumed",
-    "method": "redc_mont_256",
-    "specification": "unknown",
-    "loc": "0x1b8a0",
     "type": "method"
   },
   {
@@ -2605,6 +2535,12 @@
   {
     "status": "verified",
     "term": "(x : Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool))\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/Parameters/Fp.2.2.2.2.2.2.1\n           (cryptol:/implementation/Field/fp_abs x))\n        Prelude.True)",
+    "loc": "unknown",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "term": "(x : Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool))\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/implementation/Field/fp_invariant x)\n        (Cryptol.ecLt Prelude.Integer Cryptol.PCmpInteger\n           (cryptol:/Parameters/to_Fp (Cryptol.TCNum 384)\n              (cryptol:/implementation/Types/vec384_abs x))\n           (Cryptol.ecNumber\n              (Cryptol.TCNum\n                 4002409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787)\n              Prelude.Integer\n              Cryptol.PLiteralInteger)))",
     "loc": "unknown",
     "type": "property"
   },
@@ -4387,6 +4323,12 @@
   {
     "status": "verified",
     "term": "let { x@1 = Prelude.Vec 256 Prelude.Bool\n    }\n in (x : x@1)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@1 (Cryptol.PEqSeqBool (Cryptol.TCNum 256))\n        (cryptol:/Main/vec256_abs (cryptol:/Main/vec256_rep x))\n        x)",
+    "loc": "unknown",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "term": "let { x@1 = Prelude.Vec 384 Prelude.Bool\n      x@2 = Cryptol.TCNum 384\n      x@3 = Cryptol.PIntegralSeqBool x@2\n    }\n in (x : x@1)\n-> (y : x@1)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (Cryptol.ecLt x@1 (Cryptol.PCmpSeqBool x@2) x y)\n        (Cryptol.ecLt Prelude.Integer Cryptol.PCmpInteger\n           (Cryptol.ecToInteger x@1 x@3 x)\n           (Cryptol.ecToInteger x@1 x@3 y)))",
     "loc": "unknown",
     "type": "property"
   },
