@@ -119,10 +119,10 @@ let really_custom_prove_cryptol thm script =
 // useful things for proof development, to tidy up the goal formula before printing it.
 
 propositional_rewrites <- for
-  [ "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a True b) (or a b))"
-  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a b False) (and a b))"
-  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (and a b)) (or (not a) (not b)))"
-  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (or a b)) (and (not a) (not b)))"
+  [ "(a:Bool) -> (b:Bool) -> EqTrue (boolEq (ite Bool a True b) (or a b))"
+  , "(a:Bool) -> (b:Bool) -> EqTrue (boolEq (ite Bool a b False) (and a b))"
+  , "(a:Bool) -> (b:Bool) -> EqTrue (boolEq (not (and a b)) (or (not a) (not b)))"
+  , "(a:Bool) -> (b:Bool) -> EqTrue (boolEq (not (or a b)) (and (not a) (not b)))"
    ] (prove_core abc);
 
 let prop_simpset = add_prelude_eqs

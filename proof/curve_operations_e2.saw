@@ -33,8 +33,8 @@ hoist_if_proj_int_2 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoi
    //[];
 
 core_rewrites <- for
-  [ "EqTrue (eq Nat (intToNat (natToInt 0)) 0)"
-  , "EqTrue (eq Nat (intToNat (natToInt 1)) 1)"
+  [ "EqTrue (equalNat (intToNat (natToInt 0)) 0)"
+  , "EqTrue (equalNat (intToNat (natToInt 1)) 1)"
   //, "EqTrue (eq Bool (intLe (natToInt 0) (natToInt 0)) True)"
   //, "EqTrue (eq Bool (intLe (natToInt 0) (natToInt 1)) True)"
   ] (prove_core abc);
