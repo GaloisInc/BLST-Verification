@@ -11,26 +11,20 @@ let x86_tactic = do {
 };
 
 let do_prove_x86 = true;
-let verify_x86 name spec =
+let verify_x86_helper path module name spec =
   if do_prove_x86
   then
-  crucible_llvm_verify_x86 m "../../build/x86/libblst.so" name
+  crucible_llvm_verify_x86 module path name
     []
     false
     spec
     x86_tactic
   else
-  crucible_llvm_unsafe_assume_spec m name spec;
-let verify_x86_noadx name spec =
-  if do_prove_x86
-  then
-  crucible_llvm_verify_x86 m_noadx "../../build/x86_noadx/libblst.so" name
-    []
-    false
-    spec
-    x86_tactic
-  else
-  crucible_llvm_unsafe_assume_spec m_noadx name spec;
+  crucible_llvm_unsafe_assume_spec module name spec;
+let verify_x86 = verify_x86_helper "../../build/x86/libblst.so" m;
+let verify_x86_noadx = verify_x86_helper "../../build/x86_noadx/libblst.so" m_noadx;
+let verify_x86_patched = verify_x86_helper "../../build/x86_patched/libblst.so" m_patched;
+let verify_x86_noadx_patched = verify_x86_helper "../../build/x86_noadx_patched/libblst.so" m_noadx_patched;
 
 include "x86/add_mod_256.saw";
 include "x86/add_mod_384.saw";
@@ -41,6 +35,8 @@ include "x86/mulx_mont_384.saw";
 
 include "x86/mulq_mont_256.saw";
 include "x86/mulq_mont_384.saw";
+include "x86/ctx_inverse_mod_384.saw";
+include "x86/ctq_inverse_mod_384.saw";
 
 let assembly_overrides = concat_all
   [ add_mod_256_overrides
