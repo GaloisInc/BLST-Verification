@@ -32,6 +32,7 @@ import HashToCurveE1_standalone (hash_to_field, hash_to_curve_opt, A', B', Z, k1
 
 // TODO: it would be great if you could use better notation for field ops, e.g. + instead of Fp.add
 
+// Projective version of map_to_curve_simple_swu_3mod4:
 map_to_curve_simple_swu_3mod4_impl : t_Fp -> ProjectivePoint t_Fp
 map_to_curve_simple_swu_3mod4_impl u = res where
   c1 = (`p-3)/4
@@ -48,7 +49,7 @@ map_to_curve_simple_swu_3mod4_impl u = res where
   xd_b = if e1 then Fp.mul(Z, A') else xd_a
 
   tv2_a = Fp.sq xd_b
-  gxd = Fp.mul(xd_b, tv2_a) // NOTE: commuted, to match the implementation
+  gxd = Fp.mul(xd_b, tv2_a) // TODO: commuted, to match the implementation
   tv2_b = Fp.mul(A',  tv2_a)
   gx1 = Fp.sq x1n_a
   gx1_a = Fp.add(gx1, tv2_b)

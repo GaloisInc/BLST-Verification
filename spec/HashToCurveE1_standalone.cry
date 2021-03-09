@@ -45,11 +45,14 @@ Z = 11
 A' = to_Fp 0x144698a3b8e9433d693a02c96d4982b0ea985383ee66a8d8e8981aefd881ac98936f8da0e0f97f5cf428082d584c1d
 B' = to_Fp 0x12e2908d11688030018b12e8753eee3b2016c1f0f24f4070a0b9c14fcef35ef55a23215a316ceaa5d1cc48e98e172be0
 
+Curve_E': EC::EllipticCurve t_Fp
+Curve_E' = {base_field=Fp, a = A', b = B'}
+
 h_eff = 0xd201000000010001 // For clearing the cofactor
 clear_cofactor P = EC::mult E h_eff P
 
 iso_map: (t_Fp, t_Fp) -> (t_Fp, t_Fp)
-iso_map (x', y') = if EC::is_point_O E (x',y') then EC::point_O E else (x, y) where
+iso_map (x', y') = if EC::is_point_O Curve_E' (x',y') then EC::point_O E else (x, y) where
     x_powers = [Fp.field_unit] # [Fp.mul(x', xi) | xi <- x_powers]
     x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- x_powers]
     x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
@@ -248,7 +251,7 @@ map_to_curve_simple_swu_3mod4 u = res where
   xd_b = if e1 then Fp.mul(Z, A') else xd_a
 
   tv2_a = Fp.sq xd_b
-  gxd = Fp.mul(xd_b, tv2_a) // NOTE: commuted, to match the implementation
+  gxd = Fp.mul(xd_b, tv2_a) // TODO: commuted, to match the implementation
   tv2_b = Fp.mul(A',  tv2_a)
   gx1 = Fp.sq x1n_a
   gx1_a = Fp.add(gx1, tv2_b)
@@ -282,8 +285,4 @@ map_to_curve_simple_swu_3mod4 u = res where
 map_to_curve_simple_swu_AB0(u) = (x, y) where
     (x', y') = map_to_curve_simple_swu (u) // (x', y') is on E'
     (x, y) = iso_map(x', y')               // (x, y) is on E
-
-
-Curve_E': EC::EllipticCurve t_Fp
-Curve_E' = {base_field=Fp, a = A', b = B'}
 
