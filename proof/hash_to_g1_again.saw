@@ -270,7 +270,7 @@ e2_lemma <- simp_then_admit (unfold_term ["e2_eqn"] {{ e2_eqn }});
 
 swu_impl_equiv_3mod4_impl <- custom_prove_cryptol {{ \u -> map_to_curve_simple_swu_impl u == map_to_curve_simple_swu_3mod4_impl u }}
   do {
-    unfolding ["map_to_curve_simple_swu_impl", "map_to_curve_simple_swu_3mod4_impl"];
+    unfolding ["map_to_curve_simple_swu_impl", "map_to_curve_simple_swu_3mod4_impl", "map_to_curve_simple_swu_3mod4"];
     simplify (cryptol_ss ());
     simplify (addsimp e2_lemma empty_ss);
     simplify (addsimp recip_sqrt_fp_algebra_thm empty_ss);
@@ -279,31 +279,21 @@ swu_impl_equiv_3mod4_impl <- custom_prove_cryptol {{ \u -> map_to_curve_simple_s
 
 swu_impl_nz_thm <- custom_prove_cryptol {{ \u -> (Fp.is_equal(z, Fp.field_zero) == False where (_,_,z) = (map_to_curve_simple_swu_3mod4_impl u)) }} w4;
 
-temp <- for [
-          {{ \xn xd ->  Fp.mul (Fp.sq (Fp.div (Fp.field_unit, xd)), Fp.mul (xn,xd)) == Fp.div(xn,xd) }}
-        , {{ \y -> Fp.div(y, Fp.field_unit) == y }}
-        , {{ \xn xd y -> Fp.mul (Fp.mul (Fp.div (Fp.field_unit,xd), Fp.sq (Fp.div (Fp.field_unit,xd))), Fp.mul(y, Fp.mul(xd, Fp.sq xd))) == y }}
-      ] simp_then_admit;
-
 swu_3mod4_abs_thm <- custom_prove_cryptol {{ \u -> affinify Curve_E' (map_to_curve_simple_swu_3mod4_impl u) ==
   ((Fp.div(xn,xd), Fp.div(yn,yd)) where (xn, xd, yn, yd) = map_to_curve_simple_swu_3mod4 u) }}
   do {
     unfolding ["affinify","Curve_E'","is_zero"];
     simplify (addsimp swu_impl_nz_thm basic_ss);
-    print_readably;
-    // TODO: remains the conversion to Jacobian coordinates:
     let rewrites = run (
       for [
-          //{{ \xn xd ->  Fp.mul (Fp.sq (Fp.div (Fp.field_unit, xd)), Fp.mul (xn,xd)) == Fp.div(xn,xd) }}
-        {{ \y -> Fp.div(y, Fp.field_unit) == y }}
-        //, {{ \xn xd y -> Fp.mul (Fp.mul (Fp.div (Fp.field_unit,xd), Fp.sq (Fp.div (Fp.field_unit,xd))), Fp.mul(y, Fp.mul(xd, Fp.sq xd))) == y }}
-      ] simp_then_admit
+          {{ \xn xd ->  Fp.mul (Fp.sq (Fp.div (Fp.field_unit, xd)), Fp.mul (xn,xd)) == Fp.div(xn,xd) }}
+        , {{ \y -> Fp.div(y, Fp.field_unit) == y }}
+        , {{ \xd y -> Fp.mul (Fp.mul (Fp.div (Fp.field_unit,xd), Fp.sq (Fp.div (Fp.field_unit,xd))), Fp.mul(y, Fp.mul(xd, Fp.sq xd))) == y }}
+      ] simp_then_admit // TODO prove 1 and 3
     );
-    unfolding ["map_to_curve_simple_swu_3mod4"];
+    unfolding ["map_to_curve_simple_swu_3mod4","map_to_curve_simple_swu_3mod4_impl"];
     simplify (addsimps rewrites (cryptol_ss ()));
-    print_readably;
-    // TODO: why is y/1 not rewritten to y?
-    assume_unsat;
+    w4_unint_z3 ["Fp","fp_exp"];
   };
 
 // finally for map_to_isogenous_E1:
