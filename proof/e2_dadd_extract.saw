@@ -54,8 +54,8 @@ hoist_if_3_int_1 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_
 hoist_if_3_int_2 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_2"] {{ hoist_if_2`{[2]Integer} }})) [];
 
 core_rewrites <- for // TODO: why are those needed? which rewrites do they enable?
-  [ "EqTrue (eq Nat (intToNat (natToInt 0)) 0)"
-  , "EqTrue (eq Nat (intToNat (natToInt 1)) 1)"
+  [ "EqTrue (equalNat (intToNat (natToInt 0)) 0)"
+  , "EqTrue (equalNat (intToNat (natToInt 1)) 1)"
   //, "EqTrue (eq Bool (intLe (natToInt 0) (natToInt 0)) True)"
   //, "EqTrue (eq Bool (intLe (natToInt 0) (natToInt 1)) True)"
   ] (prove_core abc);
