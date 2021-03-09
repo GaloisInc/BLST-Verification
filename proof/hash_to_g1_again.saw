@@ -149,6 +149,9 @@ is_point_O_on_curve_thm_ <- simp_then_admit {{ \p ->  is_zero Fp p.2 == if is_po
 // projective p is on the curve iff it is not of the form (0,0,z) and its affinified version is on the curve
 is_point_equiv_thm <- simp_then_admit {{ \p -> is_point_projective Curve_E' p == (is_point_affine Curve_E' (affinify Curve_E' p) /\ ~( Fp.is_equal (p.0, Fp.field_zero) /\ Fp.is_equal (p.1, Fp.field_zero) )) }};
 
+// map_to_curve_simple_swu_ipml produces no point of the form (0,0,z):
+swu_impl_nz_x_y <- simp_then_admit {{ \u -> (Fp.is_equal (p.0, Fp.field_zero) /\ Fp.is_equal (p.1, Fp.field_zero) where p = map_to_curve_simple_swu_impl u) == False }}
+
 // map_to_curve_simple_swu produces points on the curve Curve_E':
 is_affine_swu <- simp_then_admit {{ \u -> is_point_affine Curve_E' (map_to_curve_simple_swu u) == True }};
 
@@ -296,19 +299,18 @@ swu_3mod4_abs_thm <- custom_prove_cryptol {{ \u -> affinify Curve_E' (map_to_cur
     w4_unint_z3 ["Fp","fp_exp"];
   };
 
-// finally for map_to_isogenous_E1:
+// putting it all together:
 map_to_isogenous_E1_thm <- custom_prove_cryptol {{ \u -> affinify Curve_E' (map_to_curve_simple_swu_impl u) == map_to_curve_simple_swu u }}
   do {
     simplify (addsimps [swu_impl_equiv_3mod4_impl, swu_3mod4_abs_thm, swu_3mod4_correct] empty_ss);
     w4;
   };
 
-// moreover:
+// we also need this fact:
 is_point_proj_swu <- custom_prove_cryptol {{ \u -> is_point_projective Curve_E' (map_to_curve_simple_swu_impl u) }}
   do {
-    simplify (addsimps [is_point_equiv_thm, map_to_isogenous_E1_thm, is_affine_swu, swu_impl_equiv_3mod4_impl] empty_ss);
-    // TODO: this should be provable from assumptions about swu_impl_equiv_3mod4
-    assume_unsat;
+    simplify (addsimps [is_point_equiv_thm,swu_impl_nz_x_y, map_to_isogenous_E1_thm,is_affine_swu] basic_ss);
+    w4;
   };
 
 // isogeny_map_to_E1
