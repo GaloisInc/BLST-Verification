@@ -2015,4 +2015,3 @@ fp12_rep_ite_thm <- hoist {{fp12_rep}} ["fp12_rep"] ;
 
 let fp12_simpset = addsimps (concat fp12_rep_thms [fp12_abs_ite_thm, fp12_invariant_ite_thm, fp12_rep_ite_thm])
                             (cryptol_ss ());
-

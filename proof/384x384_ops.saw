@@ -13,7 +13,7 @@
  * The following types are used:
  *  vec384 for Fp, sometimes in Montgomery form and sometimes not
  *  vec384x for Fp2
- *  vec768 for "double width" values, usually less than 2^368 * p, eventually to be Mongomery reduced 
+ *  vec768 for "double width" values, usually less than 2^368 * p, eventually to be Mongomery reduced
  *  vec768x for a pair of double width (vec768) values
  *  vec768fp6 for a triple of vec768x values, representing an unreduced Fp6
  *  vec384fp4 for a pair of vec384x values, representing a Fp4
@@ -35,13 +35,13 @@ let {{ // type shifted_p = p * 2^^384
        // rep_384x384: Integer -> Vec768 => fpx2_rep
        // rep_384x384 x = vec_rep (fromInteger x)
        // rep_768x [x, y] = [fpx2_rep y, fpx2_rep x] ==> fp2x2_rep
-       
+
        //inv_384x384: Vec768 -> Bool ==> fpx2_invariant
        //inv_384x384 x = vec_abs x < `shifted_p
 
        add_mod_384x384: t_Fpx2 -> t_Fpx2 ->t_Fpx2
        add_mod_384x384 x y = (x+y) % `shifted_p
-       
+
        sub_mod_384x384: t_Fpx2 -> t_Fpx2 ->t_Fpx2
        sub_mod_384x384 x y = (x - y) % `shifted_p
 
