@@ -64,6 +64,16 @@ let map_to_isogenous_E1_impl_spec = do {
   llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (map_to_curve_simple_swu_impl (fp_abs u)) }});
 };
 
+let map_to_g1_nonnull_spec = do {
+  out_ptr <- llvm_alloc POINTonE1_type;
+  (u,u_ptr) <- ptr_to_fresh_readonly "u" vec384_type;
+  (v,v_ptr) <- ptr_to_fresh_readonly "v" vec384_type;
+  llvm_precond {{ fp_invariant u }};
+  llvm_precond {{ fp_invariant v }};
+  llvm_execute_func [out_ptr, u_ptr, v_ptr];
+  llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (map_to_g1_impl [fp_abs u, fp_abs v]) }});
+};
+
 // other overrides:
 
 let dbl_n_add_spec n = do {
@@ -150,13 +160,16 @@ swu_3mod4_correct <- admit_cryptol
   }};
 
 swu_3mod4_impl_on_curve <- simp_then_admit {{ \u -> is_point_projective Curve_E' (map_to_curve_simple_swu_3mod4_impl u) == True }};
-//swu_impl_on_curve <- simp_then_admit {{ \u -> is_point_projective Curve_E' (map_to_curve_simple_swu_impl u) == True }};
+swu_impl_on_curve <- simp_then_admit {{ \u -> is_point_projective Curve_E' (map_to_curve_simple_swu_impl u) == True }};
 
 // point_dadd implements add:
-dadd_thm <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ p1 p2 -> affinify E (point_dadd Fp p1 p2 A' False) == add Curve_E' (affinify E p1) (affinify E p2) }});
+dadd_thm <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ p1 p2 -> affinify Curve_E' (point_dadd Fp p1 p2 A' False) == add Curve_E' (affinify Curve_E' p1) (affinify Curve_E' p2) }});
 
 // the addition of two points on the curve is on the curve:
 point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Curve_E' (point_dadd Fp p q A' False) == if is_point_projective Curve_E' p /\ is_point_projective Curve_E' q then True else apply is_point_projective Curve_E' (point_dadd Fp p q A' False) }};
+
+// adding a point to its double can be done with POINTonE1_add (cheaper than dadd) because the double of a point is never equal to the point unless the point is point_O:
+add_double_lemma <- admit_cryptol {{ \p -> affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) }};
 
 // We will need to prove that some expression involving field Fp operations are
 // equivalent.  To do so, we will try to rewrite them to a normal form with the
@@ -590,3 +603,112 @@ do {
   simplify (addsimps [affinify_lemma',iso_map_main_lemma] empty_ss);
   w4_unint_z3 ["Fp"];
 };
+
+// Now we tackle `clear_cofactor`
+
+let dbl_n_add_ns = [2,3,9,32,16];
+
+// Here we unfold the recursion in dbl_n_add by hand; we could also have used `goal_eval` to do it for us.
+dbl_n_add_unfold_thms <- for [
+      {{ \p q -> dbl_n_add p 2 q == point_dadd Fp (point_double Fp (point_double Fp p)) q Fp.field_zero True }}
+    , {{ \p q -> dbl_n_add p 3 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp p))) q Fp.field_zero True }}
+    , {{ \p q -> dbl_n_add p 9 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p))))))))) q Fp.field_zero True }}
+    , {{ \p q -> dbl_n_add p 32 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))))))))))))))))))) q Fp.field_zero True }}
+    , {{ \p q -> dbl_n_add p 16 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))) q Fp.field_zero True }}
+  ] simp_then_admit;
+
+let prove_dbl_lemma n = custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> affinify E (dbl_n_add p `n q) == add E (e1_scalar_mult (2^^(`n)) (affinify E p)) (affinify E q) }})
+  (do {
+    simplify (addsimps (foldr concat [e1_scalar_mult_alg_thms, e1_curve_op_thms, dbl_n_add_unfold_thms] []) (cryptol_ss ()));
+    w4_unint_z3 ["Fp","e1_scalar_mult"];
+  });
+
+dbl_lemmas <- for dbl_n_add_ns prove_dbl_lemma;
+
+// rewrite mult to e1_scalar_mult because the rewrite rules in ec_mult.saw use e1_scalar_mult:
+scalar_mult_lemma <-admit_cryptol (rewrite (cryptol_ss ()) {{ \p -> mult E h_eff p == e1_scalar_mult (to_Fp h_eff) p }});
+
+// now let's prove the multiplication-by-doubling code is correct
+
+mult_by_doubling_thm <- custom_prove_cryptol {{ \p -> affinify E (clear_cofactor_impl p) == clear_cofactor (affinify E p) }}
+  (do {
+    unfolding ["clear_cofactor_impl","clear_cofactor"];
+    simplify (addsimps (concat_all [e1_curve_op_thms, e1_scalar_mult_alg_thms, dbl_lemmas, [scalar_mult_lemma, add_double_lemma]]) (cryptol_ss ()));
+    w4_unint_z3 ["E","e1_scalar_mult"];
+  });
+
+// now we prove that the C code is equivalent to the _impl specs
+
+let verify_dbl_n_add n = custom_verify "POINTonE1_dbl_n_add" curve_operations_e1_ovs (dbl_n_add_spec n)
+  (do {
+    simplify (addsimps POINTonE1_thms (cryptol_ss ()));
+    goal_num_ite 3
+      (do {
+        unfolding ["dbl_n_add"];
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 (foldr concat [fp_unints, ec_mult_unints] ["point_double_fp","point_add_fp","POINTonE1_rep","Fp"]);
+      })
+      z3;
+  });
+
+dbl_n_add_ovs <- for dbl_n_add_ns verify_dbl_n_add;
+
+let overrides = foldr concat [curve_operations_e1_ovs, dbl_n_add_ovs] [map_to_isogenous_E1_impl_ov, isogeny_map_to_E1_impl_alias_ov];
+
+map_to_g1_nonnull_ov <- custom_verify "map_to_g1" overrides map_to_g1_nonnull_spec
+  (do {
+    simplify (addsimps POINTonE1_thms (cryptol_ss ()));
+    goal_num_ite 11
+      (do { // the main safety goal
+        print_goal;
+        unfolding ["map_to_g1_impl","clear_cofactor_impl"];
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 ["point_double_fp","point_add_fp","point_dadd_fp","isogeny_map_to_E1_impl","dbl_n_add","map_to_curve_simple_swu_impl"];
+      })
+      do {
+        unfolding ["POINTonE1_invariant"];
+        simplify fp_simpset;
+        goal_num_ite 2
+          (w4_unint_z3 ["Fp","map_to_curve_simple_swu_impl","isogeny_map_to_E1_impl"])
+          (w4_unint_z3 (concat ["map_to_curve_simple_swu_impl","isogeny_map_to_E1_impl"] fp_unints));
+      };
+    });
+
+let aug_len = 48; // aug_len should be 96 or 48
+let msg_len = 32;
+let DST_len= 8;
+let hash_to_field_nelems = [2]; // the values of nelems for which we prove hash_to_field
+// TODO:
+let do_prove = false;
+hash_to_field_ovs <- for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
+let do_prove = true;
+
+// let's get rid of map:
+let map_size_2_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y : Vec 2 Integer) -> map Integer (Vec 6 (Vec 64 Bool)) f 2 y";
+let map_size_2_eq_term = beta_reduce_term {{ \x -> map_size_2_term (\(y : Integer) -> fp_rep y) x == [fp_rep (x@0), fp_rep (x@1)]}};
+map_size_2_thm <- prove_cryptol map_size_2_eq_term [];
+
+hash_to_g1_ov <- custom_verify
+  "blst_hash_to_g1"
+  (concat [map_to_g1_nonnull_ov] hash_to_field_ovs)
+  (blst_hash_to_g1_impl_spec msg_len DST_len aug_len)
+  (do {
+    unfolding ["hash_to_curve_opt_impl","map"];
+    simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
+    simplify (addsimps [map_size_2_thm] empty_ss); // get rid of map
+    simplify (addsimps fp_rep_thms empty_ss);// simplify (abs . rep)
+    w4_unint_z3 ["map_to_g1_impl","hash_to_field"];
+  });
+
+// Finally, we put all the pieces together to prove that the C code is equivalent to the high-level spec
+
+final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (dst:[DST_len][8]) -> affinify E (hash_to_curve_opt_impl (msg,dst)) == hash_to_curve_opt (msg, dst) }}
+  do {
+    unfolding ["hash_to_curve_opt_impl","map_to_g1_impl"];
+    simplify (addsimps [mult_by_doubling_thm, isogeny_map_to_E1_impl_thm_z] (cryptol_ss ()));
+    unfolding ["apply"];
+    simplify (addsimps [isogeny_map_to_E1_impl_thm_nz,swu_impl_on_curve,point_dadd_on_curve] (cryptol_ss ()));
+    simplify (addsimps [dadd_thm,map_to_isogenous_E1_thm] (cryptol_ss ()));
+    print_readably;
+    w4_unint_z3 (concat fp_unints ["iso_map","map_to_curve_simple_swu","clear_cofactor","hash_to_field"]);
+  };
