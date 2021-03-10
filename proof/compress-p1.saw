@@ -15,7 +15,7 @@ let fromx_mont_384_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
 
   // TODO: Do I need this invariant?
-  //llvm_precond {{ fp_invariant a }};
+  llvm_precond {{ fp_invariant a }};
 
   p_ptr <- alloc_init_readonly vec384_type (llvm_term {{ vec384_rep (from_Fp `p) }});
 
@@ -25,6 +25,26 @@ let fromx_mont_384_spec = do {
 };
 
 fromx_mont_384_ov <- verify_x86 "fromx_mont_384" fromx_mont_384_spec;
+
+// TODO: Add nonzero to the name if nonzero is a precondition
+let blst_p1_affine_compress_spec = do {
+  out_ptr <- crucible_alloc (llvm_array 48 (llvm_int 8));
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE1_affine_type;
+
+  crucible_precond {{ POINTonE1_affine_invariant inp }};
+
+  // Nonzero
+  llvm_precond {{ ((fp_abs inp.0) != Fp.field_zero) || ((fp_abs inp.1) != Fp.field_zero) }};
+
+  crucible_execute_func [out_ptr, inp_ptr];
+
+  crucible_points_to out_ptr (crucible_term {{ serialize_E1 (POINTonE1_affine_abs inp ) }});
+};
+
+blst_p1_affine_compress_ov <- really_verify "blst_p1_affine_compress"
+  [fromx_mont_384_ov, sgn0x_pty_mont_384_ov, vec_is_zero_2fp_ov]
+  blst_p1_affine_compress_spec;
+/*
 
 let POINTonE1_from_Jacobian_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
@@ -93,3 +113,4 @@ blst_p1_compress_ov <- really_custom_verify "blst_p1_compress"
      simplify (addsimp is_point_O_thm'' (cryptol_ss()));
      w4_unint_z3 ec_mult_unints;
   };
+  */
