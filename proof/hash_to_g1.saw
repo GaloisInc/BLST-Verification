@@ -655,7 +655,6 @@ map_to_g1_nonnull_ov <- custom_verify "map_to_g1" overrides map_to_g1_nonnull_sp
     simplify (addsimps POINTonE1_thms (cryptol_ss ()));
     goal_num_ite 11
       (do { // the main safety goal
-        print_goal;
         unfolding ["map_to_g1_impl","clear_cofactor_impl"];
         simplify remove_higher_order_function_simpset;
         w4_unint_z3 ["point_double_fp","point_add_fp","point_dadd_fp","isogeny_map_to_E1_impl","dbl_n_add","map_to_curve_simple_swu_impl"];
@@ -701,6 +700,5 @@ final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (dst:[DST_len][8]) -> a
     unfolding ["apply"];
     simplify (addsimps [isogeny_map_to_E1_impl_thm_nz,swu_impl_on_curve,point_dadd_on_curve] (cryptol_ss ()));
     simplify (addsimps [dadd_thm,map_to_isogenous_E1_thm] (cryptol_ss ()));
-    print_readably;
     w4_unint_z3 (concat fp_unints ["iso_map","map_to_curve_simple_swu","clear_cofactor","hash_to_field"]);
   };
