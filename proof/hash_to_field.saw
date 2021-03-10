@@ -141,7 +141,7 @@ let verify_hash_to_field_for aug_len msg_len DST_len nelems = do {
   let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov];
   r <- custom_verify "hash_to_field" overrides (hash_to_field_fp_spec nelems aug_len msg_len DST_len)
     (do {
-      unfolding ["redc_rep", "mul_mont_rep", "HashToCurveE1::hash_to_field","expand_message"];
+      unfolding ["redc_rep", "mul_mont_rep", "HE1::hash_to_field","expand_message"];
       simplify (addsimps [vec_abs_rep_thm] empty_ss);
       simplify (cryptol_ss ());
       simplify (addsimps [main_lemma, eq_1_thm] empty_ss);
