@@ -127,18 +127,16 @@ let print_readably =  do {
 
 // Assumptions:
 
-// This holds because Fp.div(x,0) == 0
-affinify_lemma <- simp_then_admit {{
-  \p -> (affinify E p ==
-    (Fp.mul(lambda2, x), Fp.mul(lambda3, y)) where
-      lambda = Fp.div (Fp.field_unit, z); lambda2 = Fp.sq lambda; lambda3 = Fp.mul(lambda, lambda2); (x,y,z) = p)
+let {{
+  affinify_nz (x, y, z) = (Fp.mul(lambda2, x), Fp.mul(lambda3, y)) where
+      lambda = Fp.div (Fp.field_unit, z)
+      lambda2 = Fp.sq lambda
+      lambda3 = Fp.mul(lambda, lambda2)
 }};
 
-affinify_lemma' <- simp_then_admit {{
-  \p -> (affinify Curve_E' p ==
-    (Fp.mul(lambda2, x), Fp.mul(lambda3, y)) where
-      lambda = Fp.div (Fp.field_unit, z); lambda2 = Fp.sq lambda; lambda3 = Fp.mul(lambda, lambda2); (x,y,z) = p)
-}};
+// This holds because Fp.div(x,0) == 0
+affinify_lemma <- simp_then_admit {{ \p -> affinify E p == affinify_nz p }};
+affinify_lemma' <- simp_then_admit {{ \p -> affinify Curve_E' p == affinify_nz p }};
 
 on_curve_is_point_O_lemma <- simp_then_admit {{ \p -> is_point_O Curve_E' (affinify Curve_E' p) == if (is_point_projective Curve_E' p /\ ~is_zero Fp p.2) then False else apply is_point_O Curve_E' (affinify Curve_E' p) }};
 
@@ -151,34 +149,14 @@ swu_3mod4_correct <- admit_cryptol
         == map_to_curve_simple_swu u
   }};
 
-// this holds because a projective point on on ef the curves cannot be of the form (0,0,z) with z != 0
-//affinify_on_curve_thms <- for [
-    //{{ \p -> is_point_projective Curve_E' p ==> is_zero Fp p.2 == is_point_O Curve_E' (affinify E p) }}
-    //{{ \p -> is_point_projective E p ==> is_zero Fp p.2 == is_point_O E (affinify E p) }}
-  //] simp_then_admit;
-
-x_y_nz_on_curve <- simp_then_admit {{ \p -> is_zero Fp p.0 /\ is_zero Fp p.1 == if is_point_projective Curve_E' p then False else apply is_zero Fp p.0 /\ apply is_zero Fp p.1 }};
-
-// a point on the curve is point_O iff its z coordinate is zero
-is_point_O_on_curve_thm <- simp_then_admit {{ \p -> is_point_O Curve_E' (affinify Curve_E' p) == if is_point_projective Curve_E' p then Fp.is_equal (p.2, Fp.field_zero) else apply is_point_O Curve_E' (affinify Curve_E' p) }};
-is_point_O_on_curve_thm_ <- simp_then_admit {{ \p ->  is_zero Fp p.2 == if is_point_projective Curve_E' p then is_point_O Curve_E' (affinify Curve_E' p) else apply is_zero Fp p.2 }};
-
-// TODO: maybe this instead:
-swu_impl_on_curve <- simp_then_admit {{ \u -> is_point_projective Curve_E' (map_to_curve_simple_swu_impl u) == True }};
-// OR, from which the above follows:
 swu_3mod4_impl_on_curve <- simp_then_admit {{ \u -> is_point_projective Curve_E' (map_to_curve_simple_swu_3mod4_impl u) == True }};
-
-// map_to_curve_simple_swu produces points on the curve Curve_E':
-is_affine_swu <- simp_then_admit {{ \u -> is_point_affine Curve_E' (map_to_curve_simple_swu u) == True }};
+//swu_impl_on_curve <- simp_then_admit {{ \u -> is_point_projective Curve_E' (map_to_curve_simple_swu_impl u) == True }};
 
 // point_dadd implements add:
 dadd_thm <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ p1 p2 -> affinify E (point_dadd Fp p1 p2 A' False) == add Curve_E' (affinify E p1) (affinify E p2) }});
 
 // the addition of two points on the curve is on the curve:
 point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Curve_E' (point_dadd Fp p q A' False) == if is_point_projective Curve_E' p /\ is_point_projective Curve_E' q then True else apply is_point_projective Curve_E' (point_dadd Fp p q A' False) }};
-
-// the map back to E1 maps p to point_O iff p is point_O
-iso_map_z_iff <- simp_then_admit {{ \p -> is_point_O E (iso_map p) == is_point_O E p }};
 
 // We will need to prove that some expression involving field Fp operations are
 // equivalent.  To do so, we will try to rewrite them to a normal form with the
@@ -322,13 +300,6 @@ map_to_isogenous_E1_thm <- custom_prove_cryptol {{ \u -> affinify Curve_E' (map_
     w4;
   };
 
-// We also need this fact. TODO: do we?
-//is_point_proj_swu <- custom_prove_cryptol {{ \u -> is_point_projective Curve_E' (map_to_curve_simple_swu_impl u) }}
-  //do {
-    //simplify (addsimps [is_point_equiv_thm,swu_impl_nz_x_y, map_to_isogenous_E1_thm,is_affine_swu] basic_ss);
-    //w4;
-  //};
-
 // isogeny_map_to_E1
 
 isogeny_map_to_E1_impl_alias_ov <- custom_verify
@@ -372,38 +343,8 @@ let {{
     y = Fp.mul (y', Fp.div(y_num, y_den))
 }};
 
-let {{
-  affinify_iso_map_impl (x, y, z) = (Fp.mul(lambda2, x'), Fp.mul(lambda3, y')) where
-      lambda = Fp.div (Fp.field_unit, z')
-      lambda2 = Fp.sq lambda
-      lambda3 = Fp.mul(lambda, lambda2)
-      (x',y',z') = isogeny_map_to_E1_impl (x, y, z)
-}};
+// We now prove (roughly): iso_map_nz (affinify_nz p) == affinify_nz isogeny_map_to_E1_impl (x, y, z)
 
-iso_map_main_lemma <- admit_cryptol {{ \p -> iso_map_nz (affinify Curve_E' p) == affinify_iso_map_impl p }};
-
-isogeny_map_to_E1_impl_thm_nz <- custom_prove_cryptol {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if (is_point_projective Curve_E' p /\ ~is_zero Fp p.2) then iso_map (affinify Curve_E' p) else apply affinify E (isogeny_map_to_E1_impl p) }}
-do {
-  let lemma_1 = run (
-    custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> iso_map p == if is_point_O Curve_E' p then point_O E else iso_map_nz p }}) (w4_unint_z3 ["Fp"])
-  );
-  simplify (addsimps [lemma_1, on_curve_is_point_O_lemma] empty_ss); // get rid of ite term in `iso_map`
-  unfolding ["apply"]; // NOTE: otherwise the next rewrite does not apply to both sides
-  let lemma_2 = run (
-    custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> affinify E (isogeny_map_to_E1_impl p) == affinify_iso_map_impl p }})
-    do {
-      simplify (addsimp affinify_lemma empty_ss);
-      (w4_unint_z3 ["Fp"]);
-    }
-  );
-  simplify (addsimp lemma_2 empty_ss);
-  simplify (addsimp iso_map_main_lemma empty_ss);
-  w4_unint_z3 ["Fp"];
-};
-
-// Now we are going to rewrite iso_map_to_E1 to get to iso_map_impl. This involves substituting X/Z^2 for x and Y/Z^3 for y, and then multiplying as appropriate by powers of Z in order to get rid of div terms. There is a quirk if X and Y are both 0 and Z != 0, as the abstract spec yields 0 in this case, while the implementation gives a non-zero value.
-
-// an auxiliary definition that will be useful:
 let {{
   powers x = ps where
     ps = [Fp.field_unit] # [Fp.mul(x, pi) | pi <- ps]
@@ -411,11 +352,9 @@ let {{
   zz15 z = (powers (Fp.sq z))@15
 }};
 
-// we will first rewrite iso_map to get rid of div terms
-// first we multiply x_num and x_den by zz11, and y_num and y_den by zz15
+// First, in iso_map_nz, we multiply x_num and x_den by zz11, and y_num and y_den by zz15
 let {{
-  iso_map_2 (x', y', z') = if is_point_O Curve_E' (X,Y) then point_O E else (x, y) where
-    (X,Y) = affinify Curve_E' (x', y', z')
+  iso_map_nz_2 (x', y', z') = (x, y) where
     x_powers = powers X
     x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- x_powers]
     x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
@@ -423,19 +362,19 @@ let {{
     y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
     x = Fp.div (Fp.mul (x_num, zz11 z'), Fp.mul (x_den, zz11 z'))
     y = Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z')))
+    (X, Y) = affinify_nz (x', y', z')
 }};
 
-rewrite_1 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> iso_map (affinify Curve_E' p) == iso_map_2 p }})
+rewrite_1 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> iso_map_nz (affinify_nz p)  == iso_map_nz_2 p }})
   (do {
-    unfolding ["iso_map_2"];
+    unfolding ["iso_map_nz_2"];
     simplify (addsimps (concat_all [zero_unit_rewrites, simp_div_rewrites]) empty_ss);
     w4_unint_z3 fp_unints;
   });
 
-// now we use the fact that Y = y'/z'^3 if the point is not point_O
+// now we use the fact that Y = y'/z'^3
 let {{
-  iso_map_3_body (x', y', z') = (x, y) where
-    (X,Y) = affinify Curve_E' (x', y', z') // TODO: can we replace this by X = x'/z'^2?
+  iso_map_nz_3 (x', y', z') = (x, y) where
     x_powers = powers X
     x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- x_powers]
     x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
@@ -443,37 +382,20 @@ let {{
     y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
     x = Fp.div (Fp.mul (x_num, zz11 z'), Fp.mul (x_den, zz11 z'))
     y = Fp.div (Fp.mul (y', Fp.mul (y_num, zz15 z')), Fp.mul (Fp.mul (Fp.sq z', z'),  Fp.mul (y_den, zz15 z')))
+    (X, Y) = affinify_nz (x', y', z')
 }};
 
-let {{
-  iso_map_3 (x', y', z') = if is_point_O Curve_E' (affinify Curve_E' (x', y', z')) then point_O E else iso_map_3_body (x', y', z') }};
-
-// we are going to rewrite y with this rule:
 aux_rewrite <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{
-  \y_num y_den x' y' z' -> (Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z'))) == if ~(is_point_O Curve_E' (X,Y)) then Fp.div (Fp.mul (y', Fp.mul (y_num, zz15 z')), Fp.mul (Fp.mul (Fp.sq z', z'),  Fp.mul (y_den, zz15 z'))) else apply Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z')))
-  where (X,Y) = affinify Curve_E' (x', y', z'))
+  \y_num y_den x' y' z' -> (Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z'))) == Fp.div (Fp.mul (y', Fp.mul (y_num, zz15 z')), Fp.mul (Fp.mul (Fp.sq z', z'),  Fp.mul (y_den, zz15 z')))
+  where (X,Y) = affinify_nz (x', y', z'))
 }})
  (do {
-    let local_rewrites = run (for [
-          {{ \x a b c -> Fp.mul(if a then b else c, x) == if a then Fp.mul (b,x) else Fp.mul (c,x) }}
-        , {{ \x a b c -> Fp.mul(x, if a then b else c) == if a then Fp.mul (x,b) else Fp.mul (x,c) }}
-        , {{ \x a b c -> Fp.is_equal(if a then b else c, x) == if a then Fp.is_equal (b,x) else Fp.is_equal (c,x) }}
-        , {{ \x a b c -> Fp.is_equal(x, if a then b else c) == if a then Fp.is_equal (x,b) else Fp.is_equal (x,c) }}
-        , {{ \c (x:(Integer,Integer)) y -> (if c then x else y).0 == if c then x.0 else y.0 }}
-        , {{ \a (b:(Integer,Integer)) (c:(Integer,Integer))-> (if a then b else c).1 == if a then b.1 else c.1 }}
-        , {{ \(x:Integer) -> Fp.is_equal (x, x) == True }}
-      ] (\ x -> custom_prove_cryptol (rewrite (cryptol_ss()) x) w4));
-    unfolding ["affinify","Curve_E'","apply","is_point_O","same_point_affine","is_zero"];
-    simplify (addsimps local_rewrites algebra_simpset);
+    unfolding ["affinify_nz","Curve_E'","apply","is_point_O","same_point_affine","is_zero"];
+    simplify algebra_simpset;
     w4_unint_z3 fp_unints;
  });
 
-rewrite_2 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> iso_map_2 p == iso_map_3 p }})
-  (do {
-    unfolding ["iso_map_2"];
-    simplify (addsimp aux_rewrite empty_ss);
-    w4_unint_z3 fp_unints;
-  });
+rewrite_2 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> iso_map_nz_2 p == iso_map_nz_3 p }}) (do { unfolding ["iso_map_nz_2"]; simplify (addsimp aux_rewrite empty_ss); w4_unint_z3 fp_unints; });
 
 // now we rewrite x_num, x_den, y_num, and y_den independently:
 
@@ -633,77 +555,38 @@ y_den_rewrite <- custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["y_
 
 to_jacobian_rewrite <- custom_prove_cryptol (rewrite (cryptol_ss ())
   {{
-    \xn xd yn yd -> affinify E (to_jacobian xn xd yn yd) == if is_zero Fp (Fp.mul (xd,yd)) then point_O E else (Fp.div (xn, xd), Fp.div(yn, yd))
+    \xn xd yn yd -> affinify_nz (to_jacobian xn xd yn yd) == (Fp.div (xn, xd), Fp.div(yn, yd))
   }})
   (do {
-    unfolding ["to_jacobian", "affinify", "E", "apply"];
+    unfolding ["to_jacobian", "affinify_nz", "E"];
     simplify algebra_simpset;
     w4_unint_z3 fp_unints;
   });
 
-// TODO: proved that it follows from iso_map_z_iff
-x_den_times_y_den_nz <- simp_then_admit {{
-  \(p:(Integer,Integer,Integer)) -> is_zero Fp (Fp.mul (x_den_times_zz11 p.0 p.2, y_den_times_zz15 p.0 p.2)) == is_zero Fp p.2
-}};
-
-isogeny_map_to_E1_impl_lemma_1 <- custom_prove_cryptol {{ \p -> (affinify E (isogeny_map_to_E1_impl (x,y,z)) == if is_point_projective Curve_E' p then (if is_zero Fp p.2 then point_O E else (Fp.div(x_num_times_zz11 x z, x_den_times_zz11 x z), Fp.div (y_num_times_zz15 x y z, y_den_times_zz15 x z))) else apply affinify E (isogeny_map_to_E1_impl (x,y,z)) where (x,y,z) = p) }}
+// finally:
+iso_map_main_lemma <- custom_prove_cryptol {{ \p -> iso_map_nz (affinify_nz p) == affinify_nz (isogeny_map_to_E1_impl p) }}
   do {
-    unfolding ["isogeny_map_to_E1_impl","apply"];
-    simplify (cryptol_ss ());
-    simplify (addsimps [x_num_rewrite, elim_div_rewrite_x_num_times_zz11, x_den_rewrite, elim_div_rewrite_x_den_times_zz11, y_num_rewrite, elim_div_rewrite_y_num_times_zz15, y_den_rewrite, elim_div_rewrite_y_den_times_zz15] empty_ss); // rewrite iso_map_impl to get to x_num, y_num etc. as in iso_map_3
-    simplify (addsimps [to_jacobian_rewrite, x_den_times_y_den_nz] empty_ss);
+    simplify (addsimps [rewrite_1, rewrite_2] empty_ss); // rewrite iso_map_nz to iso_map_nz_3
+    unfolding ["isogeny_map_to_E1_impl"];
+    simplify (addsimps [x_num_rewrite, elim_div_rewrite_x_num_times_zz11, x_den_rewrite, elim_div_rewrite_x_den_times_zz11, y_num_rewrite, elim_div_rewrite_y_num_times_zz15, y_den_rewrite, elim_div_rewrite_y_den_times_zz15, to_jacobian_rewrite] (cryptol_ss ()));
     w4_unint_z3 ["Fp"];
   };
 
-isogeny_map_to_E1_impl_lemma_2 <- custom_prove_cryptol {{ \p -> (affinify E (isogeny_map_to_E1_impl (x,y,z)) == if is_point_projective Curve_E' p then (if is_point_O Curve_E' (affinify Curve_E' p) then point_O E else (Fp.div(x_num_times_zz11 x z, x_den_times_zz11 x z), Fp.div (y_num_times_zz15 x y z, y_den_times_zz15 x z))) else apply affinify E (isogeny_map_to_E1_impl (x,y,z)) where (x,y,z) = p) }}
-  do {
-    simplify (addsimps [isogeny_map_to_E1_impl_lemma_1,is_point_O_on_curve_thm_] empty_ss);
-    w4_unint_z3 ["Fp"];
-  };
-
-isogeny_map_to_E1_impl_lemma_3 <- custom_prove_cryptol {{ \p -> (affinify E (isogeny_map_to_E1_impl (x,y,z)) == if is_point_projective Curve_E' p then iso_map_3 (x,y,z) else apply affinify E (isogeny_map_to_E1_impl (x,y,z)) where (x,y,z) = p) }}
-  do {
-    simplify (addsimps [isogeny_map_to_E1_impl_lemma_2] empty_ss);
-    print_readably; // TODO: still a problem here...
-    w4_unint_z3 ["Fp"];
-  };
-
-
-
-//isogeny_map_to_E1_impl_thm <- custom_prove_cryptol {{ \(x:[2]) (y:[2]) (z:[2]) -> (affinify E (isogeny_map_to_E1_impl p) == if is_point_projective Curve_E' p then iso_map (affinify Curve_E' p) else apply affinify E (isogeny_map_to_E1_impl p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
-isogeny_map_to_E1_impl_thm <- custom_prove_cryptol {{ \(x:[2]) (y:[2]) (z:[2]) -> (affinify E (isogeny_map_to_E1_impl p) == if ~(p.0 == 0 /\ p.1 == 0) then iso_map (affinify Curve_E' p) else apply affinify E (isogeny_map_to_E1_impl p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
-
-// TODO:
-isogeny_map_to_E1_impl_thm <- custom_prove_cryptol {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if is_point_projective Curve_E' p then iso_map (affinify Curve_E' p) else apply affinify E (isogeny_map_to_E1_impl p) }}
-  do {
-    simplify (addsimps [rewrite_1, rewrite_2] empty_ss); // rewrite iso_map to iso_map_3
-    unfolding ["isogeny_map_to_E1_impl","apply"];
-    simplify (cryptol_ss ());
-    simplify (addsimps [x_num_rewrite, elim_div_rewrite_x_num_times_zz11, x_den_rewrite, elim_div_rewrite_x_den_times_zz11, y_num_rewrite, elim_div_rewrite_y_num_times_zz15, y_den_rewrite, elim_div_rewrite_y_den_times_zz15] empty_ss); // rewrite iso_map_impl to get to x_num, y_num etc. as in iso_map_3
-    print_readably;
-    // now it remains to deal with the 0 case...
-    unfolding ["iso_map_3"];
-    let rw = run (
-        simp_then_admit {{ \(x:(Integer,Integer)) -> (x.0,(x.1)) == x }}
-      );
-    simplify (addsimps [rw, is_point_O_on_curve_thm] empty_ss);
-    goal_eval_unint ["Fp","k1s","k2s","k3s","k4s"];
-    w4;
-    //assume_unsat;
-  // We should be able to eliminate the conditional in iso_map_3: if z is zero then the whole expression is 0 anyway
-  };
-
-custom_prove_cryptol {{ \x y -> iso_map_3 (x, y, 0) == (0,0) }} w4;
-
-custom_prove_cryptol {{ \x y -> iso_map_3 (x, y, z) == if is_point_projective (x, y, z) then ((x, y) where
-  (X,Y) = affinify E (x', y', z')
-  x_powers = powers X
-  x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- x_powers]
-  x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
-  y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- x_powers]
-  y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
-  x = Fp.div (Fp.mul (x_num, zz11 z'), Fp.mul (x_den, zz11 z'))
-  y = Fp.div (Fp.mul (y', Fp.mul (y_num, zz15 z')), Fp.mul (Fp.mul (Fp.sq z', z'),  Fp.mul (y_den, zz15 z')))) else apply iso_map_3 (x,y,z) }}
-  do {
-    assume_unsat;
-  };
+isogeny_map_to_E1_impl_thm_nz <- custom_prove_cryptol {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if (is_point_projective Curve_E' p /\ ~is_zero Fp p.2) then iso_map (affinify Curve_E' p) else apply affinify E (isogeny_map_to_E1_impl p) }}
+do {
+  let lemma_1 = run (
+    custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> iso_map p == if is_point_O Curve_E' p then point_O E else iso_map_nz p }}) (w4_unint_z3 ["Fp"])
+  );
+  simplify (addsimps [lemma_1, on_curve_is_point_O_lemma] empty_ss); // get rid of ite term in `iso_map`
+  unfolding ["apply"]; // NOTE: otherwise the next rewrite does not apply to both sides
+  let lemma_2 = run (
+    custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> affinify E (isogeny_map_to_E1_impl p) == affinify_nz (isogeny_map_to_E1_impl p) }})
+    do {
+      simplify (addsimp affinify_lemma empty_ss);
+      (w4_unint_z3 ["Fp"]);
+    }
+  );
+  simplify (addsimp lemma_2 empty_ss);
+  simplify (addsimps [affinify_lemma',iso_map_main_lemma] empty_ss);
+  w4_unint_z3 ["Fp"];
+};
