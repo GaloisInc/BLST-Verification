@@ -8,6 +8,23 @@ import "../spec/Serialization.cry";
 import "../spec/ShortWeierstrassCurve.cry";
 
 import "../spec/implementation/CurveOperation.cry";
+import "../spec/implementation/Types.cry";
+
+let fromx_mont_384_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+
+  // TODO: Do I need this invariant?
+  //llvm_precond {{ fp_invariant a }};
+
+  p_ptr <- alloc_init_readonly vec384_type (llvm_term {{ vec384_rep (from_Fp `p) }});
+
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term {{ 0x89f3fffcfffcfffd }}];
+
+  crucible_points_to ret_ptr (crucible_term {{ vec384_rep (from_Fp (fp_abs a)) }});
+};
+
+fromx_mont_384_ov <- verify_x86 "fromx_mont_384" fromx_mont_384_spec;
 
 let POINTonE1_from_Jacobian_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
@@ -16,6 +33,8 @@ let POINTonE1_from_Jacobian_spec = do {
   // TODO: Do I need this invariant?
   crucible_precond {{ POINTonE1_invariant inp }};
 
+  crucible_precond {{ fp_abs (inp.2) != Fp.field_zero }};
+
   crucible_execute_func [out_ptr, inp_ptr];
 
   // TODO: Does having the "POINTonE1_abs" here break the claim that this
@@ -23,6 +42,11 @@ let POINTonE1_from_Jacobian_spec = do {
   let out = {{ POINTonE1_affine_rep (affinify E (POINTonE1_abs inp)) }};
 
   //crucible_postcond {{ out.0 == expected_out.0 }};
+
+  // TODO: Why doesn't this fix the overrides?  A: It does if you comment out
+  // the conditional that skips the affinify in the C code
+  // llvm_postcond {{ fp_invariant out.0 }};
+  // llvm_postcond {{ fp_invariant out.1 }};
 
   crucible_points_to (crucible_field out_ptr "X") (crucible_term {{ out.0 }});
   crucible_points_to (crucible_field out_ptr "Y") (crucible_term {{ out.1 }});
@@ -62,7 +86,7 @@ is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
 
 blst_p1_compress_ov <- really_custom_verify "blst_p1_compress"
   //(concat [reciprocal_fp_ov] (concat point_op_overrides fp_overrides))
-  (concat [POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov] (concat mul_fp_ovs point_op_overrides))
+  (concat [fromx_mont_384_ov, sgn0x_pty_mont_384_ov, POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov] (concat mul_fp_ovs point_op_overrides))
   blst_p1_compress_spec
     do {
      simplify (addsimp vec_is_zero_call_thm empty_ss);
