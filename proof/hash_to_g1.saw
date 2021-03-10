@@ -7,8 +7,9 @@
 
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/HashToCurveE1_standalone.cry";
+import "../spec/HashToCurveE1.cry" (Z A' B' Curve_E' clear_cofactor iso_map hash_to_curve_opt map_to_curve_simple_swu sqrt);
 import "../spec/implementation/CurveOperation.cry";
+import "../spec/HashToCurveE1Aux.cry" (map_to_curve_simple_swu_3mod4 h_eff k1s k2s k3s k4s);
 import "../spec/implementation/HashToG1.cry";
 
 let blst_hash_to_g1_impl_spec msg_len DST_len aug_len = do {
@@ -141,7 +142,7 @@ swu_3mod4_correct <- admit_cryptol
   }};
 
 swu_3mod4_impl_on_curve <- simp_then_admit {{ \u -> is_point_projective Curve_E' (map_to_curve_simple_swu_3mod4_impl u) == True }};
-swu_impl_on_curve <- simp_then_admit {{ \u -> is_point_projective Curve_E' (map_to_curve_simple_swu_impl u) == True }};
+swu_impl_on_curve <- simp_then_admit {{ \u -> is_point_projective Curve_E' (map_to_curve_simple_swu_impl u) == True }}; // TODO: this could be obtained from the previous
 
 // point_dadd implements add:
 dadd_thm <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ p1 p2 -> affinify Curve_E' (point_dadd Fp p1 p2 A' False) == add Curve_E' (affinify Curve_E' p1) (affinify Curve_E' p2) }});
@@ -152,7 +153,7 @@ point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Curve_E' (
 // adding a point to its double can be done with POINTonE1_add (cheaper than dadd) because the double of a point is never equal to the point unless the point is point_O:
 add_double_lemma <- admit_cryptol {{ \p -> affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) }};
 
-// We will need to prove that some expression involving field Fp operations are
+// We will need to prove that some expressions involving field Fp operations are
 // equivalent.  To do so, we will try to rewrite them to a normal form with the
 // following rules. The problem is that we cannot use commutativity or
 // associativity, which would make the rewriter loop....
@@ -255,6 +256,7 @@ let {{
     e1 = Fp.is_equal(xd, Fp.field_zero))
 }};
 
+// TODO:
 e2_lemma <- simp_then_admit (unfold_term ["e2_eqn"] {{ e2_eqn }});
 
 swu_impl_equiv_3mod4_impl <- custom_prove_cryptol {{ \u -> map_to_curve_simple_swu_impl u == map_to_curve_simple_swu_3mod4_impl u }}

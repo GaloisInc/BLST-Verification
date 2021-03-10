@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import Parameters (Fp, t_Fp, to_Fp, E, p)
+import Parameters (Fp, t_Fp, to_Fp, E)
 import ShortWeierstrassCurve (ProjectivePoint, AffinePoint)
 import BLSFieldExtras (sqrt_fp, fp_exp)
 import ExpandMessage (Expandable)
 import implementation::CurveOperation (point_dadd, point_add, point_double)
-import HashToCurveE1_standalone (hash_to_field, hash_to_curve_opt, A', B', Z, k1s, k2s, k3s, k4s, h_eff, sqrt, sgn0, map_to_curve_simple_swu_3mod4) // TODO: why do we have sqrt_fp and sqrt?
+//import HashToCurveE1 (hash_to_field, hash_to_curve_opt, A', B', Z, Aux::k1s, Aux::k2s, Aux::k3s, Aux::k4s, h_eff, sqrt, sgn0, map_to_curve_simple_swu_3mod4) // TODO: why do we have sqrt_fp and sqrt?
+import HashToCurveE1
+import HashToCurveE1Aux as Aux
 
 // There are three levels of specification: high-level, optimization-level, and
 // implementation specs. The first two are taken from the IETF Draft or
@@ -35,7 +37,7 @@ import HashToCurveE1_standalone (hash_to_field, hash_to_curve_opt, A', B', Z, k1
 // Projective version of map_to_curve_simple_swu_3mod4:
 map_to_curve_simple_swu_3mod4_impl : t_Fp -> ProjectivePoint t_Fp
 map_to_curve_simple_swu_3mod4_impl u = (Fp.mul (xn, xd), Fp.mul (y, gxd), xd) where
-  (xn, xd, y, _) = map_to_curve_simple_swu_3mod4 u
+  (xn, xd, y, _) = Aux::map_to_curve_simple_swu_3mod4 u
   gxd = Fp.mul(xd, Fp.sq xd) // xd^3
 
 // This is what the implementation does:
@@ -88,18 +90,18 @@ map_to_curve_simple_swu_impl u = res where
 isogeny_map_to_E1_impl: ProjectivePoint t_Fp -> ProjectivePoint t_Fp
 isogeny_map_to_E1_impl (X, Y, Z) = to_jacobian xn xd yn yd where
   zzs = Zz_powers Z
-  xn = map_fp (kzzs#[last k1s]) X where
-    kzzs = map_fp_times_Zz`{n=11} k1s zzs
+  xn = map_fp (kzzs#[last Aux::k1s]) X where
+    kzzs = map_fp_times_Zz`{n=11} Aux::k1s zzs
   xd = Fp.mul (xs, last zzs) where
     xs = map_fp ((take`{front=9}kzzs)#[xkzz9]) X
     xkzz9 = Fp.add (X, last kzzs)
-    kzzs = map_fp_times_Zz`{n=10} k2s zzs
-  yn = Fp.mul (map_fp (kzzs#[last k3s]) X, Y) where
-    kzzs = map_fp_times_Zz`{n=15} k3s zzs
+    kzzs = map_fp_times_Zz`{n=10} Aux::k2s zzs
+  yn = Fp.mul (map_fp (kzzs#[last Aux::k3s]) X, Y) where
+    kzzs = map_fp_times_Zz`{n=15} Aux::k3s zzs
   yd = Fp.mul (Fp.mul (xs, Z), last zzs) where
     xs = map_fp ((take`{front=14}kzzs)#[xkzz14]) X
     xkzz14 = Fp.add (X, last kzzs)
-    kzzs = map_fp_times_Zz`{n=15} k4s zzs
+    kzzs = map_fp_times_Zz`{n=15} Aux::k4s zzs
 
 Zz_powers : t_Fp -> [15]t_Fp // powers of ZZ in descending order
 Zz_powers Z = reverse (take`{front=15} zzs) where

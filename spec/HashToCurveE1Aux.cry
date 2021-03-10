@@ -3,63 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-// This is a version of HashToCurveE1 that does not depend on
-// HashToCurveGeneric. At the moment, instantiated parameters are not visible
-// to SAW (see https://github.com/GaloisInc/saw-script/issues/798), and this is
-// the workaround we use.
+module HashToCurveE1Aux where
 
-module HashToCurveE1_standalone where
-
-import rfc8017 (I2OSP, OS2IP)
-import Primitive::Keyless::Hash::SHA256 as SHA256
-import Common::Field
-import Parameters (p, t_Fp, Fp, to_Fp, from_Fp, E)
+import Parameters
 import FieldExtras
-import BLSFieldExtras
-import ShortWeierstrassCurve as EC
-import ExpandMessage
-import Common::bv
-
-type q = p // cardinality
-type m = 1 // extension degree
-base_to_F [x] = x // trivial
-
-// dst = "SPEC_IS_NOT_VERY_CLEAR"
-
-// extra field operations
-
-is_square x =  y == 0 \/ y == 1 where
-    y = F_expt`{n=width q} Fp x `((q-1)/2)
-
-sqrt x = F_expt`{n=width p} Fp x `((p+1)/4) // the =3 (mod 4) variant
-
-// sgn0 for m=1, from Section 4.1 
-// sgn0 x = if x > `((p - 1) / 2) then -1 else 1 -- old Draft 6 definition
-sgn0: t_Fp -> [1]
-sgn0 x = [(from_Fp x)!0]
-
-inv0 x = F_expt`{n=width q} Fp x `(q-2) // but could be Fp.div (Fp.field_unit, x)
-
-// Constants from Section 8.8.1
-Z = 11
-A' = to_Fp 0x144698a3b8e9433d693a02c96d4982b0ea985383ee66a8d8e8981aefd881ac98936f8da0e0f97f5cf428082d584c1d
-B' = to_Fp 0x12e2908d11688030018b12e8753eee3b2016c1f0f24f4070a0b9c14fcef35ef55a23215a316ceaa5d1cc48e98e172be0
-
-Curve_E': EC::EllipticCurve t_Fp
-Curve_E' = {base_field=Fp, a = A', b = B'}
+import BLSFieldExtras (fp_exp)
 
 h_eff = 0xd201000000010001 // For clearing the cofactor
-clear_cofactor P = EC::mult E h_eff P
-
-iso_map: (t_Fp, t_Fp) -> (t_Fp, t_Fp)
-iso_map (x', y') = if EC::is_point_O Curve_E' (x',y') then EC::point_O E else (x, y) where
-    x_powers = [Fp.field_unit] # [Fp.mul(x', xi) | xi <- x_powers]
-    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- x_powers]
-    x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
-    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- x_powers]
-    y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
-    x = Fp.div (x_num, x_den)
-    y = Fp.mul (y', Fp.div(y_num, y_den))
 
 k1s = map to_Fp // k1s@i is "k_(1,i)" from the spec
    [ 0x11a05f2b1e833340b809101dd99815856b303e88a2d7005ff2627b56cdb4e2c85610c2d5f2e62d6eaeac1662734649b7
@@ -126,113 +76,14 @@ k4s = map to_Fp
    , 0x0e0fa1d816ddc03e6b24255e0d7819c171c40f65e273b853324efcd6356caa205ca2f570f13497804415473a1d634b8f
    ]
 
-// Section 3
+sqrt x = F_expt`{n=width p} Fp x `((p+1)/4) // the =3 (mod 4) variant
 
-// Note: added the dst as an extra parameter; the spec does not really fully determine it.
+Z = 11
+A' = to_Fp 0x144698a3b8e9433d693a02c96d4982b0ea985383ee66a8d8e8981aefd881ac98936f8da0e0f97f5cf428082d584c1d
+B' = to_Fp 0x12e2908d11688030018b12e8753eee3b2016c1f0f24f4070a0b9c14fcef35ef55a23215a316ceaa5d1cc48e98e172be0
 
-// random oracle encoding (hash_to_curve)
-hash_to_curve: {msg_len, DST_len}
-               (fin msg_len, fin DST_len
-               , DST_len <= 255
-               , Expandable msg_len DST_len
-               , 2 * m <= 127 // Needed for expand_message, otherwise output too large
-               // , 2 * m * ((128+lg2 p)/^ 8) <= 255 // output length of expand_message must be low enough
-               , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384 // needed for drop TODO: FIX
-               ) =>
-               ([msg_len][8], [DST_len][8]) -> EC::AffinePoint t_Fp
-hash_to_curve (msg,dst) = P where
-    u = hash_to_field`{count=2} msg dst // spec does not mention the dst here
-    Q0 = map_to_curve_simple_swu_AB0 (u@0)
-    Q1 = map_to_curve_simple_swu_AB0 (u@1)
-    R = EC::add E Q0 Q1
-    P = clear_cofactor R
-
-// ... however, there is an alternative way of doing it, described in Section 6.6.3
-// where points are added before the isogeny is applied
-
-hash_to_curve_opt: {msg_len, DST_len}
-               (fin msg_len, fin DST_len
-               , DST_len <= 255
-               , Expandable msg_len DST_len
-               , 2 * m <= 127 // Needed for expand_message, otherwise output too large
-               // , 2 * m * ((128+lg2 p)/^ 8) <= 255 // output length of expand_message must be low enough
-               , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384 // needed for drop TODO: FIX
-               ) =>
-               ([msg_len][8], [DST_len][8]) -> EC::AffinePoint t_Fp
-hash_to_curve_opt (msg,dst) = P where
-    u = hash_to_field`{count=2} msg dst // spec does not mention the dst here
-    Q0 = map_to_curve_simple_swu (u@0) //, Z, A', B')
-    Q1 = map_to_curve_simple_swu (u@1) //, Z, A', B')
-    R = EC::add Curve_E' Q0 Q1
-    P = clear_cofactor (iso_map R)
-
-
-// 5.2
-
-hash_to_field: {msg_len, DST_len, count}
-               (fin msg_len, fin DST_len, fin count
-               , DST_len <= 255
-               , Expandable msg_len DST_len
-               , count * m <= 127 // Needed for expand_message, otherwise output too large
-               , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384 // needed for drop TODO: FIX
-               ) =>
-               [msg_len][8] -> [DST_len][8] -> [count]t_Fp
-
-hash_to_field msg DST = us where
-      type k = 128 // for BLS12-381
-      type L = ((lg2 p) + k) /^ 8 // 64 for BLS12-381
-      uniform_bytes: [count * m * L][8]
-      uniform_bytes = expand_message msg DST
-      // The double loop in the Draft just splits pseduo_random_bytes into
-      // "count" parts, each part consisting of m sub_parts,
-      // each sub-part consisting of L bytes.
-      parts: [count][m][L][8]
-      parts = split (split uniform_bytes)
-      //
-      us = [ make_u_i part | part <- parts ]
-      make_u_i: [m][L][8] -> t_Fp
-      // "drop" here takes the 8*L-bit (i.e. 512-bit for BLS12-381) result and drops leading zeros to get to [384]
-      make_u_i part = base_to_F [to_Fp (drop`{back=384} ((join bytes) % `p)) | bytes <- part]
-
-hash_to_field_1: {msg_len, DST_len}
-               (fin msg_len, fin DST_len
-               , DST_len <= 255
-               , Expandable msg_len DST_len
-               , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384 // needed for drop TODO: FIX
-               ) =>
-               [msg_len][8] -> [DST_len][8] -> [384]
-hash_to_field_1 msg DST = us where
-      type L = 64
-      uniform_bytes: [L][8]
-      uniform_bytes = expand_message msg DST
-      us = drop`{back=384} ((join uniform_bytes) % `p)
-
-// 6.6.2 Simplified SWU
-
-map_to_curve_simple_swu: t_Fp -> (t_Fp, t_Fp)
-map_to_curve_simple_swu u = ret where
-    //1. tv1 = inv0(Z^2 * u^4 + Z * u^2)
-    tv1 = inv0 (Fp.add (Fp.mul (Fp.sq Z, Fp.sq (Fp.sq u)),
-                       Fp.mul (Z, Fp.sq u)))
-    //2. x1 = (-B / A) * (1 + tv1)
-    //3. If tv1 == 0, set x1 = B / (Z * A)
-    x1 = if F_is_zero Fp (tv1)
-         then Fp.div (B', Fp.mul (Z, A'))
-         else Fp.mul (Fp.div (Fp.neg B', A'), Fp.add(Fp.field_unit, tv1))
-    // 4. gx1 = x1^3 + A * x1 + B
-    gx1 = Fp.add (cube x1, Fp.add (Fp.mul (A', x1), B'))
-    // 5. x2 = Z * u^2 * x1
-    x2 = Fp.mul (Z, Fp.mul (Fp.sq u, x1))
-    // 6. gx2 = x2^3 + A * x2 + B
-    gx2 = Fp.add (cube x2, Fp.add (Fp.mul (A', x2), B'))
-    // 7. If is_square(gx1), set x = x1 and y = sqrt(gx1)
-    // 8. Else set x = x2 and y = sqrt(gx2)
-    (x,y) = if is_square(gx1) then (x1, sqrt(gx1)) else (x2, sqrt(gx2))
-    // 9. If sgn0(u) != sgn0(y), set y = -y
-    // 10. return (x, y)
-    ret = if sgn0(u) != sgn0(y) then (x, Fp.neg y) else (x,y)
-
-    cube z = Fp.mul (z, Fp.sq z)
+sgn0: t_Fp -> [1]
+sgn0 x = [(from_Fp x)!0]
 
 // https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#appendix-G.2.1
 map_to_curve_simple_swu_3mod4: t_Fp -> (t_Fp, t_Fp, t_Fp, t_Fp)
@@ -279,10 +130,3 @@ map_to_curve_simple_swu_3mod4 u = res where
   res = (xn, xd_b, y_a, Fp.field_unit)
   // NOTE: gxd = xd^3, so in Jacobian coordinates we get
   // res = (Fp.mul (xn, xd_b), Fp.mul (y_a, gxd), xd_b)
-
-// 6.6.3, Simplified SWU for AB=0
-
-map_to_curve_simple_swu_AB0(u) = (x, y) where
-    (x', y') = map_to_curve_simple_swu (u) // (x', y') is on E'
-    (x, y) = iso_map(x', y')               // (x, y) is on E
-

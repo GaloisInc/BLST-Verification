@@ -17,43 +17,62 @@ import ShortWeierstrassCurve as EC
 import ExpandMessage
 import Common::bv
 
+// TODO: use the trick described here: https://github.com/GaloisInc/cryptol/issues/1092
 parameter
-    type p: # // the field characteristic
-    type constraint fin p
-    type constraint width p <= 384 // because we have already specialized to BLS12-381 below
+    type _p: # // the field characteristic
+    type constraint fin _p
+    type constraint width _p <= 384 // because we have already specialized to BLS12-381 below
 
-    type q: # // the number of elements in the field
-    type constraint fin q
+    type _q: # // the number of elements in the field
+    type constraint fin _q
 
-    type t_F: * // a type representing field elements in the extension
-    F: FieldRep t_F // the field operatons, in the extension field
+    type _t_F: * // a type representing field elements in the extension
+    _F: FieldRep _t_F // the field operatons, in the extension field
 
-    type m: # // extension degree
-    type constraint fin m
+    type _m: # // extension degree
+    type constraint fin _m
 
     // various constraints thrown up by the type checker
     type constraint 8 * ((128 + lg2 p) /^ 8) >= 384
     type constraint 2 * m <= 127
 
     // Convert a list of elements of F_p to an element of F_q
-    base_to_F: [m]t_Fp -> t_F
+    _base_to_F: [m]t_Fp -> _t_F
 
     // The curve (will be E1 or E2)
-    C: EC::EllipticCurve t_F
+    _C: EC::EllipticCurve _t_F
 
-    clear_cofactor: (t_F, t_F) -> (t_F, t_F) // EC::AffinePoint t_F -> EC::AffinePoint t_F
+    _clear_cofactor: (_t_F, _t_F) -> (_t_F, _t_F) // EC::AffinePoint t_F -> EC::AffinePoint t_F
 
     // additional field operations
-    is_square: t_F -> Bool
-    sqrt: t_F -> t_F
-    sgn0: t_F -> [1] // 0 or 1
-    inv0: t_F -> t_F
+    _is_square: _t_F -> Bool
+    _sqrt: _t_F -> _t_F
+    _sgn0: _t_F -> [1] // 0 or 1
+    _inv0: _t_F -> _t_F
 
     // for map_to_curve_simple_swu for AB=0
-    Z: t_F
-    A': t_F
-    B': t_F
-    iso_map: (t_F, t_F) -> (t_F, t_F)
+    _Z: _t_F
+    _A': _t_F
+    _B': _t_F
+    _iso_map: (_t_F, _t_F) -> (_t_F, _t_F)
+
+type p = _p
+type q = _q
+type t_F = _t_F
+F: FieldRep t_F // the field operatons, in the extension field
+F = _F
+type m = _m // extension degree
+base_to_F = _base_to_F
+C = _C
+clear_cofactor = _clear_cofactor
+is_square = _is_square
+sqrt = _sqrt
+sgn0 = _sgn0
+inv0 = _inv0
+Z = _Z
+A' = _A'
+B' = _B'
+iso_map = _iso_map
 
 // Section 3
 
