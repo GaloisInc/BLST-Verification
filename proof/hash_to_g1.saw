@@ -10,7 +10,6 @@ include "list_utils.saw";
 include "types.saw";
 
 m <- llvm_load_module "../build/llvm/libblst.a.bc";
-let do_prove = false;
 
 enable_experimental;
 
@@ -27,8 +26,6 @@ import "../spec/ShortWeierstrassCurve.cry";
 import "../spec/HashToCurveE1_standalone.cry";
 import "../spec/implementation/CurveOperation.cry";
 import "../spec/implementation/HashToG1.cry";
-
-let do_prove = true;
 
 let blst_hash_to_g1_impl_spec msg_len DST_len aug_len = do {
   p_ptr <- llvm_alloc POINTonE1_type;
@@ -676,10 +673,7 @@ let aug_len = 48; // aug_len should be 96 or 48
 let msg_len = 32;
 let DST_len= 8;
 let hash_to_field_nelems = [2]; // the values of nelems for which we prove hash_to_field
-// TODO:
-let do_prove = false;
 hash_to_field_ovs <- for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
-let do_prove = true;
 
 // let's get rid of map:
 let map_size_2_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y : Vec 2 Integer) -> map Integer (Vec 6 (Vec 64 Bool)) f 2 y";
