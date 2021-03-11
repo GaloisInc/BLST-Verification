@@ -213,6 +213,12 @@ sum_of_prods_rewrites <- for [
   , {{ \a b c -> Fp.mul (c, Fp.add (a, b)) == Fp.add (Fp.mul (a,c), Fp.mul (b,c)) }}
 ] simp_then_admit;
 
+simp_div_rewrites <- for [
+    {{ \x y -> Fp.div (Fp.mul (y,x), x) == if ~(is_zero Fp x) then y else Fp.field_zero }}
+  , {{ \x y z -> Fp.div (Fp.mul (y,x), Fp.mul(z,x)) == if ~(is_zero Fp x) then Fp.div (y,z) else Fp.field_zero }}
+  , {{ \x y z -> Fp.div (Fp.mul (x,y), Fp.mul(x,z)) == if ~(is_zero Fp x) then Fp.div (y,z) else Fp.field_zero }}
+] simp_then_admit;
+
 unsquare_rewrite <- simp_then_admit {{ \a -> Fp.sq a == Fp.mul (a,a) }};
 
 left_fold_mul <- simp_then_admit {{ \x y z -> Fp.mul (x, Fp.mul (y,z)) == Fp.mul (Fp.mul (x, y),z) }};
@@ -384,10 +390,20 @@ let {{
     (X, Y) = affinify_nz (x', y', z')
 }};
 
-rewrite_1 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> iso_map_nz (affinify_nz p)  == iso_map_nz_2 p }})
+zz_powers_nz <- for [
+    //{{ \z -> is_zero Fp (zz11 z) == if is_zero Fp z then True else False }}
+  //, {{ \z -> is_zero Fp (zz15 z) == if is_zero Fp z then True else False }}
+    {{ \z (n:Integer) -> is_zero Fp ((powers (Fp.mul (z,z)))@n) == if is_zero Fp z then True else False }}
+  , {{ \z -> is_zero Fp (Fp.sq z) == if is_zero Fp z then True else False }}
+  , {{ \z -> is_zero Fp (Fp.mul (z, z)) == if is_zero Fp z then True else False }}
+  , {{ \z -> is_zero Fp (Fp.mul (Fp.mul (z,z), z)) == if is_zero Fp z then True else False }}
+] simp_then_admit;
+
+rewrite_1 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> iso_map_nz (affinify_nz p)  == if ~(is_zero Fp p.2) then iso_map_nz_2 p else apply iso_map_nz (affinify_nz p)}})
   (do {
-    unfolding ["iso_map_nz_2"];
-    simplify (addsimps (concat_all [zero_unit_rewrites, simp_div_rewrites]) empty_ss);
+    unfolding ["iso_map_nz_2","zz11","zz15"];
+    simplify (cryptol_ss ());
+    simplify (addsimps (concat_all [zz_powers_nz, zero_unit_rewrites, simp_div_rewrites, [unsquare_rewrite]]) empty_ss);
     w4_unint_z3 fp_unints;
   });
 
@@ -405,12 +421,15 @@ let {{
 }};
 
 aux_rewrite <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{
-  \y_num y_den x' y' z' -> (Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z'))) == Fp.div (Fp.mul (y', Fp.mul (y_num, zz15 z')), Fp.mul (Fp.mul (Fp.sq z', z'),  Fp.mul (y_den, zz15 z')))
+  \y_num y_den x' y' z' -> (Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z'))) == if ~(is_zero Fp z') then Fp.div (Fp.mul (y', Fp.mul (y_num, zz15 z')), Fp.mul (Fp.mul (Fp.sq z', z'),  Fp.mul (y_den, zz15 z'))) else apply Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z')))
   where (X,Y) = affinify_nz (x', y', z'))
 }})
  (do {
-    unfolding ["affinify_nz","Curve_E'","apply","is_point_O","same_point_affine","is_zero"];
-    simplify algebra_simpset;
+    unfolding ["affinify_nz","apply","zz15"];
+    simplify (cryptol_ss ());
+    simplify (addsimps (concat_all [simp_div_rewrites,zz_powers_nz]) algebra_simpset);
+    simplify (addsimps zz_powers_nz algebra_simpset);
+    print_readably;
     w4_unint_z3 fp_unints;
  });
 
