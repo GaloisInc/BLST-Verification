@@ -5,25 +5,23 @@
 
 // Imports
 
-include "helpers.saw";
-include "list_utils.saw";
-include "types.saw";
+//include "helpers.saw";
+//include "list_utils.saw";
+//include "types.saw";
 
-m <- llvm_load_module "../build/llvm/libblst.a.bc";
+//m <- llvm_load_module "../build/llvm/libblst.a.bc";
 
-enable_experimental;
+//enable_experimental;
 
-let do_prove = false;
+//let do_prove = true;
 
-include "proof-helpers.saw";
-include "hash_to_field.saw";
-include "fp_overrides.saw";
-include "vect.saw";
-include "curve_operations.saw";
-include "ec_mult.saw";
-include "exp.saw";
-
-let do_prove = true;
+//include "proof-helpers.saw";
+//include "hash_to_field.saw";
+//include "fp_overrides.saw";
+//include "vect.saw";
+//include "curve_operations.saw";
+//include "ec_mult.saw";
+//include "exp.saw";
 
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
@@ -162,7 +160,7 @@ affinify_lemma' <- simp_then_admit {{ \p -> affinify Curve_E' p == affinify_nz p
 
 on_curve_is_point_O_lemma <- simp_then_admit {{ \p -> is_point_O Curve_E' (affinify Curve_E' p) == if (is_point_projective Curve_E' p /\ ~is_zero Fp p.2) then False else apply is_point_O Curve_E' (affinify Curve_E' p) }};
 
-// This is an algebraic fact (TODO: duplicate from exp.saw):
+// This is an algebraic fact (TODO: duplicated in exp.saw):
 recip_sqrt_fp_algebra_thm <- simp_then_admit {{ \x -> Fp.div (Fp.field_unit, sqrt_fp x) == fp_exp x ((`p-3)/4) }};
 
 // We assume that the optimized implementation of the SWU map given in the IETF spec is correct:
@@ -181,6 +179,7 @@ dadd_thm <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ p1 p2 -> affinify Curve_
 point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Curve_E' (point_dadd Fp p q A' False) == if is_point_projective Curve_E' p /\ is_point_projective Curve_E' q then True else apply is_point_projective Curve_E' (point_dadd Fp p q A' False) }};
 
 // adding a point to its double can be done with POINTonE1_add (cheaper than dadd) because the double of a point is never equal to the point unless the point is point_O:
+// TODO: so what if it's point_O? Should this be conditional?
 add_double_lemma <- admit_cryptol {{ \p -> affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) }};
 
 // We will need to prove that some expressions involving field Fp operations are
@@ -483,7 +482,7 @@ hash_to_g1_ov <- custom_verify
     simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
     simplify (addsimps [map_size_2_thm] empty_ss); // get rid of map
     simplify (addsimps fp_rep_thms empty_ss);// simplify (abs . rep)
-    w4_unint_z3 ["map_to_g1_impl","hash_to_field"];
+    w4_unint_z3 ["map_to_g1_impl","HashToCurveE1::hash_to_field"];
   });
 
 // Finally, we put all the pieces together to prove that the C code is equivalent to the high-level spec
@@ -495,5 +494,5 @@ final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (dst:[DST_len][8]) -> a
     unfolding ["apply"];
     simplify (addsimps [isogeny_map_to_E1_impl_thm_nz,swu_impl_on_curve,point_dadd_on_curve] (cryptol_ss ()));
     simplify (addsimps [dadd_thm,map_to_isogenous_E1_thm] (cryptol_ss ()));
-    w4_unint_z3 (concat fp_unints ["iso_map","map_to_curve_simple_swu","clear_cofactor","hash_to_field"]);
+    w4_unint_z3 (concat fp_unints ["iso_map","map_to_curve_simple_swu","clear_cofactor","HashToCurveE1::hash_to_field"]); // TODO: why is the HashToCurveE1 prefix necessary?
   };
