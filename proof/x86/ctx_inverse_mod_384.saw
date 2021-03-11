@@ -31,7 +31,7 @@ let ct_inverse_mod_383_spec = do {
 //   abstract, we know little about the actual value of the address, making it
 //   difficult to perform bitwise operations on addresses. However, if the base
 //   is known to have a certain alignment, we know that a certain number of low
-//   bits of the pointer are determined entirely by the offset. This makes it
+//   bits of the address are determined entirely by the offset. This makes it
 //   possible to apply bitwise operations that only influence those bits
 //   directly to the offset.
 
