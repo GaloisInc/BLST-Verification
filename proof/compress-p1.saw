@@ -49,14 +49,14 @@ let POINTonE1_affine_Compress_BE_spec = do {
 POINTonE1_affine_Compress_BE_ov <- really_verify "POINTonE1_affine_Compress_BE"
   [fromx_mont_384_ov, sgn0x_pty_mont_384_ov]
   POINTonE1_affine_Compress_BE_spec;
-/*
 
 let POINTonE1_from_Jacobian_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
   (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE1_type;
 
-  // TODO: Do I need this invariant?
+  // TODO: Do I need these invariants?
   crucible_precond {{ POINTonE1_invariant inp }};
+  crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
 
   crucible_precond {{ fp_abs (inp.2) != Fp.field_zero }};
 
@@ -72,6 +72,11 @@ let POINTonE1_from_Jacobian_spec = do {
   // the conditional that skips the affinify in the C code
   // llvm_postcond {{ fp_invariant out.0 }};
   // llvm_postcond {{ fp_invariant out.1 }};
+
+  crucible_postcond {{ POINTonE1_affine_invariant out }};
+
+  // Nonzero
+  llvm_postcond {{ ((fp_abs out.0) != Fp.field_zero) || ((fp_abs out.1) != Fp.field_zero) }};
 
   crucible_points_to (crucible_field out_ptr "X") (crucible_term {{ out.0 }});
   crucible_points_to (crucible_field out_ptr "Y") (crucible_term {{ out.1 }});
@@ -92,8 +97,14 @@ let blst_p1_compress_spec = do {
   (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE1_type;
   crucible_precond {{ POINTonE1_invariant inp }};
   //crucible_precond {{ inp.2 == zero }};
-  //crucible_precond {{ fp_abs (inp.2) == Fp.field_zero }};
+
+  // TODO: Remove this precond once nonzero case proof goes through
+  crucible_precond {{ fp_abs (inp.2) != Fp.field_zero }};
+
   crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
+
+  // TODO: POINTonE1_invariant should ensure that Z != p, but SAW still
+  // investigates the branch where Z == p.  What's going on here?
 
   crucible_execute_func [out_ptr, inp_ptr];
   //crucible_postcond {{ is_point_O E (affinify E (POINTonE1_abs inp)) }};
@@ -111,11 +122,11 @@ is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
 
 blst_p1_compress_ov <- really_custom_verify "blst_p1_compress"
   //(concat [reciprocal_fp_ov] (concat point_op_overrides fp_overrides))
-  (concat [fromx_mont_384_ov, sgn0x_pty_mont_384_ov, POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov] (concat mul_fp_ovs point_op_overrides))
+  (concat [POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov] (concat mul_fp_ovs point_op_overrides))
   blst_p1_compress_spec
     do {
      simplify (addsimp vec_is_zero_call_thm empty_ss);
      simplify (addsimp is_point_O_thm'' (cryptol_ss()));
+     (print_goal);
      w4_unint_z3 ec_mult_unints;
   };
-  */
