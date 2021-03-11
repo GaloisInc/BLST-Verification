@@ -8,6 +8,7 @@ module HashToCurveE1Aux where
 import Parameters
 import FieldExtras
 import BLSFieldExtras (fp_exp)
+import ShortWeierstrassCurve
 
 h_eff = 0xd201000000010001 // For clearing the cofactor
 
@@ -78,7 +79,7 @@ k4s = map to_Fp
 
 sqrt x = F_expt`{n=width p} Fp x `((p+1)/4) // the =3 (mod 4) variant
 
-Z = 11
+Z = 11:Integer
 A' = to_Fp 0x144698a3b8e9433d693a02c96d4982b0ea985383ee66a8d8e8981aefd881ac98936f8da0e0f97f5cf428082d584c1d
 B' = to_Fp 0x12e2908d11688030018b12e8753eee3b2016c1f0f24f4070a0b9c14fcef35ef55a23215a316ceaa5d1cc48e98e172be0
 

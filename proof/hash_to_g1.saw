@@ -5,11 +5,31 @@
 
 // Imports
 
+include "helpers.saw";
+include "list_utils.saw";
+include "types.saw";
+
+m <- llvm_load_module "../build/llvm/libblst.a.bc";
+
+enable_experimental;
+
+let do_prove = false;
+
+include "proof-helpers.saw";
+include "hash_to_field.saw";
+include "fp_overrides.saw";
+include "vect.saw";
+include "curve_operations.saw";
+include "ec_mult.saw";
+include "exp.saw";
+
+let do_prove = true;
+
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/HashToCurveE1.cry" (Z A' B' Curve_E' clear_cofactor iso_map hash_to_curve_opt map_to_curve_simple_swu sqrt);
+import "../spec/HashToCurveE1.cry" (Z A' B' Curve_E' clear_cofactor iso_map hash_to_curve_opt map_to_curve_simple_swu sqrt sgn0 sqrt);
 import "../spec/implementation/CurveOperation.cry";
-import "../spec/HashToCurveE1Aux.cry" (map_to_curve_simple_swu_3mod4 h_eff k1s k2s k3s k4s);
+Aux <- cryptol_load "../spec/HashToCurveE1Aux.cry";
 import "../spec/implementation/HashToG1.cry";
 
 let blst_hash_to_g1_impl_spec msg_len DST_len aug_len = do {
@@ -117,6 +137,16 @@ let print_readably =  do {
     print_goal;
 };
 
+// rewrite rules to get rid of the Aux version of some definitions
+
+aux_rewrites <- for [
+    {{ Aux::A' == A' }}
+  , {{ Aux::Z == Z }}
+  , {{ Aux::B' == B' }}
+  , {{ \x -> Aux::sgn0 x == sgn0 x}}
+  , {{ \x -> Aux::sqrt x == sqrt x}}
+] simp_then_admit;
+
 // Assumptions:
 
 let {{
@@ -137,7 +167,7 @@ recip_sqrt_fp_algebra_thm <- simp_then_admit {{ \x -> Fp.div (Fp.field_unit, sqr
 
 // We assume that the optimized implementation of the SWU map given in the IETF spec is correct:
 swu_3mod4_correct <- admit_cryptol
-  {{ \u -> ((Fp.div(xn,xd), Fp.div(yn,yd)) where (xn, xd, yn, yd) = map_to_curve_simple_swu_3mod4 u)
+  {{ \u -> ((Fp.div(xn,xd), Fp.div(yn,yd)) where (xn, xd, yn, yd) = Aux::map_to_curve_simple_swu_3mod4 u)
         == map_to_curve_simple_swu u
   }};
 
@@ -190,13 +220,7 @@ left_fold_mul <- simp_then_admit {{ \x y z -> Fp.mul (x, Fp.mul (y,z)) == Fp.mul
 // this one is not included in algebra_simpset below:
 right_fold_mul <- simp_then_admit {{ \x y z -> Fp.mul (Fp.mul (x, y),z) == Fp.mul (x, Fp.mul (y,z)) }};
 
-simp_div_rewrites <- for [
-    {{ \x y -> Fp.div (Fp.mul (y,x), x) == y }}
-  , {{ \x y z -> Fp.div (Fp.mul (y,x), Fp.mul(z,x)) == Fp.div (y,z) }}
-  , {{ \x y z -> Fp.div (Fp.mul (x,y), Fp.mul(x,z)) == Fp.div (y,z) }}
-] simp_then_admit;
-
-let algebra_simpset = addsimps (concat_all [zero_unit_rewrites, [unsquare_rewrite], [left_fold_mul], sum_of_prods_rewrites, push_div_out_rewrites, simp_div_rewrites]) empty_ss;
+let algebra_simpset = addsimps (concat_all [zero_unit_rewrites, [unsquare_rewrite], [left_fold_mul], sum_of_prods_rewrites, push_div_out_rewrites]) empty_ss;
 
 // Proofs
 
@@ -261,8 +285,8 @@ e2_lemma <- simp_then_admit (unfold_term ["e2_eqn"] {{ e2_eqn }});
 
 swu_impl_equiv_3mod4_impl <- custom_prove_cryptol {{ \u -> map_to_curve_simple_swu_impl u == map_to_curve_simple_swu_3mod4_impl u }}
   do {
-    unfolding ["map_to_curve_simple_swu_impl", "map_to_curve_simple_swu_3mod4_impl", "map_to_curve_simple_swu_3mod4"];
-    simplify (cryptol_ss ());
+    unfolding ["map_to_curve_simple_swu_impl", "map_to_curve_simple_swu_3mod4_impl", "Aux::map_to_curve_simple_swu_3mod4"];
+    simplify (addsimps aux_rewrites (cryptol_ss ()));
     simplify (addsimp e2_lemma empty_ss);
     simplify (addsimp recip_sqrt_fp_algebra_thm empty_ss);
     w4_unint_z3 (concat ["Fp"] ["sqrt","fp_exp"]);
@@ -271,9 +295,9 @@ swu_impl_equiv_3mod4_impl <- custom_prove_cryptol {{ \u -> map_to_curve_simple_s
 swu_impl_nz_thm <- custom_prove_cryptol {{ \u -> (Fp.is_equal(z, Fp.field_zero) == False where (_,_,z) = (map_to_curve_simple_swu_3mod4_impl u)) }} w4;
 
 swu_3mod4_abs_thm <- custom_prove_cryptol {{ \u -> affinify Curve_E' (map_to_curve_simple_swu_3mod4_impl u) ==
-  ((Fp.div(xn,xd), Fp.div(yn,yd)) where (xn, xd, yn, yd) = map_to_curve_simple_swu_3mod4 u) }}
+  ((Fp.div(xn,xd), Fp.div(yn,yd)) where (xn, xd, yn, yd) = Aux::map_to_curve_simple_swu_3mod4 u) }}
   do {
-    unfolding ["affinify","Curve_E'","is_zero"];
+    unfolding ["affinify","Curve_E'","is_zero","HashToCurveE1::F","HashToCurveE1::module parameter _F","HashToCurveE1::_F"];
     simplify (addsimp swu_impl_nz_thm basic_ss);
     let rewrites = run (
       for [
@@ -282,7 +306,8 @@ swu_3mod4_abs_thm <- custom_prove_cryptol {{ \u -> affinify Curve_E' (map_to_cur
         , {{ \xd y -> Fp.mul (Fp.mul (Fp.div (Fp.field_unit,xd), Fp.sq (Fp.div (Fp.field_unit,xd))), Fp.mul(y, Fp.mul(xd, Fp.sq xd))) == y }}
       ] simp_then_admit // TODO prove 1 and 3
     );
-    unfolding ["map_to_curve_simple_swu_3mod4","map_to_curve_simple_swu_3mod4_impl"];
+    unfolding ["Aux::map_to_curve_simple_swu_3mod4","map_to_curve_simple_swu_3mod4_impl"];
+    simplify (addsimps aux_rewrites (cryptol_ss ()));
     simplify (addsimps rewrites (cryptol_ss ()));
     w4_unint_z3 ["Fp","fp_exp"];
   };
@@ -329,10 +354,10 @@ do {
 let {{
   iso_map_nz (x', y') = (x, y) where
     x_powers = [Fp.field_unit] # [Fp.mul(x', xi) | xi <- x_powers]
-    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- x_powers]
-    x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
-    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- x_powers]
-    y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
+    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k1s | xi <- x_powers]
+    x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k2s | xi <- x_powers])
+    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k3s | xi <- x_powers]
+    y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k4s | xi <- x_powers])
     x = Fp.div (x_num, x_den)
     y = Fp.mul (y', Fp.div(y_num, y_den))
 }};
@@ -350,10 +375,10 @@ let {{
 let {{
   iso_map_nz_2 (x', y', z') = (x, y) where
     x_powers = powers X
-    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- x_powers]
-    x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
-    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- x_powers]
-    y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
+    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k1s | xi <- x_powers]
+    x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k2s | xi <- x_powers])
+    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k3s | xi <- x_powers]
+    y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k4s | xi <- x_powers])
     x = Fp.div (Fp.mul (x_num, zz11 z'), Fp.mul (x_den, zz11 z'))
     y = Fp.mul (Y, Fp.div (Fp.mul (y_num, zz15 z'), Fp.mul (y_den, zz15 z')))
     (X, Y) = affinify_nz (x', y', z')
@@ -370,10 +395,10 @@ rewrite_1 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> iso_map_nz (
 let {{
   iso_map_nz_3 (x', y', z') = (x, y) where
     x_powers = powers X
-    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- x_powers]
-    x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- x_powers])
-    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- x_powers]
-    y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- x_powers])
+    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k1s | xi <- x_powers]
+    x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k2s | xi <- x_powers])
+    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k3s | xi <- x_powers]
+    y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k4s | xi <- x_powers])
     x = Fp.div (Fp.mul (x_num, zz11 z'), Fp.mul (x_den, zz11 z'))
     y = Fp.div (Fp.mul (y', Fp.mul (y_num, zz15 z')), Fp.mul (Fp.mul (Fp.sq z', z'),  Fp.mul (y_den, zz15 z')))
     (X, Y) = affinify_nz (x', y', z')
@@ -400,18 +425,18 @@ let {{
     X = Fp.mul(lambda2, x') where
       lambda2 = Fp.sq lambda
       lambda = Fp.div (Fp.field_unit, z')
-    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k1s | xi <- (powers X)]
+    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k1s | xi <- (powers X)]
   // here we don't want any divisions:
   x_num_times_zz11_nodiv x' z' = x_num where
     x'_powers = take`{front=12}(powers x')
     zz'_powers = take`{front=12}(powers zz')
     zz' = Fp.sq z'
-    x_num = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- k1s | xi <- x'_powers | zzi <- reverse (zz'_powers)]
+    x_num = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- Aux::k1s | xi <- x'_powers | zzi <- reverse (zz'_powers)]
 }};
 
 elim_div_rewrite_x_num_times_zz11 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x z -> x_num_times_zz11_nodiv x z == x_num_times_zz11 x z }})
   (do { // we must get rid of the divisions by rewriting
-    goal_eval_unint (concat fp_unints ["k1s","x_num_times_zz11_nodiv"]);
+    goal_eval_unint (concat fp_unints ["Aux::k1s","x_num_times_zz11_nodiv"]);
     simplify algebra_simpset;
     w4;
   });
@@ -421,13 +446,13 @@ elim_div_rewrite_x_num_times_zz11 <- custom_prove_cryptol (rewrite (cryptol_ss (
 let {{
   x_num_times_zz11_impl x' z' = xn where
     zzs = Zz_powers z'
-    xn = map_fp (kzzs#[last k1s]) x' where // k0 to k11
-      kzzs = map_fp_times_Zz`{n=11} k1s zzs // k0 to k10
+    xn = map_fp (kzzs#[last Aux::k1s]) x' where // k0 to k11
+      kzzs = map_fp_times_Zz`{n=11} Aux::k1s zzs // k0 to k10
 }};
 
 x_num_rewrite <- custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["x_num_times_zz11_impl"] {{ \x z -> x_num_times_zz11_impl x z == x_num_times_zz11_nodiv x z }}))
   (do {
-    goal_eval_unint (concat fp_unints ["k1s"]);
+    goal_eval_unint (concat fp_unints ["Aux::k1s"]);
     w4;
   });
 
@@ -438,18 +463,18 @@ let {{
     X = Fp.mul(lambda2, x') where
       lambda2 = Fp.sq lambda
       lambda = Fp.div (Fp.field_unit, z')
-    x_den = Fp.add ((powers X)@10, F_sum Fp [Fp.mul(ki, xi) | ki <- k2s | xi <- (powers X)])
+    x_den = Fp.add ((powers X)@10, F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k2s | xi <- (powers X)])
   // here we don't want any divisions:
   x_den_times_zz11_nodiv x' z' = x_den where
     x'_powers = take`{front=11}(powers x')
     zz'_powers = tail (take`{front=12}(powers zz'))
     zz' = Fp.sq z'
-    x_den = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- (k2s#[Fp.field_unit]) | xi <- x'_powers | zzi <- reverse (zz'_powers)]
+    x_den = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- (Aux::k2s#[Fp.field_unit]) | xi <- x'_powers | zzi <- reverse (zz'_powers)]
 }};
 
 elim_div_rewrite_x_den_times_zz11 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x z -> x_den_times_zz11_nodiv x z == x_den_times_zz11 x z }})
   (do { // we must get rid of the divisions by rewriting
-    goal_eval_unint (concat fp_unints ["k2s","x_den_times_zz11_nodiv"]);
+    goal_eval_unint (concat fp_unints ["Aux::k2s","x_den_times_zz11_nodiv"]);
     simplify algebra_simpset;
     w4;
   });
@@ -462,12 +487,12 @@ let {{
     xd = Fp.mul (xs, last zzs)
     xs = map_fp ((take`{front=9}kzzs)#[xkzz9]) x'
     xkzz9 = Fp.add (x', last kzzs)
-    kzzs = map_fp_times_Zz`{n=10} k2s zzs
+    kzzs = map_fp_times_Zz`{n=10} Aux::k2s zzs
 }};
 
 x_den_rewrite <- custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["x_den_times_zz11_impl"] {{ \x z -> x_den_times_zz11_impl x z == x_den_times_zz11_nodiv x z }}))
   (do {
-    goal_eval_unint (concat fp_unints ["k1s"]);
+    goal_eval_unint (concat fp_unints ["Aux::k1s"]);
     w4;
   });
 
@@ -478,18 +503,18 @@ let {{
     X = Fp.mul(lambda2, x') where
       lambda2 = Fp.sq lambda
       lambda = Fp.div (Fp.field_unit, z')
-    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- k3s | xi <- (powers X)]
+    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k3s | xi <- (powers X)]
   // here we don't want any divisions:
   y_num_times_zz15_nodiv x' y' z' = Fp.mul (y_num, y') where
     x'_powers = take`{front=16}(powers x')
     zz'_powers = take`{front=16}(powers zz')
     zz' = Fp.sq z'
-    y_num = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- k3s | xi <- x'_powers | zzi <- reverse (zz'_powers)]
+    y_num = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- Aux::k3s | xi <- x'_powers | zzi <- reverse (zz'_powers)]
 }};
 
 elim_div_rewrite_y_num_times_zz15 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x y z -> y_num_times_zz15_nodiv x y z == y_num_times_zz15 x y z }})
   (do { // we must get rid of the divisions by rewriting
-    goal_eval_unint (concat fp_unints ["k1s","y_num_times_zz15_nodiv"]);
+    goal_eval_unint (concat fp_unints ["Aux::k1s","y_num_times_zz15_nodiv"]);
     simplify algebra_simpset;
     w4;
   });
@@ -497,13 +522,13 @@ elim_div_rewrite_y_num_times_zz15 <- custom_prove_cryptol (rewrite (cryptol_ss (
 let {{
   y_num_times_zz15_impl x' y' z' = Fp.mul (xn, y') where
     zzs = Zz_powers z'
-    xn = map_fp (kzzs#[last k3s]) x' where
-      kzzs = map_fp_times_Zz`{n=15} k3s zzs
+    xn = map_fp (kzzs#[last Aux::k3s]) x' where
+      kzzs = map_fp_times_Zz`{n=15} Aux::k3s zzs
 }};
 
 y_num_rewrite <- custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["y_num_times_zz15_impl"] {{ \x y z -> y_num_times_zz15_impl x y z == y_num_times_zz15_nodiv x y z }}))
   (do {
-    goal_eval_unint (concat fp_unints ["k3s"]);
+    goal_eval_unint (concat fp_unints ["Aux::k3s"]);
     w4;
   });
 
@@ -514,18 +539,18 @@ let {{
     X = Fp.mul(lambda2, x') where
       lambda2 = Fp.sq lambda
       lambda = Fp.div (Fp.field_unit, z')
-    y_den = Fp.add ((powers X)@15, F_sum Fp [Fp.mul(ki, xi) | ki <- k4s | xi <- (powers X)])
+    y_den = Fp.add ((powers X)@15, F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k4s | xi <- (powers X)])
   // here we don't want any divisions:
   y_den_times_zz15_nodiv x' z' = Fp.mul (Fp.mul (Fp.sq z', z'),  y_den) where
     x'_powers = take`{front=16}(powers x')
     zz'_powers = take`{front=16}(powers zz')
     zz' = Fp.sq z'
-    y_den = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- (k4s#[Fp.field_unit]) | xi <- x'_powers | zzi <- reverse (zz'_powers)]
+    y_den = F_sum Fp [Fp.mul(Fp.mul(ki, xi), zzi) | ki <- (Aux::k4s#[Fp.field_unit]) | xi <- x'_powers | zzi <- reverse (zz'_powers)]
 }};
 
 elim_div_rewrite_y_den_times_zz15 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x z -> y_den_times_zz15_nodiv x z == y_den_times_zz15 x z }})
   (do { // we must get rid of the divisions by rewriting
-    goal_eval_unint (concat fp_unints ["k4s","y_den_times_zz15_nodiv"]);
+    goal_eval_unint (concat fp_unints ["Aux::k4s","y_den_times_zz15_nodiv"]);
     simplify algebra_simpset;
     w4;
   });
@@ -537,13 +562,13 @@ let {{
     zzs = Zz_powers z'
     xs = map_fp ((take`{front=14}kzzs)#[ykzz14]) x'
     ykzz14 = Fp.add (x', last kzzs)
-    kzzs = map_fp_times_Zz`{n=15} k4s zzs
+    kzzs = map_fp_times_Zz`{n=15} Aux::k4s zzs
 }};
 
 y_den_rewrite <- custom_prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["y_den_times_zz15_impl"] {{ \x z -> y_den_times_zz15_impl x z == y_den_times_zz15_nodiv x z }}))
   (do {
     unfolding ["y_den_times_zz15_nodiv"];
-    goal_eval_unint (concat fp_unints ["k4s"]);
+    goal_eval_unint (concat fp_unints ["Aux::k4s"]);
     w4;
   });
 

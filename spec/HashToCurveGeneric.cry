@@ -188,6 +188,5 @@ map_to_curve_simple_swu_AB0(u) = (x, y) where
     (x', y') = map_to_curve_simple_swu (u) // (x', y') is on E'
     (x, y) = iso_map(x', y')               // (x, y) is on E
 
-
 Curve_E': EC::EllipticCurve t_F
 Curve_E' = {base_field=F, a = A', b = B'}
