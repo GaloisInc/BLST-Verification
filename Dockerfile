@@ -1,8 +1,7 @@
 FROM ubuntu:20.04
 
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
-RUN apt-get update
-RUN apt-get install -y apt-utils
+RUN apt-get update && apt-get install -y apt-utils
 
 # Install and configure locale `en_US.UTF-8` (otherwise SAW sometimes fails to write to the
 # console)
