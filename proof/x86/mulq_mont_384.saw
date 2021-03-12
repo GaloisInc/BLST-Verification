@@ -258,7 +258,7 @@ mulq_mont_384x_ov <- verify_x86_noadx "mul_mont_384x" mulq_mont_384x_spec;
 mulq_mont_384x_alias_ret_ret_ov <- verify_x86_noadx "mul_mont_384x" mulq_mont_384x_alias_ret_ret_spec;
 mulq_mont_384x_alias_ret_a_ret_ov <- verify_x86_noadx "mul_mont_384x" mulq_mont_384x_alias_ret_a_ret_spec;
 
-// sqrq_mont_384x - counterexample for internal var
+// sqrq_mont_384x
 sqrq_mont_384x_ov <- verify_x86_noadx "sqr_mont_384x" sqrq_mont_384x_spec;
 sqrq_mont_384x_alias_ov <- verify_x86_noadx "sqr_mont_384x" sqrq_mont_384x_alias_spec;
 
@@ -285,11 +285,11 @@ mulq_mont_384_ov <- verify_x86_noadx "mul_mont_384" mulq_mont_384_spec;
 mulq_mont_384_ret_ret_ov <- verify_x86_noadx "mul_mont_384" mulq_mont_384_ret_ret_spec;
 mulq_mont_384_ret_a_ret_ov <- verify_x86_noadx "mul_mont_384" mulq_mont_384_ret_a_ret_spec;
 
-// sqrq_mont_384 - counterexample for internal var
+// sqrq_mont_384
 sqrq_mont_384_ov <- verify_x86_noadx "sqr_mont_384" sqrq_mont_384_spec;
 sqrq_mont_384_alias_ov <- verify_x86_noadx "sqr_mont_384" sqrq_mont_384_alias_spec;
 
-// sqrq_n_mul_mont_383 - performance issue
+// sqrq_n_mul_mont_383
 sqrq_n_mul_mont_383_count1_ov <- verify_x86_noadx "sqr_n_mul_mont_383" (sqrq_n_mul_mont_383_spec 1);
 sqrq_n_mul_mont_383_count2_ov <- verify_x86_noadx "sqr_n_mul_mont_383" (sqrq_n_mul_mont_383_spec 2);
 sqrq_n_mul_mont_383_count3_ov <- verify_x86_noadx "sqr_n_mul_mont_383" (sqrq_n_mul_mont_383_spec 3);
@@ -316,7 +316,7 @@ sqrq_n_mul_mont_383_alias_1_2_count10_ov <- verify_x86_noadx "sqr_n_mul_mont_383
 sqrq_n_mul_mont_383_alias_1_2_count11_ov <- verify_x86_noadx "sqr_n_mul_mont_383" (sqrq_n_mul_mont_383_alias_1_2_spec 11);
 sqrq_n_mul_mont_383_alias_1_2_count12_ov <- verify_x86_noadx "sqr_n_mul_mont_383" (sqrq_n_mul_mont_383_alias_1_2_spec 12);
 
-// sqrq_mont_382x - counterexample for internal var
+// sqrq_mont_382x
 sqrq_mont_382x_ov <- verify_x86_noadx "sqr_mont_382x" sqrq_mont_382x_spec;
 sqrq_mont_382x_alias_ov <- verify_x86_noadx "sqr_mont_382x" sqrq_mont_382x_alias_spec;
 

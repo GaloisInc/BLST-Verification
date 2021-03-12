@@ -194,19 +194,6 @@ let sqrx_mont_384_alias_spec = do {
   crucible_points_to ret_ptr (crucible_term new_sqr_mont_384_alias_ret);
 };
 
-// sqrx_n_mul_mont_384
-// let sqrx_n_mul_mont_384_spec  = do {
-//   ret_ptr <- crucible_alloc vec384_type;
-//   (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-//   count <- crucible_fresh_var "count" size_type;
-//   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-//   n0 <- crucible_fresh_var "n0" limb_type;
-//   (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
-//   crucible_execute_func [ret_ptr, a_ptr, crucible_term count, p_ptr, crucible_term n0, b_ptr];
-//   new_sqr_n_mul_mont_384_ret <- crucible_fresh_var "new_sqr_n_mul_mont_384_ret" vec384_type;
-//   crucible_points_to ret_ptr (crucible_term new_sqr_n_mul_mont_384_ret);
-// };
-
 // sqrx_n_mul_mont_383
 let sqrx_n_mul_mont_383_spec count = do {
   ret_ptr <- crucible_alloc vec384_type;
@@ -258,7 +245,7 @@ mulx_mont_384x_ov <- verify_x86 "mulx_mont_384x" mulx_mont_384x_spec;
 mulx_mont_384x_alias_ret_ret_ov <- verify_x86 "mulx_mont_384x" mulx_mont_384x_alias_ret_ret_spec;
 mulx_mont_384x_alias_ret_a_ret_ov <- verify_x86 "mulx_mont_384x" mulx_mont_384x_alias_ret_a_ret_spec;
 
-// sqrx_mont_384x - counterexample for internal var
+// sqrx_mont_384x
 sqrx_mont_384x_ov <- verify_x86 "sqrx_mont_384x" sqrx_mont_384x_spec;
 sqrx_mont_384x_alias_ov <- verify_x86 "sqrx_mont_384x" sqrx_mont_384x_alias_spec;
 
@@ -280,18 +267,14 @@ sgn0x_pty_mont_384_ov <- verify_x86 "sgn0x_pty_mont_384" sgn0x_pty_mont_384_spec
 // sqn0x_pty_mont_384x
 sgn0x_pty_mont_384x_ov <- verify_x86 "sgn0x_pty_mont_384x" sgn0x_pty_mont_384x_spec;
 
-// mulx_mont_384 - counterexample for var_macaw_reg55
+// mulx_mont_384
 mulx_mont_384_ov <- verify_x86 "mulx_mont_384" mulx_mont_384_spec;
 mulx_mont_384_ret_ret_ov <- verify_x86 "mulx_mont_384" mulx_mont_384_ret_ret_spec;
 mulx_mont_384_ret_a_ret_ov <- verify_x86 "mulx_mont_384" mulx_mont_384_ret_a_ret_spec;
 
-// sqrx_mont_384 - counterexample for internal var
+// sqrx_mont_384
 sqrx_mont_384_ov <- verify_x86 "sqrx_mont_384" sqrx_mont_384_spec;
 sqrx_mont_384_alias_ov <- verify_x86 "sqrx_mont_384" sqrx_mont_384_alias_spec;
-
-// sqrx_n_mul_mont_384 - doesn't exist in bitcode, never called?
-// sqrx_n_mul_mont_384_ov <- verify_x86 "sqrx_n_mul_mont_384" sqrx_n_mul_mont_384_spec;
-// sqrx_n_mul_mont_384_alias_1_2_ov <- verify_x86 "sqrx_n_mul_mont_384" sqrx_n_mul_mont_384_alias_1_2_spec;
 
 // sqrx_n_mul_mont_383
 sqrx_n_mul_mont_383_count1_ov <- verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 1);
