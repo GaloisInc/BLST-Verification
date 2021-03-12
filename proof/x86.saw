@@ -23,8 +23,8 @@ let verify_x86_helper path module name spec =
   crucible_llvm_unsafe_assume_spec module name spec;
 let verify_x86 = verify_x86_helper "../../build/x86/libblst.so" m;
 let verify_x86_noadx = verify_x86_helper "../../build/x86_noadx/libblst.so" m_noadx;
-let verify_x86_patched = verify_x86_helper "../../build/x86_patched/libblst.so" m_patched;
-let verify_x86_noadx_patched = verify_x86_helper "../../build/x86_noadx_patched/libblst.so" m_noadx_patched;
+let verify_x86_recent = verify_x86_helper "../../build/x86_recent/libblst.so" m_recent;
+let verify_x86_noadx_recent = verify_x86_helper "../../build/x86_noadx_recent/libblst.so" m_noadx_recent;
 
 include "x86/add_mod_256.saw";
 include "x86/add_mod_384.saw";

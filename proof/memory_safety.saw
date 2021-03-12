@@ -13,8 +13,8 @@ include "types.saw";
 
 m <- llvm_load_module "../build/llvm/libblst.a.bc";
 m_noadx <- llvm_load_module "../build/llvm_noadx/libblst.a.bc";
-m_patched <- llvm_load_module "../build/llvm_patched/libblst.a.bc";
-m_noadx_patched <- llvm_load_module "../build/llvm_noadx_patched/libblst.a.bc";
+m_recent <- llvm_load_module "../build/llvm_recent/libblst.a.bc";
+m_noadx_recent <- llvm_load_module "../build/llvm_noadx_recent/libblst.a.bc";
 
 let do_prove = true;
 include "proof-helpers.saw";

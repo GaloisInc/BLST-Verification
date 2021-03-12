@@ -5,5 +5,5 @@
 	path = cryptol-specs
 	url = git://github.com/GaloisInc/cryptol-specs
 [submodule "blst_patched"]
-	path = blst_patched
+	path = blst_recent
 	url = git@github.com:supranational/blst.git

@@ -25,7 +25,7 @@ enable_what4_hash_consing;
 set_x86_stack_base_align 512;
 
 // ct_inverse_mod_383
-verify_x86_noadx_patched "ct_inverse_mod_383" ct_inverse_mod_383_spec;
+verify_x86_noadx_recent "ct_inverse_mod_383" ct_inverse_mod_383_spec;
 
 disable_what4_hash_consing;
 default_x86_stack_base_align;

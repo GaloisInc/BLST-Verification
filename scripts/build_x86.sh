@@ -22,5 +22,5 @@ build () {
 
 build x86 blst '-D__ADX__'
 build x86_noadx blst
-build x86_patched blst_patched '-D__ADX__'
-build x86_noadx_patched blst_patched
+build x86_recent blst_recent '-D__ADX__'
+build x86_noadx_recent blst_recent

@@ -26,5 +26,5 @@ build () {
 
 build llvm blst '-D__ADX__'
 build llvm_noadx blst
-build llvm_patched blst_patched '-D__ADX__'
-build llvm_noadx_patched blst_patched
+build llvm_recent blst_recent '-D__ADX__'
+build llvm_noadx_recent blst_recent
