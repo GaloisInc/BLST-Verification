@@ -53,4 +53,6 @@ Function `blst_keygen` has been shown to give a result in agreement with the Cry
 
 * For now, the assembly language subroutines have their functional correctness assumed.
 
+* We make an additional assumption about the stack pointer when verifying `ctx_inverse_mod_383` and `ct_inverse_mod_383` - see the comment in `proof/x86/ctx_inverse_mod_384.saw`
+
 * We have assumed the memory-safety and functional correctness of the implementation of SHA-256.
