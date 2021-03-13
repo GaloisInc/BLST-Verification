@@ -1,0 +1,1446 @@
+diff --git a/build/coff/mulq_mont_384-x86_64.s b/build/coff/mulq_mont_384-x86_64.s
+index f0d52f5..5663463 100644
+--- a/build/coff/mulq_mont_384-x86_64.s
++++ b/build/coff/mulq_mont_384-x86_64.s
+@@ -329,8 +329,8 @@ sqr_mont_384x:
+ 
+ 	movq	%rcx,0(%rsp)
+ 	movq	%rdx,%rcx
++	movq	%rdi,8(%rsp)
+ 	movq	%rsi,16(%rsp)
+-.byte	102,72,15,110,199
+ 
+ 
+ 	leaq	48(%rsi),%rdx
+@@ -2084,7 +2084,7 @@ mul_mont_384:
+ 
+ 	pushq	%r15
+ 
+-	pushq	%r8
++	subq	$24,%rsp
+ 
+ .LSEH_body_mul_mont_384:
+ 
+@@ -2095,23 +2095,24 @@ mul_mont_384:
+ 	movq	16(%rsi),%r12
+ 	movq	24(%rsi),%r13
+ 	movq	%rdx,%rbx
+-.byte	102,72,15,110,199
++	movq	%r8,0(%rsp)
++	movq	%rdi,8(%rsp)
+ 
+ 	call	__mulq_mont_384
+ 
+-	movq	8(%rsp),%r15
++	movq	24(%rsp),%r15
+ 
+-	movq	16(%rsp),%r14
++	movq	32(%rsp),%r14
+ 
+-	movq	24(%rsp),%r13
++	movq	40(%rsp),%r13
+ 
+-	movq	32(%rsp),%r12
++	movq	48(%rsp),%r12
+ 
+-	movq	40(%rsp),%rbx
++	movq	56(%rsp),%rbx
+ 
+-	movq	48(%rsp),%rbp
++	movq	64(%rsp),%rbp
+ 
+-	leaq	56(%rsp),%rsp
++	leaq	72(%rsp),%rsp
+ 
+ .LSEH_epilogue_mul_mont_384:
+ 	mov	8(%rsp),%rdi
+@@ -2693,7 +2694,7 @@ __mulq_mont_384:
+ 
+ 
+ 
+-.byte	102,72,15,126,199
++	movq	16(%rsp),%rdi
+ 	subq	0(%rcx),%r14
+ 	movq	%r15,%rdx
+ 	sbbq	8(%rcx),%r15
+@@ -2758,8 +2759,8 @@ sqr_n_mul_mont_384:
+ 
+ 
+ 	movq	%r8,0(%rsp)
+-	movq	%rcx,8(%rsp)
+-.byte	102,72,15,110,199
++	movq	%rdi,8(%rsp)
++	movq	%rcx,16(%rsp)
+ 	leaq	32(%rsp),%rdi
+ 	movq	%r9,24(%rsp)
+ 	movq	(%r9),%xmm2
+@@ -2771,7 +2772,7 @@ sqr_n_mul_mont_384:
+ 
+ 	leaq	0(%rdi),%rsi
+ 	movq	0(%rsp),%rcx
+-	movq	8(%rsp),%rbx
++	movq	16(%rsp),%rbx
+ 	call	__mulq_by_1_mont_384
+ 	call	__redc_tail_mont_384
+ 
+@@ -2853,8 +2854,8 @@ sqr_n_mul_mont_383:
+ 
+ 
+ 	movq	%r8,0(%rsp)
+-	movq	%rcx,8(%rsp)
+-.byte	102,72,15,110,199
++	movq	%rdi,8(%rsp)
++	movq	%rcx,16(%rsp)
+ 	leaq	32(%rsp),%rdi
+ 	movq	%r9,24(%rsp)
+ 	movq	(%r9),%xmm2
+@@ -2866,7 +2867,7 @@ sqr_n_mul_mont_383:
+ 
+ 	leaq	0(%rdi),%rsi
+ 	movq	0(%rsp),%rcx
+-	movq	8(%rsp),%rbx
++	movq	16(%rsp),%rbx
+ 	call	__mulq_by_1_mont_384
+ 
+ 	movd	%xmm1,%edx
+@@ -4118,15 +4119,15 @@ sqr_mont_382x:
+ .byte	0,0
+ .LSEH_info_mul_mont_384_body:
+ .byte	1,0,17,0
+-.byte	0x00,0xf4,0x01,0x00
+-.byte	0x00,0xe4,0x02,0x00
+-.byte	0x00,0xd4,0x03,0x00
+-.byte	0x00,0xc4,0x04,0x00
+-.byte	0x00,0x34,0x05,0x00
+-.byte	0x00,0x54,0x06,0x00
+-.byte	0x00,0x74,0x08,0x00
+-.byte	0x00,0x64,0x09,0x00
+-.byte	0x00,0x62
++.byte	0x00,0xf4,0x03,0x00
++.byte	0x00,0xe4,0x04,0x00
++.byte	0x00,0xd4,0x05,0x00
++.byte	0x00,0xc4,0x06,0x00
++.byte	0x00,0x34,0x07,0x00
++.byte	0x00,0x54,0x08,0x00
++.byte	0x00,0x74,0x0a,0x00
++.byte	0x00,0x64,0x0b,0x00
++.byte	0x00,0x82
+ .byte	0x00,0x00
+ .LSEH_info_mul_mont_384_epilogue:
+ .byte	1,0,4,0
+diff --git a/build/coff/mulx_mont_384-x86_64.s b/build/coff/mulx_mont_384-x86_64.s
+index defd0bd..12306a7 100644
+--- a/build/coff/mulx_mont_384-x86_64.s
++++ b/build/coff/mulx_mont_384-x86_64.s
+@@ -331,8 +331,8 @@ sqrx_mont_384x:
+ 	movq	%rcx,0(%rsp)
+ 	movq	%rdx,%rcx
+ 
+-	movq	%rsi,16(%rsp)
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
++	movq	%rsi,24(%rsp)
+ 
+ 
+ 	leaq	48(%rsi),%rdx
+@@ -340,13 +340,13 @@ sqrx_mont_384x:
+ 	call	__add_mod_384
+ 
+ 
+-	movq	16(%rsp),%rsi
++	movq	24(%rsp),%rsi
+ 	leaq	48(%rsi),%rdx
+ 	leaq	32+48(%rsp),%rdi
+ 	call	__sub_mod_384
+ 
+ 
+-	movq	16(%rsp),%rsi
++	movq	24(%rsp),%rsi
+ 	leaq	48(%rsi),%rbx
+ 
+ 	movq	48(%rsi),%rdx
+@@ -1004,7 +1004,6 @@ __sqrx_384:
+ 	movq	16(%rsi),%r15
+ 	movq	24(%rsi),%rcx
+ 	movq	32(%rsi),%rbx
+-.byte	102,72,15,110,199
+ 
+ 
+ 	mulxq	%r14,%r8,%rdi
+@@ -1072,7 +1071,7 @@ __sqrx_384:
+ 	mulxq	%rbp,%rdi,%rbx
+ 	movq	0(%rsi),%rdx
+ 	addq	%rdi,%rcx
+-.byte	102,72,15,126,199
++	movq	8(%rsp),%rdi
+ 	adcq	$0,%rbx
+ 
+ 
+@@ -1774,7 +1773,7 @@ mulx_mont_384:
+ 	movq	8(%rsi),%r15
+ 	movq	16(%rsi),%rax
+ 	movq	24(%rsi),%r12
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
+ 	movq	32(%rsi),%rdi
+ 	movq	40(%rsi),%rbp
+ 	leaq	-128(%rsi),%rsi
+@@ -2141,7 +2140,7 @@ __mulx_mont_384:
+ 	adoxq	%r12,%r11
+ 	adcxq	%r12,%r11
+ 	imulq	8(%rsp),%rdx
+-.byte	102,72,15,126,195
++	movq	24(%rsp),%rbx
+ 
+ 
+ 	xorq	%r12,%r12
+@@ -2245,7 +2244,7 @@ sqrx_mont_384:
+ 	movq	8(%rsi),%r15
+ 	movq	16(%rsi),%rax
+ 	movq	24(%rsi),%r12
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
+ 	movq	32(%rsi),%rdi
+ 	movq	40(%rsi),%rbp
+ 
+@@ -2308,7 +2307,7 @@ sqrx_n_mul_mont_384:
+ 
+ 	pushq	%r15
+ 
+-	leaq	-24(%rsp),%rsp
++	leaq	-40(%rsp),%rsp
+ 
+ .LSEH_body_sqrx_n_mul_mont_384:
+ 
+@@ -2319,12 +2318,12 @@ sqrx_n_mul_mont_384:
+ 	movq	16(%rsi),%rax
+ 	movq	%rsi,%rbx
+ 	movq	24(%rsi),%r12
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
+ 	movq	32(%rsi),%rdi
+ 	movq	40(%rsi),%rbp
+ 
+ 	movq	%r8,(%rsp)
+-	movq	%r9,16(%rsp)
++	movq	%r9,24(%rsp)
+ 	movq	0(%r9),%xmm2
+ 
+ .Loop_sqrx_384:
+@@ -2342,25 +2341,25 @@ sqrx_n_mul_mont_384:
+ 	movq	%rdx,%r14
+ .byte	102,72,15,126,210
+ 	leaq	-128(%rbx),%rsi
+-	movq	16(%rsp),%rbx
++	movq	24(%rsp),%rbx
+ 	leaq	-128(%rcx),%rcx
+ 
+ 	mulxq	%r14,%r8,%r9
+ 	call	__mulx_mont_384
+ 
+-	movq	24(%rsp),%r15
++	movq	40(%rsp),%r15
+ 
+-	movq	32(%rsp),%r14
++	movq	48(%rsp),%r14
+ 
+-	movq	40(%rsp),%r13
++	movq	56(%rsp),%r13
+ 
+-	movq	48(%rsp),%r12
++	movq	64(%rsp),%r12
+ 
+-	movq	56(%rsp),%rbx
++	movq	72(%rsp),%rbx
+ 
+-	movq	64(%rsp),%rbp
++	movq	80(%rsp),%rbp
+ 
+-	leaq	72(%rsp),%rsp
++	leaq	88(%rsp),%rsp
+ 
+ .LSEH_epilogue_sqrx_n_mul_mont_384:
+ 	mov	8(%rsp),%rdi
+@@ -2400,7 +2399,7 @@ sqrx_n_mul_mont_383:
+ 
+ 	pushq	%r15
+ 
+-	leaq	-24(%rsp),%rsp
++	leaq	-40(%rsp),%rsp
+ 
+ .LSEH_body_sqrx_n_mul_mont_383:
+ 
+@@ -2411,12 +2410,12 @@ sqrx_n_mul_mont_383:
+ 	movq	16(%rsi),%rax
+ 	movq	%rsi,%rbx
+ 	movq	24(%rsi),%r12
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
+ 	movq	32(%rsi),%rdi
+ 	movq	40(%rsi),%rbp
+ 
+ 	movq	%r8,(%rsp)
+-	movq	%r9,16(%rsp)
++	movq	%r9,24(%rsp)
+ 	movq	0(%r9),%xmm2
+ 	leaq	-128(%rcx),%rcx
+ 
+@@ -2434,24 +2433,24 @@ sqrx_n_mul_mont_383:
+ 	movq	%rdx,%r14
+ .byte	102,72,15,126,210
+ 	leaq	-128(%rbx),%rsi
+-	movq	16(%rsp),%rbx
++	movq	24(%rsp),%rbx
+ 
+ 	mulxq	%r14,%r8,%r9
+ 	call	__mulx_mont_384
+ 
+-	movq	24(%rsp),%r15
++	movq	40(%rsp),%r15
+ 
+-	movq	32(%rsp),%r14
++	movq	48(%rsp),%r14
+ 
+-	movq	40(%rsp),%r13
++	movq	56(%rsp),%r13
+ 
+-	movq	48(%rsp),%r12
++	movq	64(%rsp),%r12
+ 
+-	movq	56(%rsp),%rbx
++	movq	72(%rsp),%rbx
+ 
+-	movq	64(%rsp),%rbp
++	movq	80(%rsp),%rbp
+ 
+-	leaq	72(%rsp),%rsp
++	leaq	88(%rsp),%rsp
+ 
+ .LSEH_epilogue_sqrx_n_mul_mont_383:
+ 	mov	8(%rsp),%rdi
+@@ -2779,7 +2778,7 @@ __mulx_mont_383_nonred:
+ 	adoxq	%r11,%r10
+ 	adcxq	%r11,%r10
+ 	imulq	8(%rsp),%rdx
+-.byte	102,72,15,126,195
++	movq	24(%rsp),%rbx
+ 
+ 
+ 	xorq	%r12,%r12
+@@ -2857,8 +2856,8 @@ sqrx_mont_382x:
+ 
+ 	movq	%rcx,0(%rsp)
+ 	movq	%rdx,%rcx
+-	movq	%rsi,16(%rsp)
+-	movq	%rdi,%xmm0
++	movq	%rdi,16(%rsp)
++	movq	%rsi,24(%rsp)
+ 
+ 
+ 	movq	0(%rsi),%r8
+@@ -3495,15 +3494,15 @@ sqrx_mont_382x:
+ .byte	0,0
+ .LSEH_info_sqrx_n_mul_mont_384_body:
+ .byte	1,0,17,0
+-.byte	0x00,0xf4,0x03,0x00
+-.byte	0x00,0xe4,0x04,0x00
+-.byte	0x00,0xd4,0x05,0x00
+-.byte	0x00,0xc4,0x06,0x00
+-.byte	0x00,0x34,0x07,0x00
+-.byte	0x00,0x54,0x08,0x00
+-.byte	0x00,0x74,0x0a,0x00
+-.byte	0x00,0x64,0x0b,0x00
+-.byte	0x00,0x82
++.byte	0x00,0xf4,0x05,0x00
++.byte	0x00,0xe4,0x06,0x00
++.byte	0x00,0xd4,0x07,0x00
++.byte	0x00,0xc4,0x08,0x00
++.byte	0x00,0x34,0x09,0x00
++.byte	0x00,0x54,0x0a,0x00
++.byte	0x00,0x74,0x0c,0x00
++.byte	0x00,0x64,0x0d,0x00
++.byte	0x00,0xa2
+ .byte	0x00,0x00
+ .LSEH_info_sqrx_n_mul_mont_384_epilogue:
+ .byte	1,0,4,0
+@@ -3519,15 +3518,15 @@ sqrx_mont_382x:
+ .byte	0,0
+ .LSEH_info_sqrx_n_mul_mont_383_body:
+ .byte	1,0,17,0
+-.byte	0x00,0xf4,0x03,0x00
+-.byte	0x00,0xe4,0x04,0x00
+-.byte	0x00,0xd4,0x05,0x00
+-.byte	0x00,0xc4,0x06,0x00
+-.byte	0x00,0x34,0x07,0x00
+-.byte	0x00,0x54,0x08,0x00
+-.byte	0x00,0x74,0x0a,0x00
+-.byte	0x00,0x64,0x0b,0x00
+-.byte	0x00,0x82
++.byte	0x00,0xf4,0x05,0x00
++.byte	0x00,0xe4,0x06,0x00
++.byte	0x00,0xd4,0x07,0x00
++.byte	0x00,0xc4,0x08,0x00
++.byte	0x00,0x34,0x09,0x00
++.byte	0x00,0x54,0x0a,0x00
++.byte	0x00,0x74,0x0c,0x00
++.byte	0x00,0x64,0x0d,0x00
++.byte	0x00,0xa2
+ .byte	0x00,0x00
+ .LSEH_info_sqrx_n_mul_mont_383_epilogue:
+ .byte	1,0,4,0
+diff --git a/build/elf/mulq_mont_384-x86_64.s b/build/elf/mulq_mont_384-x86_64.s
+index dabf3ff..fa9dd35 100644
+--- a/build/elf/mulq_mont_384-x86_64.s
++++ b/build/elf/mulq_mont_384-x86_64.s
+@@ -327,8 +327,8 @@ sqr_mont_384x:
+ 
+ 	movq	%rcx,0(%rsp)
+ 	movq	%rdx,%rcx
++	movq	%rdi,8(%rsp)
+ 	movq	%rsi,16(%rsp)
+-.byte	102,72,15,110,199
+ 
+ 
+ 	leaq	48(%rsi),%rdx
+@@ -2043,8 +2043,8 @@ mul_mont_384:
+ 	pushq	%r15
+ .cfi_adjust_cfa_offset	8
+ .cfi_offset	%r15,-56
+-	pushq	%r8
+-.cfi_adjust_cfa_offset	8
++	subq	$24,%rsp
++.cfi_adjust_cfa_offset	8*3
+ 
+ 
+ 	movq	0(%rdx),%rax
+@@ -2053,24 +2053,25 @@ mul_mont_384:
+ 	movq	16(%rsi),%r12
+ 	movq	24(%rsi),%r13
+ 	movq	%rdx,%rbx
+-.byte	102,72,15,110,199
++	movq	%r8,0(%rsp)
++	movq	%rdi,8(%rsp)
+ 
+ 	call	__mulq_mont_384
+ 
+-	movq	8(%rsp),%r15
++	movq	24(%rsp),%r15
+ .cfi_restore	%r15
+-	movq	16(%rsp),%r14
++	movq	32(%rsp),%r14
+ .cfi_restore	%r14
+-	movq	24(%rsp),%r13
++	movq	40(%rsp),%r13
+ .cfi_restore	%r13
+-	movq	32(%rsp),%r12
++	movq	48(%rsp),%r12
+ .cfi_restore	%r12
+-	movq	40(%rsp),%rbx
++	movq	56(%rsp),%rbx
+ .cfi_restore	%rbx
+-	movq	48(%rsp),%rbp
++	movq	64(%rsp),%rbp
+ .cfi_restore	%rbp
+-	leaq	56(%rsp),%rsp
+-.cfi_adjust_cfa_offset	-56
++	leaq	72(%rsp),%rsp
++.cfi_adjust_cfa_offset	-72
+ 
+ 	.byte	0xf3,0xc3
+ .cfi_endproc	
+@@ -2649,7 +2650,7 @@ __mulq_mont_384:
+ 
+ 
+ 
+-.byte	102,72,15,126,199
++	movq	16(%rsp),%rdi
+ 	subq	0(%rcx),%r14
+ 	movq	%r15,%rdx
+ 	sbbq	8(%rcx),%r15
+@@ -2711,8 +2712,8 @@ sqr_n_mul_mont_384:
+ 
+ 
+ 	movq	%r8,0(%rsp)
+-	movq	%rcx,8(%rsp)
+-.byte	102,72,15,110,199
++	movq	%rdi,8(%rsp)
++	movq	%rcx,16(%rsp)
+ 	leaq	32(%rsp),%rdi
+ 	movq	%r9,24(%rsp)
+ 	movq	(%r9),%xmm2
+@@ -2724,7 +2725,7 @@ sqr_n_mul_mont_384:
+ 
+ 	leaq	0(%rdi),%rsi
+ 	movq	0(%rsp),%rcx
+-	movq	8(%rsp),%rbx
++	movq	16(%rsp),%rbx
+ 	call	__mulq_by_1_mont_384
+ 	call	__redc_tail_mont_384
+ 
+@@ -2799,8 +2800,8 @@ sqr_n_mul_mont_383:
+ 
+ 
+ 	movq	%r8,0(%rsp)
+-	movq	%rcx,8(%rsp)
+-.byte	102,72,15,110,199
++	movq	%rdi,8(%rsp)
++	movq	%rcx,16(%rsp)
+ 	leaq	32(%rsp),%rdi
+ 	movq	%r9,24(%rsp)
+ 	movq	(%r9),%xmm2
+@@ -2812,7 +2813,7 @@ sqr_n_mul_mont_383:
+ 
+ 	leaq	0(%rdi),%rsi
+ 	movq	0(%rsp),%rcx
+-	movq	8(%rsp),%rbx
++	movq	16(%rsp),%rbx
+ 	call	__mulq_by_1_mont_384
+ 
+ 	movd	%xmm1,%edx
+diff --git a/build/elf/mulx_mont_384-x86_64.s b/build/elf/mulx_mont_384-x86_64.s
+index 3748954..9f9f740 100644
+--- a/build/elf/mulx_mont_384-x86_64.s
++++ b/build/elf/mulx_mont_384-x86_64.s
+@@ -329,8 +329,8 @@ sqrx_mont_384x:
+ 	movq	%rcx,0(%rsp)
+ 	movq	%rdx,%rcx
+ 
+-	movq	%rsi,16(%rsp)
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
++	movq	%rsi,24(%rsp)
+ 
+ 
+ 	leaq	48(%rsi),%rdx
+@@ -338,13 +338,13 @@ sqrx_mont_384x:
+ 	call	__add_mod_384
+ 
+ 
+-	movq	16(%rsp),%rsi
++	movq	24(%rsp),%rsi
+ 	leaq	48(%rsi),%rdx
+ 	leaq	32+48(%rsp),%rdi
+ 	call	__sub_mod_384
+ 
+ 
+-	movq	16(%rsp),%rsi
++	movq	24(%rsp),%rsi
+ 	leaq	48(%rsi),%rbx
+ 
+ 	movq	48(%rsi),%rdx
+@@ -986,7 +986,6 @@ __sqrx_384:
+ 	movq	16(%rsi),%r15
+ 	movq	24(%rsi),%rcx
+ 	movq	32(%rsi),%rbx
+-.byte	102,72,15,110,199
+ 
+ 
+ 	mulxq	%r14,%r8,%rdi
+@@ -1054,7 +1053,7 @@ __sqrx_384:
+ 	mulxq	%rbp,%rdi,%rbx
+ 	movq	0(%rsi),%rdx
+ 	addq	%rdi,%rcx
+-.byte	102,72,15,126,199
++	movq	8(%rsp),%rdi
+ 	adcq	$0,%rbx
+ 
+ 
+@@ -1740,7 +1739,7 @@ mulx_mont_384:
+ 	movq	8(%rsi),%r15
+ 	movq	16(%rsi),%rax
+ 	movq	24(%rsi),%r12
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
+ 	movq	32(%rsi),%rdi
+ 	movq	40(%rsi),%rbp
+ 	leaq	-128(%rsi),%rsi
+@@ -2105,7 +2104,7 @@ __mulx_mont_384:
+ 	adoxq	%r12,%r11
+ 	adcxq	%r12,%r11
+ 	imulq	8(%rsp),%rdx
+-.byte	102,72,15,126,195
++	movq	24(%rsp),%rbx
+ 
+ 
+ 	xorq	%r12,%r12
+@@ -2207,7 +2206,7 @@ sqrx_mont_384:
+ 	movq	8(%rsi),%r15
+ 	movq	16(%rsi),%rax
+ 	movq	24(%rsi),%r12
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
+ 	movq	32(%rsi),%rdi
+ 	movq	40(%rsi),%rbp
+ 
+@@ -2264,8 +2263,8 @@ sqrx_n_mul_mont_384:
+ 	pushq	%r15
+ .cfi_adjust_cfa_offset	8
+ .cfi_offset	%r15,-56
+-	leaq	-24(%rsp),%rsp
+-.cfi_adjust_cfa_offset	8*3
++	leaq	-40(%rsp),%rsp
++.cfi_adjust_cfa_offset	8*5
+ 
+ 
+ 	movq	%rdx,%r10
+@@ -2274,12 +2273,12 @@ sqrx_n_mul_mont_384:
+ 	movq	16(%rsi),%rax
+ 	movq	%rsi,%rbx
+ 	movq	24(%rsi),%r12
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
+ 	movq	32(%rsi),%rdi
+ 	movq	40(%rsi),%rbp
+ 
+ 	movq	%r8,(%rsp)
+-	movq	%r9,16(%rsp)
++	movq	%r9,24(%rsp)
+ 	movq	0(%r9),%xmm2
+ 
+ .Loop_sqrx_384:
+@@ -2297,26 +2296,26 @@ sqrx_n_mul_mont_384:
+ 	movq	%rdx,%r14
+ .byte	102,72,15,126,210
+ 	leaq	-128(%rbx),%rsi
+-	movq	16(%rsp),%rbx
++	movq	24(%rsp),%rbx
+ 	leaq	-128(%rcx),%rcx
+ 
+ 	mulxq	%r14,%r8,%r9
+ 	call	__mulx_mont_384
+ 
+-	movq	24(%rsp),%r15
++	movq	40(%rsp),%r15
+ .cfi_restore	%r15
+-	movq	32(%rsp),%r14
++	movq	48(%rsp),%r14
+ .cfi_restore	%r14
+-	movq	40(%rsp),%r13
++	movq	56(%rsp),%r13
+ .cfi_restore	%r13
+-	movq	48(%rsp),%r12
++	movq	64(%rsp),%r12
+ .cfi_restore	%r12
+-	movq	56(%rsp),%rbx
++	movq	72(%rsp),%rbx
+ .cfi_restore	%rbx
+-	movq	64(%rsp),%rbp
++	movq	80(%rsp),%rbp
+ .cfi_restore	%rbp
+-	leaq	72(%rsp),%rsp
+-.cfi_adjust_cfa_offset	-8*9
++	leaq	88(%rsp),%rsp
++.cfi_adjust_cfa_offset	-8*11
+ 
+ 	.byte	0xf3,0xc3
+ .cfi_endproc	
+@@ -2349,8 +2348,8 @@ sqrx_n_mul_mont_383:
+ 	pushq	%r15
+ .cfi_adjust_cfa_offset	8
+ .cfi_offset	%r15,-56
+-	leaq	-24(%rsp),%rsp
+-.cfi_adjust_cfa_offset	8*3
++	leaq	-40(%rsp),%rsp
++.cfi_adjust_cfa_offset	8*5
+ 
+ 
+ 	movq	%rdx,%r10
+@@ -2359,12 +2358,12 @@ sqrx_n_mul_mont_383:
+ 	movq	16(%rsi),%rax
+ 	movq	%rsi,%rbx
+ 	movq	24(%rsi),%r12
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
+ 	movq	32(%rsi),%rdi
+ 	movq	40(%rsi),%rbp
+ 
+ 	movq	%r8,(%rsp)
+-	movq	%r9,16(%rsp)
++	movq	%r9,24(%rsp)
+ 	movq	0(%r9),%xmm2
+ 	leaq	-128(%rcx),%rcx
+ 
+@@ -2382,25 +2381,25 @@ sqrx_n_mul_mont_383:
+ 	movq	%rdx,%r14
+ .byte	102,72,15,126,210
+ 	leaq	-128(%rbx),%rsi
+-	movq	16(%rsp),%rbx
++	movq	24(%rsp),%rbx
+ 
+ 	mulxq	%r14,%r8,%r9
+ 	call	__mulx_mont_384
+ 
+-	movq	24(%rsp),%r15
++	movq	40(%rsp),%r15
+ .cfi_restore	%r15
+-	movq	32(%rsp),%r14
++	movq	48(%rsp),%r14
+ .cfi_restore	%r14
+-	movq	40(%rsp),%r13
++	movq	56(%rsp),%r13
+ .cfi_restore	%r13
+-	movq	48(%rsp),%r12
++	movq	64(%rsp),%r12
+ .cfi_restore	%r12
+-	movq	56(%rsp),%rbx
++	movq	72(%rsp),%rbx
+ .cfi_restore	%rbx
+-	movq	64(%rsp),%rbp
++	movq	80(%rsp),%rbp
+ .cfi_restore	%rbp
+-	leaq	72(%rsp),%rsp
+-.cfi_adjust_cfa_offset	-8*9
++	leaq	88(%rsp),%rsp
++.cfi_adjust_cfa_offset	-8*11
+ 
+ 	.byte	0xf3,0xc3
+ .cfi_endproc	
+@@ -2725,7 +2724,7 @@ __mulx_mont_383_nonred:
+ 	adoxq	%r11,%r10
+ 	adcxq	%r11,%r10
+ 	imulq	8(%rsp),%rdx
+-.byte	102,72,15,126,195
++	movq	24(%rsp),%rbx
+ 
+ 
+ 	xorq	%r12,%r12
+@@ -2801,8 +2800,8 @@ sqrx_mont_382x:
+ 
+ 	movq	%rcx,0(%rsp)
+ 	movq	%rdx,%rcx
+-	movq	%rsi,16(%rsp)
+-	movq	%rdi,%xmm0
++	movq	%rdi,16(%rsp)
++	movq	%rsi,24(%rsp)
+ 
+ 
+ 	movq	0(%rsi),%r8
+diff --git a/build/mach-o/mulq_mont_384-x86_64.s b/build/mach-o/mulq_mont_384-x86_64.s
+index 7465af4..0d8ac89 100644
+--- a/build/mach-o/mulq_mont_384-x86_64.s
++++ b/build/mach-o/mulq_mont_384-x86_64.s
+@@ -327,8 +327,8 @@ _sqr_mont_384x:
+ 
+ 	movq	%rcx,0(%rsp)
+ 	movq	%rdx,%rcx
++	movq	%rdi,8(%rsp)
+ 	movq	%rsi,16(%rsp)
+-.byte	102,72,15,110,199
+ 
+ 
+ 	leaq	48(%rsi),%rdx
+@@ -2043,8 +2043,8 @@ _mul_mont_384:
+ 	pushq	%r15
+ .cfi_adjust_cfa_offset	8
+ .cfi_offset	%r15,-56
+-	pushq	%r8
+-.cfi_adjust_cfa_offset	8
++	subq	$24,%rsp
++.cfi_adjust_cfa_offset	8*3
+ 
+ 
+ 	movq	0(%rdx),%rax
+@@ -2053,24 +2053,25 @@ _mul_mont_384:
+ 	movq	16(%rsi),%r12
+ 	movq	24(%rsi),%r13
+ 	movq	%rdx,%rbx
+-.byte	102,72,15,110,199
++	movq	%r8,0(%rsp)
++	movq	%rdi,8(%rsp)
+ 
+ 	call	__mulq_mont_384
+ 
+-	movq	8(%rsp),%r15
++	movq	24(%rsp),%r15
+ .cfi_restore	%r15
+-	movq	16(%rsp),%r14
++	movq	32(%rsp),%r14
+ .cfi_restore	%r14
+-	movq	24(%rsp),%r13
++	movq	40(%rsp),%r13
+ .cfi_restore	%r13
+-	movq	32(%rsp),%r12
++	movq	48(%rsp),%r12
+ .cfi_restore	%r12
+-	movq	40(%rsp),%rbx
++	movq	56(%rsp),%rbx
+ .cfi_restore	%rbx
+-	movq	48(%rsp),%rbp
++	movq	64(%rsp),%rbp
+ .cfi_restore	%rbp
+-	leaq	56(%rsp),%rsp
+-.cfi_adjust_cfa_offset	-56
++	leaq	72(%rsp),%rsp
++.cfi_adjust_cfa_offset	-72
+ 
+ 	.byte	0xf3,0xc3
+ .cfi_endproc	
+@@ -2649,7 +2650,7 @@ __mulq_mont_384:
+ 
+ 
+ 
+-.byte	102,72,15,126,199
++	movq	16(%rsp),%rdi
+ 	subq	0(%rcx),%r14
+ 	movq	%r15,%rdx
+ 	sbbq	8(%rcx),%r15
+@@ -2711,8 +2712,8 @@ _sqr_n_mul_mont_384:
+ 
+ 
+ 	movq	%r8,0(%rsp)
+-	movq	%rcx,8(%rsp)
+-.byte	102,72,15,110,199
++	movq	%rdi,8(%rsp)
++	movq	%rcx,16(%rsp)
+ 	leaq	32(%rsp),%rdi
+ 	movq	%r9,24(%rsp)
+ 	movq	(%r9),%xmm2
+@@ -2724,7 +2725,7 @@ L$oop_sqr_384:
+ 
+ 	leaq	0(%rdi),%rsi
+ 	movq	0(%rsp),%rcx
+-	movq	8(%rsp),%rbx
++	movq	16(%rsp),%rbx
+ 	call	__mulq_by_1_mont_384
+ 	call	__redc_tail_mont_384
+ 
+@@ -2799,8 +2800,8 @@ _sqr_n_mul_mont_383:
+ 
+ 
+ 	movq	%r8,0(%rsp)
+-	movq	%rcx,8(%rsp)
+-.byte	102,72,15,110,199
++	movq	%rdi,8(%rsp)
++	movq	%rcx,16(%rsp)
+ 	leaq	32(%rsp),%rdi
+ 	movq	%r9,24(%rsp)
+ 	movq	(%r9),%xmm2
+@@ -2812,7 +2813,7 @@ L$oop_sqr_383:
+ 
+ 	leaq	0(%rdi),%rsi
+ 	movq	0(%rsp),%rcx
+-	movq	8(%rsp),%rbx
++	movq	16(%rsp),%rbx
+ 	call	__mulq_by_1_mont_384
+ 
+ 	movd	%xmm1,%edx
+diff --git a/build/mach-o/mulx_mont_384-x86_64.s b/build/mach-o/mulx_mont_384-x86_64.s
+index 065d9ac..95d3dad 100644
+--- a/build/mach-o/mulx_mont_384-x86_64.s
++++ b/build/mach-o/mulx_mont_384-x86_64.s
+@@ -329,8 +329,8 @@ _sqrx_mont_384x:
+ 	movq	%rcx,0(%rsp)
+ 	movq	%rdx,%rcx
+ 
+-	movq	%rsi,16(%rsp)
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
++	movq	%rsi,24(%rsp)
+ 
+ 
+ 	leaq	48(%rsi),%rdx
+@@ -338,13 +338,13 @@ _sqrx_mont_384x:
+ 	call	__add_mod_384
+ 
+ 
+-	movq	16(%rsp),%rsi
++	movq	24(%rsp),%rsi
+ 	leaq	48(%rsi),%rdx
+ 	leaq	32+48(%rsp),%rdi
+ 	call	__sub_mod_384
+ 
+ 
+-	movq	16(%rsp),%rsi
++	movq	24(%rsp),%rsi
+ 	leaq	48(%rsi),%rbx
+ 
+ 	movq	48(%rsi),%rdx
+@@ -986,7 +986,6 @@ __sqrx_384:
+ 	movq	16(%rsi),%r15
+ 	movq	24(%rsi),%rcx
+ 	movq	32(%rsi),%rbx
+-.byte	102,72,15,110,199
+ 
+ 
+ 	mulxq	%r14,%r8,%rdi
+@@ -1054,7 +1053,7 @@ __sqrx_384:
+ 	mulxq	%rbp,%rdi,%rbx
+ 	movq	0(%rsi),%rdx
+ 	addq	%rdi,%rcx
+-.byte	102,72,15,126,199
++	movq	8(%rsp),%rdi
+ 	adcq	$0,%rbx
+ 
+ 
+@@ -1740,7 +1739,7 @@ _mulx_mont_384:
+ 	movq	8(%rsi),%r15
+ 	movq	16(%rsi),%rax
+ 	movq	24(%rsi),%r12
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
+ 	movq	32(%rsi),%rdi
+ 	movq	40(%rsi),%rbp
+ 	leaq	-128(%rsi),%rsi
+@@ -2105,7 +2104,7 @@ __mulx_mont_384:
+ 	adoxq	%r12,%r11
+ 	adcxq	%r12,%r11
+ 	imulq	8(%rsp),%rdx
+-.byte	102,72,15,126,195
++	movq	24(%rsp),%rbx
+ 
+ 
+ 	xorq	%r12,%r12
+@@ -2207,7 +2206,7 @@ _sqrx_mont_384:
+ 	movq	8(%rsi),%r15
+ 	movq	16(%rsi),%rax
+ 	movq	24(%rsi),%r12
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
+ 	movq	32(%rsi),%rdi
+ 	movq	40(%rsi),%rbp
+ 
+@@ -2264,8 +2263,8 @@ _sqrx_n_mul_mont_384:
+ 	pushq	%r15
+ .cfi_adjust_cfa_offset	8
+ .cfi_offset	%r15,-56
+-	leaq	-24(%rsp),%rsp
+-.cfi_adjust_cfa_offset	8*3
++	leaq	-40(%rsp),%rsp
++.cfi_adjust_cfa_offset	8*5
+ 
+ 
+ 	movq	%rdx,%r10
+@@ -2274,12 +2273,12 @@ _sqrx_n_mul_mont_384:
+ 	movq	16(%rsi),%rax
+ 	movq	%rsi,%rbx
+ 	movq	24(%rsi),%r12
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
+ 	movq	32(%rsi),%rdi
+ 	movq	40(%rsi),%rbp
+ 
+ 	movq	%r8,(%rsp)
+-	movq	%r9,16(%rsp)
++	movq	%r9,24(%rsp)
+ 	movq	0(%r9),%xmm2
+ 
+ L$oop_sqrx_384:
+@@ -2297,26 +2296,26 @@ L$oop_sqrx_384:
+ 	movq	%rdx,%r14
+ .byte	102,72,15,126,210
+ 	leaq	-128(%rbx),%rsi
+-	movq	16(%rsp),%rbx
++	movq	24(%rsp),%rbx
+ 	leaq	-128(%rcx),%rcx
+ 
+ 	mulxq	%r14,%r8,%r9
+ 	call	__mulx_mont_384
+ 
+-	movq	24(%rsp),%r15
++	movq	40(%rsp),%r15
+ .cfi_restore	%r15
+-	movq	32(%rsp),%r14
++	movq	48(%rsp),%r14
+ .cfi_restore	%r14
+-	movq	40(%rsp),%r13
++	movq	56(%rsp),%r13
+ .cfi_restore	%r13
+-	movq	48(%rsp),%r12
++	movq	64(%rsp),%r12
+ .cfi_restore	%r12
+-	movq	56(%rsp),%rbx
++	movq	72(%rsp),%rbx
+ .cfi_restore	%rbx
+-	movq	64(%rsp),%rbp
++	movq	80(%rsp),%rbp
+ .cfi_restore	%rbp
+-	leaq	72(%rsp),%rsp
+-.cfi_adjust_cfa_offset	-8*9
++	leaq	88(%rsp),%rsp
++.cfi_adjust_cfa_offset	-8*11
+ 
+ 	.byte	0xf3,0xc3
+ .cfi_endproc	
+@@ -2349,8 +2348,8 @@ _sqrx_n_mul_mont_383:
+ 	pushq	%r15
+ .cfi_adjust_cfa_offset	8
+ .cfi_offset	%r15,-56
+-	leaq	-24(%rsp),%rsp
+-.cfi_adjust_cfa_offset	8*3
++	leaq	-40(%rsp),%rsp
++.cfi_adjust_cfa_offset	8*5
+ 
+ 
+ 	movq	%rdx,%r10
+@@ -2359,12 +2358,12 @@ _sqrx_n_mul_mont_383:
+ 	movq	16(%rsi),%rax
+ 	movq	%rsi,%rbx
+ 	movq	24(%rsi),%r12
+-.byte	102,72,15,110,199
++	movq	%rdi,16(%rsp)
+ 	movq	32(%rsi),%rdi
+ 	movq	40(%rsi),%rbp
+ 
+ 	movq	%r8,(%rsp)
+-	movq	%r9,16(%rsp)
++	movq	%r9,24(%rsp)
+ 	movq	0(%r9),%xmm2
+ 	leaq	-128(%rcx),%rcx
+ 
+@@ -2382,25 +2381,25 @@ L$oop_sqrx_383:
+ 	movq	%rdx,%r14
+ .byte	102,72,15,126,210
+ 	leaq	-128(%rbx),%rsi
+-	movq	16(%rsp),%rbx
++	movq	24(%rsp),%rbx
+ 
+ 	mulxq	%r14,%r8,%r9
+ 	call	__mulx_mont_384
+ 
+-	movq	24(%rsp),%r15
++	movq	40(%rsp),%r15
+ .cfi_restore	%r15
+-	movq	32(%rsp),%r14
++	movq	48(%rsp),%r14
+ .cfi_restore	%r14
+-	movq	40(%rsp),%r13
++	movq	56(%rsp),%r13
+ .cfi_restore	%r13
+-	movq	48(%rsp),%r12
++	movq	64(%rsp),%r12
+ .cfi_restore	%r12
+-	movq	56(%rsp),%rbx
++	movq	72(%rsp),%rbx
+ .cfi_restore	%rbx
+-	movq	64(%rsp),%rbp
++	movq	80(%rsp),%rbp
+ .cfi_restore	%rbp
+-	leaq	72(%rsp),%rsp
+-.cfi_adjust_cfa_offset	-8*9
++	leaq	88(%rsp),%rsp
++.cfi_adjust_cfa_offset	-8*11
+ 
+ 	.byte	0xf3,0xc3
+ .cfi_endproc	
+@@ -2725,7 +2724,7 @@ __mulx_mont_383_nonred:
+ 	adoxq	%r11,%r10
+ 	adcxq	%r11,%r10
+ 	imulq	8(%rsp),%rdx
+-.byte	102,72,15,126,195
++	movq	24(%rsp),%rbx
+ 
+ 
+ 	xorq	%r12,%r12
+@@ -2801,8 +2800,8 @@ _sqrx_mont_382x:
+ 
+ 	movq	%rcx,0(%rsp)
+ 	movq	%rdx,%rcx
+-	movq	%rsi,16(%rsp)
+-	movq	%rdi,%xmm0
++	movq	%rdi,16(%rsp)
++	movq	%rsi,24(%rsp)
+ 
+ 
+ 	movq	0(%rsi),%r8
+diff --git a/build/win64/blst.def b/build/win64/blst.def
+index d3ab2f1..78a0c1d 100644
+--- a/build/win64/blst.def
++++ b/build/win64/blst.def
+@@ -1,6 +1,4 @@
+-LIBRARY blst
+-
+-EXPORTS
++LIBRARY blst\n\nEXPORTS
+ 	blst_scalar_from_uint32
+ 	blst_uint32_from_scalar
+ 	blst_scalar_from_uint64
+diff --git a/build/win64/mulq_mont_384-x86_64.asm b/build/win64/mulq_mont_384-x86_64.asm
+index c6d6d29..0ccb467 100644
+--- a/build/win64/mulq_mont_384-x86_64.asm
++++ b/build/win64/mulq_mont_384-x86_64.asm
+@@ -330,8 +330,8 @@ $L$SEH_body_sqr_mont_384x::
+ 
+ 	mov	QWORD PTR[rsp],rcx
+ 	mov	rcx,rdx
++	mov	QWORD PTR[8+rsp],rdi
+ 	mov	QWORD PTR[16+rsp],rsi
+-DB	102,72,15,110,199
+ 
+ 
+ 	lea	rdx,QWORD PTR[48+rsi]
+@@ -2101,7 +2101,7 @@ $L$SEH_begin_mul_mont_384::
+ 
+ 	push	r15
+ 
+-	push	r8
++	sub	rsp,8*3
+ 
+ $L$SEH_body_mul_mont_384::
+ 
+@@ -2112,23 +2112,24 @@ $L$SEH_body_mul_mont_384::
+ 	mov	r12,QWORD PTR[16+rsi]
+ 	mov	r13,QWORD PTR[24+rsi]
+ 	mov	rbx,rdx
+-DB	102,72,15,110,199
++	mov	QWORD PTR[rsp],r8
++	mov	QWORD PTR[8+rsp],rdi
+ 
+ 	call	__mulq_mont_384
+ 
+-	mov	r15,QWORD PTR[8+rsp]
++	mov	r15,QWORD PTR[24+rsp]
+ 
+-	mov	r14,QWORD PTR[16+rsp]
++	mov	r14,QWORD PTR[32+rsp]
+ 
+-	mov	r13,QWORD PTR[24+rsp]
++	mov	r13,QWORD PTR[40+rsp]
+ 
+-	mov	r12,QWORD PTR[32+rsp]
++	mov	r12,QWORD PTR[48+rsp]
+ 
+-	mov	rbx,QWORD PTR[40+rsp]
++	mov	rbx,QWORD PTR[56+rsp]
+ 
+-	mov	rbp,QWORD PTR[48+rsp]
++	mov	rbp,QWORD PTR[64+rsp]
+ 
+-	lea	rsp,QWORD PTR[56+rsp]
++	lea	rsp,QWORD PTR[72+rsp]
+ 
+ $L$SEH_epilogue_mul_mont_384::
+ 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
+@@ -2710,7 +2711,7 @@ __mulq_mont_384	PROC PRIVATE
+ 
+ 
+ 
+-DB	102,72,15,126,199
++	mov	rdi,QWORD PTR[16+rsp]
+ 	sub	r14,QWORD PTR[rcx]
+ 	mov	rdx,r15
+ 	sbb	r15,QWORD PTR[8+rcx]
+@@ -2776,8 +2777,8 @@ $L$SEH_body_sqr_n_mul_mont_384::
+ 
+ 
+ 	mov	QWORD PTR[rsp],r8
+-	mov	QWORD PTR[8+rsp],rcx
+-DB	102,72,15,110,199
++	mov	QWORD PTR[8+rsp],rdi
++	mov	QWORD PTR[16+rsp],rcx
+ 	lea	rdi,QWORD PTR[32+rsp]
+ 	mov	QWORD PTR[24+rsp],r9
+ 	movq	xmm2,QWORD PTR[r9]
+@@ -2789,7 +2790,7 @@ $L$oop_sqr_384::
+ 
+ 	lea	rsi,QWORD PTR[rdi]
+ 	mov	rcx,QWORD PTR[rsp]
+-	mov	rbx,QWORD PTR[8+rsp]
++	mov	rbx,QWORD PTR[16+rsp]
+ 	call	__mulq_by_1_mont_384
+ 	call	__redc_tail_mont_384
+ 
+@@ -2873,8 +2874,8 @@ $L$SEH_body_sqr_n_mul_mont_383::
+ 
+ 
+ 	mov	QWORD PTR[rsp],r8
+-	mov	QWORD PTR[8+rsp],rcx
+-DB	102,72,15,110,199
++	mov	QWORD PTR[8+rsp],rdi
++	mov	QWORD PTR[16+rsp],rcx
+ 	lea	rdi,QWORD PTR[32+rsp]
+ 	mov	QWORD PTR[24+rsp],r9
+ 	movq	xmm2,QWORD PTR[r9]
+@@ -2886,7 +2887,7 @@ $L$oop_sqr_383::
+ 
+ 	lea	rsi,QWORD PTR[rdi]
+ 	mov	rcx,QWORD PTR[rsp]
+-	mov	rbx,QWORD PTR[8+rsp]
++	mov	rbx,QWORD PTR[16+rsp]
+ 	call	__mulq_by_1_mont_384
+ 
+ 	movd	edx,xmm1
+@@ -4142,15 +4143,15 @@ DB	0,003h
+ DB	0,0
+ $L$SEH_info_mul_mont_384_body::
+ DB	1,0,17,0
+-DB	000h,0f4h,001h,000h
+-DB	000h,0e4h,002h,000h
+-DB	000h,0d4h,003h,000h
+-DB	000h,0c4h,004h,000h
+-DB	000h,034h,005h,000h
+-DB	000h,054h,006h,000h
+-DB	000h,074h,008h,000h
+-DB	000h,064h,009h,000h
+-DB	000h,062h
++DB	000h,0f4h,003h,000h
++DB	000h,0e4h,004h,000h
++DB	000h,0d4h,005h,000h
++DB	000h,0c4h,006h,000h
++DB	000h,034h,007h,000h
++DB	000h,054h,008h,000h
++DB	000h,074h,00ah,000h
++DB	000h,064h,00bh,000h
++DB	000h,082h
+ DB	000h,000h
+ $L$SEH_info_mul_mont_384_epilogue::
+ DB	1,0,4,0
+diff --git a/build/win64/mulx_mont_384-x86_64.asm b/build/win64/mulx_mont_384-x86_64.asm
+index bd2c091..25bee97 100644
+--- a/build/win64/mulx_mont_384-x86_64.asm
++++ b/build/win64/mulx_mont_384-x86_64.asm
+@@ -332,8 +332,8 @@ $L$SEH_body_sqrx_mont_384x::
+ 	mov	QWORD PTR[rsp],rcx
+ 	mov	rcx,rdx
+ 
+-	mov	QWORD PTR[16+rsp],rsi
+-DB	102,72,15,110,199
++	mov	QWORD PTR[16+rsp],rdi
++	mov	QWORD PTR[24+rsp],rsi
+ 
+ 
+ 	lea	rdx,QWORD PTR[48+rsi]
+@@ -341,13 +341,13 @@ DB	102,72,15,110,199
+ 	call	__add_mod_384
+ 
+ 
+-	mov	rsi,QWORD PTR[16+rsp]
++	mov	rsi,QWORD PTR[24+rsp]
+ 	lea	rdx,QWORD PTR[48+rsi]
+ 	lea	rdi,QWORD PTR[((32+48))+rsp]
+ 	call	__sub_mod_384
+ 
+ 
+-	mov	rsi,QWORD PTR[16+rsp]
++	mov	rsi,QWORD PTR[24+rsp]
+ 	lea	rbx,QWORD PTR[48+rsi]
+ 
+ 	mov	rdx,QWORD PTR[48+rsi]
+@@ -1012,7 +1012,6 @@ __sqrx_384	PROC PRIVATE
+ 	mov	r15,QWORD PTR[16+rsi]
+ 	mov	rcx,QWORD PTR[24+rsi]
+ 	mov	rbx,QWORD PTR[32+rsi]
+-DB	102,72,15,110,199
+ 
+ 
+ 	mulx	rdi,r8,r14
+@@ -1080,7 +1079,7 @@ DB	102,72,15,110,199
+ 	mulx	rbx,rdi,rbp
+ 	mov	rdx,QWORD PTR[rsi]
+ 	add	rcx,rdi
+-DB	102,72,15,126,199
++	mov	rdi,QWORD PTR[8+rsp]
+ 	adc	rbx,0
+ 
+ 
+@@ -1789,7 +1788,7 @@ $L$SEH_body_mulx_mont_384::
+ 	mov	r15,QWORD PTR[8+rsi]
+ 	mov	rax,QWORD PTR[16+rsi]
+ 	mov	r12,QWORD PTR[24+rsi]
+-DB	102,72,15,110,199
++	mov	QWORD PTR[16+rsp],rdi
+ 	mov	rdi,QWORD PTR[32+rsi]
+ 	mov	rbp,QWORD PTR[40+rsi]
+ 	lea	rsi,QWORD PTR[((-128))+rsi]
+@@ -2156,7 +2155,7 @@ __mulx_mont_384	PROC PRIVATE
+ 	adox	r11,r12
+ 	adcx	r11,r12
+ 	imul	rdx,QWORD PTR[8+rsp]
+-DB	102,72,15,126,195
++	mov	rbx,QWORD PTR[24+rsp]
+ 
+ 
+ 	xor	r12,r12
+@@ -2261,7 +2260,7 @@ $L$SEH_body_sqrx_mont_384::
+ 	mov	r15,QWORD PTR[8+rsi]
+ 	mov	rax,QWORD PTR[16+rsi]
+ 	mov	r12,QWORD PTR[24+rsi]
+-DB	102,72,15,110,199
++	mov	QWORD PTR[16+rsp],rdi
+ 	mov	rdi,QWORD PTR[32+rsi]
+ 	mov	rbp,QWORD PTR[40+rsi]
+ 
+@@ -2326,7 +2325,7 @@ $L$SEH_begin_sqrx_n_mul_mont_384::
+ 
+ 	push	r15
+ 
+-	lea	rsp,QWORD PTR[((-24))+rsp]
++	lea	rsp,QWORD PTR[((-40))+rsp]
+ 
+ $L$SEH_body_sqrx_n_mul_mont_384::
+ 
+@@ -2337,12 +2336,12 @@ $L$SEH_body_sqrx_n_mul_mont_384::
+ 	mov	rax,QWORD PTR[16+rsi]
+ 	mov	rbx,rsi
+ 	mov	r12,QWORD PTR[24+rsi]
+-DB	102,72,15,110,199
++	mov	QWORD PTR[16+rsp],rdi
+ 	mov	rdi,QWORD PTR[32+rsi]
+ 	mov	rbp,QWORD PTR[40+rsi]
+ 
+ 	mov	QWORD PTR[rsp],r8
+-	mov	QWORD PTR[16+rsp],r9
++	mov	QWORD PTR[24+rsp],r9
+ 	movq	xmm2,QWORD PTR[r9]
+ 
+ $L$oop_sqrx_384::
+@@ -2360,25 +2359,25 @@ $L$oop_sqrx_384::
+ 	mov	r14,rdx
+ DB	102,72,15,126,210
+ 	lea	rsi,QWORD PTR[((-128))+rbx]
+-	mov	rbx,QWORD PTR[16+rsp]
++	mov	rbx,QWORD PTR[24+rsp]
+ 	lea	rcx,QWORD PTR[((-128))+rcx]
+ 
+ 	mulx	r9,r8,r14
+ 	call	__mulx_mont_384
+ 
+-	mov	r15,QWORD PTR[24+rsp]
++	mov	r15,QWORD PTR[40+rsp]
+ 
+-	mov	r14,QWORD PTR[32+rsp]
++	mov	r14,QWORD PTR[48+rsp]
+ 
+-	mov	r13,QWORD PTR[40+rsp]
++	mov	r13,QWORD PTR[56+rsp]
+ 
+-	mov	r12,QWORD PTR[48+rsp]
++	mov	r12,QWORD PTR[64+rsp]
+ 
+-	mov	rbx,QWORD PTR[56+rsp]
++	mov	rbx,QWORD PTR[72+rsp]
+ 
+-	mov	rbp,QWORD PTR[64+rsp]
++	mov	rbp,QWORD PTR[80+rsp]
+ 
+-	lea	rsp,QWORD PTR[72+rsp]
++	lea	rsp,QWORD PTR[88+rsp]
+ 
+ $L$SEH_epilogue_sqrx_n_mul_mont_384::
+ 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
+@@ -2420,7 +2419,7 @@ $L$SEH_begin_sqrx_n_mul_mont_383::
+ 
+ 	push	r15
+ 
+-	lea	rsp,QWORD PTR[((-24))+rsp]
++	lea	rsp,QWORD PTR[((-40))+rsp]
+ 
+ $L$SEH_body_sqrx_n_mul_mont_383::
+ 
+@@ -2431,12 +2430,12 @@ $L$SEH_body_sqrx_n_mul_mont_383::
+ 	mov	rax,QWORD PTR[16+rsi]
+ 	mov	rbx,rsi
+ 	mov	r12,QWORD PTR[24+rsi]
+-DB	102,72,15,110,199
++	mov	QWORD PTR[16+rsp],rdi
+ 	mov	rdi,QWORD PTR[32+rsi]
+ 	mov	rbp,QWORD PTR[40+rsi]
+ 
+ 	mov	QWORD PTR[rsp],r8
+-	mov	QWORD PTR[16+rsp],r9
++	mov	QWORD PTR[24+rsp],r9
+ 	movq	xmm2,QWORD PTR[r9]
+ 	lea	rcx,QWORD PTR[((-128))+rcx]
+ 
+@@ -2454,24 +2453,24 @@ $L$oop_sqrx_383::
+ 	mov	r14,rdx
+ DB	102,72,15,126,210
+ 	lea	rsi,QWORD PTR[((-128))+rbx]
+-	mov	rbx,QWORD PTR[16+rsp]
++	mov	rbx,QWORD PTR[24+rsp]
+ 
+ 	mulx	r9,r8,r14
+ 	call	__mulx_mont_384
+ 
+-	mov	r15,QWORD PTR[24+rsp]
++	mov	r15,QWORD PTR[40+rsp]
+ 
+-	mov	r14,QWORD PTR[32+rsp]
++	mov	r14,QWORD PTR[48+rsp]
+ 
+-	mov	r13,QWORD PTR[40+rsp]
++	mov	r13,QWORD PTR[56+rsp]
+ 
+-	mov	r12,QWORD PTR[48+rsp]
++	mov	r12,QWORD PTR[64+rsp]
+ 
+-	mov	rbx,QWORD PTR[56+rsp]
++	mov	rbx,QWORD PTR[72+rsp]
+ 
+-	mov	rbp,QWORD PTR[64+rsp]
++	mov	rbp,QWORD PTR[80+rsp]
+ 
+-	lea	rsp,QWORD PTR[72+rsp]
++	lea	rsp,QWORD PTR[88+rsp]
+ 
+ $L$SEH_epilogue_sqrx_n_mul_mont_383::
+ 	mov	rdi,QWORD PTR[8+rsp]	;WIN64 epilogue
+@@ -2799,7 +2798,7 @@ __mulx_mont_383_nonred	PROC PRIVATE
+ 	adox	r10,r11
+ 	adcx	r10,r11
+ 	imul	rdx,QWORD PTR[8+rsp]
+-DB	102,72,15,126,195
++	mov	rbx,QWORD PTR[24+rsp]
+ 
+ 
+ 	xor	r12,r12
+@@ -2878,8 +2877,8 @@ $L$SEH_body_sqrx_mont_382x::
+ 
+ 	mov	QWORD PTR[rsp],rcx
+ 	mov	rcx,rdx
+-	mov	QWORD PTR[16+rsp],rsi
+-	movq	xmm0,rdi
++	mov	QWORD PTR[16+rsp],rdi
++	mov	QWORD PTR[24+rsp],rsi
+ 
+ 
+ 	mov	r8,QWORD PTR[rsi]
+@@ -3519,15 +3518,15 @@ DB	0,003h
+ DB	0,0
+ $L$SEH_info_sqrx_n_mul_mont_384_body::
+ DB	1,0,17,0
+-DB	000h,0f4h,003h,000h
+-DB	000h,0e4h,004h,000h
+-DB	000h,0d4h,005h,000h
+-DB	000h,0c4h,006h,000h
+-DB	000h,034h,007h,000h
+-DB	000h,054h,008h,000h
+-DB	000h,074h,00ah,000h
+-DB	000h,064h,00bh,000h
+-DB	000h,082h
++DB	000h,0f4h,005h,000h
++DB	000h,0e4h,006h,000h
++DB	000h,0d4h,007h,000h
++DB	000h,0c4h,008h,000h
++DB	000h,034h,009h,000h
++DB	000h,054h,00ah,000h
++DB	000h,074h,00ch,000h
++DB	000h,064h,00dh,000h
++DB	000h,0a2h
+ DB	000h,000h
+ $L$SEH_info_sqrx_n_mul_mont_384_epilogue::
+ DB	1,0,4,0
+@@ -3543,15 +3542,15 @@ DB	0,003h
+ DB	0,0
+ $L$SEH_info_sqrx_n_mul_mont_383_body::
+ DB	1,0,17,0
+-DB	000h,0f4h,003h,000h
+-DB	000h,0e4h,004h,000h
+-DB	000h,0d4h,005h,000h
+-DB	000h,0c4h,006h,000h
+-DB	000h,034h,007h,000h
+-DB	000h,054h,008h,000h
+-DB	000h,074h,00ah,000h
+-DB	000h,064h,00bh,000h
+-DB	000h,082h
++DB	000h,0f4h,005h,000h
++DB	000h,0e4h,006h,000h
++DB	000h,0d4h,007h,000h
++DB	000h,0c4h,008h,000h
++DB	000h,034h,009h,000h
++DB	000h,054h,00ah,000h
++DB	000h,074h,00ch,000h
++DB	000h,064h,00dh,000h
++DB	000h,0a2h
+ DB	000h,000h
+ $L$SEH_info_sqrx_n_mul_mont_383_epilogue::
+ DB	1,0,4,0
