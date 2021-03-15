@@ -50,15 +50,26 @@ projectify C (x,y) = (x, y, C.base_field.field_unit)
 /**
  * The affine coordinates of a point in Jacobian projective coordinates.
  */
+ // TODO: Put conditional back in
+ /*
 affinify: {t} EllipticCurve t -> ProjectivePoint t -> AffinePoint t
-affinify C (x,y,z) = if is_zero F z
-                     then point_O C
-                     else (F.mul(lambda2, x), F.mul(lambda3, y))
+affinify C (x,y,z) = (F.mul(lambda2, x), F.mul(lambda3, y))
     where
         F = C.base_field
         lambda = F.div (F.field_unit, z)
         lambda2 = F.sq lambda
         lambda3 = F.mul(lambda, lambda2)
+        */
+
+// TODO: Had to reverse arguments to F.mul.  I bet there's a rewriting rule to
+// do this automatically for me.
+affinify: {t} EllipticCurve t -> ProjectivePoint t -> AffinePoint t
+affinify C (x,y,z) = (F.mul(x, lambda2), F.mul(y, lambda3))
+    where
+        F = C.base_field
+        lambda = F.div (F.field_unit, z)
+        lambda2 = F.sq lambda
+        lambda3 = F.mul(lambda2, lambda)
 
 private
     cubed: {t} FieldRep t -> t -> t

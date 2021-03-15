@@ -130,8 +130,8 @@ let reciprocal_fp_spec = do {
     crucible_precond {{ fp_invariant inp }};
     crucible_execute_func [out_ptr, inp_ptr];
     // crucible_points_to out_ptr (crucible_term {{ fp_rep (fp_exp (fp_abs inp) (`p-2)) }});
-    // crucible_points_to out_ptr (crucible_term {{ fp_rep (Fp.div (Fp.field_unit, fp_abs inp)) }});
-    crucible_points_to out_ptr (crucible_term {{ fp_rep (inverse_fp (fp_abs inp)) }});
+     crucible_points_to out_ptr (crucible_term {{ fp_rep (Fp.div (Fp.field_unit, fp_abs inp)) }});
+    //crucible_points_to out_ptr (crucible_term {{ fp_rep (inverse_fp (fp_abs inp)) }});
     };
 
 reciprocal_fp_ov <- custom_verify "reciprocal_fp"
