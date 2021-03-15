@@ -75,7 +75,7 @@ let POINTonE1_from_Jacobian_spec = do {
   // llvm_postcond {{ fp_invariant out.0 }};
   // llvm_postcond {{ fp_invariant out.1 }};
 
-  //crucible_postcond {{ POINTonE1_affine_invariant out }};
+  crucible_postcond {{ POINTonE1_affine_invariant out }};
 
   // Nonzero
   //llvm_postcond {{ ((fp_abs out.0) != Fp.field_zero) || ((fp_abs out.1) != Fp.field_zero) }};
@@ -90,7 +90,7 @@ POINTonE1_from_Jacobian_ov <- really_custom_verify "POINTonE1_from_Jacobian"
   (concat [reciprocal_fp_ov] (concat vec_select_asm_ovs fp_overrides))
   POINTonE1_from_Jacobian_spec
   do {
-    (apply_fp_rewrites);
+    unfolding ["POINTonE1_affine_invariant", "POINTonE1_affine_rep"];
     (apply_fp_rewrites);
     (print_goal);
     w4_unint_z3 fp_unints;
