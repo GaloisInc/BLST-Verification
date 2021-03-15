@@ -48,11 +48,9 @@ let POINTonE1_affine_Compress_BE_spec = do {
   crucible_return (crucible_term {{ (zext [2*(fp_abs inp.1)>`p, (fp_abs inp.1)%2 == 1]):[64] }});
 };
 
-/*
 POINTonE1_affine_Compress_BE_ov <- really_verify "POINTonE1_affine_Compress_BE"
   [fromx_mont_384_ov, sgn0x_pty_mont_384_ov]
   POINTonE1_affine_Compress_BE_spec;
-  */
 
 let POINTonE1_from_Jacobian_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
@@ -62,7 +60,8 @@ let POINTonE1_from_Jacobian_spec = do {
   crucible_precond {{ POINTonE1_invariant inp }};
   crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
 
-  crucible_precond {{ fp_abs (inp.2) != Fp.field_zero }};
+  //crucible_precond {{ fp_abs (inp.2) != Fp.field_zero }};
+  crucible_precond {{ ~(is_zero Fp ((POINTonE1_abs inp).2)) }};
 
   crucible_execute_func [out_ptr, inp_ptr];
 
@@ -111,7 +110,11 @@ let blst_p1_compress_spec = do {
   //crucible_precond {{ inp.2 == zero }};
 
   // TODO: Remove this precond once nonzero case proof goes through
-  crucible_precond {{ fp_abs (inp.2) != Fp.field_zero }};
+  //crucible_precond {{ fp_abs (inp.2) != Fp.field_zero }};
+  crucible_precond {{ ~(is_zero Fp ((POINTonE1_abs inp).2)) }};
+
+  // TODO: For some reason this precond is insufficient to exclude the case
+  // where the input is already in affine coordinates
   crucible_precond {{ fp_abs (inp.2) != Fp.field_unit }};
 
   crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
@@ -122,7 +125,6 @@ let blst_p1_compress_spec = do {
   //crucible_points_to out_ptr (crucible_term {{ split`{48,8} (0xc0 # zero) }});
 };
 
-/*
 // This is the conditional rule showing that the Z coordinate check does the right thing
 // This may be provable in SAW but for now we assume it as an algebraic fact.
 is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
@@ -131,6 +133,7 @@ is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
            then is_point_O E (affinify E (POINTonE1_abs p))
            else apply peq (fp_abs(p.2)) (Fp.field_zero) }});
 
+/*
 blst_p1_compress_ov <- really_custom_verify "blst_p1_compress"
   //(concat [reciprocal_fp_ov] (concat point_op_overrides fp_overrides))
   (concat [POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov] (concat mul_fp_ovs point_op_overrides))
