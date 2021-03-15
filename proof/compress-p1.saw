@@ -48,9 +48,11 @@ let POINTonE1_affine_Compress_BE_spec = do {
   crucible_return (crucible_term {{ (zext [2*(fp_abs inp.1)>`p, (fp_abs inp.1)%2 == 1]):[64] }});
 };
 
+/*
 POINTonE1_affine_Compress_BE_ov <- really_verify "POINTonE1_affine_Compress_BE"
   [fromx_mont_384_ov, sgn0x_pty_mont_384_ov]
   POINTonE1_affine_Compress_BE_spec;
+  */
 
 let POINTonE1_from_Jacobian_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
@@ -84,10 +86,14 @@ let POINTonE1_from_Jacobian_spec = do {
   crucible_points_to (crucible_field out_ptr "Y") (crucible_term {{ out.1 }});
 };
 
+// commute mul once -- use with caution!
+mul_commutes_fp_thm <- prove_cryptol {{ \x y  -> Fp.mul (x, y) == apply Fp.mul (y,x) }} [];
+
 POINTonE1_from_Jacobian_ov <- really_custom_verify "POINTonE1_from_Jacobian"
   (concat [reciprocal_fp_ov] (concat vec_select_asm_ovs fp_overrides))
   POINTonE1_from_Jacobian_spec
   do {
+    (simplify (addsimp mul_commutes_fp_thm empty_ss));
     unfolding ["POINTonE1_affine_invariant", "POINTonE1_affine_rep"];
     (apply_fp_rewrites);
     (print_goal);
@@ -109,9 +115,6 @@ let blst_p1_compress_spec = do {
   crucible_precond {{ fp_abs (inp.2) != Fp.field_unit }};
 
   crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
-
-  // TODO: POINTonE1_invariant should ensure that Z != p, but SAW still
-  // investigates the branch where Z == p.  What's going on here?
 
   crucible_execute_func [out_ptr, inp_ptr];
   //crucible_postcond {{ is_point_O E (affinify E (POINTonE1_abs inp)) }};

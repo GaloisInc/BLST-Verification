@@ -64,12 +64,12 @@ affinify C (x,y,z) = (F.mul(lambda2, x), F.mul(lambda3, y))
 // TODO: Had to reverse arguments to F.mul.  I bet there's a rewriting rule to
 // do this automatically for me.
 affinify: {t} EllipticCurve t -> ProjectivePoint t -> AffinePoint t
-affinify C (x,y,z) = (F.mul(x, lambda2), F.mul(y, lambda3))
+affinify C (x,y,z) = (F.mul(lambda2, x), F.mul(lambda3, y))
     where
         F = C.base_field
         lambda = F.div (F.field_unit, z)
         lambda2 = F.sq lambda
-        lambda3 = F.mul(lambda2, lambda)
+        lambda3 = F.mul(lambda, lambda2)
 
 private
     cubed: {t} FieldRep t -> t -> t
