@@ -19,14 +19,13 @@ f2 = P::Fp_2
 f6 = P::Fp_6
 f12 = P::Fp_12
 
-
 // F_p2
 
-conjugate_2: t2 -> t2
-conjugate_2 [a,b] = [f1.neg a, b] // a*u + b -> -a*u + b
+fp2_conjugate: t2 -> t2
+fp2_conjugate [a,b] = [f1.neg a, b] // a*u + b -> -a*u + b
 
-f2_frobenius: t2  -> t2
-f2_frobenius x = conjugate_2 x
+fp2_frobenius: t2  -> t2
+fp2_frobenius x = fp2_conjugate x
 
 // F_p6
 
@@ -41,11 +40,11 @@ v_frobenius_constant_sq = f2.sq v_frobenius_constant
 
 // Now (av^2+bv+c)^p = a^p k^2 v^2 + b^p k v + c^p
 
-f6_frobenius: t6 -> t6
-f6_frobenius [a,b,c] = [a',b',c'] where
-    a' = f2.mul (v_frobenius_constant_sq, f2_frobenius a)
-    b' = f2.mul (v_frobenius_constant, f2_frobenius b)
-    c' = f2_frobenius c
+fp6_frobenius: t6 -> t6
+fp6_frobenius [a,b,c] = [a',b',c'] where
+    a' = f2.mul (v_frobenius_constant_sq, fp2_frobenius a)
+    b' = f2.mul (v_frobenius_constant, fp2_frobenius b)
+    c' = fp2_frobenius c
 
 // F_p12
 
@@ -55,12 +54,12 @@ f6_frobenius [a,b,c] = [a',b',c'] where
 w_frobenius_constant: t6
 w_frobenius_constant = P::Fp_2_to_Fp_6 (F_expt f2 P::u_plus_1 (`((P::p-1)/6):[381]))
 
-f12_frobenius: t12 -> t12
-f12_frobenius [a,b] = [a', b'] where
-    a' = f6.mul (w_frobenius_constant, f6_frobenius a)
-    b' = f6_frobenius b
+fp12_frobenius: t12 -> t12
+fp12_frobenius [a,b] = [a', b'] where
+    a' = f6.mul (w_frobenius_constant, fp6_frobenius a)
+    b' = fp6_frobenius b
 
 // The conjugate in F_p12 also gives x^(p^6), the six-fold Frobenius
 
-f12_conjugate: t12 -> t12
-f12_conjugate [a,b] = [f6.neg a, b] // a*w + b -> -a*w + b
+fp12_conjugate: t12 -> t12
+fp12_conjugate [a,b] = [f6.neg a, b] // a*w + b -> -a*w + b

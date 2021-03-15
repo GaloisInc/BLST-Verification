@@ -58,6 +58,7 @@ one_mont_fp2_rep_thm <- prove_cryptol (rewrite (cryptol_ss ())
 
 let fp2_simpset = addsimps (concat fp2_rep_thms [one_mont_fp2_rep_thm, fp2_abs_ite_thm, fp2_invariant_ite_thm, fp2_rep_ite_thm]) (cryptol_ss ());
 
+
 let fp2_binop_ovs name op = do {
   let plain_spec = binop_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
   plain_ov <- admit name plain_spec;
@@ -65,7 +66,13 @@ let fp2_binop_ovs name op = do {
   let alias_1_2_spec = binop_alias_1_2_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
   alias_1_2_ov <- admit name alias_1_2_spec;
 
-  return [plain_ov, alias_1_2_ov];
+  let alias_1_3_spec = binop_alias_1_3_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
+  alias_1_3_ov <- admit name alias_1_3_spec;
+
+  let alias_1_2_3_spec = binop_alias_1_2_3_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
+  alias_1_2_3_ov <- admit name alias_1_2_3_spec;
+
+  return [plain_ov, alias_1_2_ov, alias_1_3_ov, alias_1_2_3_ov];
   };
 
 add_fp2_ovs <- fp2_binop_ovs "add_fp2" {{Fp_2.add}} ;
@@ -134,6 +141,8 @@ fp2_alg_thms <- for
   , {{ Fp_2.neg Fp_2.field_zero == Fp_2.field_zero }} // -0 = 0
   ] (\ t -> prove_cryptol t []);
 
-// This rule is not included in the main fp_simplification rules as it is seldom needed.
-fp2_normalize_thm <- admit_cryptol
-  {{ \x -> fp2_normalize x == if fp2_invariant x then x else apply fp2_normalize x }};
+fp_inv_fp2_rep_thms <- for [0,1]
+  (\ i -> custom_prove_cryptol (rewrite (cryptol_ss()) {{ \ x -> fp_invariant ((fp2_rep x) @ (`i:[1])) == True }})
+            do {unfolding ["fp2_rep"];
+                simplify fp_simpset;
+                w4_unint_z3 fp_unints; } );

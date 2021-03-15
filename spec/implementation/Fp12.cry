@@ -1,0 +1,454 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+//
+// Definitions for fp12_tower.c and the proofs in fp12.saw
+//
+
+module implementation::Fp12 where
+
+import Common::Field
+import FieldExtras
+import ExtensionField
+import implementation::Types
+import implementation::Field
+import Parameters (p, Fp, t_Fp, to_Fp, from_Fp, t_Fp_2, Fp_2, t_Fp_6, Fp_6, t_Fp_12, Fp_12,
+                   u_plus_1, Fp_2_to_Fp_6)
+import Frobenius
+import PrimeField // for the ring stuff ...
+import ExtensionField
+import Polynomial
+
+////////////////////////////////////////////////////////////////
+//
+// Frobenius_map
+
+// "nest" is just used to simplify the writing of the postcondition for the
+// frobenius_map functions.  However, there is a simpler way, which is used for
+// frobenius_map_fp12.
+nest f x (n:[64]) =
+    if n==0 then x
+     | n == 1 then f x
+     | n == 2 then f (f x)
+    else f (f (f x))
+
+
+// constants for the various Frobenius maps
+rep_v_frobenius_constant = // fp2_rep v_frobenius_constant
+    [[0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000],
+     [0xcd03c9e48671f071, 0x5dab22461fcda5d2, 0x587042afd3851b95,
+      0x8eb60ebe01bacb9e, 0x03f97d6e83d050d2, 0x18f0206554638741]]
+
+rep_v_frobenius_constant_sq =  // fp2_rep v_frobenius_constant_sq
+    [[0x890dc9e4867545c3, 0x2af322533285a5d5, 0x50880866309b7e2c,
+      0xa20d1b8c7e881024, 0x14e4f04fe2db9068, 0x14e56d3f1564853a],
+     [0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000]]
+
+rep_v_frobenius_constant_sq_const_part =  // fp_rep (v_frobenius_constant!0)
+    [0x890dc9e4867545c3, 0x2af322533285a5d5, 0x50880866309b7e2c,
+     0xa20d1b8c7e881024, 0x14e4f04fe2db9068, 0x14e56d3f1564853a]
+
+// w_frobenius_constant has the form [0,0,c], so we can multiply easily using fp2_mul,
+// and do not need to store all the zeros
+rep_w_frobenius_constant_const_part = // fp2_rep (w_frobenius_constant!0)
+    [[0x07089552b319d465, 0xc6695f92b50a8313, 0x97e83cccd117228f,
+      0xa35baecab2dc29ee, 0x1ce393ea5daace4d, 0x08f2220fb0fb66eb],
+     [0xb2f66aad4ce5d646, 0x5842a06bfc497cec, 0xcf4895d42599d394,
+      0xc11b9cba40a8e8d0, 0x2e3813cbe5a0de89, 0x110eefda88847faf]]
+
+// The double Frobenius for fp6 and fp12 have similar formulas to the single
+v_frobenius_constant_2 = F_expt f2 u_plus_1 (`((p*p-1)/3):[762])
+v_frobenius_constant_2_sq = Fp_2.sq v_frobenius_constant_2
+
+w_frobenius_constant_2_part = F_expt f2 u_plus_1 (`((p*p-1)/6):[762])
+
+rep_v_frobenius_constant_2 =
+    [[0x30f1361b798a64e8, 0xf3b8ddab7ece5a2a, 0x16a8ca3ac61577f7,
+      0xc26a2ff874fd029b, 0x3636b76660701c6e, 0x051ba4ab241b6160],
+     [0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000]]
+
+rep_v_frobenius_constant_2_sq_const_part =
+    [0xcd03c9e48671f071, 0x5dab22461fcda5d2, 0x587042afd3851b95,
+     0x8eb60ebe01bacb9e, 0x03f97d6e83d050d2, 0x18f0206554638741]
+
+rep_w_frobenius_constant_2_const_part =
+    [[0xecfb361b798dba3a, 0xc100ddb891865a2c, 0x0ec08ff1232bda8e,
+      0xd5c13cc6f1ca4721, 0x47222a47bf7b5c04, 0x0110f184e51c5f59],
+     [0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000]]
+
+fp6_frobenius2 [a,b,c] = [a',b',c'] where
+    a' = f2.mul (v_frobenius_constant_2_sq, fp2_frobenius (fp2_frobenius a))
+    b' = f2.mul (v_frobenius_constant_2, fp2_frobenius (fp2_frobenius b))
+    c' = fp2_frobenius (fp2_frobenius c)
+
+fp12_frobenius2 [a,b] = [a',b'] where
+    a' = Fp_6.mul (Fp_2_to_Fp_6 w_frobenius_constant_2_part,
+                   fp6_frobenius (fp6_frobenius a))
+    b' = fp6_frobenius (fp6_frobenius b)
+
+// for triple Frobenius
+v_frobenius_constant_3 = F_expt f2 u_plus_1 (`((p*p*p-1)/3):[1143])
+v_frobenius_constant_3_sq = Fp_2.sq v_frobenius_constant_3
+
+w_frobenius_constant_3_part = F_expt f2 u_plus_1 (`((p*p*p-1)/6):[1143])
+
+rep_v_frobenius_constant_3 =
+    [[0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000],
+     [0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba,
+      0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]]
+
+rep_v_frobenius_constant_3_sq_const_part =
+    [0x43f5fffffffcaaae, 0x32b7fff2ed47fffd, 0x07e83a49a2e99d69,
+     0xeca8f3318332bb7a, 0xef148d1ea0f4c069, 0x040ab3263eff0206]
+
+rep_w_frobenius_constant_3_const_part =
+    [[0x3e2f585da55c9ad1, 0x4294213d86c18183, 0x382844c88b623732,
+      0x92ad2afd19103e18, 0x1d794e4fac7cf0b9, 0x0bd592fc7d825ec8],
+     [0x7bcfa7a25aa30fda, 0xdc17dec12a927e7c, 0x2f088dd86b4ebef1,
+      0xd1ca2087da74d4a7, 0x2da2596696cebc1d, 0x0e2b7eedbbfd87d2]]
+
+fp6_frobenius3 [a,b,c] = [a',b',c'] where
+    a' = f2.mul (v_frobenius_constant_3_sq, fp2_frobenius a)
+    b' = f2.mul (v_frobenius_constant_3, fp2_frobenius b)
+    c' = fp2_frobenius c
+
+fp12_frobenius3 [a,b] = [a',b'] where
+    a' = Fp_6.mul (Fp_2_to_Fp_6 w_frobenius_constant_3_part,
+                   fp6_frobenius (fp6_frobenius (fp6_frobenius a)))
+    b' = fp6_frobenius (fp6_frobenius (fp6_frobenius b))
+
+////////////////////////////////////////////////////////////////
+//
+// Cyclotomic squaring
+
+/* The "cyclotomic squaring" operation is described in
+   Robert Granger amd Michael Scott,
+   "Faster Squaring in the Cyclotomic Subgroup of Sixth Degree Extensions"
+   eprint.iacr.org/2009/565
+
+  This expresses a value in Fp_12 as a cubic expension of a quadratic extension,
+  whereas in most of blst we consider it as a quadratic extension of a cubic extension of Fp_2.
+  The Fp_4 we use here is used only for the purposes of this cyclotomic squaring operation.
+
+  Fp_4 = Fp_2[y]/(y^2 - u - 1)
+  Fp_12 is isomorphic to Fp_4[x]/(x^3 - y)
+
+  Noting that in the regular Fp_12 construction of the Parameters module, we have
+  v^3 = u+1 and w^2 = v, we have w^6 = u+1 and so (w^3)^2 = u+1.  So for the alternative
+  construction we have y = w^3 and x = w.
+*/
+
+type t_Fp_4 = [2]t_Fp_2
+Fp_4 = extension_field Fp_2 [Fp_2.field_zero, u_plus_1]
+y_fp4: t_Fp_4
+y_fp4 = [Fp_2.field_unit, Fp_2.field_zero] // = poly_x Fp_4
+
+fp4_abs [x, y] = [fp2_abs y, fp2_abs x]
+fp4_rep [x, y] = [fp2_rep y, fp2_rep x]
+
+type t_Fp_12_alt = [3]t_Fp_4
+Fp_12_alt = extension_field Fp_4 [Fp_4.field_zero, Fp_4.field_zero, y_fp4]
+
+/* In the standard tower, [[a,b,c],[d,e,f]] means
+  (av^2+bv+c)w + (dv^2+ev+f), which, given v = w^2, equals aw^5 + dw^4 + bw^3 + ew^2 + cw + f
+
+  In the alternative tower , [[A,B], [C,D], [E,F]] means
+  (Ay + B)x^2 + (Cy + D)x + (Ey + F),
+  and given y = w^3 and x = w, equals Aw^5 + Cw^4 + Ew^3 + Bw^2 + Dw + F
+
+  These two are equal iff A=a, B=e, C=d, D=c, E=b, and F=f
+*/
+
+Fp_12_to_Fp_12_alt: t_Fp_12 -> t_Fp_12_alt
+Fp_12_to_Fp_12_alt [[a,b,c],[d,e,f]] = [[a,e], [d,c], [b,f]]
+
+Fp_12_alt_to_Fp_12: t_Fp_12_alt -> t_Fp_12
+Fp_12_alt_to_Fp_12 [[A,B], [C,D], [E,F]] = [[A,E,D], [C,B,F]]
+
+conjugate_fp4: t_Fp_4 -> t_Fp_4
+conjugate_fp4 [x,y] = [Fp_2.neg x, y]
+
+// definition from the paper
+
+cyclotomic_sqr_alt: t_Fp_12_alt -> t_Fp_12_alt
+cyclotomic_sqr_alt [c,b,a] = [C,B,A] where // paper has a+b+cx^2 and A + Bx + Cx^2
+    A = Fp_4.sub (x3 (Fp_4.sq a), x2 (conjugate_fp4 a))
+    B = Fp_4.add (x3 (Fp_4.mul (y_fp4, Fp_4.sq c)), x2 (conjugate_fp4 b))
+    C = Fp_4.sub (x3 (Fp_4.sq b), x2 (conjugate_fp4 c))
+    x2 x = Fp_4.add (x, x) // x+x = 2*x
+    x3 x = Fp_4.add (x, x2 x) // x + 2*x = 3*x
+
+cyclotomic_sqr_fp12: t_Fp_12 -> t_Fp_12
+cyclotomic_sqr_fp12 x =
+    Fp_12_alt_to_Fp_12 (cyclotomic_sqr_alt (Fp_12_to_Fp_12_alt x))
+
+// .. and as-implemented (in abstract space)
+
+cyclotomic_sqr_fp12_imp: t_Fp_12 -> t_Fp_12
+cyclotomic_sqr_fp12_imp [[a12, a11, a10], [a02, a01, a00]] = r where
+    // aij, tij, and rij names correspond to the indices of the implementation,
+    // i.e., reversed from abstract
+    [t01, t00] = Fp_4.sq [a11, a00]
+    [t11, t10] = Fp_4.sq [a02, a10]
+    [t21, t20] = Fp_4.sq [a12, a01]
+    r00 = f_sub t00 a00
+    r01 = f_sub t10 a01
+    r02 = f_sub t20 a02
+
+    r10 = f_add (Fp_2.mul (u_plus_1, t21)) a10
+    r11 = f_add t01 a11
+    r12 = f_add t11 a12
+
+    r = [[r12, r11, r10], [r02, r01, r00]]
+    f_sub x y = Fp_2.add (s, Fp_2.add (s, x)) where s = Fp_2.sub (x, y)
+    f_add x y = Fp_2.add (s, Fp_2.add (s, x)) where s = Fp_2.add (x, y)
+
+sqr_fp4_imp a0 a1 = [ret1, ret0] where
+    t0 = Fp_2x2.sq a0 // sqr_fp2x2(t0, a0);
+    t1 = Fp_2x2.sq a1 // sqr_fp2x2(t1, a1);
+    t3 = Fp_2.add (a0, a1) // add_fp2(ret[1], a0, a1);
+
+    t2 = Fp_2x2.mul (t1, u_plus_1x2) // mul_by_u_plus_1_fp2x2(t2, t1);
+    ret0 = Fp_2x2.add (t2, t0) // add_fp2x2(t2, t2, t0); redc_fp2x2(ret[0], t2);
+
+    t2_b = Fp_2x2.sq t3 // sqr_fp2x2(t2, ret[1]);
+    ret1 = Fp_2x2.sub (Fp_2x2.sub (t2_b, t0), t1) // sub_fp2x2(t2, t2, t0); sub_fp2x2(t2, t2, t1);
+    // redc_fp2x2(ret[1], t2);
+
+////////////////////////////////////////////////////////////////
+//
+// mul_fp6, mul_fp12, and friends
+//
+// Some of the action takes place in rings:
+// Fpx2: Integers mod 2^384 * p
+// Fp2x2: Fpx2[x] / (x^2+1), a quotient ring.
+// etc.
+//
+// We fake the rings by using the field constructors, and taking care never to call `half` or `div`
+//
+// It would be a big rewrite to introduce a Ring structure (like Field), define polynomials over rings,
+// and have the projection for fields to rings where needed, but in the end it would be a bit neater.
+
+Fpx2 = prime_field_integer (`p * 2^^384 )
+
+Fp_2x2 = extension_field Fpx2 [Fpx2.field_zero, Fpx2.neg Fpx2.field_unit] // [0,-1]
+u_plus_1x2: t_Fp_2x2
+u_plus_1x2 = Fp_2x2.add (poly_x Fpx2, poly_1 Fpx2)
+
+Fp_6x2 = extension_field Fp_2x2 [Fp_2x2.field_zero, Fp_2x2.field_zero, u_plus_1x2]
+
+// "optimised" form for a1 b2 + a2 b1
+// (a1+a2)(b1 + b2) - a1 b1 - a2 b2
+fp6x2_tmp a1 a2 b1 b2 = Fp_2x2.sub (Fp_2x2.sub (t, Fp_2x2.mul (a1, b1)), Fp_2x2.mul (a2, b2)) where
+  t = Fp_2x2.mul (Fp_2.add (a1,a2), Fp_2.add (b1, b2))
+
+fp6x2_mul: [3][2]Integer -> [3][2]Integer -> [3][2]Integer
+fp6x2_mul [a2, a1, a0] [b2, b1, b0] = [r2, r1, r0] where
+  r0 = Fp_2x2.add (Fp_2x2.mul (fp6x2_tmp a1 a2 b1 b2, u_plus_1x2), Fp_2x2.mul (a0, b0))
+  r1 = Fp_2x2.add (fp6x2_tmp a0 a1 b0 b1, Fp_2x2.mul (Fp_2x2.mul (a2, b2), u_plus_1x2))
+  r2 = Fp_2x2.add (fp6x2_tmp a0 a2 b0 b2, Fp_2x2.mul (a1, b1))
+
+// mul_fp12 "as implemented", but without the final "redc"
+// ...  but in the abstract space, so all our indexing is backwards
+
+// "optimised" form for a0 b1 + a1 b0
+// (a0+a1)(b0 + b1) - a0 b0 - a1 b1
+
+fp12_mul_1 a0 a1 b0 b1 = Fp_6x2.sub (Fp_6x2.sub (t, fp6x2_mul a0  b0), fp6x2_mul a1 b1) where
+  t = fp6x2_mul (Fp_6.add (b0,b1)) (Fp_6.add (a0, a1))
+
+/* original definition:
+fp12_mul_0 a0 a1 b0 b1 = [rx2, rx1, rx0] where
+  t0 = Fp_6x2.mul (a0, b0)
+  t1 = Fp_6x2.mul (a1, b1)
+  rx2 = Fp_2x2.add (t0!2, t1!1)
+  rx1 = Fp_2x2.add (t0!1, t1!0)
+  rx0 = Fp_2x2.add (t0!0, Fp_2x2.mul (t1!2, u_plus_1x2))
+*/
+// better SAWcore terms result if we use destructuring binds rather than indexing:
+fp12_mul_0 a0 a1 b0 b1 = [rx2, rx1, rx0] where
+  [t0_2, t0_1, t0_0] = fp6x2_mul a0 b0
+  [t1_2, t1_1, t1_0] = fp6x2_mul a1 b1
+  rx2 = Fp_2x2.add (t0_2, t1_1)
+  rx1 = Fp_2x2.add (t0_1, t1_0)
+  rx0 = Fp_2x2.add (t0_0, Fp_2x2.mul (t1_2, u_plus_1x2))
+
+fp12_mul: [2][3][2]Integer -> [2][3][2]Integer -> [2][3][2]Integer
+fp12_mul [a1, a0] [b1, b0] = [r1, r0] where
+  r0 = fp12_mul_0 a0 a1 b0 b1
+  r1 = fp12_mul_1 a0 a1 b0 b1
+
+////////////////////////////////////////////////////////////////
+//
+// sqr_fp12
+//
+
+// The as-implemented sqr_fp12 algorithm, in our abstractspace and so wih indexing
+// reversed from the code:
+
+fp12_sqr: t_Fp_12 -> t_Fp_12
+fp12_sqr a = ret where
+    [a1, a0] = a
+    [a12, a11, a10] = a1
+    [a02, a01, a00] = a0
+
+    t0 = Fp_6.add (a0, a1)               // add_fp6(t0, a[0], a[1]);
+    t12 = Fp_2.mul (u_plus_1, a12)       // mul_by_u_plus_1_fp2(t1[2], a[1][2]);
+    t1 = [ Fp_2.add (a02, a11)           //  /- add_fp2(t1[0], a[0][0], t1[2]);
+         , Fp_2.add (a01, a10)           // <|-  add_fp2(t1[1], a[0][1], a[1][0]);
+         , Fp_2.add (a00, t12)]          //  \- add_fp2(t1[2], a[0][2], a[1][1]);
+    t0_a = Fp_6.mul (t0, t1)             // mul_fp6(t0, t0, t1);
+    t1_a = Fp_6.mul (a0, a1)             // mul_fp6(t1, a[0], a[1]);
+    [t12_a, t11_a, t10_a] = t1_a
+
+    r1 = Fp_6.add (t1_a, t1_a)           // add_fp6(ret[1], t1, t1);
+    [r02, r01, r00] = Fp_6.sub (t0_a, t1_a) // sub_fp6(ret[0], t0, t1);
+
+    t12_b = Fp_2.mul (u_plus_1, t12_a)   // mul_by_u_plus_1_fp2(t1[2], t1[2]);
+
+    r00_a = Fp_2.sub (r00, t12_b)        // sub_fp2(ret[0][0], ret[0][0], t1[2]);
+    r01_a = Fp_2.sub (r01, t10_a)        // sub_fp2(ret[0][1], ret[0][1], t1[0]);
+    r02_a = Fp_2.sub (r02, t11_a)        // sub_fp2(ret[0][2], ret[0][2], t1[1]);
+    ret = [r1, [r02_a, r01_a, r00_a]]
+
+////////////////////////////////////////////////////////////////
+//
+// mul_by_xy00z0
+//
+
+xy00z0_expander: Fp_6_rep_t -> Fp_12_rep_t
+xy00z0_expander [x,y,z] = [[x, y, zero], [zero, z, zero]] // in rep space
+
+fp6_to_fp12_xy00z0: t_Fp_6 -> t_Fp_12
+fp6_to_fp12_xy00z0 [z,y,x] = [[zero, z, zero], [zero, y, x]] // in abs space, reversed.
+
+
+mul_by_0y0_fp6x2: t_Fp_6 -> t_Fp_2 -> t_Fp_6
+mul_by_0y0_fp6x2 a b = [r2, r1, r0] where
+    [a2,a1,a0] = a
+    t = Fp_2x2.mul (a2, b)
+    r0 = Fp_2x2.mul (t, u_plus_1x2)
+    r1 = Fp_2x2.mul (a0, b)
+    r2 = Fp_2x2.mul (a1, b)
+
+mul_by_xy0_fp6x2: t_Fp_6 -> t_Fp_2 -> t_Fp_2 -> t_Fp_6
+mul_by_xy0_fp6x2 a b1 b0 = [r2_a, r1_b, r0_a] where
+    [a2, a1, a0] = a
+    t0 = Fp_2x2.mul (a0, b0)     // mul_fp2x2(t0, a[0], b[0]);
+    t1 = Fp_2x2.mul (a1, b1)     // mul_fp2x2(t1, a[1], b[1]);
+
+    t2 = Fp_2x2.mul (a2, b1)     // mul_fp2x2(ret[1], a[2], b[1]);  (renaming to t2 here)
+    r0 = Fp_2x2.mul (t2, u_plus_1x2) // mul_by_u_plus_1_fp2x2(ret[0], ret[1]);
+    r0_a = Fp_2x2.add (r0, t0)   // add_fp2x2(ret[0], ret[0], t0);
+
+    aa = Fp_2.add (a0, a1)       // add_fp2(aa, a[0], a[1]);
+    bb = Fp_2.add (b0, b1)       // add_fp2(bb, b[0], b[1]);
+    r1 = Fp_2x2.mul (aa, bb)     // mul_fp2x2(ret[1], aa, bb);
+    r1_a = Fp_2x2.sub (r1, t0)   // sub_fp2x2(ret[1], ret[1], t0);
+    r1_b = Fp_2x2.sub (r1_a, t1) // sub_fp2x2(ret[1], ret[1], t1);
+
+    r2 = Fp_2x2.mul (a2, b0)     // mul_fp2x2(ret[2], a[2], b[0]);
+    r2_a = Fp_2x2.add (r2, t1)   // add_fp2x2(ret[2], ret[2], t1);
+
+mul_by_xy00z0_fp12: t_Fp_12 -> t_Fp_6 -> t_Fp_12
+mul_by_xy00z0_fp12 a xy00z0 = [r1_a, r0] where
+    [a1, a0] = a
+    [b2, b1, b0] = xy00z0
+    t0 =  mul_by_xy0_fp6x2 a0 b1 b0     // mul_by_xy0_fp6x2(t0, a[0], xy00z0);
+    t1 = mul_by_0y0_fp6x2 a1 b2         // mul_by_0y0_fp6x2(t1, a[1], xy00z0[2]);
+
+    t2_0 = b0                           // vec_copy(t2[0], xy00z0[0], sizeof(t2[0]));
+    t2_1 = Fp_2.add (b1, b2)            // add_fp2(t2[1], xy00z0[1], xy00z0[2]);
+    r1 = Fp_6.add (a0, a1)              // add_fp6(ret[1], a[0], a[1]);
+    rr = mul_by_xy0_fp6x2 r1 t2_1 t2_0  //  mul_by_xy0_fp6x2(rr, ret[1], t2);
+    rr_a = Fp_6x2.sub (rr, t0)          // sub_fp6x2(rr, rr, t0);
+    rr_b = Fp_6x2.sub (rr_a, t1)        // sub_fp6x2(rr, rr, t1);
+    r1_a = rr_b                         // redc_fp6x2(ret[1], rr);
+
+    [t0_2, t0_1, t0_0] = t0
+    [t1_2, t1_1, t1_0] = t1
+    rr0 = Fp_2x2.mul (t1_2, u_plus_1x2) // mul_by_u_plus_1_fp2x2(rr[0], t1[2]);
+    rr0_a = Fp_2x2.add (t0_0, rr0)      // add_fp2x2(rr[0], t0[0], rr[0]);
+    rr1 = Fp_2x2.add (t0_1, t1_0)       // add_fp2x2(rr[1], t0[1], t1[0]);
+    rr2 = Fp_2x2.add (t0_2, t1_1)       // add_fp2x2(rr[2], t0[2], t1[1]);
+    r0 = [rr2, rr1, rr0_a]              // redc_fp6x2(ret[0], rr);
+
+////////////////////////////////////////////////////////////////
+//
+// inverse_fp12
+
+inverse_fp2_imp: t_Fp_2 -> t_Fp_2
+inverse_fp2_imp [a1,a0] = [r1,r0] where
+    t = Fp.div(Fp.field_unit, Fp.add (Fp.sq a0, Fp.sq a1))
+    r0 = Fp.mul (a0,t)
+    r1 = Fp.neg (Fp.mul (a1,t))
+
+inverse_fp6_imp: t_Fp_6 -> t_Fp_6
+inverse_fp6_imp [a2,a1,a0] = [r2,r1,r0] where 
+    c0 = Fp_2.sub (Fp_2.sq a0, Fp_2.mul (u_plus_1,Fp_2.mul (a1,a2)))
+    c1 = Fp_2.sub (Fp_2.mul (u_plus_1, Fp_2.sq a2), Fp_2.mul(a0,a1))
+    c2 = Fp_2.sub (Fp_2.sq a1, Fp_2.mul (a0, a2))
+    t0 = Fp_2.add (Fp_2.mul (c1, a2), Fp_2.mul (c2, a1))
+    t1 = Fp_2.add (Fp_2.mul (u_plus_1, t0), Fp_2.mul (c0, a0))
+    t  = inverse_fp2_imp t1 // or  Fp_2.div(Fp_2.field_unit, t1)
+    r2 = Fp_2.mul(c2, t)
+    r1 = Fp_2.mul(c1, t)
+    r0 = Fp_2.mul(c0, t)
+
+inverse_fp12_imp: t_Fp_12 -> t_Fp_12
+inverse_fp12_imp [a1,a0] = [r1,r0] where
+    [t0_2, t0_1, t0_0]  = Fp_6.sq a0 // sqr_fp6(t0, a[0]);
+    [t1_2, t1_1, t1_0] = Fp_6.sq a1  // sqr_fp6(t1, a[1]);
+    t1_2a = Fp_2.mul (t1_2, u_plus_1) // mul_by_u_plus_1_fp2(t1[2], t1[2]);
+    t0_0a = Fp_2.sub (t0_0, t1_2a)  // sub_fp2(t0[0], t0[0], t1[2]);
+    t0_1a = Fp_2.sub (t0_1, t1_0)   // sub_fp2(t0[1], t0[1], t1[0]);
+    t0_2a = Fp_2.sub (t0_2, t1_1)   // sub_fp2(t0[2], t0[2], t1[1]);
+
+    t1_a = inverse_fp6_imp [t0_2a, t0_1a, t0_0a] // inverse_fp6(t1, t0);
+    r0 = Fp_6.mul (a0, t1_a)        // mul_fp6(ret[0], a[0], t1);
+    r1 = Fp_6.neg (Fp_6.mul (a1, t1_a)) // mul_fp6(ret[1], a[1], t1); neg_fp6(ret[1], ret[1]);
+
+
+sqr_fp6_imp: t_Fp_6 -> t_Fp_6
+sqr_fp6_imp a = ret where
+    [a2, a1, a0] = a
+    s0 = Fp_2x2.mul (a0, a0) // sqr_fp2x2(s0, a[0]);
+
+    m01 = Fp_2x2.mul (a0, a1) // mul_fp2x2(m01, a[0], a[1]);
+    m01_a = Fp_2x2.add (m01, m01) // add_fp2x2(m01, m01, m01);
+
+    m12 = Fp_2x2.mul (a1, a2) // mul_fp2x2(m12, a[1], a[2]);
+    m12_a = Fp_2x2.add (m12, m12) // add_fp2x2(m12, m12, m12);
+
+    s2 = Fp_2x2.mul (a2,a2) // sqr_fp2x2(s2, a[2]);
+
+    /* ret[2] = (a0 + a1 + a2)^2 - a0^2 - a2^2 - 2*(a0*a1) - 2*(a1*a2)
+              = a1^2 + 2*(a0*a2) */
+    ret2 = Fp_2.add (a2, a1) // add_fp2(ret[2], a[2], a[1]);
+    ret2_a = Fp_2.add (ret2, a0) // add_fp2(ret[2], ret[2], a[0]);
+    rx = Fp_2x2.mul (ret2_a, ret2_a) // sqr_fp2x2(rx, ret[2]);
+    rx_a = Fp_2x2.sub (rx, s0) // sub_fp2x2(rx, rx, s0);
+    rx_b = Fp_2x2.sub (rx_a, s2) // sub_fp2x2(rx, rx, s2);
+    rx_c = Fp_2x2.sub (rx_b, m01_a) // sub_fp2x2(rx, rx, m01);
+    rx_d = Fp_2x2.sub (rx_c, m12_a) // sub_fp2x2(rx, rx, m12);
+    ret2_b = rx_d // we apply redc outside this Cryptol function //  redc_fp2x2(ret[2], rx);
+
+    /* ret[0] = a0^2 + 2*(a1*a2)*(u+1) */
+    rx_e = Fp_2x2.mul (m12_a, u_plus_1x2) //  mul_by_u_plus_1_fp2x2(rx, m12);
+    rx_f = Fp_2x2.add (rx_e, s0) // add_fp2x2(rx, rx, s0);
+    ret0 = rx_f // redc_fp2x2(ret[0], rx);
+
+    /* ret[1] = a2^2*(u+1) + 2*(a0*a1) */
+    rx_g = Fp_2x2.mul (s2, u_plus_1x2) //  mul_by_u_plus_1_fp2x2(rx, s2);
+    rx_h = Fp_2x2.add (rx_g, m01_a) // (add_fp2x2(rx, rx, m01);
+    ret1 = rx_h // redc_fp2x2(ret[1], rx);
+
+    ret = [ret2_b, ret1, ret0]
+

@@ -82,7 +82,7 @@ let binop_spec name llvm_type inv rep abs op = do {
 
 // generic binary operation specification, pass-by-reference, aliasing return with first arg
 let binop_alias_1_2_spec name llvm_type inv rep abs op = do {
-  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
+  (x, x_ptr) <- ptr_to_fresh "x" llvm_type;
   (y, y_ptr) <- ptr_to_fresh_readonly "y" llvm_type;
   crucible_precond {{ inv x /\ inv y }};
   crucible_execute_func [x_ptr, x_ptr, y_ptr];
@@ -96,6 +96,23 @@ let binop_alias_1_2_spec name llvm_type inv rep abs op = do {
   else if use_concrete_method
   then crucible_points_to x_ptr (crucible_term {{ rep (op (abs x, abs y)) }})
   else crucible_points_to x_ptr (crucible_term {{ op x y }});
+};
+
+// generic binary operation specification, pass-by-reference, aliasing return with second arg
+// (concrete method only)
+let binop_alias_1_3_spec name llvm_type inv rep abs op = do {
+  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
+  (y, y_ptr) <- ptr_to_fresh "y" llvm_type;
+  crucible_precond {{ inv x /\ inv y }};
+  crucible_execute_func [y_ptr, x_ptr, y_ptr];
+  crucible_points_to y_ptr (crucible_term {{ rep (op (abs x, abs y)) }});
+};
+
+let binop_alias_1_2_3_spec name llvm_type inv rep abs op = do {
+  (x, x_ptr) <- ptr_to_fresh "x" llvm_type;
+  crucible_precond {{ inv x }};
+  crucible_execute_func [x_ptr, x_ptr, x_ptr];
+  crucible_points_to x_ptr (crucible_term {{ rep (op (abs x, abs x)) }});
 };
 
 ////////////////////////////////////////////////////////////////
@@ -231,7 +248,13 @@ let fp_binop_ovs name op = do {
   let alias_1_2_spec = binop_alias_1_2_spec name vec384_type {{fp_invariant}} {{fp_rep}} {{fp_abs}} op;
   alias_1_2_ov <- admit name alias_1_2_spec;
 
-  return [plain_ov, alias_1_2_ov];
+  let alias_1_3_spec = binop_alias_1_3_spec name vec384_type {{fp_invariant}} {{fp_rep}} {{fp_abs}} op;
+  alias_1_3_ov <- admit name alias_1_3_spec;
+
+  let alias_1_2_3_spec = binop_alias_1_2_3_spec name vec384_type {{fp_invariant}} {{fp_rep}} {{fp_abs}} op;
+  alias_1_2_3_ov <- admit name alias_1_2_3_spec;
+
+  return [plain_ov, alias_1_2_ov, alias_1_3_ov, alias_1_2_3_ov];
   };
 
 add_fp_ovs <- fp_binop_ovs "add_fp" {{Fp.add}} ;
