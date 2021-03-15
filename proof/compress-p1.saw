@@ -4,6 +4,7 @@
 */
 
 import "../spec/Parameters.cry";
+import "../spec/rfc8017.cry";
 import "../spec/Serialization.cry";
 import "../spec/ShortWeierstrassCurve.cry";
 
@@ -33,24 +34,23 @@ let POINTonE1_affine_Compress_BE_spec = do {
   crucible_precond {{ POINTonE1_affine_invariant inp }};
 
   // Nonzero
-  llvm_precond {{ ((fp_abs inp.0) != Fp.field_zero) || ((fp_abs inp.1) != Fp.field_zero) }};
+  //llvm_precond {{ ((fp_abs inp.0) != Fp.field_zero) || ((fp_abs inp.1) != Fp.field_zero) }};
 
   crucible_execute_func [out_ptr, inp_ptr];
 
-  /*
-  crucible_points_to out_ptr (crucible_term {{ serialize_E1 (POINTonE1_affine_abs inp ) }});
-  */
-  crucible_points_to out_ptr (crucible_term {{ x_string_E1 (POINTonE1_affine_abs inp ) }});
+  // TODO: If I want to use the x_string_E1 form below, I need the Nonzero
+  // precond (which also requires proving the nonzero postcond in
+  // POINTonE1_from_Jacobian_spec)
+  // crucible_points_to out_ptr (crucible_term {{ x_string_E1 (POINTonE1_affine_abs inp ) }});
+  crucible_points_to out_ptr (crucible_term {{ I2OSP`{48} ((POINTonE1_affine_abs inp ).0) }});
 
   // TODO: Dedeup with sgn0x_pty_mont_384_spec
   crucible_return (crucible_term {{ (zext [2*(fp_abs inp.1)>`p, (fp_abs inp.1)%2 == 1]):[64] }});
 };
 
-/*
 POINTonE1_affine_Compress_BE_ov <- really_verify "POINTonE1_affine_Compress_BE"
   [fromx_mont_384_ov, sgn0x_pty_mont_384_ov]
   POINTonE1_affine_Compress_BE_spec;
-  */
 
 let POINTonE1_from_Jacobian_spec = do {
   out_ptr <- crucible_alloc POINTonE1_type;
@@ -64,8 +64,6 @@ let POINTonE1_from_Jacobian_spec = do {
 
   crucible_execute_func [out_ptr, inp_ptr];
 
-  // TODO: Does having the "POINTonE1_abs" here break the claim that this
-  // function is equivalent to affinify?
   let out = {{ POINTonE1_affine_rep (affinify E (POINTonE1_abs inp)) }};
 
   //crucible_postcond {{ out.0 == expected_out.0 }};
