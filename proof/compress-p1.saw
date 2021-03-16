@@ -111,7 +111,7 @@ let blst_p1_compress_spec = do {
 
   // TODO: Remove this precond once nonzero case proof goes through
   //crucible_precond {{ fp_abs (inp.2) != Fp.field_zero }};
-  crucible_precond {{ ~(is_zero Fp ((POINTonE1_abs inp).2)) }};
+  //crucible_precond {{ ~(is_zero Fp ((POINTonE1_abs inp).2)) }};
 
   // TODO: For some reason this precond is insufficient to exclude the case
   // where the input is already in affine coordinates
