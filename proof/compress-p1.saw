@@ -153,7 +153,7 @@ blst_p1_compress_ov <- really_custom_verify "blst_p1_compress"
      (apply_fp_rewrites);
      // TODO: Might still need is_point_O_thm'' when adding back vec_is_zero
      // conditional in code
-     simplify (addsimp is_point_O_rev_thm (cryptol_ss()));
+     simplify (addsimps [is_point_O_thm'', is_point_O_rev_thm] (cryptol_ss()));
      (print_goal);
      w4_unint_z3 ec_mult_unints;
   };
