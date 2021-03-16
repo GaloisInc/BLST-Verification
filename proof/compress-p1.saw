@@ -145,7 +145,11 @@ blst_p1_compress_ov <- really_custom_verify "blst_p1_compress"
   blst_p1_compress_spec
     do {
      simplify (addsimp vec_is_zero_call_thm empty_ss);
-     unfolding ["POINTonE1_affine_abs", "POINTonE1_affine_rep", "serialize_E1", "m_byte_E1", "metadata_bits_E1"];
+     // POINTonE1_affine_abs and POINTonE1_affine_rep need to be unfolded for
+     // fp_rewrites to apply.  Similarly, the remaining functions need to be
+     // unfolded for is_point_O_rev_thm to apply and replace the is_point_O
+     // checks.
+     unfolding ["POINTonE1_affine_abs", "POINTonE1_affine_rep", "serialize_E1", "x_string_E1", "m_byte_E1", "metadata_bits_E1"];
      (apply_fp_rewrites);
      // TODO: Might still need is_point_O_thm'' when adding back vec_is_zero
      // conditional in code

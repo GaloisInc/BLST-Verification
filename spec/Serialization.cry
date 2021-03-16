@@ -28,13 +28,15 @@ metadata_bits_E1:  EC::AffinePoint t_Fp -> [3]
 metadata_bits_E1 P = [C_bit, I_bit, S_bit] where
     C_bit = True
     I_bit = EC::is_point_O E P
-    S_bit = sign_F_p y where (_,y) = P
+    S_bit = if I_bit then False else sign_F_p y where (_,y) = P
 
 m_byte_E1: EC::AffinePoint t_Fp -> [8]
 m_byte_E1 P = (metadata_bits_E1 P) # zero
 
 x_string_E1: EC::AffinePoint t_Fp -> [48][8]
-x_string_E1 P = I2OSP(x) where (x,_) = P
+x_string_E1 P = if EC::is_point_O E P
+                then I2OSP(0)
+                else I2OSP(x) where (x,_) = P
 
 // See the note about the order of the x_i below, in deserialize_E2
 x_string_E2: EC::AffinePoint t_Fp_2 -> [96][8]
