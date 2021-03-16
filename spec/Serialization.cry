@@ -27,7 +27,7 @@ sign_F_p_2(y') = if y'_1 == 0 then sign_F_p(y'_0) else y'_1 > `((p - 1)/2) where
 metadata_bits_E1:  EC::AffinePoint t_Fp -> [3]
 metadata_bits_E1 P = [C_bit, I_bit, S_bit] where
     C_bit = True
-    I_bit = False //EC::is_point_O E P
+    I_bit = EC::is_point_O E P
     S_bit = sign_F_p y where (_,y) = P
 
 m_byte_E1: EC::AffinePoint t_Fp -> [8]

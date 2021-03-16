@@ -120,7 +120,7 @@ let blst_p1_compress_spec = do {
   crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
 
   crucible_execute_func [out_ptr, inp_ptr];
-  //crucible_postcond {{ is_point_O E (affinify E (POINTonE1_abs inp)) }};
+  //crucible_postcond {{ ~(is_point_O E (affinify E (POINTonE1_abs inp))) }};
   crucible_points_to out_ptr (crucible_term {{ serialize_E1 (affinify E (POINTonE1_abs inp)) }});
   //crucible_points_to out_ptr (crucible_term {{ I2OSP`{48} ((affinify E (POINTonE1_abs inp)).0) }});
   //crucible_points_to out_ptr (crucible_term {{ split`{48,8} (0xc0 # zero) }});
@@ -134,15 +134,22 @@ is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
            then is_point_O E (affinify E (POINTonE1_abs p))
            else apply peq (fp_abs(p.2)) (Fp.field_zero) }});
 
+// TODO: Does this need the is_point_projective precondition?
+is_point_O_rev_thm <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \p -> (is_point_O E (affinify E (POINTonE1_abs p))) == (is_zero Fp ((POINTonE1_abs p).2))}});
+
+
 blst_p1_compress_ov <- really_custom_verify "blst_p1_compress"
   //(concat [reciprocal_fp_ov] (concat point_op_overrides fp_overrides))
   (concat [POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov] (concat fp_overrides (concat mul_fp_ovs point_op_overrides)))
   blst_p1_compress_spec
     do {
      simplify (addsimp vec_is_zero_call_thm empty_ss);
-     unfolding ["POINTonE1_affine_abs", "POINTonE1_affine_rep"];
+     unfolding ["POINTonE1_affine_abs", "POINTonE1_affine_rep", "serialize_E1", "m_byte_E1", "metadata_bits_E1"];
      (apply_fp_rewrites);
-     //simplify (addsimp is_point_O_thm'' (cryptol_ss()));
+     // TODO: Might still need is_point_O_thm'' when adding back vec_is_zero
+     // conditional in code
+     simplify (addsimp is_point_O_rev_thm (cryptol_ss()));
      (print_goal);
      w4_unint_z3 ec_mult_unints;
   };
