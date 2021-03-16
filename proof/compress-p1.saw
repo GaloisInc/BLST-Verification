@@ -45,7 +45,7 @@ let POINTonE1_affine_Compress_BE_spec = do {
   crucible_points_to out_ptr (crucible_term {{ I2OSP`{48} ((POINTonE1_affine_abs inp ).0) }});
 
   // TODO: Dedeup with sgn0x_pty_mont_384_spec
-  crucible_return (crucible_term {{ (zext [2*(fp_abs inp.1)>`p, (fp_abs inp.1)%2 == 1]):[64] }});
+  crucible_return (crucible_term {{ (zext [(sign_F_p (fp_abs inp.1)), (fp_abs inp.1)%2 == 1]):[64] }});
 };
 
 POINTonE1_affine_Compress_BE_ov <- really_verify "POINTonE1_affine_Compress_BE"
@@ -121,8 +121,8 @@ let blst_p1_compress_spec = do {
 
   crucible_execute_func [out_ptr, inp_ptr];
   //crucible_postcond {{ is_point_O E (affinify E (POINTonE1_abs inp)) }};
-  //crucible_points_to out_ptr (crucible_term {{ serialize_E1 (affinify E (POINTonE1_abs inp)) }});
-  crucible_points_to out_ptr (crucible_term {{ I2OSP`{48} ((affinify E (POINTonE1_abs inp)).0) }});
+  crucible_points_to out_ptr (crucible_term {{ serialize_E1 (affinify E (POINTonE1_abs inp)) }});
+  //crucible_points_to out_ptr (crucible_term {{ I2OSP`{48} ((affinify E (POINTonE1_abs inp)).0) }});
   //crucible_points_to out_ptr (crucible_term {{ split`{48,8} (0xc0 # zero) }});
 };
 
