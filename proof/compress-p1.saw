@@ -27,6 +27,7 @@ let fromx_mont_384_spec = do {
 
 fromx_mont_384_ov <- verify_x86 "fromx_mont_384" fromx_mont_384_spec;
 
+let {{ I2OSP48 = I2OSP`{48, t_Fp} }};
 let POINTonE1_affine_Compress_BE_spec = do {
   out_ptr <- crucible_alloc (llvm_array 48 (llvm_int 8));
   (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE1_affine_type;
@@ -42,7 +43,7 @@ let POINTonE1_affine_Compress_BE_spec = do {
   // precond (which also requires proving the nonzero postcond in
   // POINTonE1_from_Jacobian_spec)
   // crucible_points_to out_ptr (crucible_term {{ x_string_E1 (POINTonE1_affine_abs inp ) }});
-  crucible_points_to out_ptr (crucible_term {{ I2OSP`{48} ((POINTonE1_affine_abs inp ).0) }});
+  crucible_points_to out_ptr (crucible_term {{ I2OSP48 ((POINTonE1_affine_abs inp ).0) }});
 
   // TODO: Dedeup with sgn0x_pty_mont_384_spec
   crucible_return (crucible_term {{ (zext [(sign_F_p (fp_abs inp.1)), (fp_abs inp.1)%2 == 1]):[64] }});
@@ -118,11 +119,11 @@ let POINTonE1_Compress_BE_spec = do {
   // POINTonE1_from_Jacobian_spec)
   // crucible_points_to out_ptr (crucible_term {{ x_string_E1 (POINTonE1_affine_abs inp ) }});
   let affinified = {{ affinify E (POINTonE1_abs inp) }};
-  crucible_points_to out_ptr (crucible_term {{ I2OSP`{48} (affinified.0) }});
+  crucible_points_to out_ptr (crucible_term {{ I2OSP48 (affinified.0) }});
 
   // TODO: Dedeup with sgn0x_pty_mont_384_spec
   // TODO: Re-enable
-  //crucible_return (crucible_term {{ (zext [(sign_F_p affinified.1), affinified.1%2 == 1]):[64] }});
+  crucible_return (crucible_term {{ (zext [(sign_F_p affinified.1), affinified.1%2 == 1]):[64] }});
 };
 
 // This is the conditional rule showing that the Z coordinate check does the right thing
@@ -159,8 +160,9 @@ POINTonE1_Compress_BE_ov <- really_custom_verify "POINTonE1_Compress_BE"
      simplify (addsimp unit_rewrite empty_ss);
      simplify prop_simpset;
      (print_goal_readably_fp);
+     print_goal_consts;
      //assume_unsat;
-     w4_unint_z3 ec_mult_unints;
+     w4_unint_z3 (concat ec_mult_unints ["fp_abs", "I2OSP48"]);
   };
 
 // Have the "Z=0 <=> infinity" issue again; see the notes in `map_to_g1.saw`.
@@ -197,7 +199,6 @@ is_point_one_thm <- admit_cryptol (rewrite (cryptol_ss())
   */
 
 
-/*
 blst_p1_compress_ov <- really_custom_verify "blst_p1_compress"
   //(concat [reciprocal_fp_ov] (concat point_op_overrides fp_overrides))
   (concat [POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov, POINTonE1_Compress_BE_ov] (concat fp_overrides (concat mul_fp_ovs point_op_overrides)))
@@ -220,4 +221,3 @@ blst_p1_compress_ov <- really_custom_verify "blst_p1_compress"
      //assume_unsat;
      w4_unint_z3 ec_mult_unints;
   };
-  */

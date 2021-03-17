@@ -123,6 +123,7 @@ propositional_rewrites <- for
   , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a b False) (and a b))"
   , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (and a b)) (or (not a) (not b)))"
   , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (or a b)) (and (not a) (not b)))"
+  , "(a:Bool) -> EqTrue (eq Bool (bvEq 64 (bvNat 64 0) (ite (Vec 64 Bool) a (bvNat 64 1) (bvNat 64 0))) (not a))"
    ] (prove_core abc);
 
 let prop_simpset = add_prelude_eqs
