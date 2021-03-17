@@ -99,6 +99,70 @@ POINTonE1_from_Jacobian_ov <- really_custom_verify "POINTonE1_from_Jacobian"
     w4_unint_z3 fp_unints;
   };
 
+let POINTonE1_Compress_BE_spec = do {
+  out_ptr <- crucible_alloc (llvm_array 48 (llvm_int 8));
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE1_type;
+
+  crucible_precond {{ POINTonE1_invariant inp }};
+  crucible_precond {{ (fp_abs (inp.2)) != Fp.field_unit }};
+  crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
+  crucible_precond {{ ~(is_zero Fp ((POINTonE1_abs inp).2)) }};
+
+  // Nonzero
+  //llvm_precond {{ ((fp_abs inp.0) != Fp.field_zero) || ((fp_abs inp.1) != Fp.field_zero) }};
+
+  crucible_execute_func [out_ptr, inp_ptr];
+
+  // TODO: If I want to use the x_string_E1 form below, I need the Nonzero
+  // precond (which also requires proving the nonzero postcond in
+  // POINTonE1_from_Jacobian_spec)
+  // crucible_points_to out_ptr (crucible_term {{ x_string_E1 (POINTonE1_affine_abs inp ) }});
+  let affinified = {{ affinify E (POINTonE1_abs inp) }};
+  crucible_points_to out_ptr (crucible_term {{ I2OSP`{48} (affinified.0) }});
+
+  // TODO: Dedeup with sgn0x_pty_mont_384_spec
+  // TODO: Re-enable
+  //crucible_return (crucible_term {{ (zext [(sign_F_p affinified.1), affinified.1%2 == 1]):[64] }});
+};
+
+// This is the conditional rule showing that the Z coordinate check does the right thing
+// This may be provable in SAW but for now we assume it as an algebraic fact.
+is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \p -> peq (fp_abs(p.2)) (Fp.field_zero) ==
+           if is_point_projective E (POINTonE1_abs p)
+           then is_point_O E (affinify E (POINTonE1_abs p))
+           else apply peq (fp_abs(p.2)) (Fp.field_zero) }});
+
+// TODO: Does this need the is_point_projective precondition?
+is_point_O_rev_thm <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \p -> (is_point_O E (affinify E (POINTonE1_abs p))) == (is_zero Fp ((POINTonE1_abs p).2))}});
+
+
+let {{ my_field_unit = Fp.field_unit }};
+POINTonE1_Compress_BE_ov <- really_custom_verify "POINTonE1_Compress_BE"
+  //(concat [reciprocal_fp_ov] (concat point_op_overrides fp_overrides))
+  (concat [POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov] (concat fp_overrides (concat mul_fp_ovs point_op_overrides)))
+  POINTonE1_Compress_BE_spec
+    do {
+     // POINTonE1_affine_abs and POINTonE1_affine_rep need to be unfolded for
+     // fp_rewrites to apply.  Similarly, the remaining functions need to be
+     // unfolded for is_point_O_rev_thm to apply and replace the is_point_O
+     // checks.
+     unfolding ["POINTonE1_affine_abs", "POINTonE1_affine_rep", "POINTonE1_invariant", "serialize_E1", "x_string_E1", "m_byte_E1", "metadata_bits_E1"];
+     (apply_fp_rewrites);
+     simplify (addsimps [is_point_O_thm'', is_point_O_rev_thm/*, one_mont_p_invariant_thm, one_mont_p_abs_thm*/] (cryptol_ss()));
+     //simplify (addsimp is_point_one_thm empty_ss);
+     //
+     simplify (addsimp one_mont_p_abs_thm empty_ss);
+     let unit_rewrite = run (prove_cryptol {{ Fp.field_unit == my_field_unit }} []);
+     //(goal_eval_unint fp_unints);
+     simplify (addsimp unit_rewrite empty_ss);
+     simplify prop_simpset;
+     (print_goal_readably_fp);
+     //assume_unsat;
+     w4_unint_z3 ec_mult_unints;
+  };
+
 // Have the "Z=0 <=> infinity" issue again; see the notes in `map_to_g1.saw`.
 // So, passing in a value (0,0,1) would give a result not agreeing with
 // the specification.
@@ -116,6 +180,7 @@ let blst_p1_compress_spec = do {
   // TODO: For some reason this precond is insufficient to exclude the case
   // where the input is already in affine coordinates
   crucible_precond {{ (fp_abs (inp.2)) != Fp.field_unit }};
+  //crucible_precond {{ inp.2 != [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493] }};
 
   crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
 
@@ -126,22 +191,16 @@ let blst_p1_compress_spec = do {
   //crucible_points_to out_ptr (crucible_term {{ split`{48,8} (0xc0 # zero) }});
 };
 
-// This is the conditional rule showing that the Z coordinate check does the right thing
-// This may be provable in SAW but for now we assume it as an algebraic fact.
-is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
-  {{ \p -> peq (fp_abs(p.2)) (Fp.field_zero) ==
-           if is_point_projective E (POINTonE1_abs p)
-           then is_point_O E (affinify E (POINTonE1_abs p))
-           else apply peq (fp_abs(p.2)) (Fp.field_zero) }});
-
-// TODO: Does this need the is_point_projective precondition?
-is_point_O_rev_thm <- admit_cryptol (rewrite (cryptol_ss())
-  {{ \p -> (is_point_O E (affinify E (POINTonE1_abs p))) == (is_zero Fp ((POINTonE1_abs p).2))}});
+  /*
+is_point_one_thm <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \p -> peq (fp_abs(p)) (Fp.field_one) == False }});
+  */
 
 
+/*
 blst_p1_compress_ov <- really_custom_verify "blst_p1_compress"
   //(concat [reciprocal_fp_ov] (concat point_op_overrides fp_overrides))
-  (concat [POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov] (concat fp_overrides (concat mul_fp_ovs point_op_overrides)))
+  (concat [POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov, POINTonE1_Compress_BE_ov] (concat fp_overrides (concat mul_fp_ovs point_op_overrides)))
   blst_p1_compress_spec
     do {
      simplify (addsimp vec_is_zero_call_thm empty_ss);
@@ -151,9 +210,14 @@ blst_p1_compress_ov <- really_custom_verify "blst_p1_compress"
      // checks.
      unfolding ["POINTonE1_affine_abs", "POINTonE1_affine_rep", "serialize_E1", "x_string_E1", "m_byte_E1", "metadata_bits_E1"];
      (apply_fp_rewrites);
-     // TODO: Might still need is_point_O_thm'' when adding back vec_is_zero
-     // conditional in code
-     simplify (addsimps [is_point_O_thm'', is_point_O_rev_thm] (cryptol_ss()));
-     (print_goal);
+     simplify (addsimps [is_point_O_thm'', is_point_O_rev_thm, one_mont_p_invariant_thm, one_mont_p_abs_thm] (cryptol_ss()));
+     //simplify (addsimp is_point_one_thm empty_ss);
+     simplify (addsimp one_mont_p_abs_thm empty_ss);
+     //let unit_rewrite = run (prove_cryptol {{ Fp.field_unit == my_field_unit }} []);
+     //(goal_eval_unint fp_unints);
+     //simplify (addsimp unit_rewrite empty_ss);
+     //(print_goal_readably_fp);
+     //assume_unsat;
      w4_unint_z3 ec_mult_unints;
   };
+  */

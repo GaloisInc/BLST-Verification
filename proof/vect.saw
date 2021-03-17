@@ -173,6 +173,7 @@ let vec_is_equal_fp_spec = do {
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
   crucible_precond {{ fp_invariant a /\  fp_invariant b }};
   crucible_execute_func [a_ptr, b_ptr, crucible_term {{ (48:Size_t) }}]; // Non-portable
+  //crucible_return (crucible_term {{ if Fp.is_equal (fp_abs a, fp_abs b) then 1 else (0:Limb) }});
   crucible_return (crucible_term {{ if fp_abs a ==  fp_abs b then 1 else (0:Limb) }});
   };
 
