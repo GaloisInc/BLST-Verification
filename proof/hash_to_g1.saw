@@ -5,23 +5,23 @@
 
 // Imports
 
-//include "helpers.saw";
-//include "list_utils.saw";
-//include "types.saw";
+include "helpers.saw";
+include "list_utils.saw";
+include "types.saw";
 
-//m <- llvm_load_module "../build/llvm/libblst.a.bc";
+m <- llvm_load_module "../build/llvm/libblst.a.bc";
 
-//enable_experimental;
+enable_experimental;
 
-//let do_prove = true;
+let do_prove = true;
 
-//include "proof-helpers.saw";
-//include "hash_to_field.saw";
-//include "fp_overrides.saw";
-//include "vect.saw";
-//include "curve_operations.saw";
-//include "ec_mult.saw";
-//include "exp.saw";
+include "proof-helpers.saw";
+include "hash_to_field.saw";
+include "fp_overrides.saw";
+include "vect.saw";
+include "curve_operations.saw";
+include "ec_mult.saw";
+include "exp.saw";
 
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
@@ -169,8 +169,12 @@ swu_3mod4_correct <- admit_cryptol
         == map_to_curve_simple_swu u
   }};
 
-swu_3mod4_impl_on_curve <- simp_then_admit {{ \u -> is_point_projective Curve_E' (map_to_curve_simple_swu_3mod4_impl u) == True }};
-swu_impl_on_curve <- simp_then_admit {{ \u -> is_point_projective Curve_E' (map_to_curve_simple_swu_impl u) == True }}; // TODO: this could be obtained from the previous
+swu_3mod4_impl_on_curve <- simp_then_admit {{ \u -> is_point_affine Curve_E' (map_to_curve_simple_swu_3mod4 u) == True }};
+
+swu_impl_xy_nz <- simp_then_admit {{ \u -> ~((x,y) == (0,0) \/ z == 0) where (x,y,z) = map_to_curve_simple_swu_impl u) }};
+
+is_point_projective_lemma <- simp_then_admit {{ \p -> is_point_projective Curve_E' p == if is_point_affine Curve_E' (affinify Curve_E' p) /\ ~((p.0 == 0 /\ p.1 == 0) \/ p.2 == 0) then True else apply is_point_projective Curve_E' p }};
+//_ <- really_custom_prove_cryptol {{ \(x:[2]) (y:[2]) (z:[2]) -> (is_point_projective Curve_E' p == if is_point_affine Curve_E' (affinify Curve_E' p) /\ ~((p.0 == 0 /\ p.1 == 0) \/ p.2 == 0) then True else apply is_point_projective Curve_E' p where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
 
 // point_dadd implements add:
 dadd_thm <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ p1 p2 -> affinify Curve_E' (point_dadd Fp p1 p2 A' False) == add Curve_E' (affinify Curve_E' p1) (affinify Curve_E' p2) }});
@@ -181,51 +185,6 @@ point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Curve_E' (
 // adding a point to its double can be done with POINTonE1_add (cheaper than dadd) because the double of a point is never equal to the point unless the point is point_O:
 // TODO: so what if it's point_O? Should this be conditional?
 add_double_lemma <- admit_cryptol {{ \p -> affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) }};
-
-// We will need to prove that some expressions involving field Fp operations are
-// equivalent.  To do so, we will try to rewrite them to a normal form with the
-// following rules. The problem is that we cannot use commutativity or
-// associativity, which would make the rewriter loop....
-
-zero_unit_rewrites <- for [ // TODO: here we are cheating: this is true only if we use the (Z p) type
-    {{ \p -> Fp.add (Fp.field_zero, p) == p }}
-  , {{ \p -> Fp.add (p, Fp.field_zero) == p }}
-  , {{ \p -> Fp.mul (p, Fp.field_unit) == p }}
-  , {{ \p -> Fp.mul (Fp.field_unit, p) == p }}
-  , {{ \p -> Fp.mul (p, Fp.field_zero) == Fp.field_zero }}
-  , {{ \p -> Fp.mul (Fp.field_zero, p) == Fp.field_zero }}
-  , {{ \p -> Fp.div (p, Fp.field_zero) == Fp.field_zero }}
-  , {{ \p -> Fp.div (p, Fp.field_unit) == Fp.field_unit }}
-  , {{ \p -> Fp.div (Fp.field_zero, p) == Fp.field_zero }}
-] simp_then_admit;
-
-// NOTE: those rules should be sound since we have `Fp.div (x,0) == 0`
-push_div_out_rewrites <- for [
-    {{ \x y a b -> Fp.mul (Fp.div (x,y), Fp.div (a,b)) == Fp.div (Fp.mul (x,a), Fp.mul (y,b)) }}
-  , {{ \x y z -> Fp.mul (Fp.div (x,y), z) == Fp.div (Fp.mul (x,z), y) }}
-  , {{ \x y z -> Fp.mul (z, Fp.div (x,y)) == Fp.div (Fp.mul (x,z), y) }}
-  , {{ \x y z -> Fp.div (Fp.div (z, x), y) == Fp.div (z, Fp.mul (x,y)) }}
-] simp_then_admit;
-
-sum_of_prods_rewrites <- for [
-  {{ \a b c -> Fp.mul (Fp.add (a, b), c) == Fp.add (Fp.mul (a,c), Fp.mul (b,c)) }}
-  , {{ \a b c -> Fp.mul (c, Fp.add (a, b)) == Fp.add (Fp.mul (a,c), Fp.mul (b,c)) }}
-] simp_then_admit;
-
-simp_div_rewrites <- for [
-    {{ \x y -> Fp.div (Fp.mul (y,x), x) == if ~(is_zero Fp x) then y else Fp.field_zero }}
-  , {{ \x y z -> Fp.div (Fp.mul (y,x), Fp.mul(z,x)) == if ~(is_zero Fp x) then Fp.div (y,z) else Fp.field_zero }}
-  , {{ \x y z -> Fp.div (Fp.mul (x,y), Fp.mul(x,z)) == if ~(is_zero Fp x) then Fp.div (y,z) else Fp.field_zero }}
-] simp_then_admit;
-
-unsquare_rewrite <- simp_then_admit {{ \a -> Fp.sq a == Fp.mul (a,a) }};
-
-left_fold_mul <- simp_then_admit {{ \x y z -> Fp.mul (x, Fp.mul (y,z)) == Fp.mul (Fp.mul (x, y),z) }};
-
-// this one is not included in algebra_simpset below:
-right_fold_mul <- simp_then_admit {{ \x y z -> Fp.mul (Fp.mul (x, y),z) == Fp.mul (x, Fp.mul (y,z)) }};
-
-let algebra_simpset = addsimps (concat_all [zero_unit_rewrites, [unsquare_rewrite], [left_fold_mul], sum_of_prods_rewrites, push_div_out_rewrites]) empty_ss; // TODO: not sure how many of those are used anymore...
 
 // NOTE: there are more assumptions sprinkled throughout
 
@@ -299,23 +258,16 @@ swu_impl_equiv_3mod4_impl <- custom_prove_cryptol {{ \u -> map_to_curve_simple_s
     w4_unint_z3 (concat ["Fp"] ["sqrt","fp_exp"]);
   };
 
-swu_impl_nz_thm <- custom_prove_cryptol {{ \u -> (Fp.is_equal(z, Fp.field_zero) == False where (_,_,z) = (map_to_curve_simple_swu_3mod4_impl u)) }} w4;
+//_ <- really_custom_prove_cryptol {{ \(xn_:[2]) (xd_:[2]) (yn_:[2]) -> (affinify_nz (Fp.mul (xn, xd), Fp.mul (yn, gxd), xd) == if ~Fp.is_equal(xd, Fp.field_zero) then (Fp.div(xn,xd), Fp.div(yn,Fp.field_unit)) else apply affinify_nz (Fp.mul (xn, xd), Fp.mul (yn, gxd), xd) where gxd = Fp.mul(xd, Fp.sq xd); xn = toInteger xn_; xd = toInteger xd_; yn = toInteger yn_ )}} (quickcheck 64);
 
 swu_3mod4_abs_thm <- custom_prove_cryptol {{ \u -> affinify Curve_E' (map_to_curve_simple_swu_3mod4_impl u) ==
   ((Fp.div(xn,xd), Fp.div(yn,yd)) where (xn, xd, yn, yd) = Aux::map_to_curve_simple_swu_3mod4 u) }}
   do {
-    unfolding ["affinify","Curve_E'","is_zero","HashToCurveE1::F","HashToCurveE1::module parameter _F","HashToCurveE1::_F"];
-    simplify (addsimp swu_impl_nz_thm basic_ss);
-    let rewrites = run (
-      for [
-          {{ \xn xd ->  Fp.mul (Fp.sq (Fp.div (Fp.field_unit, xd)), Fp.mul (xn,xd)) == Fp.div(xn,xd) }}
-        , {{ \y -> Fp.div(y, Fp.field_unit) == y }}
-        , {{ \xd y -> Fp.mul (Fp.mul (Fp.div (Fp.field_unit,xd), Fp.sq (Fp.div (Fp.field_unit,xd))), Fp.mul(y, Fp.mul(xd, Fp.sq xd))) == y }}
-      ] simp_then_admit // TODO prove 1 and 3
-    );
-    unfolding ["Aux::map_to_curve_simple_swu_3mod4","map_to_curve_simple_swu_3mod4_impl"];
-    simplify (addsimps aux_rewrites (cryptol_ss ()));
-    simplify (addsimps rewrites (cryptol_ss ()));
+    let algebra_rewrite = run ( simp_then_admit {{ \xn xd yn -> (affinify_nz (Fp.mul (xn, xd), Fp.mul (yn, gxd), xd) == if ~Fp.is_equal(xd, Fp.field_zero) then (Fp.div(xn,xd), Fp.div(yn,Fp.field_unit)) else apply affinify_nz (Fp.mul (xn, xd), Fp.mul (yn, gxd), xd) where gxd = Fp.mul(xd, Fp.sq xd) )}} );
+    unfolding ["map_to_curve_simple_swu_3mod4_impl"];
+    simplify (addsimps [affinify_lemma',algebra_rewrite ] empty_ss);
+    let swu_impl_nz_thm = run (custom_prove_cryptol {{ \u -> (Fp.is_equal(z, Fp.field_zero) == False where (_,z,_,_) = (Aux::map_to_curve_simple_swu_3mod4 u)) }} w4);
+    simplify (addsimp swu_impl_nz_thm empty_ss);
     w4_unint_z3 ["Fp","fp_exp"];
   };
 
@@ -370,8 +322,9 @@ let {{
 }};
 
 // TODO
-// This is "trivial" algebra...
-iso_map_main_lemma <- simp_then_admit {{ \p -> iso_map_nz (affinify_nz p) == affinify_nz (isogeny_map_to_E1_impl p) }};
+// This should be "trivial" algebra...
+iso_map_main_lemma <- simp_then_admit {{ \p -> iso_map_nz (affinify_nz p) == if ~Fp.is_equal(p.2, Fp.field_zero) then affinify_nz (isogeny_map_to_E1_impl p) else apply iso_map_nz (affinify_nz p) }};
+//_ <- really_custom_prove_cryptol {{ \(x:[2]) (y:[2]) (z:[2])-> (iso_map_nz (affinify_nz p) == if ~Fp.is_equal(p.2, Fp.field_zero) then affinify_nz (isogeny_map_to_E1_impl p) else apply iso_map_nz (affinify_nz p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
 
 isogeny_map_to_E1_impl_thm_nz <- custom_prove_cryptol {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if (is_point_projective Curve_E' p /\ ~is_zero Fp p.2) then iso_map (affinify Curve_E' p) else apply affinify E (isogeny_map_to_E1_impl p) }}
 do {
