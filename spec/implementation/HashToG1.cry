@@ -8,31 +8,10 @@ import ShortWeierstrassCurve (ProjectivePoint, AffinePoint)
 import BLSFieldExtras (sqrt_fp, fp_exp)
 import ExpandMessage (Expandable)
 import implementation::CurveOperation (point_dadd, point_add, point_double)
-//import HashToCurveE1 (hash_to_field, hash_to_curve_opt, A', B', Z, Aux::k1s, Aux::k2s, Aux::k3s, Aux::k4s, h_eff, sqrt, sgn0, map_to_curve_simple_swu_3mod4) // TODO: why do we have sqrt_fp and sqrt?
 import HashToCurveE1
 import HashToCurveE1Aux as Aux
 
-// There are three levels of specification: high-level, optimization-level, and
-// implementation specs. The first two are taken from the IETF Draft or
-// references papers, while the third type are specifications written to match
-// the C implementations as closely as possible.
-
-// a) we define optimization-level specifications (for example, the IETF Draft gives a
-// optimization-level spec for map_to_curve_simple_swu), which we assume are equivalent
-// to their high-level counterparts.
-
-// b) we define implementation specifications, which follows the C
-// implementations very closely, and we prove that those are equivalent to
-// their optimization-level spec counterparts.
-
-// c) we tie everything together to obtain a proof that hash_to_g1 implements
-// its high-level specifications. This often involves assuming that that
-// optimization-level specs are quivalent to the high-level ones (those proofs
-// would be too hard in SAW)
-
-// the SWU map:
-
-// TODO: it would be great if you could use better notation for field ops, e.g. + instead of Fp.add
+// the SWU map
 
 // Projective version of map_to_curve_simple_swu_3mod4:
 map_to_curve_simple_swu_3mod4_impl : t_Fp -> ProjectivePoint t_Fp
