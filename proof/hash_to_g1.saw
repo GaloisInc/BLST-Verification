@@ -9,21 +9,21 @@ include "helpers.saw";
 include "list_utils.saw";
 include "types.saw";
 
-m <- llvm_load_module "../build/llvm/libblst.a.bc";
+//m <- llvm_load_module "../build/llvm/libblst.a.bc";
 
-enable_experimental;
+//enable_experimental;
 
-let do_prove = false;
+//let do_prove = false;
 
-include "proof-helpers.saw";
-include "hash_to_field.saw";
-include "fp_overrides.saw";
-include "vect.saw";
-include "curve_operations.saw";
-include "ec_mult.saw";
-include "exp.saw";
+//include "proof-helpers.saw";
+//include "hash_to_field.saw";
+//include "fp_overrides.saw";
+//include "vect.saw";
+//include "curve_operations.saw";
+//include "ec_mult.saw";
+//include "exp.saw";
 
-let do_prove = true;
+//let do_prove = true;
 
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
