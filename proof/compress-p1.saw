@@ -171,32 +171,25 @@ blst_p1_compress_projective_ov <- really_custom_verify "blst_p1_compress"
      // replace the is_point_O checks.
      unfolding ["serialize_E1", "x_string_E1", "m_byte_E1", "metadata_bits_E1"];
      simplify (addsimps [vec_is_zero_call_thm, is_point_O_thm'', is_point_O_rev_thm] (cryptol_ss()));
-     w4_unint_z3 fp_unints; //ec_mult_unints;
+     w4_unint_z3 fp_unints;
   };
 
-/*
+// TODO: rename these rewriting rules
 is_point_O_thmA'' <- admit_cryptol (rewrite (cryptol_ss())
   {{ \p -> peq (fp_abs(p.2)) (Fp.field_zero) ==
            if is_point_projective E (POINTonE1_abs p)
            then is_point_O E (fp_abs p.0, fp_abs p.1)
            else apply peq (fp_abs(p.2)) (Fp.field_zero) }});
 
-// TODO: Does this need the is_point_projective precondition?
 is_point_O_rev_thmA <- admit_cryptol (rewrite (cryptol_ss())
   {{ \p -> (is_point_O E (fp_abs p.0, fp_abs p.1)) == (is_zero Fp ((POINTonE1_abs p).2))}});
+
+
 blst_p1_compress_affine_ov <- really_custom_verify "blst_p1_compress"
-  (concat [POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov, POINTonE1_Compress_BE_affine_ov] (concat fp_overrides (concat mul_fp_ovs point_op_overrides)))
+  (concat [POINTonE1_Compress_BE_affine_ov] vec_overrides)
   (blst_p1_compress_spec true)
     do {
-     simplify (addsimp vec_is_zero_call_thm empty_ss);
-     // POINTonE1_affine_abs and POINTonE1_affine_rep need to be unfolded for
-     // fp_rewrites to apply.  Similarly, the remaining functions need to be
-     // unfolded for is_point_O_rev_thm to apply and replace the is_point_O
-     // checks.
-     unfolding ["POINTonE1_affine_abs", "POINTonE1_affine_rep", "serialize_E1", "x_string_E1", "m_byte_E1", "metadata_bits_E1"];
-     (apply_fp_rewrites);
-     simplify (addsimps [is_point_O_thmA'', is_point_O_rev_thmA, one_mont_p_invariant_thm, one_mont_p_abs_thm] (cryptol_ss()));
-     simplify (addsimp one_mont_p_abs_thm empty_ss);
-     w4_unint_z3 ec_mult_unints;
+     unfolding ["serialize_E1", "x_string_E1", "m_byte_E1", "metadata_bits_E1"];
+     simplify (addsimps [vec_is_zero_call_thm, is_point_O_thmA'', is_point_O_rev_thmA] (cryptol_ss()));
+     w4_unint_z3 fp_unints;
   };
-*/
