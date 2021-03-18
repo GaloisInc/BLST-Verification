@@ -9,7 +9,6 @@ is_square_fp x =  y == 0 \/ y == 1 where
 sqrt_fp x = F_expt`{n=width p} Fp x `((p+1)/4) // the =3 (mod 4) variant
 
 inverse_fp x = F_expt`{n=width p} Fp x `(p-2) // but also could be F.div (F.field_unit, x)
-//inverse_fp F x = Fp.div (Fp.field_unit, x) // but also could be F.div (F.field_unit, x)
 
 type q = p*p
 
