@@ -118,7 +118,6 @@ is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
 is_point_O_rev_thm <- admit_cryptol (rewrite (cryptol_ss())
   {{ \p -> (is_point_O E (affinify E (POINTonE1_abs p))) == (is_zero Fp ((POINTonE1_abs p).2))}});
 
-
 POINTonE1_Compress_BE_projective_ov <- really_custom_verify "POINTonE1_Compress_BE"
   [POINTonE1_from_Jacobian_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov]
   (POINTonE1_Compress_BE_spec false)
@@ -129,26 +128,17 @@ POINTonE1_Compress_BE_projective_ov <- really_custom_verify "POINTonE1_Compress_
      simplify (addsimp one_mont_p_abs_thm empty_ss);
      w4_unint_z3 (concat ec_mult_unints ["fp_abs", "I2OSP48"]);
   };
-/*
 POINTonE1_Compress_BE_affine_ov <- really_custom_verify "POINTonE1_Compress_BE"
-  (concat [POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov] (concat fp_overrides (concat mul_fp_ovs point_op_overrides)))
+  [POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov]
   (POINTonE1_Compress_BE_spec true)
     do {
-     // POINTonE1_affine_abs and POINTonE1_affine_rep need to be unfolded for
-     // fp_rewrites to apply.  Similarly, the remaining functions need to be
-     // unfolded for is_point_O_rev_thm to apply and replace the is_point_O
-     // checks.
-     unfolding ["POINTonE1_affine_abs", "POINTonE1_affine_rep", "POINTonE1_invariant", "serialize_E1", "x_string_E1", "m_byte_E1", "metadata_bits_E1"];
+     // Unfolding needed for fp rewrites to apply
+     unfolding ["POINTonE1_invariant"];
      (apply_fp_rewrites);
-     simplify (addsimps [is_point_O_thm'', is_point_O_rev_thm] (cryptol_ss()));
      simplify (addsimp one_mont_p_abs_thm empty_ss);
-     let unit_rewrite = run (prove_cryptol {{ Fp.field_unit == my_field_unit }} []);
-     simplify (addsimp unit_rewrite empty_ss);
-     simplify prop_simpset;
-     (print_goal_readably_fp);
-     print_goal_consts;
      w4_unint_z3 (concat ec_mult_unints ["fp_abs", "I2OSP48"]);
   };
+/*
 
 // Have the "Z=0 <=> infinity" issue again; see the notes in `map_to_g1.saw`.
 // So, passing in a value (0,0,1) would give a result not agreeing with
