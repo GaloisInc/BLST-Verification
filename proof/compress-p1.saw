@@ -41,6 +41,7 @@ let POINTonE1_affine_Compress_BE_spec = do {
   crucible_return (crucible_term {{ (zext [(sign_F_p (fp_abs inp.1)), (fp_abs inp.1)%2 == 1]):[64] }});
 };
 
+// TODO: Change "really_verify" to "verify"
 POINTonE1_affine_Compress_BE_ov <- really_verify "POINTonE1_affine_Compress_BE"
   [fromx_mont_384_ov, sgn0x_pty_mont_384_ov]
   POINTonE1_affine_Compress_BE_spec;
@@ -75,7 +76,6 @@ POINTonE1_from_Jacobian_ov <- really_custom_verify "POINTonE1_from_Jacobian"
     (simplify (addsimp mul_commutes_fp_thm empty_ss));
     unfolding ["POINTonE1_affine_invariant", "POINTonE1_affine_rep"];
     (apply_fp_rewrites);
-    (print_goal);
     w4_unint_z3 fp_unints;
   };
 
@@ -119,26 +119,17 @@ is_point_O_rev_thm <- admit_cryptol (rewrite (cryptol_ss())
   {{ \p -> (is_point_O E (affinify E (POINTonE1_abs p))) == (is_zero Fp ((POINTonE1_abs p).2))}});
 
 
-let {{ my_field_unit = Fp.field_unit }};
 POINTonE1_Compress_BE_projective_ov <- really_custom_verify "POINTonE1_Compress_BE"
-  (concat [POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov] (concat fp_overrides (concat mul_fp_ovs point_op_overrides)))
+  [POINTonE1_from_Jacobian_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov]
   (POINTonE1_Compress_BE_spec false)
     do {
-     // POINTonE1_affine_abs and POINTonE1_affine_rep need to be unfolded for
-     // fp_rewrites to apply.  Similarly, the remaining functions need to be
-     // unfolded for is_point_O_rev_thm to apply and replace the is_point_O
-     // checks.
-     unfolding ["POINTonE1_affine_abs", "POINTonE1_affine_rep", "POINTonE1_invariant", "serialize_E1", "x_string_E1", "m_byte_E1", "metadata_bits_E1"];
+     // Unfolding needed for fp rewrites to apply
+     unfolding ["POINTonE1_affine_abs", "POINTonE1_affine_rep", "POINTonE1_invariant"];
      (apply_fp_rewrites);
-     simplify (addsimps [is_point_O_thm'', is_point_O_rev_thm] (cryptol_ss()));
      simplify (addsimp one_mont_p_abs_thm empty_ss);
-     let unit_rewrite = run (prove_cryptol {{ Fp.field_unit == my_field_unit }} []);
-     simplify (addsimp unit_rewrite empty_ss);
-     simplify prop_simpset;
-     (print_goal_readably_fp);
-     print_goal_consts;
      w4_unint_z3 (concat ec_mult_unints ["fp_abs", "I2OSP48"]);
   };
+/*
 POINTonE1_Compress_BE_affine_ov <- really_custom_verify "POINTonE1_Compress_BE"
   (concat [POINTonE1_from_Jacobian_ov, reciprocal_fp_ov, sqr_fp_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov] (concat fp_overrides (concat mul_fp_ovs point_op_overrides)))
   (POINTonE1_Compress_BE_spec true)
@@ -226,3 +217,4 @@ blst_p1_compress_affine_ov <- really_custom_verify "blst_p1_compress"
      simplify (addsimp one_mont_p_abs_thm empty_ss);
      w4_unint_z3 ec_mult_unints;
   };
+*/
