@@ -1898,70 +1898,70 @@
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/hash_to_g1.saw:104:26",
+    "loc": "/workdir/proof/hash_to_g1.saw:108:26",
     "method": "sgn0x_pty_mont_384",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
-    "loc": "/workdir/proof/hash_to_g1.saw:105:27",
+    "status": "verified",
+    "loc": "/workdir/proof/hash_to_g1.saw:111:27",
     "method": "recip_sqrt_fp_3mod4",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:247:32",
+    "loc": "/workdir/proof/hash_to_g1.saw:229:32",
     "method": "map_to_isogenous_E1",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:331:36",
+    "loc": "/workdir/proof/hash_to_g1.saw:258:36",
     "method": "isogeny_map_to_E1",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:443:18",
+    "loc": "/workdir/proof/hash_to_g1.saw:290:18",
     "method": "POINTonE1_dbl_n_add",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:447:25",
+    "loc": "/workdir/proof/hash_to_g1.saw:294:25",
     "method": "map_to_g1",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/hash_to_g1.saw:469:22",
+    "loc": "/workdir/proof/hash_to_g1.saw:316:22",
     "method": "blst_sha256_block_data_order",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:469:22",
+    "loc": "/workdir/proof/hash_to_g1.saw:316:22",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:469:22",
+    "loc": "/workdir/proof/hash_to_g1.saw:316:22",
     "method": "hash_to_field",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:476:18",
+    "loc": "/workdir/proof/hash_to_g1.saw:325:18",
     "method": "blst_hash_to_g1",
     "type": "method",
     "specification": "unknown"
@@ -2965,13 +2965,7 @@
   {
     "status": "assumed",
     "loc": "unknown",
-    "term": "(u : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/ShortWeierstrassCurve/is_point_projective Prelude.Integer\n           cryptol:/HashToCurveE1/Curve_E'\n           (cryptol:/Main/map_to_curve_simple_swu_3mod4_impl u))\n        Prelude.True)",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "(u : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/ShortWeierstrassCurve/is_point_projective Prelude.Integer\n           cryptol:/HashToCurveE1/Curve_E'\n           (cryptol:/Main/map_to_curve_simple_swu_impl u))\n        Prelude.True)",
+    "term": "(u : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/ShortWeierstrassCurve/is_point_affine Prelude.Integer\n           cryptol:/HashToCurveE1/Curve_E'\n           (cryptol:/HashToCurveE1/map_to_curve_simple_swu u))\n        Prelude.True)",
     "type": "property"
   },
   {
@@ -3205,6 +3199,18 @@
   {
     "status": "assumed",
     "loc": "unknown",
+    "term": "let { x@1 = Cryptol.PEqInteger\n      x@2 = Prelude.Integer * Prelude.Integer\n      x@3 = cryptol:/Parameters/Fp.2\n      x@4 = x@3.2\n      x@5 = x@4.2\n      x@6 = x@5.2.2\n      x@7 = x@6.2.2\n    }\n in (xn : Prelude.Integer)\n-> (xd : Prelude.Integer)\n-> (yn : Prelude.Integer)\n-> let { x@8 = (xn,xd)\n         x@9 = (x@7.1 x@8,x@7.1 (yn,x@7.1 (xd,x@7.2.2.2.1 xd)),xd)\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@2\n         (Cryptol.PEqPair Prelude.Integer Prelude.Integer x@1 x@1)\n         (cryptol:affinify_nz#8006 x@9)\n         (Prelude.ite x@2 (Prelude.not (x@6.1 (xd,x@5.1)))\n            (x@3.1 x@8,x@3.1 (yn,x@4.1))\n            (cryptol:/implementation/CryptolHelpers/apply\n               (Prelude.Integer * x@2)\n               x@2\n               cryptol:affinify_nz#8006\n               x@9)))",
+    "type": "property"
+  },
+  {
+    "status": "assumed",
+    "loc": "unknown",
+    "term": "let { x@1 = Cryptol.PEqInteger\n      x@2 = Prelude.Integer * Prelude.Integer\n      x@3 = cryptol:/Parameters/Fp.2.2.2\n    }\n in (p : (Prelude.Integer * x@2))\n-> let { x@4 = cryptol:affinify_nz#8006 p\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@2\n         (Cryptol.PEqPair Prelude.Integer Prelude.Integer x@1 x@1)\n         (cryptol:iso_map_nz#8028 x@4)\n         (Prelude.ite x@2 (Prelude.not (x@3.2.2.1 (p.2.2,x@3.1)))\n            (cryptol:affinify_nz#8006 (cryptol:/Main/isogeny_map_to_E1_impl p))\n            (cryptol:/implementation/CryptolHelpers/apply x@2 x@2\n               cryptol:iso_map_nz#8028\n               x@4)))",
+    "type": "property"
+  },
+  {
+    "status": "assumed",
+    "loc": "unknown",
     "term": "let { x@1 = Cryptol.PEqInteger\n      x@2 = Prelude.Integer * Prelude.Integer\n    }\n in (k : Prelude.Integer)\n-> (k' : Prelude.Integer)\n-> (p1 : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqPair Prelude.Integer Prelude.Integer x@1 x@1)\n        (cryptol:/ShortWeierstrassCurve/add Prelude.Integer\n           cryptol:/Parameters/E\n           (cryptol:e1_scalar_mult#6737 k p1)\n           (cryptol:e1_scalar_mult#6737 k' p1))\n        (cryptol:e1_scalar_mult#6737\n           (Cryptol.ecPlus Prelude.Integer Cryptol.PRingInteger k k')\n           p1))",
     "type": "property"
   },
@@ -3265,12 +3271,6 @@
   {
     "status": "assumed",
     "loc": "unknown",
-    "term": "let { x@1 = Cryptol.PEqInteger\n      x@2 = Prelude.Integer * Prelude.Integer\n    }\n in (p : (Prelude.Integer * x@2))\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqPair Prelude.Integer Prelude.Integer x@1 x@1)\n        (cryptol:iso_map_nz#8023 (cryptol:affinify_nz#8006 p))\n        (cryptol:affinify_nz#8006 (cryptol:/Main/isogeny_map_to_E1_impl p)))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
     "term": "let { x@1 = Cryptol.PEqInteger\n      x@2 = Prelude.Integer * Prelude.Integer\n    }\n in (p : (Prelude.Integer * x@2))\n-> let { x@3 = cryptol:/ShortWeierstrassCurve/affinify Prelude.Integer\n                 cryptol:/HashToCurveE1/Curve_E'\n                 p\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@2\n         (Cryptol.PEqPair Prelude.Integer Prelude.Integer x@1 x@1)\n         (cryptol:/HashToCurveE1/iso_map x@3)\n         (Prelude.ite x@2\n            (cryptol:/ShortWeierstrassCurve/is_zero Prelude.Integer\n               cryptol:/Parameters/Fp\n               p.2.2)\n            (cryptol:/ShortWeierstrassCurve/point_O Prelude.Integer\n               cryptol:/Parameters/E)\n            (cryptol:/implementation/CryptolHelpers/apply x@2 x@2\n               cryptol:/HashToCurveE1/iso_map\n               x@3)))",
     "type": "property"
   },
@@ -3284,6 +3284,12 @@
     "status": "assumed",
     "loc": "unknown",
     "term": "let { x@1 = Cryptol.PEqInteger\n      x@2 = Prelude.Integer * Prelude.Integer\n    }\n in (p1 : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqPair Prelude.Integer Prelude.Integer x@1 x@1)\n        (cryptol:/ShortWeierstrassCurve/add Prelude.Integer\n           cryptol:/Parameters/E\n           p1\n           p1)\n        (cryptol:e1_scalar_mult#6737\n           (Cryptol.ecNumber (Cryptol.TCNum 2) Prelude.Integer\n              Cryptol.PLiteralInteger)\n           p1))",
+    "type": "property"
+  },
+  {
+    "status": "assumed",
+    "loc": "unknown",
+    "term": "let { x@1 = Cryptol.PEqInteger\n      x@2 = Prelude.natToInt 0\n    }\n in (u : Prelude.Integer)\n-> let { x@3 = cryptol:/Main/map_to_curve_simple_swu_impl u\n         x@4 = x@3.2\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n         (Prelude.not\n            (cryptol:/Cryptol/%5c%2f\n               (Cryptol.ecEq (Prelude.Integer * Prelude.Integer)\n                  (Cryptol.PEqPair Prelude.Integer Prelude.Integer x@1 x@1)\n                  (x@3.1,x@4.1)\n                  (x@2,x@2))\n               (Cryptol.ecEq Prelude.Integer x@1 x@4.2 x@2)))\n         Prelude.True)",
     "type": "property"
   },
   {
@@ -3415,13 +3421,13 @@
   {
     "status": "assumed",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Integer\n      -> Prelude.Integer\n      -> Prelude.Integer\n      x@2 = Prelude.Nat\n      -> Prelude.Integer\n      x@3 = cryptol:/Parameters/Fp.2\n    }\n in (x : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger\n        (x@3.1 (x@3.2.1,cryptol:/BLSFieldExtras/sqrt_fp x))\n        (cryptol:/BLSFieldExtras/fp_exp x\n           (Prelude.intDiv\n              (Prelude.intSub\n                 (Prelude.natToInt\n                    4002409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787)\n                 (Prelude.natToInt 3))\n              (Prelude.natToInt 4))))",
+    "term": "let { x@1 = Prelude.Integer\n      -> Prelude.Integer\n      x@2 = Cryptol.PEqInteger\n      x@3 = Prelude.Integer * Prelude.Integer\n      x@4 = Prelude.Integer * x@3\n      x@5 = x@3\n      -> Prelude.Integer\n      x@6 = cryptol:/Parameters/E\n    }\n in (p : x@4)\n-> let { x@7 = cryptol:/Main/isogeny_map_to_E1_impl p\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@3\n         (Cryptol.PEqPair Prelude.Integer Prelude.Integer x@2 x@2)\n         (cryptol:/ShortWeierstrassCurve/affinify Prelude.Integer x@6 x@7)\n         (Prelude.ite x@3\n            (cryptol:/ShortWeierstrassCurve/is_zero Prelude.Integer\n               cryptol:/Parameters/Fp\n               p.2.2)\n            (cryptol:/ShortWeierstrassCurve/point_O Prelude.Integer x@6)\n            (cryptol:/implementation/CryptolHelpers/apply\n               (Prelude.Integer * Prelude.Integer * x@5 * x@5 * Prelude.Integer * Prelude.Integer * x@1 * (x@3\n                                                                                                           -> Prelude.Bool) * (Prelude.Integer\n                                                                                                                               -> Prelude.Bool) * x@5 * x@1 * x@1 * x@1 * x@5)\n               (x@4\n                -> x@3)\n               (cryptol:/ShortWeierstrassCurve/affinify Prelude.Integer)\n               x@6\n               x@7)))",
     "type": "property"
   },
   {
     "status": "assumed",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Integer\n      -> Prelude.Integer\n      x@2 = Cryptol.PEqInteger\n      x@3 = Prelude.Integer * Prelude.Integer\n      x@4 = Prelude.Integer * x@3\n      x@5 = x@3\n      -> Prelude.Integer\n      x@6 = cryptol:/Parameters/E\n    }\n in (p : x@4)\n-> let { x@7 = cryptol:/Main/isogeny_map_to_E1_impl p\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@3\n         (Cryptol.PEqPair Prelude.Integer Prelude.Integer x@2 x@2)\n         (cryptol:/ShortWeierstrassCurve/affinify Prelude.Integer x@6 x@7)\n         (Prelude.ite x@3\n            (cryptol:/ShortWeierstrassCurve/is_zero Prelude.Integer\n               cryptol:/Parameters/Fp\n               p.2.2)\n            (cryptol:/ShortWeierstrassCurve/point_O Prelude.Integer x@6)\n            (cryptol:/implementation/CryptolHelpers/apply\n               (Prelude.Integer * Prelude.Integer * x@5 * x@5 * Prelude.Integer * Prelude.Integer * x@1 * (x@3\n                                                                                                           -> Prelude.Bool) * (Prelude.Integer\n                                                                                                                               -> Prelude.Bool) * x@5 * x@1 * x@1 * x@1 * x@5)\n               (x@4\n                -> x@3)\n               (cryptol:/ShortWeierstrassCurve/affinify Prelude.Integer)\n               x@6\n               x@7)))",
+    "term": "let { x@1 = Prelude.Integer\n      -> Prelude.Integer\n      x@2 = Cryptol.PEqInteger\n      x@3 = Prelude.natToInt 0\n      x@4 = Prelude.Integer * Prelude.Integer\n      x@5 = Prelude.Integer * x@4\n      x@6 = x@4\n      -> Prelude.Integer\n      x@7 = cryptol:/HashToCurveE1/Curve_E'\n    }\n in (p : x@5)\n-> let { x@8 = p.2\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n         (cryptol:/ShortWeierstrassCurve/is_point_projective Prelude.Integer x@7\n            p)\n         (Prelude.ite Prelude.Bool\n            (cryptol:/Cryptol/%2f%5c\n               (cryptol:/ShortWeierstrassCurve/is_point_affine Prelude.Integer\n                  x@7\n                  (cryptol:/ShortWeierstrassCurve/affinify Prelude.Integer x@7\n                     p))\n               (Prelude.not\n                  (cryptol:/Cryptol/%5c%2f\n                     (Cryptol.ecEq x@4\n                        (Cryptol.PEqPair Prelude.Integer Prelude.Integer x@2\n                           x@2)\n                        (p.1,x@8.1)\n                        (x@3,x@3))\n                     (Cryptol.ecEq Prelude.Integer x@2 x@8.2 x@3))))\n            Prelude.True\n            (cryptol:/implementation/CryptolHelpers/apply\n               (Prelude.Integer * Prelude.Integer * x@6 * x@6 * Prelude.Integer * Prelude.Integer * x@1 * (x@4\n                                                                                                           -> Prelude.Bool) * (Prelude.Integer\n                                                                                                                               -> Prelude.Bool) * x@6 * x@1 * x@1 * x@1 * x@6)\n               (x@5\n                -> Prelude.Bool)\n               (cryptol:/ShortWeierstrassCurve/is_point_projective\n                  Prelude.Integer)\n               x@7\n               p)))",
     "type": "property"
   },
   {
@@ -3823,61 +3829,7 @@
   {
     "status": "assumed",
     "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp\n      x@2 = x@1.2\n      x@3 = x@2.2.2\n      x@4 = x@3.2.2.2.2\n    }\n in (x : Prelude.Integer)\n-> (y : Prelude.Integer)\n-> (z : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger\n        (x@2.1 (x@4.1 (x,y),x@4.1 (x,z)))\n        (Prelude.ite Prelude.Integer\n           (Prelude.not\n              (cryptol:/ShortWeierstrassCurve/is_zero Prelude.Integer x@1 x))\n           (x@2.1 (y,z))\n           x@3.1))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp\n      x@2 = x@1.2\n      x@3 = x@2.2.2\n      x@4 = x@3.2.2.2.2\n    }\n in (x : Prelude.Integer)\n-> (y : Prelude.Integer)\n-> (z : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger\n        (x@2.1 (x@4.1 (y,x),x@4.1 (z,x)))\n        (Prelude.ite Prelude.Integer\n           (Prelude.not\n              (cryptol:/ShortWeierstrassCurve/is_zero Prelude.Integer x@1 x))\n           (x@2.1 (y,z))\n           x@3.1))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp\n      x@2 = x@1.2\n      x@3 = x@2.2.2\n    }\n in (x : Prelude.Integer)\n-> (y : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger\n        (x@2.1 (x@3.2.2.2.2.1 (y,x),x))\n        (Prelude.ite Prelude.Integer\n           (Prelude.not\n              (cryptol:/ShortWeierstrassCurve/is_zero Prelude.Integer x@1 x))\n           y\n           x@3.1))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp\n      x@2 = x@1.2.2.2.2.2.2.2\n    }\n in (a : Prelude.Integer)\n-> (b : Prelude.Integer)\n-> (c : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@2.1 (c,x@1.1 (a,b)))\n        (x@1.1 (x@2.1 (a,c),x@2.1 (b,c))))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp\n      x@2 = x@1.2.2.2.2.2.2.2\n    }\n in (a : Prelude.Integer)\n-> (b : Prelude.Integer)\n-> (c : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@2.1 (x@1.1 (a,b),c))\n        (x@1.1 (x@2.1 (a,c),x@2.1 (b,c))))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp\n    }\n in (p : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@1.1 (p,x@1.2.2.2.1)) p)",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp\n    }\n in (p : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@1.1 (x@1.2.2.2.1,p)) p)",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
     "term": "let { x@1 = cryptol:/Parameters/Fp.2\n      x@2 = x@1.2\n      x@3 = x@2.2\n      x@4 = x@3.2.2\n      x@5 = x@4.2.2\n      x@6 = x@5.2.2.2\n    }\n in (gx1 : Prelude.Integer)\n-> (xd : Prelude.Integer)\n-> let { x@7 = Prelude.ite Prelude.Integer (x@4.1 (xd,x@3.1))\n                 (x@5.1 (cryptol:/HashToCurveE1/Z,cryptol:/HashToCurveE1/A'))\n                 xd\n         x@8 = x@5.1 (x@7,x@6.1 x@7)\n         x@9 = x@5.1 (gx1,x@8)\n         x@10 = x@5.1 (x@6.1 x@8,x@9)\n         x@11 = x@1.1 (x@2.1,cryptol:/BLSFieldExtras/sqrt_fp x@10)\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n         (x@4.1 (x@6.1 (x@5.1 (x@11,x@10)),x@10))\n         (x@4.1 (x@5.1 (x@6.1 (x@5.1 (x@11,x@9)),x@8),gx1)))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2\n      x@2 = x@1.2\n      x@3 = x@2.2.2.2.2.2\n      x@4 = x@3.2.2.2\n    }\n in (xd : Prelude.Integer)\n-> (y : Prelude.Integer)\n-> let { x@5 = x@1.1 (x@2.1,xd)\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger\n         (x@3.1 (x@3.1 (x@5,x@4.1 x@5),x@3.1 (y,x@3.1 (xd,x@4.1 xd))))\n         y)",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2\n      x@2 = x@1.2\n      x@3 = x@2.2.2.2.2.2\n    }\n in (xn : Prelude.Integer)\n-> (xd : Prelude.Integer)\n-> let { x@4 = (xn,xd)\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger\n         (x@3.1 (x@3.2.2.2.1 (x@1.1 (x@2.1,xd)),x@3.1 x@4))\n         (x@1.1 x@4))",
     "type": "property"
   },
   {
@@ -3889,49 +3841,7 @@
   {
     "status": "assumed",
     "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2\n      x@2 = x@1.2.1\n    }\n in (p : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@1.1 (p,x@2)) x@2)",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2\n      x@2 = x@1.2.2.1\n    }\n in (p : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@1.1 (p,x@2)) x@2)",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2\n      x@2 = x@1.2.2.1\n    }\n in (p : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@1.1 (x@2,p)) x@2)",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2\n      x@2 = x@1.2.2.2.2.2.2\n    }\n in (x : Prelude.Integer)\n-> (y : Prelude.Integer)\n-> (a : Prelude.Integer)\n-> (b : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger\n        (x@2.1 (x@1.1 (x,y),x@1.1 (a,b)))\n        (x@1.1 (x@2.1 (x,a),x@2.1 (y,b))))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2\n      x@2 = x@1.2.2.2.2.2.2\n    }\n in (x : Prelude.Integer)\n-> (y : Prelude.Integer)\n-> (z : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@2.1 (x@1.1 (x,y),z))\n        (x@1.1 (x@2.1 (x,z),y)))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2\n      x@2 = x@1.2.2.2.2.2.2\n    }\n in (x : Prelude.Integer)\n-> (y : Prelude.Integer)\n-> (z : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@2.1 (z,x@1.1 (x,y)))\n        (x@1.1 (x@2.1 (x,z),y)))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
     "term": "let { x@1 = cryptol:/Parameters/Fp.2\n      x@2 = x@1.2.2.2.2.2.2.2\n    }\n in (x : Prelude.Integer)\n-> (y : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@1.1 (x@2.1 x,y))\n        (x@2.1 (x@1.1 (x,y))))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2\n    }\n in (x : Prelude.Integer)\n-> (y : Prelude.Integer)\n-> (z : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@1.1 (x@1.1 (z,x),y))\n        (x@1.1 (z,x@1.2.2.2.2.2.2.1 (x,y))))",
     "type": "property"
   },
   {
@@ -3943,55 +3853,7 @@
   {
     "status": "assumed",
     "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2\n    }\n in (y : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@1.1 (y,x@1.2.1)) y)",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2.2\n    }\n in (p : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger\n        (x@1.2.2.2.2.2.1 (p,x@1.1))\n        p)",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2.2\n    }\n in (p : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger\n        (x@1.2.2.2.2.2.1 (x@1.1,p))\n        p)",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
     "term": "let { x@1 = cryptol:/Parameters/Fp.2.2.1\n    }\n in (n : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger\n        (cryptol:/BLSFieldExtras/fp_exp x@1 n)\n        x@1)",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2.2.2\n      x@2 = x@1.1\n    }\n in (p : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@1.2.2.2.2.1 (p,x@2))\n        x@2)",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2.2.2\n      x@2 = x@1.1\n    }\n in (p : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@1.2.2.2.2.1 (x@2,p))\n        x@2)",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2.2.2.2.2.2.2\n    }\n in (a : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@1.2.2.2.1 a)\n        (x@1.1 (a,a)))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2.2.2.2.2.2.2\n    }\n in (x : Prelude.Integer)\n-> (y : Prelude.Integer)\n-> (z : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@1.1 (x,x@1.1 (y,z)))\n        (x@1.1 (x@1.1 (x,y),z)))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2.2.2.2.2.2.2\n    }\n in (x : Prelude.Integer)\n-> (y : Prelude.Integer)\n-> (z : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger (x@1.1 (x@1.1 (x,y),z))\n        (x@1.1 (x,x@1.1 (y,z))))",
     "type": "property"
   },
   {
@@ -4046,6 +3908,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "(p1 : (Prelude.Integer * Prelude.Integer))\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/ShortWeierstrassCurve/is_point_affine Prelude.Integer\n           cryptol:/Parameters/E\n           p1)\n        (cryptol:is_point_affine_E#6746 p1))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "(u : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/ShortWeierstrassCurve/is_point_projective Prelude.Integer\n           cryptol:/HashToCurveE1/Curve_E'\n           (cryptol:/Main/map_to_curve_simple_swu_impl u))\n        Prelude.True)",
     "type": "property"
   },
   {
@@ -4129,7 +3997,7 @@
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "Prelude.EqTrue\n  (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger\n     cryptol:/Parameters/Fp.2.2.2.1\n     (Prelude.natToInt 0))",
+    "term": "Prelude.EqTrue\n  (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger\n     cryptol:/Parameters/Fp.2.2.2.1\n     (Cryptol.ecNumber (Cryptol.TCNum 0) Prelude.Integer\n        Cryptol.PLiteralInteger))",
     "type": "property"
   },
   {
@@ -4699,7 +4567,7 @@
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "let { x@1 = Cryptol.PEqInteger\n      x@2 = Prelude.Integer * Prelude.Integer\n    }\n in (p : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqPair Prelude.Integer Prelude.Integer x@1 x@1)\n        (cryptol:/HashToCurveE1/iso_map p)\n        (Prelude.ite x@2\n           (cryptol:/ShortWeierstrassCurve/is_point_O Prelude.Integer\n              cryptol:/HashToCurveE1/Curve_E'\n              p)\n           (cryptol:/ShortWeierstrassCurve/point_O Prelude.Integer\n              cryptol:/Parameters/E)\n           (cryptol:iso_map_nz#8023 p)))",
+    "term": "let { x@1 = Cryptol.PEqInteger\n      x@2 = Prelude.Integer * Prelude.Integer\n    }\n in (p : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqPair Prelude.Integer Prelude.Integer x@1 x@1)\n        (cryptol:/HashToCurveE1/iso_map p)\n        (Prelude.ite x@2\n           (cryptol:/ShortWeierstrassCurve/is_point_O Prelude.Integer\n              cryptol:/HashToCurveE1/Curve_E'\n              p)\n           (cryptol:/ShortWeierstrassCurve/point_O Prelude.Integer\n              cryptol:/Parameters/E)\n           (cryptol:iso_map_nz#8028 p)))",
     "type": "property"
   },
   {
@@ -7771,7 +7639,7 @@
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "let { x@1 = cryptol:/Parameters/Fp.2.2.2\n    }\n in (u : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (x@1.2.2.1\n           ((cryptol:/Main/map_to_curve_simple_swu_3mod4_impl u).2.2,x@1.1))\n        Prelude.False)",
+    "term": "let { x@1 = cryptol:/Parameters/Fp.2.2.2\n    }\n in (u : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (x@1.2.2.1\n           ((cryptol:/HashToCurveE1Aux/map_to_curve_simple_swu_3mod4 u).2.1,\n            x@1.1))\n        Prelude.False)",
     "type": "property"
   },
   {
