@@ -146,8 +146,6 @@ let blst_p1_compress_spec affine = do {
 
   if affine then do {
     crucible_precond {{ (fp_abs (inp.2)) == Fp.field_unit }};
-    // TODO: Do I really need this ~is_zero precondition?
-    crucible_precond {{ ~(is_zero Fp ((POINTonE1_abs inp).2)) }};
   } else do {
     crucible_precond {{ (fp_abs (inp.2)) != Fp.field_unit }};
   };

@@ -60,10 +60,6 @@ affinify C (x,y,z) = if is_zero F z
         lambda2 = F.sq lambda
         lambda3 = F.mul(lambda, lambda2)
 
-// TODO: Dedup with F_is_zero?
-is_zero: {t} FieldRep t -> t -> Bit
-is_zero F x = F.is_equal (x, F.field_zero)
-
 private
     cubed: {t} FieldRep t -> t -> t
     cubed F x = F.mul (x, F.sq x)
@@ -73,6 +69,9 @@ private
 
     sixth: {t} FieldRep t -> t -> t
     sixth F x = F.sq (cubed F x)
+
+    is_zero: {t} FieldRep t -> t -> Bit
+    is_zero F x = F.is_equal (x, F.field_zero)
 
     // it would be convenient if FieldRep included a function for multiplying
     // by a constant
