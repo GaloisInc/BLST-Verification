@@ -118,26 +118,22 @@ is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
 is_point_O_rev_thm <- admit_cryptol (rewrite (cryptol_ss())
   {{ \p -> (is_point_O E (affinify E (POINTonE1_abs p))) == (is_zero Fp ((POINTonE1_abs p).2))}});
 
-POINTonE1_Compress_BE_projective_ov <- really_custom_verify "POINTonE1_Compress_BE"
-  [POINTonE1_from_Jacobian_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov]
-  (POINTonE1_Compress_BE_spec false)
-    do {
+let POINTonE1_Compress_BE_proof = do {
      // Unfolding needed for fp rewrites to apply
      unfolding ["POINTonE1_affine_abs", "POINTonE1_affine_rep", "POINTonE1_invariant"];
      (apply_fp_rewrites);
      simplify (addsimp one_mont_p_abs_thm empty_ss);
      w4_unint_z3 (concat ec_mult_unints ["fp_abs", "I2OSP48"]);
   };
+
+POINTonE1_Compress_BE_projective_ov <- really_custom_verify "POINTonE1_Compress_BE"
+  [POINTonE1_from_Jacobian_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov]
+  (POINTonE1_Compress_BE_spec false)
+  (POINTonE1_Compress_BE_proof);
 POINTonE1_Compress_BE_affine_ov <- really_custom_verify "POINTonE1_Compress_BE"
   [POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov]
   (POINTonE1_Compress_BE_spec true)
-    do {
-     // Unfolding needed for fp rewrites to apply
-     unfolding ["POINTonE1_invariant"];
-     (apply_fp_rewrites);
-     simplify (addsimp one_mont_p_abs_thm empty_ss);
-     w4_unint_z3 (concat ec_mult_unints ["fp_abs", "I2OSP48"]);
-  };
+  (POINTonE1_Compress_BE_proof);
 /*
 
 // Have the "Z=0 <=> infinity" issue again; see the notes in `map_to_g1.saw`.
