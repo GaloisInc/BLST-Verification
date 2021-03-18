@@ -266,18 +266,34 @@ let sgn0_pty_mont_384_spec = do {
 // Proofs
 ////////////////////////////////////////////////////////////////////////////////
 
+// Lemmas for mul_to_fp_thm proof
+
+Vec384_less_thm <- prove_cryptol
+  {{ \(x:[384]) y -> (x < y) == (toInteger x < toInteger y) }}
+  [];
+fp_invariant_thm <- custom_prove_cryptol
+  {{ \x -> fp_invariant x == to_Fp (vec384_abs x) < `p }}
+  do {
+    unfolding ["fp_invariant"];
+    simplify (addsimp Vec384_less_thm empty_ss);
+    w4_unint_z3 [];
+  };
+
 // Starting with proofs that the as-implemented algorithm matches the reference specification
 // as-implemented has an additional check
 
 // We have a conditional property
 //  {{ \x -> fp_invariant x ==> Fp.mul (fp_abs x,  montgomery_factor_p) == to_Fp (vec384_abs x) }}
 // expressed as this conditional rewrite rule:
-mul_to_fp_thm <- prove_cryptol
+mul_to_fp_thm <- custom_prove_cryptol
   {{ \x -> Fp.mul (fp_abs x, montgomery_factor_p) ==
            if fp_invariant x
            then to_Fp (vec384_abs x)
            else apply Fp.mul (fp_abs x,  montgomery_factor_p) }}
-   [] ;
+  do {
+    simplify (addsimp fp_invariant_thm empty_ss);
+    w4_unint_z3 [];
+  };
 
 // "uncompress_OK" is the correct value in the non-infinity case
 

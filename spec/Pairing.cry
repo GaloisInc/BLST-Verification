@@ -156,5 +156,5 @@ final_exponentiation: t12 -> t12
       ordinary elliptic curves." eprint.iacr.org/2008/490
  */
 final_exponentiation x = k_expt`{5} f12 x2 (`small_final_e:[1268+2]) where
-  x1 = f12.div (f12_conjugate x, x) // = x^(p^6 - 1)
-  x2 = f12.mul (f12_frobenius (f12_frobenius x1), x1) // x1^(p^2+1)
+  x1 = f12.div (fp12_conjugate x, x) // = x^(p^6 - 1)
+  x2 = f12.mul (fp12_frobenius (fp12_frobenius x1), x1) // x1^(p^2+1)

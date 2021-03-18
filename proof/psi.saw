@@ -8,8 +8,8 @@ import "../spec/Frobenius.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/Field.cry";
 import "../spec/G2SubGroupCheck.cry";
-import "../spec/Pairing.cry"; // for "alpha"
-import "../spec/ShortWeierstrassCurve.cry"; // for ProjctivePoint, affinify
+import "../spec/Pairing.cry" (alpha); // for "alpha"
+import "../spec/ShortWeierstrassCurve.cry"; // for ProjectivePoint, affinify
 import "../spec/implementation/CurveOperation.cry"; // for POINTonE2_invariant, _abs, etc.
 
 fp_inv_fp2_rep_thms <- for [0,1]
@@ -29,8 +29,8 @@ fp2_mult_constant_thm <- prove_cryptol
 fp2_mult_constant_rev_thm <- prove_cryptol
   {{ \x y z -> [Fp.mul(x, z), Fp.mul(y,z)] == Fp_2.mul ([x, y], [Fp.field_zero, z])  }} [];
 
-frobenius_f2_thm <- prove_cryptol {{ \ x y -> f2_frobenius [x, y] == [Fp.neg x, y]}} [] ;
-frobenius_f2_rev_thm <- prove_cryptol {{ \ x y -> [Fp.neg x, y] == f2_frobenius [x, y]}} [] ;
+// fp2_frobenius_thm <- prove_cryptol {{ \ x y -> fp2_frobenius [x, y] == [Fp.neg x, y]}} [] ;
+fp2_frobenius_rev_thm <- prove_cryptol {{ \ x y -> [Fp.neg x, y] == fp2_frobenius [x, y]}} [] ;
 
 // We define two functions here: `qi_x_imp` coirresponds fairly closely to the code, and `qi_x_abs`
 // is a more abstract and compact description of the effect.  We will prove them equivalent.
@@ -40,13 +40,13 @@ let {{
   qi_x_imp x = qi_x_imp' (Fp_2.mul (x, alpha))
 
   psi_x_factor = Fp_2.mul (alpha, [Fp.field_zero,psi_c1@0])
-  qi_x_abs x = f2_frobenius (Fp_2.mul (x, psi_x_factor))
+  qi_x_abs x = fp2_frobenius (Fp_2.mul (x, psi_x_factor))
   }};
 
 qi_x_spec_equiv_thm <- custom_prove_cryptol
   {{ \x -> qi_x_abs x == qi_x_imp x }}
   do { unfolding ["qi_x_abs", "psi_x_factor", "qi_x_imp", "qi_x_imp'"];
-       simplify (addsimps [fp2_unrip_thm, frobenius_f2_rev_thm, fp2_mult_constant_rev_thm] empty_ss);
+       simplify (addsimps [fp2_unrip_thm, fp2_frobenius_rev_thm, fp2_mult_constant_rev_thm] empty_ss);
        simplify (addsimps fp2_alg_thms empty_ss);
        w4_unint_z3 (concat fp2_unints fp_unints); };
 
@@ -161,7 +161,7 @@ let {{
   qi_y_imp x = qi_y_imp' (Fp_2.mul (x, alpha))
 
   psi_y_factor = Fp_2.mul (alpha, Fp_2.neg psi_c2)
-  qi_y_abs x = f2_frobenius (Fp_2.mul (x, psi_y_factor))
+  qi_y_abs x = fp2_frobenius (Fp_2.mul (x, psi_y_factor))
   }};
 
 mul_neg_psi_c2_thm <- prove_cryptol

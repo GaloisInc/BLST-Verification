@@ -34,11 +34,9 @@ let eucl_inverse_mod_384_alias_ret_a_spec = do {
 // Proofs
 ///////////////////////////////////////////////////////////////////////////////
 
-// eucl_inverse_mod_384 - runs out of memory
-let do_prove_x86 = false;
-eucl_inverse_mod_384_ov <- verify_x86 "eucl_inverse_mod_384" eucl_inverse_mod_384_spec;
-eucl_inverse_mod_384_alias_ret_a_ov <- verify_x86 "eucl_inverse_mod_384" eucl_inverse_mod_384_alias_ret_a_spec;
-let do_prove_x86 = true;
+// eucl_inverse_mod_384 - assumed
+eucl_inverse_mod_384_ov <- admit "eucl_inverse_mod_384" eucl_inverse_mod_384_spec;
+eucl_inverse_mod_384_alias_ret_a_ov <- admit "eucl_inverse_mod_384" eucl_inverse_mod_384_alias_ret_a_spec;
 
 let inverse_mod_384_overrides =
   [ eucl_inverse_mod_384_ov

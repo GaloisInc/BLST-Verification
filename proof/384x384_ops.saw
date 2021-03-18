@@ -1,0 +1,234 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+/* Functional specifications and proofs for the various "384x384" operations, used in fp12_tower.c
+ *
+ * These operations are applied, typically, to the result of a multiplication on 384-bit quantities.
+ * That gives a result of 768 bits, but one that is less that p^2.  The 384x384 operations work
+ * modulo p * 2^384 (rather than mod p^2), and so preserve the result mod p.  Eventually, these
+ * 768-bit values are Montgomery reduced, giving a 384-bit result less than p.
+ *
+ * The following types are used:
+ *  vec384 for Fp, sometimes in Montgomery form and sometimes not
+ *  vec384x for Fp2
+ *  vec768 for "double width" values, usually less than 2^368 * p, eventually to be Mongomery reduced
+ *  vec768x for a pair of double width (vec768) values
+ *  vec768fp6 for a triple of vec768x values, representing an unreduced Fp6
+ *  vec384fp4 for a pair of vec384x values, representing a Fp4
+ *  vec384fp12
+ */
+
+import "../spec/Parameters.cry" (p);
+import "../spec/implementation/CryptolHelpers.cry" (apply);
+import "../spec/implementation/Types.cry";
+import "../spec/implementation/Field.cry";
+
+let {{ // type shifted_p = p * 2^^384
+
+       // abs_384x384 (x:Vec768) = toInteger (vec_abs x) => fpx2_abs
+       abs_384 (x:Vec384) = toInteger (vec384_abs x)
+       abs_384x [x, y] = [abs_384 y, abs_384 x] // [im, re], like the other abs functions
+
+       rep_384 x = vec384_rep (fromInteger x)
+       // rep_384x384: Integer -> Vec768 => fpx2_rep
+       // rep_384x384 x = vec_rep (fromInteger x)
+       // rep_768x [x, y] = [fpx2_rep y, fpx2_rep x] ==> fp2x2_rep
+
+       //inv_384x384: Vec768 -> Bool ==> fpx2_invariant
+       //inv_384x384 x = vec_abs x < `shifted_p
+
+       add_mod_384x384: t_Fpx2 -> t_Fpx2 ->t_Fpx2
+       add_mod_384x384 x y = (x+y) % `shifted_p
+
+       sub_mod_384x384: t_Fpx2 -> t_Fpx2 ->t_Fpx2
+       sub_mod_384x384 x y = (x - y) % `shifted_p
+
+       // mul_382x: [2]Integer -> [2]Integer -> [2]Integer // [im, re] abstractly
+       mul_382x: t_Fp_2x2 -> t_Fp_2x2 ->t_Fp_2x2
+       mul_382x [a,b] [c,d] = [e, f] where
+           e =  (a*d + b*c) % `shifted_p
+           f =  (b*d - a*c) % `shifted_p
+
+       sqr_382x x = mul_382x x x
+
+       // R_inverse = 756932377023786838651550925592541459659721362320071439453990269266980078978837212705482375457041822473487776934882: Integer
+       R_inverse = 3231460744492646417066832100176244795738767926513225105051837195607029917124509527734802654356338138714468589979680 : Integer
+       redc_mont_384 x = (x*R_inverse) % `p
+    }};
+
+// Little-endian representation of `p` in 64-bit limbs
+let p_representation = crucible_term {{ [0xb9feffffffffaaab, 0x1eabfffeb153ffff, 0x6730d2a0f6b0f624,
+                                         0x64774b84f38512bf, 0x4b1ba7b6434bacd7, 0x1a0111ea397fe69a] }};
+
+let p0_term = crucible_term {{ 0x89f3fffcfffcfffd }};
+
+////////////////////////////////////////////////////////////////
+//
+// Specifications
+
+
+/*
+let add_mod_384x384_spec = do {
+  ret_ptr <- crucible_alloc vec768_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec768_type;
+  p_ptr <- crucible_alloc_readonly vec384_type;
+  crucible_precond {{ fpx2_invariant a }};
+  crucible_precond {{ fpx2_invariant b }};
+  crucible_points_to p_ptr p_representation;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fpx2_rep (add_mod_384x384 (fpx2_abs a) (fpx2_abs b)) }});
+};
+*/
+
+// either a or b might be aliased to ret, or to each other. But as they are readonly,
+// it does not matter if they are aliased to each other and not to r.
+
+/*
+let add_mod_384x384_spec a_aliased b_aliased ab_aliased = do {
+  (ret, ret_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
+  (a, a_ptr) <- if a_aliased then return (ret, ret_ptr) else ptr_to_fresh_readonly "a" vec768_type;
+  (b, b_ptr) <- if b_aliased then return (ret, ret_ptr)
+                else if ab_aliased then (a, a_ptr)
+                     else ptr_to_fresh_readonly "b" vec768_type;
+  p_ptr <- crucible_alloc_readonly vec384_type;
+  crucible_precond {{ fpx2_invariant a }};
+  crucible_precond {{ fpx2_invariant b }};
+  crucible_points_to p_ptr p_representation;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fpx2_rep (add_mod_384x384 (fpx2_abs a) (fpx2_abs b)) }});
+};
+*/
+
+// Boolean conectives.  Note that `and` is a reserved word.
+let both x y = if x then y else false; // logical `and`
+let either x y = if x then true else y; // logical `or`
+
+// here's a way to write a spec for 3 parameters, (out, in, in), with the possibility for
+// neither, either, or both of the ins to alias the out. This is a bit less writing than
+// spelling out the 4 different specs
+let add_mod_384x384_spec a_aliased b_aliased = do {
+  (ret, ret_ptr) <- if either a_aliased b_aliased
+                    then ptr_to_fresh "ret" vec768_type
+                    else do { ptr <- crucible_alloc vec768_type;
+                              return ({{zero: Vec768}}, ptr);
+                            };
+  (a, a_ptr) <- if a_aliased then return (ret, ret_ptr) else ptr_to_fresh_readonly "a" vec768_type;
+  (b, b_ptr) <- if b_aliased then return (ret, ret_ptr) else ptr_to_fresh_readonly "b" vec768_type;
+  p_ptr <- crucible_alloc_readonly vec384_type;
+  crucible_precond {{ fpx2_invariant a }};
+  crucible_precond {{ fpx2_invariant b }};
+  crucible_points_to p_ptr p_representation;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fpx2_rep (add_mod_384x384 (fpx2_abs a) (fpx2_abs b)) }});
+};
+
+let sub_mod_384x384_spec a_aliased b_aliased = do {
+  (ret, ret_ptr) <- if either a_aliased b_aliased
+                    then ptr_to_fresh "ret" vec768_type
+                    else do { ptr <- crucible_alloc vec768_type;
+                              return ({{zero: Vec768}}, ptr);
+                            };
+  (a, a_ptr) <- if a_aliased then return (ret, ret_ptr) else ptr_to_fresh_readonly "a" vec768_type;
+  (b, b_ptr) <- if b_aliased then return (ret, ret_ptr) else ptr_to_fresh_readonly "b" vec768_type;
+  p_ptr <- crucible_alloc_readonly vec384_type;
+  crucible_precond {{ fpx2_invariant a }};
+  crucible_precond {{ fpx2_invariant b }};
+  crucible_points_to p_ptr p_representation;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fpx2_rep (sub_mod_384x384 (fpx2_abs a) (fpx2_abs b)) }});
+};
+
+let mul_382x_spec = do {
+  ret_ptr <- crucible_alloc vec768x_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384x_type;
+  p_ptr <- crucible_alloc_readonly vec384_type;
+  crucible_precond {{ fp2_invariant a }}; // a is smallish
+  crucible_precond {{ fp2_invariant b }};
+  crucible_points_to p_ptr p_representation;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp2x2_rep (mul_382x (abs_384x a) (abs_384x b)) }});
+};
+
+let redcx_mont_384_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
+  p_ptr <- crucible_alloc vec384_type;
+  crucible_points_to p_ptr p_representation;
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr, p0_term];
+  crucible_points_to ret_ptr (crucible_term {{ rep_384 (redc_mont_384 (fpx2_abs a)) }});
+};
+
+let redcx_mont_384_alt_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  crucible_precond {{  b == vec384_rep `p }};
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p0_term];
+  crucible_points_to ret_ptr (crucible_term {{ rep_384 (redc_mont_384 (fpx2_abs a)) }});
+};
+
+
+let sqr_382x_spec = do {
+  ret_ptr <- crucible_alloc vec768x_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
+  p_ptr <- crucible_alloc_readonly vec384_type;
+  crucible_precond {{ fp2_invariant a }}; // a is smallish
+  crucible_points_to p_ptr p_representation;
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr];
+  crucible_points_to ret_ptr (crucible_term {{ fp2x2_rep (sqr_382x (abs_384x a)) }});
+};
+
+
+////////////////////////////////////////////////////////////////
+//
+// Theorems about the functions
+
+vec_384x384_rep_thms <- for
+  [ {{ \ x -> fpx2_invariant (fpx2_rep x) == True }}
+  // , {{ \ x -> fpx2_abs (fpx2_rep x) == if x < `shifted_p then x else apply fpx2_abs (fpx2_rep x) }}
+  , {{ \ x -> fpx2_abs (fpx2_rep x) == x % (2^^768) }}
+  , {{ \ x -> fpx2_rep (fpx2_abs x) == x }}
+
+  , {{ \ x -> abs_384 (rep_384 x) == x % (2^^384) }}
+  , {{ \ x -> rep_384 (abs_384 x) == x }}
+  ] admit_cryptol;
+
+vec_384x384_ite_thms <- for
+  [ {{ fpx2_invariant }}, {{ fpx2_rep }}, {{ fpx2_abs }} ] // TODO: more functions?
+  (\t -> hoist t ["fpx2_invariant", "fpx2_rep", "fpx2_abs"]) ;
+
+vec384x384_thms <- concat vec_384x384_rep_thms vec_384x384_ite_thms;
+
+////////////////////////////////////////////////////////////////
+//
+// Proofs (in this case, assumptions)
+
+let possible_aliases =
+  //  a/r?   b/r?
+  [ (false, false) // (r, a, b) or (r, a, a)
+  , (false, true)  // (r, a, r)
+  , (true,  false) // (r, r, b)
+  , (true,  true)  // (r, r, r)
+  ];
+
+
+add_mod_384x384_ovs <- for possible_aliases
+  (\ (ar, br) -> admit "add_mod_384x384" (add_mod_384x384_spec ar br));
+
+sub_mod_384x384_ovs <- for possible_aliases
+  (\ (ar, br) -> admit "sub_mod_384x384" (sub_mod_384x384_spec ar br));
+
+mul_382x_ov <- admit "mulx_382x" mul_382x_spec;
+sqr_382x_ov <- admit "sqrx_382x" sqr_382x_spec;
+
+redcx_mont_384_ov <- admit "redcx_mont_384" redcx_mont_384_spec;
+redcx_mont_384_alt_ov <- admit "redcx_mont_384" redcx_mont_384_alt_spec;
+
+let all_384x384_ovs = concat_all [ add_mod_384x384_ovs, sub_mod_384x384_ovs
+                                 , [mul_382x_ov, sqr_382x_ov, redcx_mont_384_ov]];
+
+let all_384x384_unints = ["add_mod_384x384", "sub_mod_384x384", "mul_382x", "redc_mont_384"];
