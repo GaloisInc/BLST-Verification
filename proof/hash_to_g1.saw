@@ -5,25 +5,25 @@
 
 // Imports
 
-//include "helpers.saw";
-//include "list_utils.saw";
-//include "types.saw";
+include "helpers.saw";
+include "list_utils.saw";
+include "types.saw";
 
-//m <- llvm_load_module "../build/llvm/libblst.a.bc";
+m <- llvm_load_module "../build/llvm/libblst.a.bc";
 
-//enable_experimental;
+enable_experimental;
 
-//let do_prove = false;
+let do_prove = false;
 
-//include "proof-helpers.saw";
-//include "hash_to_field.saw";
-//include "fp_overrides.saw";
-//include "vect.saw";
-//include "curve_operations.saw";
-//include "ec_mult.saw";
-//include "exp.saw";
+include "proof-helpers.saw";
+include "hash_to_field.saw";
+include "fp_overrides.saw";
+include "vect.saw";
+include "curve_operations.saw";
+include "ec_mult.saw";
+include "exp.saw";
 
-//let do_prove = true;
+let do_prove = true;
 
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
@@ -31,16 +31,6 @@ import "../spec/HashToCurveE1.cry" (Z A' B' Curve_E' clear_cofactor iso_map hash
 import "../spec/implementation/CurveOperation.cry";
 Aux <- cryptol_load "../spec/HashToCurveE1Aux.cry";
 import "../spec/implementation/HashToG1.cry";
-
-
-// Proof overview (TODO):
-//  * `\u -> affinify Curve_E' (map_to_curve_simple_swu_impl u) == map_to_curve_simple_swu u`
-//  * `\u -> is_point_projective Curve_E' (map_to_curve_simple_swu_impl u)`
-
-do {
-  simplify (addsimps [is_point_projective_lemma,swu_impl_xy_nz,map_to_isogenous_E1_thm,swu_on_curve] empty_ss);
-  w4_unint_z3 fp_unints;
-};
 
 // Specs
 
@@ -210,6 +200,10 @@ is_point_projective_lemma <- simp_then_admit {{ \p -> is_point_projective Curve_
 
 // Proofs
 
+// First we prove that the C code is equivalent to the low-level specification `hash_to_curve_opt_impl`
+
+// We start by proving overrides for the subroutines
+
 // map_to_isogenous_E1
 
 // Rewrite rules for the constants appearing in the C code:
@@ -250,7 +244,90 @@ map_to_isogenous_E1_impl_ov <- custom_verify
       };
   });
 
-// Now we prove that `affinify Curve_E' (map_to_curve_simple_swu_impl u) == map_to_curve_simple_swu u`
+// isogeny_map_to_E1
+
+isogeny_map_to_E1_impl_alias_ov <- custom_verify
+  "isogeny_map_to_E1"
+  fp_overrides
+  isogeny_map_to_E1_impl_alias_spec
+  (goal_num_ite 176 // 176 is the main safety goal
+    (do {
+      simplify fp_simpset; // eliminate `abs . rep` etc.
+      w4_unint_z3 ["fp_rep"];
+    })
+    (do { // discharge simulation side-conditions:
+      unfolding ["POINTonE1_invariant"];
+      simplify fp_simpset;
+      w4_unint_z3 ["Fp"];
+    })
+  );
+
+// Because `clear_cofactor` is inlined (it's not implemented in a separated function that we can override), we can't just prove an override for it.
+
+let dbl_n_add_ns = [2,3,9,32,16];
+
+let verify_dbl_n_add n = custom_verify "POINTonE1_dbl_n_add" curve_operations_e1_ovs (dbl_n_add_spec n)
+  (do {
+    simplify (addsimps POINTonE1_thms (cryptol_ss ()));
+    goal_num_ite 3
+      (do {
+        unfolding ["dbl_n_add"];
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 (foldr concat [fp_unints, ec_mult_unints] ["point_double_fp","point_add_fp","POINTonE1_rep","Fp"]);
+      })
+      z3;
+  });
+
+dbl_n_add_ovs <- for dbl_n_add_ns verify_dbl_n_add;
+
+let overrides = foldr concat [curve_operations_e1_ovs, dbl_n_add_ovs] [map_to_isogenous_E1_impl_ov, isogeny_map_to_E1_impl_alias_ov];
+
+map_to_g1_nonnull_ov <- custom_verify "map_to_g1" overrides map_to_g1_nonnull_spec
+  (do {
+    simplify (addsimps POINTonE1_thms (cryptol_ss ()));
+    goal_num_ite 11
+      (do { // the main safety goal
+        unfolding ["map_to_g1_impl","clear_cofactor_impl"];
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 ["point_double_fp","point_add_fp","point_dadd_fp","isogeny_map_to_E1_impl","dbl_n_add","map_to_curve_simple_swu_impl"];
+      })
+      do {
+        unfolding ["POINTonE1_invariant"];
+        simplify fp_simpset;
+        goal_num_ite 2
+          (w4_unint_z3 ["Fp","map_to_curve_simple_swu_impl","isogeny_map_to_E1_impl"])
+          (w4_unint_z3 (concat ["map_to_curve_simple_swu_impl","isogeny_map_to_E1_impl"] fp_unints));
+      };
+    });
+
+let aug_len = 48; // aug_len should be 96 or 48
+let msg_len = 32;
+let DST_len= 8;
+let hash_to_field_nelems = [2]; // the values of nelems for which we prove hash_to_field
+hash_to_field_ovs <- for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
+
+// let's get rid of map:
+let map_size_2_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y : Vec 2 Integer) -> map Integer (Vec 6 (Vec 64 Bool)) f 2 y";
+let map_size_2_eq_term = beta_reduce_term {{ \x -> map_size_2_term (\(y : Integer) -> fp_rep y) x == [fp_rep (x@0), fp_rep (x@1)]}};
+map_size_2_thm <- prove_cryptol map_size_2_eq_term [];
+
+// Finally, the proof that the C code is equivalent to the implementation-level spec:
+
+hash_to_g1_ov <- custom_verify
+  "blst_hash_to_g1"
+  (concat [map_to_g1_nonnull_ov] hash_to_field_ovs)
+  (blst_hash_to_g1_impl_spec msg_len DST_len aug_len)
+  (do {
+    unfolding ["hash_to_curve_opt_impl","map"];
+    simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
+    simplify (addsimps [map_size_2_thm] empty_ss); // get rid of map
+    simplify (addsimps fp_rep_thms empty_ss);// simplify (abs . rep)
+    w4_unint_z3 ["map_to_g1_impl","HashToCurveE1::hash_to_field"];
+  });
+
+// Now we go all the way to the abstract spec
+
+// First, the SWU map: `affinify Curve_E' (map_to_curve_simple_swu_impl u) == map_to_curve_simple_swu u`
 
 // We need to rewrite `e2`, which is computed differently in the C code compared to the specification
 // The implementation seems to test whether tv4=gx1(gxd^3) is square by testing (tv4/sqrt(tv4))^2=tv4
@@ -309,22 +386,6 @@ do {
 
 // isogeny_map_to_E1
 
-isogeny_map_to_E1_impl_alias_ov <- custom_verify
-  "isogeny_map_to_E1"
-  fp_overrides
-  isogeny_map_to_E1_impl_alias_spec
-  (goal_num_ite 176 // 176 is the main safety goal
-    (do {
-      simplify fp_simpset; // eliminate `abs . rep` etc.
-      w4_unint_z3 ["fp_rep"];
-    })
-    (do { // discharge simulation side-conditions:
-      unfolding ["POINTonE1_invariant"];
-      simplify fp_simpset;
-      w4_unint_z3 ["Fp"];
-    })
-  );
-
 // First case: Z is zero
 isogeny_map_to_E1_impl_thm_z <- custom_prove_cryptol {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if is_zero Fp p.2 then iso_map (affinify Curve_E' p) else apply affinify E (isogeny_map_to_E1_impl p) }}
 do {
@@ -376,11 +437,9 @@ do {
   w4_unint_z3 ["Fp"];
 };
 
-// Now we tackle `clear_cofactor`
+// clear_cofactor
 
-let dbl_n_add_ns = [2,3,9,32,16];
-
-// Here we unfold the recursion in dbl_n_add by hand; we could also have used `goal_eval` to do it for us.
+// Here we unfold the recursion in dbl_n_add by hand; maybe we could have used `goal_eval` to do it for us.
 dbl_n_add_unfold_thms <- for [
       {{ \p q -> dbl_n_add p 2 q == point_dadd Fp (point_double Fp (point_double Fp p)) q Fp.field_zero True }}
     , {{ \p q -> dbl_n_add p 3 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp p))) q Fp.field_zero True }}
@@ -405,68 +464,8 @@ scalar_mult_lemma <-admit_cryptol (rewrite (cryptol_ss ()) {{ \p -> mult E Aux::
 mult_by_doubling_thm <- custom_prove_cryptol {{ \p -> affinify E (clear_cofactor_impl p) == clear_cofactor (affinify E p) }}
   (do {
     unfolding ["clear_cofactor_impl","clear_cofactor","HashToCurveE1::module parameter _clear_cofactor","HashToCurveE1::_clear_cofactor","HashToCurveE1::module parameter _C","HashToCurveE1::_C"];
-    print_readably;
     simplify (addsimps (concat_all [e1_curve_op_thms, e1_scalar_mult_alg_thms, dbl_lemmas, [scalar_mult_lemma, add_double_lemma]]) (cryptol_ss ()));
     w4_unint_z3 ["E","e1_scalar_mult"];
-  });
-
-// now we prove that the C code is equivalent to the _impl specs
-
-let verify_dbl_n_add n = custom_verify "POINTonE1_dbl_n_add" curve_operations_e1_ovs (dbl_n_add_spec n)
-  (do {
-    simplify (addsimps POINTonE1_thms (cryptol_ss ()));
-    goal_num_ite 3
-      (do {
-        unfolding ["dbl_n_add"];
-        simplify remove_higher_order_function_simpset;
-        w4_unint_z3 (foldr concat [fp_unints, ec_mult_unints] ["point_double_fp","point_add_fp","POINTonE1_rep","Fp"]);
-      })
-      z3;
-  });
-
-dbl_n_add_ovs <- for dbl_n_add_ns verify_dbl_n_add;
-
-let overrides = foldr concat [curve_operations_e1_ovs, dbl_n_add_ovs] [map_to_isogenous_E1_impl_ov, isogeny_map_to_E1_impl_alias_ov];
-
-map_to_g1_nonnull_ov <- custom_verify "map_to_g1" overrides map_to_g1_nonnull_spec
-  (do {
-    simplify (addsimps POINTonE1_thms (cryptol_ss ()));
-    goal_num_ite 11
-      (do { // the main safety goal
-        unfolding ["map_to_g1_impl","clear_cofactor_impl"];
-        simplify remove_higher_order_function_simpset;
-        w4_unint_z3 ["point_double_fp","point_add_fp","point_dadd_fp","isogeny_map_to_E1_impl","dbl_n_add","map_to_curve_simple_swu_impl"];
-      })
-      do {
-        unfolding ["POINTonE1_invariant"];
-        simplify fp_simpset;
-        goal_num_ite 2
-          (w4_unint_z3 ["Fp","map_to_curve_simple_swu_impl","isogeny_map_to_E1_impl"])
-          (w4_unint_z3 (concat ["map_to_curve_simple_swu_impl","isogeny_map_to_E1_impl"] fp_unints));
-      };
-    });
-
-let aug_len = 48; // aug_len should be 96 or 48
-let msg_len = 32;
-let DST_len= 8;
-let hash_to_field_nelems = [2]; // the values of nelems for which we prove hash_to_field
-hash_to_field_ovs <- for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
-
-// let's get rid of map:
-let map_size_2_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y : Vec 2 Integer) -> map Integer (Vec 6 (Vec 64 Bool)) f 2 y";
-let map_size_2_eq_term = beta_reduce_term {{ \x -> map_size_2_term (\(y : Integer) -> fp_rep y) x == [fp_rep (x@0), fp_rep (x@1)]}};
-map_size_2_thm <- prove_cryptol map_size_2_eq_term [];
-
-hash_to_g1_ov <- custom_verify
-  "blst_hash_to_g1"
-  (concat [map_to_g1_nonnull_ov] hash_to_field_ovs)
-  (blst_hash_to_g1_impl_spec msg_len DST_len aug_len)
-  (do {
-    unfolding ["hash_to_curve_opt_impl","map"];
-    simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
-    simplify (addsimps [map_size_2_thm] empty_ss); // get rid of map
-    simplify (addsimps fp_rep_thms empty_ss);// simplify (abs . rep)
-    w4_unint_z3 ["map_to_g1_impl","HashToCurveE1::hash_to_field"];
   });
 
 // Finally, we put all the pieces together to prove that the C code is equivalent to the high-level spec
