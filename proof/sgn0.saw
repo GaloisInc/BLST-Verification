@@ -3,16 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-<<<<<<< HEAD
-=======
-include "helpers.saw";
-include "list_utils.saw";
-include "types.saw";
-
-m <- llvm_load_module "../build/llvm/libblst.a.bc";
-
-let do_prove = true;
->>>>>>> add test script for sgn0
 include "proof-helpers.saw";
 
 enable_experimental;
@@ -31,7 +21,7 @@ let verify_x86 name spec =
     []
     false
     spec
-    x86_tactic
+    tactic
   else
   crucible_llvm_unsafe_assume_spec m name spec;
 
@@ -49,4 +39,5 @@ let sgn0x_pty_mont_384_spec = do {
   crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs a), (HTCE1::sgn0 (fp_abs a))@0]):[64] }});
 };
 
-sgn0x_pty_mont_384_ov <- verify_x86 "sgn0x_pty_mont_384" sgn0x_pty_mont_384_spec;
+// TODO: prove (not so easy because of the Montgomery representation)
+sgn0x_pty_mont_384_ov <- verify_x86 "sgn0x_pty_mont_384" sgn0x_pty_mont_384_spec (quickcheck 16);

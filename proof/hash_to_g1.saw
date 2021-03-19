@@ -88,14 +88,6 @@ let dbl_n_add_spec n = do {
   llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (dbl_n_add (POINTonE1_abs out) `n (POINTonE1_abs p)) }});
 };
 
-// the code calls this assembly function:
-let sgn0x_pty_mont_384_spec = do {
-  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  p_ptr <- alloc_init_readonly vec384_type (llvm_term {{ vec384_rep (from_Fp `p) }});
-  llvm_execute_func [a_ptr, p_ptr, llvm_term {{ 0x89f3fffcfffcfffd }}];
-  llvm_return (llvm_term {{ zext`{m=64} [2*(fp_abs a)>`p, (from_Fp (fp_abs a))!0] }});
-};
-
 // we also need this:
 let recip_sqrt_fp_3mod4_spec = do {
     out_ptr <- crucible_alloc vec384_type;
