@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
+import "../spec/HashToCurveE1.cry" as HTCE1;
 import "../spec/Parameters.cry";
 import "../spec/rfc8017.cry";
 import "../spec/Serialization.cry";
@@ -40,7 +41,7 @@ let POINTonE1_affine_Compress_BE_spec = do {
   crucible_execute_func [out_ptr, inp_ptr];
 
   crucible_points_to out_ptr (crucible_term {{ I2OSP48 ((POINTonE1_affine_abs inp ).0) }});
-  crucible_return (crucible_term {{ (zext [(sign_F_p (fp_abs inp.1)), (fp_abs inp.1)%2 == 1]):[64] }});
+  crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs inp.1), (HTCE1::sgn0 (fp_abs inp.1))@0]):[64] }});
 };
 
 POINTonE1_affine_Compress_BE_ov <- verify "POINTonE1_affine_Compress_BE"
@@ -95,19 +96,24 @@ let POINTonE1_Compress_BE_spec is_point_affine = do {
     // Point is projective, so Z must not be 1
     crucible_precond {{ (fp_abs (inp.2)) != Fp.field_unit }};
     crucible_precond {{ ~(is_zero Fp ((POINTonE1_abs inp).2)) }};
+    crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
   };
-  crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
 
   crucible_execute_func [out_ptr, inp_ptr];
 
   if is_point_affine then do {
     crucible_points_to out_ptr (crucible_term {{ I2OSP48 (fp_abs inp.0) }});
-    crucible_return (crucible_term {{ (zext [(sign_F_p (fp_abs inp.1)), (fp_abs inp.1)%2 == 1]):[64] }});
+    crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs inp.1), (HTCE1::sgn0 (fp_abs inp.1))@0]):[64] }});
   } else do {
     // Point is not already in affine coordinates, so must affinify first
     let affinified = {{ affinify E (POINTonE1_abs inp) }};
     crucible_points_to out_ptr (crucible_term {{ I2OSP48 (affinified.0) }});
-    crucible_return (crucible_term {{ (zext [(sign_F_p affinified.1), affinified.1%2 == 1]):[64] }});
+
+    // SAW struggles to reason about `HTCE1::sgn0 (affinified.1)`, but we don't
+    // need it anyway so this spec only specifies the sign_F_p bit.
+    ret <- crucible_fresh_var "ret" limb_type;
+    crucible_postcond {{ (ret!1) == (sign_F_p affinified.1) }};
+    crucible_return (crucible_term ret);
   };
 };
 
@@ -148,9 +154,8 @@ let blst_p1_compress_spec is_point_affine = do {
   } else do {
     // Point is projective, so Z must not be 1
     crucible_precond {{ (fp_abs (inp.2)) != Fp.field_unit }};
+    crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
   };
-
-  crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
 
   crucible_execute_func [out_ptr, inp_ptr];
   if is_point_affine then do {
@@ -170,7 +175,10 @@ is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
 
 // A reversed version of is_point_O_thm''
 is_point_O_rev_thm <- admit_cryptol (rewrite (cryptol_ss())
-  {{ \p -> (is_point_O E (affinify E (POINTonE1_abs p))) == (is_zero Fp ((POINTonE1_abs p).2))}});
+  {{ \p -> (is_point_O E (affinify E (POINTonE1_abs p))) ==
+           if is_point_projective E (POINTonE1_abs p)
+           then (is_zero Fp ((POINTonE1_abs p).2))
+           else apply is_point_O E (affinify E (POINTonE1_abs p)) }});
 
 blst_p1_compress_projective_ov <- custom_verify "blst_p1_compress"
   (concat [POINTonE1_Compress_BE_projective_ov] vec_overrides)

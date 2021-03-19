@@ -27,14 +27,16 @@ let verify_x86 name spec =
 
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/Field.cry";
+import "../spec/HashToCurveE1.cry" as HTCE1;
 import "../spec/Parameters.cry";
+import "../spec/Serialization.cry";
 
 let sgn0x_pty_mont_384_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
   llvm_precond {{ fp_invariant a }};
   p_ptr <- alloc_init_readonly vec384_type (llvm_term {{ vec384_rep (from_Fp `p) }});
   crucible_execute_func [a_ptr, p_ptr, crucible_term {{ 0x89f3fffcfffcfffd }}];
-  crucible_return (crucible_term {{ (zext [2*(fp_abs a)>`p, (fp_abs a)%2 == 1]):[64] }});
+  crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs a), (HTCE1::sgn0 (fp_abs a))@0]):[64] }});
 };
 
 sgn0x_pty_mont_384_ov <- verify_x86 "sgn0x_pty_mont_384" sgn0x_pty_mont_384_spec;
