@@ -69,12 +69,13 @@ let POINTonE1_from_Jacobian_spec = do {
 
 // commute mul once -- use with caution!
 mul_commutes_fp_thm <- prove_cryptol {{ \x y  -> Fp.mul (x, y) == apply Fp.mul (y,x) }} [];
+reciprocal_div_thm <- admit_cryptol {{ \x -> inverse_fp x ==  Fp.div (Fp.field_unit, x) }};
 
 POINTonE1_from_Jacobian_ov <- custom_verify "POINTonE1_from_Jacobian"
-  (concat [reciprocal_fp_div_ov] (concat vec_select_asm_ovs fp_overrides))
+  (concat [reciprocal_fp_ov] (concat vec_select_asm_ovs fp_overrides))
   POINTonE1_from_Jacobian_spec
   do {
-    (simplify (addsimp mul_commutes_fp_thm empty_ss));
+    (simplify (addsimps [mul_commutes_fp_thm, reciprocal_div_thm] empty_ss));
     unfolding ["POINTonE1_affine_invariant", "POINTonE1_affine_rep"];
     (apply_fp_rewrites);
     w4_unint_z3 fp_unints;
