@@ -124,6 +124,7 @@ let ovs_for_reciprocal =
 // an instance of (fp_exp_fact):
 recip_fp_algebra_thm <- admit_cryptol {{ \x -> inverse_fp x == fp_exp x (`p-2) }};
 
+// TODO: Conditional postcondition
 let reciprocal_fp_spec = do {
     out_ptr <- crucible_alloc vec384_type;
     (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384_type;

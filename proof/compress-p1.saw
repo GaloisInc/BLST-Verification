@@ -130,9 +130,6 @@ POINTonE1_Compress_BE_affine_ov <- really_custom_verify "POINTonE1_Compress_BE"
   (POINTonE1_Compress_BE_spec true)
   (POINTonE1_Compress_BE_proof);
 
-// Have the "Z=0 <=> infinity" issue again; see the notes in `map_to_g1.saw`.
-// So, passing in a value (0,0,1) would give a result not agreeing with
-// the specification.
 
 let blst_p1_compress_spec is_point_affine = do {
   out_ptr <- crucible_alloc (llvm_array 48 (llvm_int 8));
@@ -142,7 +139,12 @@ let blst_p1_compress_spec is_point_affine = do {
   if is_point_affine then do {
     // Point is affine, so Z must be 1
     crucible_precond {{ (fp_abs (inp.2)) == Fp.field_unit }};
-    crucible_precond {{ ~(is_zero Fp ((POINTonE1_abs inp).2)) }};
+    crucible_precond {{ (fp_abs (inp.2)) != Fp.field_zero }};
+
+    // Have the "Z=0 <=> infinity" issue again; see the notes in `map_to_g1.saw`.
+    // So, passing in a value (0,0,1) would give a result not agreeing with
+    // the specification.
+    crucible_precond {{ ~(is_point_O E (fp_abs inp.0, fp_abs inp.1)) }};
   } else do {
     // Point is projective, so Z must not be 1
     crucible_precond {{ (fp_abs (inp.2)) != Fp.field_unit }};
@@ -170,7 +172,6 @@ is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
 is_point_O_rev_thm <- admit_cryptol (rewrite (cryptol_ss())
   {{ \p -> (is_point_O E (affinify E (POINTonE1_abs p))) == (is_zero Fp ((POINTonE1_abs p).2))}});
 
-
 blst_p1_compress_projective_ov <- really_custom_verify "blst_p1_compress"
   (concat [POINTonE1_Compress_BE_projective_ov] vec_overrides)
   (blst_p1_compress_spec false)
@@ -182,22 +183,11 @@ blst_p1_compress_projective_ov <- really_custom_verify "blst_p1_compress"
      w4_unint_z3 fp_unints;
   };
 
-// TODO: rename these rewriting rules
-is_point_O_thmA'' <- admit_cryptol (rewrite (cryptol_ss())
-  {{ \p -> peq (fp_abs(p.2)) (Fp.field_zero) ==
-           if is_point_projective E (POINTonE1_abs p)
-           then is_point_O E (fp_abs p.0, fp_abs p.1)
-           else apply peq (fp_abs(p.2)) (Fp.field_zero) }});
-
-is_point_O_rev_thmA <- admit_cryptol (rewrite (cryptol_ss())
-  {{ \p -> (is_point_O E (fp_abs p.0, fp_abs p.1)) == (is_zero Fp ((POINTonE1_abs p).2))}});
-
-
 blst_p1_compress_affine_ov <- really_custom_verify "blst_p1_compress"
   (concat [POINTonE1_Compress_BE_affine_ov] vec_overrides)
   (blst_p1_compress_spec true)
     do {
      unfolding ["serialize_E1", "x_string_E1", "m_byte_E1", "metadata_bits_E1"];
-     simplify (addsimps [vec_is_zero_call_thm, is_point_O_thmA''] (cryptol_ss()));
+     simplify (addsimps [vec_is_zero_call_thm] (cryptol_ss()));
      w4_unint_z3 fp_unints;
   };
