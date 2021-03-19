@@ -22,6 +22,7 @@ import Parameters as P
 import FieldExtras
 import ShortWeierstrassCurve as EC
 import HashToCurveE1Aux as Aux
+import BLSFieldExtras (sqrt_fp)
 
 type _p = P::p // characteristic
 type _q = P::p // cardinality
@@ -39,7 +40,7 @@ _C = P::E // {base_field = F, a = _F.field_zero, b = P::b}
 _is_square x =  y == 0 \/ y == 1 where
     y = F_expt`{n=width _q} _F x `((_q-1)/2)
 
-_sqrt = Aux::sqrt
+_sqrt = sqrt_fp
 
 _sgn0 = Aux::sgn0
 

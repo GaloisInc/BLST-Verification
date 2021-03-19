@@ -7,7 +7,7 @@ module HashToCurveE1Aux where
 
 import Parameters
 import FieldExtras
-import BLSFieldExtras (fp_exp)
+import BLSFieldExtras (fp_exp, sqrt_fp)
 import ShortWeierstrassCurve
 
 h_eff = 0xd201000000010001 // For clearing the cofactor
@@ -77,8 +77,6 @@ k4s = map to_Fp
    , 0x0e0fa1d816ddc03e6b24255e0d7819c171c40f65e273b853324efcd6356caa205ca2f570f13497804415473a1d634b8f
    ]
 
-sqrt x = F_expt`{n=width p} Fp x `((p+1)/4) // the =3 (mod 4) variant
-
 Z = 11:Integer
 A' = to_Fp 0x144698a3b8e9433d693a02c96d4982b0ea985383ee66a8d8e8981aefd881ac98936f8da0e0f97f5cf428082d584c1d
 B' = to_Fp 0x12e2908d11688030018b12e8753eee3b2016c1f0f24f4070a0b9c14fcef35ef55a23215a316ceaa5d1cc48e98e172be0
@@ -90,7 +88,7 @@ sgn0 x = [(from_Fp x)!0]
 map_to_curve_simple_swu_3mod4: t_Fp -> (t_Fp, t_Fp, t_Fp, t_Fp)
 map_to_curve_simple_swu_3mod4 u = res where
   c1 = (`p-3)/4
-  c2 = sqrt (Fp.neg (Fp.mul (Fp.sq Z, Z)))
+  c2 = sqrt_fp (Fp.neg (Fp.mul (Fp.sq Z, Z)))
 
   tv1 = Fp.sq u
   tv3 = Fp.mul (Z, tv1)

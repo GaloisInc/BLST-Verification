@@ -27,7 +27,7 @@
 
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/HashToCurveE1.cry" (Z A' B' Curve_E' clear_cofactor iso_map hash_to_curve_opt map_to_curve_simple_swu sqrt sgn0 sqrt);
+import "../spec/HashToCurveE1.cry" (Z A' B' Curve_E' clear_cofactor iso_map hash_to_curve_opt map_to_curve_simple_swu sgn0);
 import "../spec/implementation/CurveOperation.cry";
 Aux <- cryptol_load "../spec/HashToCurveE1Aux.cry";
 import "../spec/implementation/HashToG1.cry";
@@ -157,8 +157,7 @@ aux_rewrites <- for [
   , {{ Aux::Z == Z }}
   , {{ Aux::B' == B' }}
   , {{ \x -> Aux::sgn0 x == sgn0 x}}
-  , {{ \x -> Aux::sqrt x == sqrt x}}
-] simp_then_admit;
+] (\ eq -> prove_cryptol eq []);
 
 // Assumptions we will not prove:
 
@@ -217,7 +216,7 @@ is_point_projective_lemma <- simp_then_admit {{ \p -> is_point_projective Curve_
 
 // Rewrite rules for the constants appearing in the C code:
 constants_rewrites <- for [
-      {{ fp_abs [ 4878930887265312543 , 14750521259635781058 , 8371497156570714123 , 15793066378700994603 , 16433423527091015560 , 32548497384448767 ] == sqrt (Fp.neg (Fp.mul (Fp.sq Z, Z))) }}
+      {{ fp_abs [ 4878930887265312543 , 14750521259635781058 , 8371497156570714123 , 15793066378700994603 , 16433423527091015560 , 32548497384448767 ] == sqrt_fp (Fp.neg (Fp.mul (Fp.sq Z, Z))) }}
     , {{ fp_abs [ 9830232086645309404 , 1112389714365644829 , 8603885298299447491 , 11361495444721768256 , 5788602283869803809 , 543934104870762216 ] == Z }}
     , {{ [ 9180392817347875192 , 12752300768841235045 , 5424152106454515062 , 3349150446948955809 , 1614784533401171638 , 42236840757897548 ] == fp_rep (Fp.mul (Z, A')) }}
     ,  {{ fp_abs [ 9987108143941419098 , 10981380979105458492 , 12597673232421864513 , 4365728511027233858 , 2514197008840889506 , 336850944957925653 ] == Fp.neg(A') }}
@@ -244,7 +243,7 @@ map_to_isogenous_E1_impl_ov <- custom_verify
           ] (\ eq -> custom_prove_cryptol eq w4)
         );
         simplify (addsimps local_rewrites empty_ss);
-        w4_unint_z3 (concat ["Fp"] ["sqrt_fp","sqrt","fp_rep"]);
+        w4_unint_z3 (concat ["Fp"] ["sqrt_fp","fp_rep"]);
       }
       do { // simulation side-conditions
         unfolding ["select"];
@@ -363,7 +362,7 @@ swu_impl_equiv_3mod4_impl <- custom_prove_cryptol {{ \u -> map_to_curve_simple_s
     simplify (addsimps aux_rewrites (cryptol_ss ()));
     simplify (addsimp e2_lemma empty_ss);
     simplify (addsimp recip_sqrt_fp_algebra_thm empty_ss);
-    w4_unint_z3 (concat ["Fp"] ["sqrt","fp_exp"]);
+    w4_unint_z3 (concat ["Fp"] ["sqrt_fp","fp_exp"]);
   };
 
 //_ <- really_custom_prove_cryptol {{ \(xn_:[2]) (xd_:[2]) (yn_:[2]) -> (affinify_nz (Fp.mul (xn, xd), Fp.mul (yn, gxd), xd) == if ~Fp.is_equal(xd, Fp.field_zero) then (Fp.div(xn,xd), Fp.div(yn,Fp.field_unit)) else apply affinify_nz (Fp.mul (xn, xd), Fp.mul (yn, gxd), xd) where gxd = Fp.mul(xd, Fp.sq xd); xn = toInteger xn_; xd = toInteger xd_; yn = toInteger yn_ )}} (quickcheck 64);
