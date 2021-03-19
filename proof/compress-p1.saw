@@ -115,7 +115,7 @@ let POINTonE1_Compress_BE_proof = do {
      unfolding ["POINTonE1_affine_abs", "POINTonE1_affine_rep", "POINTonE1_invariant"];
      (apply_fp_rewrites);
      simplify (addsimp one_mont_p_abs_thm empty_ss);
-     w4_unint_z3 (concat ec_mult_unints ["fp_abs", "I2OSP48"]);
+     w4_unint_z3 ["POINTonE1_abs", "POINTonE1_invariant", "Fp", "fp_abs", "I2OSP48"];
   };
 
 // Prove POINTonE1_Compress_BE matches the spec for both projective and affine
