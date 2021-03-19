@@ -239,28 +239,28 @@
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/compress-p1.saw:123:40",
+    "loc": "/workdir/proof/compress-p1.saw:124:40",
     "method": "POINTonE1_Compress_BE",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/compress-p1.saw:127:36",
+    "loc": "/workdir/proof/compress-p1.saw:128:36",
     "method": "POINTonE1_Compress_BE",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/compress-p1.saw:174:35",
+    "loc": "/workdir/proof/compress-p1.saw:175:35",
     "method": "blst_p1_compress",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/compress-p1.saw:185:31",
+    "loc": "/workdir/proof/compress-p1.saw:186:31",
     "method": "blst_p1_compress",
     "type": "method",
     "specification": "unknown"
@@ -274,7 +274,7 @@
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/compress-p1.saw:73:31",
+    "loc": "/workdir/proof/compress-p1.saw:74:31",
     "method": "POINTonE1_from_Jacobian",
     "type": "method",
     "specification": "unknown"
@@ -1170,35 +1170,28 @@
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/exp.saw:140:21",
-    "method": "reciprocal_fp",
-    "type": "method",
-    "specification": "unknown"
-  },
-  {
-    "status": "assumed",
-    "loc": "/workdir/proof/exp.saw:150:25",
+    "loc": "/workdir/proof/exp.saw:137:21",
     "method": "reciprocal_fp",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/exp.saw:174:21",
+    "loc": "/workdir/proof/exp.saw:169:21",
     "method": "recip_sqrt_fp",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/exp.saw:215:15",
+    "loc": "/workdir/proof/exp.saw:210:15",
     "method": "sqrt_fp",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/exp.saw:216:21",
+    "loc": "/workdir/proof/exp.saw:211:21",
     "method": "sqrt_fp",
     "type": "method",
     "specification": "unknown"
@@ -3628,6 +3621,12 @@
     "status": "assumed",
     "loc": "unknown",
     "term": "let { x@1 = cryptol:/Parameters/Fp.2\n    }\n in (x : Prelude.Integer)\n-> (z : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger\n        (x@1.2.2.2.2.2.2.1 (x,cryptol:/BLSFieldExtras/inverse_fp z))\n        (x@1.1 (x,z)))",
+    "type": "property"
+  },
+  {
+    "status": "assumed",
+    "loc": "unknown",
+    "term": "let { x@1 = cryptol:/Parameters/Fp.2\n    }\n in (x : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger\n        (cryptol:/BLSFieldExtras/inverse_fp x)\n        (x@1.1 (x@1.2.1,x)))",
     "type": "property"
   },
   {
