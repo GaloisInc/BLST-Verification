@@ -43,8 +43,7 @@ let POINTonE1_affine_Compress_BE_spec = do {
   crucible_return (crucible_term {{ (zext [(sign_F_p (fp_abs inp.1)), (fp_abs inp.1)%2 == 1]):[64] }});
 };
 
-// TODO: Change "really_verify" to "verify"
-POINTonE1_affine_Compress_BE_ov <- really_verify "POINTonE1_affine_Compress_BE"
+POINTonE1_affine_Compress_BE_ov <- verify "POINTonE1_affine_Compress_BE"
   [fromx_mont_384_ov, sgn0x_pty_mont_384_ov]
   POINTonE1_affine_Compress_BE_spec;
 
@@ -71,8 +70,8 @@ let POINTonE1_from_Jacobian_spec = do {
 // commute mul once -- use with caution!
 mul_commutes_fp_thm <- prove_cryptol {{ \x y  -> Fp.mul (x, y) == apply Fp.mul (y,x) }} [];
 
-POINTonE1_from_Jacobian_ov <- really_custom_verify "POINTonE1_from_Jacobian"
-  (concat [reciprocal_fp_ov] (concat vec_select_asm_ovs fp_overrides))
+POINTonE1_from_Jacobian_ov <- custom_verify "POINTonE1_from_Jacobian"
+  (concat [reciprocal_fp_div_ov] (concat vec_select_asm_ovs fp_overrides))
   POINTonE1_from_Jacobian_spec
   do {
     (simplify (addsimp mul_commutes_fp_thm empty_ss));
@@ -121,11 +120,11 @@ let POINTonE1_Compress_BE_proof = do {
 
 // Prove POINTonE1_Compress_BE matches the spec for both projective and affine
 // points.
-POINTonE1_Compress_BE_projective_ov <- really_custom_verify "POINTonE1_Compress_BE"
+POINTonE1_Compress_BE_projective_ov <- custom_verify "POINTonE1_Compress_BE"
   [POINTonE1_from_Jacobian_ov, POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov]
   (POINTonE1_Compress_BE_spec false)
   (POINTonE1_Compress_BE_proof);
-POINTonE1_Compress_BE_affine_ov <- really_custom_verify "POINTonE1_Compress_BE"
+POINTonE1_Compress_BE_affine_ov <- custom_verify "POINTonE1_Compress_BE"
   [POINTonE1_affine_Compress_BE_ov, vec_is_equal_fp_ov]
   (POINTonE1_Compress_BE_spec true)
   (POINTonE1_Compress_BE_proof);
@@ -172,7 +171,7 @@ is_point_O_thm'' <- admit_cryptol (rewrite (cryptol_ss())
 is_point_O_rev_thm <- admit_cryptol (rewrite (cryptol_ss())
   {{ \p -> (is_point_O E (affinify E (POINTonE1_abs p))) == (is_zero Fp ((POINTonE1_abs p).2))}});
 
-blst_p1_compress_projective_ov <- really_custom_verify "blst_p1_compress"
+blst_p1_compress_projective_ov <- custom_verify "blst_p1_compress"
   (concat [POINTonE1_Compress_BE_projective_ov] vec_overrides)
   (blst_p1_compress_spec false)
     do {
@@ -183,7 +182,7 @@ blst_p1_compress_projective_ov <- really_custom_verify "blst_p1_compress"
      w4_unint_z3 fp_unints;
   };
 
-blst_p1_compress_affine_ov <- really_custom_verify "blst_p1_compress"
+blst_p1_compress_affine_ov <- custom_verify "blst_p1_compress"
   (concat [POINTonE1_Compress_BE_affine_ov] vec_overrides)
   (blst_p1_compress_spec true)
     do {

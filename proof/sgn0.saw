@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-let do_prove = true;
 include "proof-helpers.saw";
 
 enable_experimental;
