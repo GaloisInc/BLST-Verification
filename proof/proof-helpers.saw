@@ -133,14 +133,14 @@ let rw_with_1 thm = simplify (addsimp thm (cryptol_ss ()));
 // useful things for proof development, to tidy up the goal formula before printing it.
 
 propositional_rewrites <- for
-  [ "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a True b) (or a b))"
-  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (ite Bool a b False) (and a b))"
-  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (and a b)) (or (not a) (not b)))"
-  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (or a b)) (and (not a) (not b)))"
-  , "(a:Bool) -> EqTrue (eq Bool (implies a False) (not a))"
-  , "(a:Bool) -> (b:Bool) -> (c:Bool) -> EqTrue (eq Bool (implies a (or b c)) (implies (and a (not b)) c))"
-  // , "(a:Bool) -> (b:Bool) -> (c:Bool) -> EqTrue (eq Bool (implies (and a b) c) (implies a (implies b c)))"
-  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (or (not a) b) (implies a b))"
+  [ "(a:Bool) -> (b:Bool) -> EqTrue (boolEq (ite Bool a True b) (or a b))"
+  , "(a:Bool) -> (b:Bool) -> EqTrue (boolEq (ite Bool a b False) (and a b))"
+  , "(a:Bool) -> (b:Bool) -> EqTrue (boolEq (not (and a b)) (or (not a) (not b)))"
+  , "(a:Bool) -> (b:Bool) -> EqTrue (boolEq (not (or a b)) (and (not a) (not b)))"
+  , "(a:Bool) -> EqTrue (boolEq (implies a False) (not a))"
+  , "(a:Bool) -> (b:Bool) -> (c:Bool) -> EqTrue (boolEq (implies a (or b c)) (implies (and a (not b)) c))"
+  // , "(a:Bool) -> (b:Bool) -> (c:Bool) -> EqTrue (boolEq (implies (and a b) c) (implies a (implies b c)))"
+  , "(a:Bool) -> (b:Bool) -> EqTrue (boolEq (or (not a) b) (implies a b))"
    ] (prove_core abc);
 
 let prop_simpset = add_prelude_eqs
