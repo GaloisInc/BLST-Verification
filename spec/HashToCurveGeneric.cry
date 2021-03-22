@@ -47,7 +47,7 @@ parameter
     // additional field operations
     _is_square: _t_F -> Bool
     _sqrt: _t_F -> _t_F
-    _sgn0: _t_F -> [1] // 0 or 1
+    _sgn0: _t_F -> Bit // 0 or 1
     _inv0: _t_F -> _t_F
 
     // for map_to_curve_simple_swu for AB=0
