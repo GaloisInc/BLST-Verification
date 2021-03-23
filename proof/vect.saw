@@ -9,6 +9,7 @@
 // consider their effect in the abstract, not concrete, domain.
 
 import "../spec/implementation/Types.cry";
+import "../spec/ShortWeierstrassCurve.cry";
 
 // ... vec_select
 let vec_select_asm_spec (bytes:Int) = do {
@@ -112,7 +113,8 @@ let vec_is_zero_fp_spec = do {
   crucible_precond {{ fp_invariant a }};
   crucible_execute_func [a_ptr, crucible_term {{ (48:Size_t) }}]; // Non-portable
   // crucible_return (crucible_term {{ if fp_equal_rep a Fp_rep.field_zero then 1 else (0:Limb) }});
-  crucible_return (crucible_term {{ if (fp_abs a) ==  Fp.field_zero then 1 else (0:Limb) }});
+  //crucible_return (crucible_term {{ if (fp_abs a) ==  Fp.field_zero then 1 else (0:Limb) }});
+  crucible_return (crucible_term {{ if is_zero Fp (fp_abs a) then 1 else (0:Limb) }});
   };
 
 let vec_is_zero_fp2_spec = do {
