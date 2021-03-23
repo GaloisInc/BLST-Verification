@@ -221,7 +221,7 @@ map_to_isogenous_E1_impl_ov <- custom_verify
   (concat_all [fp_overrides, vec_overrides, [recip_sqrt_fp_3mod4_ov , sgn0x_pty_mont_384_ov]])
   map_to_isogenous_E1_impl_spec
   (do {
-    goal_num_ite 31
+    goal_num_ite 33
       do { // main safety goal:
         // the only difference between spec and code is the use of `vec_select` and `vec_is_equal`
         unfolding ["map_to_curve_simple_swu_impl", "select", "POINTonE1_rep"];
@@ -234,9 +234,12 @@ map_to_isogenous_E1_impl_ov <- custom_verify
           ] (\ eq -> custom_prove_cryptol eq w4)
         );
         simplify (addsimps local_rewrites empty_ss);
-        w4_unint_z3 (concat ["Fp"] ["sqrt_fp","fp_rep"]);
+        print_readably;
+        print_goal_consts;
+        w4_unint_z3 (concat ["Fp"] ["sqrt_fp", "fp_rep"]);
       }
       do { // simulation side-conditions
+        print_goal;
         unfolding ["select"];
         simplify fp_simpset;
         w4;

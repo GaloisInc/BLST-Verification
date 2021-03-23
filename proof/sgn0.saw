@@ -37,7 +37,7 @@ let sgn0x_pty_mont_384_spec = do {
   p_ptr <- alloc_init_readonly vec384_type (llvm_term {{ vec384_rep (from_Fp `p) }});
   crucible_execute_func [a_ptr, p_ptr, crucible_term {{ 0x89f3fffcfffcfffd }}];
   crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs a), (HTCE1::sgn0 (fp_abs a))@0]):[64] }});
-};
+;
 
 // TODO: prove (not so easy because of the Montgomery representation)
 sgn0x_pty_mont_384_ov <- verify_x86 "sgn0x_pty_mont_384" sgn0x_pty_mont_384_spec (quickcheck 16);
