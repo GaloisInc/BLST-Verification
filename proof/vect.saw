@@ -107,12 +107,16 @@ let vec_is_zero_spec n = do { // n is size IN LIMBS; routine takes size in bytes
 
 // ... we actually want the is-0 test in the abstract domain
 
-let vec_is_zero_fp_spec = do {
+let vec_is_zero_fp_spec use_fp_is_equal = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
   crucible_precond {{ fp_invariant a }};
   crucible_execute_func [a_ptr, crucible_term {{ (48:Size_t) }}]; // Non-portable
   // crucible_return (crucible_term {{ if fp_equal_rep a Fp_rep.field_zero then 1 else (0:Limb) }});
-  crucible_return (crucible_term {{ if (fp_abs a) ==  Fp.field_zero then 1 else (0:Limb) }});
+  if use_fp_is_equal then do {
+    crucible_return (crucible_term {{ if Fp.is_equal ((fp_abs a), Fp.field_zero) then 1 else (0:Limb) }});
+  } else do {
+    crucible_return (crucible_term {{ if (fp_abs a) ==  Fp.field_zero then 1 else (0:Limb) }});
+  };
   };
 
 let vec_is_zero_fp2_spec = do {
@@ -123,7 +127,8 @@ let vec_is_zero_fp2_spec = do {
   }; // TODO: is this specification okay?
 
 // TODO: Prove
-vec_is_zero_fp_ov <- test "vec_is_zero" [] vec_is_zero_fp_spec;
+vec_is_zero_fp_ov <- test "vec_is_zero" [] (vec_is_zero_fp_spec false);
+vec_is_zero_fp_is_equal_ov <- test "vec_is_zero" [] (vec_is_zero_fp_spec true);
 vec_is_zero_fp2_ov <- test "vec_is_zero" [] vec_is_zero_fp2_spec;
 //  do { unfolding ["fp_invariant", "fp_abs", "vec384_abs" ]; beta_reduce_goal; print_goal; quickcheck 100; };
 //  do { unfolding ["fp_invariant", "fp_abs", "vec384_abs" ]; beta_reduce_goal; print_goal; z3; };
