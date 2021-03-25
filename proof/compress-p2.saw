@@ -1,0 +1,216 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+HE2 <- cryptol_load "../spec/HashToCurveE2.cry";
+import "../spec/Parameters.cry";
+import "../spec/rfc8017.cry";
+import "../spec/Serialization.cry" (sign_F_p_2 serialize_E2);
+import "../spec/ShortWeierstrassCurve.cry";
+
+import "../spec/implementation/CurveOperation.cry";
+import "../spec/implementation/Types.cry";
+
+
+// POINTonE2_affine_Compress_BE compresses X and returns the sign for Y
+let POINTonE2_affine_Compress_BE_spec = do {
+  out_ptr <- crucible_alloc (llvm_array 96 (llvm_int 8));
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE2_affine_type;
+
+  crucible_precond {{ POINTonE2_affine_invariant inp }};
+
+  crucible_execute_func [out_ptr, inp_ptr];
+
+  let x = {{ (POINTonE2_affine_abs inp).0 }};
+
+  crucible_points_to out_ptr (crucible_term {{ (I2OSP48 (x@0)) # (I2OSP48 (x@1)) }});
+
+  crucible_return (crucible_term {{ (zext [sign_F_p_2 (fp2_abs inp.1), HE2::sgn0 (fp2_abs inp.1)]):[64] }});
+};
+
+POINTonE2_affine_Compress_BE_ov <- verify "POINTonE2_affine_Compress_BE"
+  [fromx_mont_384_ov, sgn0x_pty_mont_384x_ov]
+  POINTonE2_affine_Compress_BE_spec;
+
+// POINTonE2_from_Jacobian affinifies a projective point
+let POINTonE2_from_Jacobian_spec = do {
+  out_ptr <- crucible_alloc POINTonE2_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE2_type;
+
+  crucible_precond {{ POINTonE2_invariant inp }};
+  crucible_precond {{ is_point_projective E' (POINTonE2_abs inp) }}; // on the curve
+  crucible_precond {{ ~(Fp_2.is_equal ((fp2_abs (inp.2)), Fp_2.field_zero)) }};
+
+  crucible_execute_func [out_ptr, inp_ptr];
+
+  let out = {{ POINTonE2_affine_rep (affinify E' (POINTonE2_abs inp)) }};
+  crucible_postcond {{ POINTonE2_affine_invariant out }};
+
+  // Use points_to_untyped because out_ptr is a POINTonE2 that the caller
+  // immediately casts to a POINTonE2_affine.  Therefore, we can treat out_ptr
+  // as a POINTonE2_affine and ignore Z.
+  crucible_points_to_untyped out_ptr (crucible_term out);
+};
+
+// commute mul once -- use with caution!
+mul_commutes_fp2_thm <- prove_cryptol {{ \x y  -> Fp_2.mul (x, y) == apply Fp_2.mul (y,x) }} [];
+reciprocal_div_fp2_thm <- admit_cryptol {{ \x -> inverse_fp2 x ==  Fp_2.div (Fp_2.field_unit, x) }};
+
+POINTonE2_from_Jacobian_ov <- custom_verify "POINTonE2_from_Jacobian"
+  (concat [reciprocal_fp2_ov] (concat vec_select_asm_ovs fp2_overrides))
+  POINTonE2_from_Jacobian_spec
+  do {
+    unfolding ["POINTonE2_affine_invariant", "POINTonE2_affine_rep"];
+    (simplify (addsimps [ mul_commutes_fp2_thm
+                        , reciprocal_div_fp2_thm
+                        , fp2_unrip_thm ]
+                        fp2_simpset));
+    w4_unint_z3 fp2_unints;
+  };
+
+// POINTonE2_Compress_BE compresses X and returns the sign of Y.  It supports
+// both affine points (indicated by Z == 1) and projective points (Z != 1).
+let POINTonE2_Compress_BE_spec is_point_affine = do {
+  out_ptr <- crucible_alloc (llvm_array 96 (llvm_int 8));
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE2_type;
+
+  crucible_precond {{ POINTonE2_invariant inp }};
+  if is_point_affine then do {
+    // Point is affine, so Z must be 1
+    crucible_precond {{ (fp2_abs (inp.2)) == Fp_2.field_unit }};
+  } else do {
+    // Point is projective, so Z must not be 1
+    crucible_precond {{ (fp2_abs (inp.2)) != Fp_2.field_unit }};
+    crucible_precond {{ ~(Fp_2.is_equal ((fp2_abs (inp.2)), Fp_2.field_zero)) }};
+    crucible_precond {{ is_point_projective E' (POINTonE2_abs inp) }}; // on the curve
+  };
+
+  crucible_execute_func [out_ptr, inp_ptr];
+
+  if is_point_affine then do {
+    let x = {{ fp2_abs (inp.0) }};
+    crucible_points_to out_ptr (crucible_term {{ I2OSP48 (x@0) # I2OSP48 (x@1) }});
+    crucible_return (crucible_term {{ (zext [sign_F_p_2 (fp2_abs inp.1), HE2::sgn0 (fp2_abs inp.1)]):[64] }});
+  } else do {
+    // Point is not already in affine coordinates, so must affinify first
+    let affinified = {{ affinify E' (POINTonE2_abs inp) }};
+    let x = {{ affinified.0 }};
+    crucible_points_to out_ptr (crucible_term {{ I2OSP48 (x@0) # I2OSP48 (x@1) }});
+
+    // SAW struggles to reason about `sgn0 (affinified.1)`, but we don't
+    // need it anyway so this spec only specifies the sign_F_p_2 bit.
+    ret <- crucible_fresh_var "ret" limb_type;
+    crucible_postcond {{ (ret!1) == (sign_F_p_2 affinified.1) }};
+    crucible_return (crucible_term ret);
+  };
+};
+
+// Theorems for reasoning about `one`
+one_mont_px_abs_thm <-
+  prove_cryptol (rewrite (cryptol_ss ())
+       {{fp2_abs [[ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+                  , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493],
+                  [0, 0, 0, 0, 0, 0]]
+          == Fp_2.field_unit }}) [];
+one_mont_px_invariant_thm <-
+  prove_cryptol (rewrite (cryptol_ss ())
+    {{fp2_invariant [[ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+                     , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493],
+                     [0, 0, 0, 0, 0, 0]]
+       == True}}) [];
+
+// Prove POINTonE2_Compress_BE matches the spec for projective points
+POINTonE2_Compress_BE_projective_ov <- custom_verify "POINTonE2_Compress_BE"
+  [ POINTonE2_from_Jacobian_ov
+  , POINTonE2_affine_Compress_BE_ov
+  , vec_is_equal_fp2_ov ]
+  (POINTonE2_Compress_BE_spec false)
+  do {
+     // Unfolding needed for fp rewrites to apply
+     unfolding [ "POINTonE2_affine_abs"
+               , "POINTonE2_affine_rep"
+               , "POINTonE2_invariant" ];
+     (apply_fp_rewrites);
+     simplify (addsimps [ one_mont_px_abs_thm
+                        , one_mont_px_invariant_thm
+                        , seq_ite_2_thm
+                        , unrip_thm_2 ]
+                        fp2_simpset);
+     w4_unint_z3 [ "POINTonE2_abs"
+                 , "POINTonE2_invariant"
+                 , "Fp_2"
+                 , "fp2_abs"
+                 , "I2OSP48"
+                 , "fp2_invariant"
+                 , "POINTonE2_affine_invariant"];
+  };
+
+// Prove POINTonE2_Compress_BE matches the spec for affine points
+POINTonE2_Compress_BE_affine_ov <- custom_verify "POINTonE2_Compress_BE"
+  [POINTonE2_affine_Compress_BE_ov, vec_is_equal_fp2_ov]
+  (POINTonE2_Compress_BE_spec true)
+  do {
+     // Unfolding needed for fp rewrites to apply
+     unfolding [ "POINTonE2_affine_abs"
+               , "POINTonE2_affine_rep"
+               , "POINTonE2_invariant" ];
+     simplify (addsimp one_mont_px_abs_thm fp2_simpset);
+     w4_unint_z3 [ "POINTonE2_abs"
+                 , "POINTonE2_invariant"
+                 , "Fp_2"
+                 , "fp2_abs"
+                 , "I2OSP48"];
+  };
+
+let blst_p2_compress_spec is_point_affine = do {
+  out_ptr <- crucible_alloc (llvm_array 96 (llvm_int 8));
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant inp }};
+
+  if is_point_affine then do {
+    // Point is affine, so Z must be 1
+    crucible_precond {{ (fp2_abs (inp.2)) == Fp_2.field_unit }};
+    crucible_precond {{ ~(Fp_2.is_equal (fp2_abs (inp.2), Fp_2.field_zero)) }};
+
+    // Have the "Z=0 <=> infinity" issue again; see the notes in `map_to_g1.saw`.
+    // So, passing in a value (0,0,1) would give a result not agreeing with
+    // the specification.
+    crucible_precond {{ ~(is_point_O E' (fp2_abs inp.0, fp2_abs inp.1)) }};
+  } else do {
+    // Point is projective, so Z must not be 1
+    crucible_precond {{ (fp2_abs (inp.2)) != Fp_2.field_unit }};
+    crucible_precond {{ is_point_projective E' (POINTonE2_abs inp) }}; // on the curve
+  };
+
+  crucible_execute_func [out_ptr, inp_ptr];
+  if is_point_affine then do {
+    crucible_points_to out_ptr (crucible_term {{ serialize_E2 (fp2_abs inp.0, fp2_abs inp.1) }});
+  } else do {
+    crucible_points_to out_ptr (crucible_term {{ serialize_E2 (affinify E' (POINTonE2_abs inp)) }});
+  };
+};
+
+// This is the conditional rule showing that the Z coordinate check does the
+// right thing This may be provable in SAW but for now we assume it as an
+// algebraic fact.
+is_point_O_fp2_thm <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \p -> Fp_2.is_equal ((fp2_abs p.2), Fp_2.field_zero) ==
+           if is_point_projective E' (POINTonE2_abs p)
+           then is_point_O E' (affinify E' (POINTonE2_abs p))
+           else apply Fp_2.is_equal ((fp2_abs p.2), Fp_2.field_zero) }});
+
+// Prove blst_p2_compress matches the spec for projective points
+blst_p2_compress_projective_ov <- custom_verify "blst_p2_compress"
+  (concat [POINTonE2_Compress_BE_projective_ov] vec_fp2_overrides)
+  (blst_p2_compress_spec false)
+    do {
+     simplify (addsimp is_point_O_fp2_thm empty_ss);
+     w4_unint_z3 fp2_unints;
+  };
+
+// Prove blst_p2_compress matches the spec for affine points
+blst_p2_compress_affine_ov <- custom_verify "blst_p2_compress"
+  (concat [POINTonE2_Compress_BE_affine_ov] vec_fp2_overrides)
+  (blst_p2_compress_spec true)
+  (w4_unint_z3 fp2_unints);
