@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import "../spec/HashToCurveE1.cry" as HTCE1;
+import "../spec/HashToCurveE1.cry" (sgn0);
 import "../spec/Parameters.cry";
 import "../spec/rfc8017.cry";
-import "../spec/Serialization.cry";
+import "../spec/Serialization.cry" (sign_F_p serialize_E1);
 import "../spec/ShortWeierstrassCurve.cry";
 
 import "../spec/implementation/CurveOperation.cry";
@@ -25,7 +25,8 @@ let fromx_mont_384_spec = do {
   crucible_points_to ret_ptr (crucible_term {{ vec384_rep (from_Fp (fp_abs a)) }});
 };
 
-fromx_mont_384_ov <- verify_x86 "fromx_mont_384" fromx_mont_384_spec;
+// TODO: prove
+fromx_mont_384_ov <- verify_x86 "fromx_mont_384" fromx_mont_384_spec (quickcheck 64);
 
 // I2OSP48 is I2OSP with fixed type parameters to allow for use as an
 // uninterpreted function (polymorphic functions cannot be left uninterpreted)
@@ -41,12 +42,13 @@ let POINTonE1_affine_Compress_BE_spec = do {
   crucible_execute_func [out_ptr, inp_ptr];
 
   crucible_points_to out_ptr (crucible_term {{ I2OSP48 ((POINTonE1_affine_abs inp ).0) }});
-  crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs inp.1), (HTCE1::sgn0 (fp_abs inp.1))@0]):[64] }});
+  crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs inp.1), sgn0 (fp_abs inp.1)]):[64] }});
 };
 
-POINTonE1_affine_Compress_BE_ov <- verify "POINTonE1_affine_Compress_BE"
+POINTonE1_affine_Compress_BE_ov <- custom_verify "POINTonE1_affine_Compress_BE"
   [fromx_mont_384_ov, sgn0x_pty_mont_384_ov]
-  POINTonE1_affine_Compress_BE_spec;
+  POINTonE1_affine_Compress_BE_spec // TODO: does not work without the call to goal_eval; why?
+  do {goal_eval; w4;};
 
 // POINTonE1_from_Jacobian affinifies a projective point
 let POINTonE1_from_Jacobian_spec = do {
@@ -103,13 +105,13 @@ let POINTonE1_Compress_BE_spec is_point_affine = do {
 
   if is_point_affine then do {
     crucible_points_to out_ptr (crucible_term {{ I2OSP48 (fp_abs inp.0) }});
-    crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs inp.1), (HTCE1::sgn0 (fp_abs inp.1))@0]):[64] }});
+    crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs inp.1), sgn0 (fp_abs inp.1)]):[64] }});
   } else do {
     // Point is not already in affine coordinates, so must affinify first
     let affinified = {{ affinify E (POINTonE1_abs inp) }};
     crucible_points_to out_ptr (crucible_term {{ I2OSP48 (affinified.0) }});
 
-    // SAW struggles to reason about `HTCE1::sgn0 (affinified.1)`, but we don't
+    // SAW struggles to reason about `sgn0 (affinified.1)`, but we don't
     // need it anyway so this spec only specifies the sign_F_p bit.
     ret <- crucible_fresh_var "ret" limb_type;
     crucible_postcond {{ (ret!1) == (sign_F_p affinified.1) }};

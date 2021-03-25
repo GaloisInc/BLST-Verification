@@ -44,3 +44,17 @@ let map f =
   in m;
 
 let concat_all xs = foldr concat xs [];
+
+let elem_at =
+  rec f = (\ n xs ->
+    if (eq n 0)
+    then (head xs)
+    else (f (eval_int {{(`n-1):[width n]}}) (tail xs) ))
+  in f;
+
+let elems_at =
+  rec f = (\ ns xs ->
+    if null ns
+    then []
+    else concat [elem_at (head ns) xs] (f (tail ns) xs))
+  in f;

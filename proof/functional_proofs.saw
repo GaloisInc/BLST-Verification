@@ -33,3 +33,4 @@ include "api-extra-for-release-2.saw";
 include "integer-and-bv.saw";
 include "384x384_ops.saw";
 include "fp12.saw";
+include "hash_to_g1.saw";

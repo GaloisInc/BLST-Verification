@@ -19,38 +19,38 @@ import Parameters as P
 import FieldExtras
 import ShortWeierstrassCurve as EC
 
-type p = P::p // characteristic
-type q = P::p * P::p // cardinality, here p^2
-type t_F = P::t_Fp_2 // field representation type
-F = P::Fp_2 // the field structure, containing the operations
-type m = 2 // extension degree
-base_to_F xs = reverse xs // Our polynomials are big-endian; the spec is little-endian
+type _p = P::p // characteristic
+type _q = P::p * P::p // cardinality, here p^2
+type _t_F = P::t_Fp_2 // field representation type
+_F = P::Fp_2 // the field structure, containing the operations
+type _m = 2 // extension degree
+_base_to_F xs = reverse xs // Our polynomials are big-endian; the spec is little-endian
 
-C = P::E' // {base_field = F, a = F.field_zero, b = P::b'}
+_C = P::E' // {base_field = F, a = F.field_zero, b = P::b'}
 
 // From Section 4. Utility Functions
 CMOV (a,b,c) = if c==False then a else b
 
 // extra field operations
 
-is_square x =  F.is_equal (y, F.field_zero) \/ F.is_equal (y, F.field_unit) where
-    y = F_expt`{n = width q} F x `((q-1)/2)
+_is_square x =  _F.is_equal (y, _F.field_zero) \/ _F.is_equal (y, _F.field_unit) where
+    y = F_expt`{n = width _q} _F x `((_q-1)/2)
 
 // Alternative implementation from G.5
 // TODO
 
 // sqrt from Appendix G.3 (q = 9 mod 8)
-sqrt x = z where
-    tv1 = F_expt`{n=(width q) - 3} F x `((q+7)/16)
-    tv2 = F.mul (c1, tv1)
-    tv3 = F.mul (c2, tv1)
-    tv4 = F.mul (c3, tv1)
-    e1 =  F.is_equal (F.sq tv2, x)
-    e2 =  F.is_equal (F.sq tv3, x)
+_sqrt x = z where
+    tv1 = F_expt`{n=(width _q) - 3} _F x `((_q+7)/16)
+    tv2 = _F.mul (c1, tv1)
+    tv3 = _F.mul (c2, tv1)
+    tv4 = _F.mul (c3, tv1)
+    e1 =  _F.is_equal (_F.sq tv2, x)
+    e2 =  _F.is_equal (_F.sq tv3, x)
 
     tv1_1 = CMOV (tv1, tv2, e1)
     tv2_1 = CMOV (tv4, tv3, e2)
-    e3 = F.is_equal (F.sq tv2_1, x)
+    e3 = _F.is_equal (_F.sq tv2_1, x)
     z = CMOV (tv1_1, tv2_1, e3)
 
     // Need constants c1,c2,c3 with c1^2 = -1, c2^2 = c1, c3^3 = -c1
@@ -64,16 +64,16 @@ sqrt x = z where
     c2 = [k, P::Fp.neg k] // k*(u-1)
     c3 = [k, k] // k*(u+1)
 
-// sgn0 for m=2, from Section 4.1 
-sgn0 [x_1, x_0] =  sign_0 || (zero_0 && sign_1) where
+// sgn0 for m=2, from Section 4.1
+_sgn0 [x_1, x_0] =  sign_0 \/ (zero_0 /\ sign_1) where
     // [x_1, x_0] because Section 2.1 asks for a little-endian order of elements
     x_0' = P::from_Fp x_0
     x_1' = P::from_Fp x_1
-    sign_0 = [x_0'!0] // least-signiifcant bit
-    zero_0 = [x_0' == 0] // represent the Boolean as 0 or 1
-    sign_1 = [x_1'!0]  
+    sign_0 = x_0'!0 // least-signiifcant bit
+    zero_0 = x_0' == 0 // represent the Boolean as 0 or 1
+    sign_1 = x_1'!0
 
-inv0 x = F_expt`{n=width q} F x `(q-2) // but could be F.div (F.field_unit, x)
+_inv0 x = F_expt`{n=width _q} _F x `(_q-2) // but could be F.div (_F.field_unit, x)
 
 // for the isogenous curve
 private
@@ -81,25 +81,25 @@ private
 
 
 // Constants from Section 8.8.2
-Z = F.neg [1, 2] // -(2+I)
+_Z = _F.neg [1, 2] // -(2+I)
 // A' = [to_Fp 240, 0]: t_F // 240 * I
-A' = to_Fp2 (0,240)
+_A' = to_Fp2 (0,240)
 //B' = [to_Fp 1012, to_Fp 1012]: t_F  // 1012 * (1+I)
-B' = to_Fp2 (1012,1012)
+_B' = to_Fp2 (1012,1012)
 
 h_eff = 0xbc69f08f2ee75b3584c6a0ea91b352888e2a8e9145ad7689986ff031508ffe1329c2f178731db956d82bf015d1212b02ec0ec69d7477c1ae954cbc06689f6a359894c0adebbf6b4e8020005aaa95551
 
-clear_cofactor P = EC::mult C h_eff P
+_clear_cofactor P = EC::mult _C h_eff P
 
-iso_map: (t_F, t_F) -> (t_F, t_F)
-iso_map (x', y') = (x, y) where
-    x_powers = [F.field_unit] # [F.mul(x', xi) | xi <- x_powers]
-    x_num = F_sum F [F.mul(ki, xi) | ki <- k1s | xi <- x_powers]
-    x_den = F.add (x_powers@2, F_sum F [F.mul(ki, xi) | ki <- k2s | xi <- x_powers])
-    y_num = F_sum F [F.mul(ki, xi) | ki <- k3s | xi <- x_powers]
-    y_den = F.add (x_powers@3, F_sum F [F.mul(ki, xi) | ki <- k4s | xi <- x_powers])
-    x = F.div (x_num, x_den)
-    y = F.mul (y', F.div(y_num, y_den))
+_iso_map: (_t_F, _t_F) -> (_t_F, _t_F)
+_iso_map (x', y') = (x, y) where
+    x_powers = [_F.field_unit] # [_F.mul(x', xi) | xi <- x_powers]
+    x_num = F_sum _F [_F.mul(ki, xi) | ki <- k1s | xi <- x_powers]
+    x_den = _F.add (x_powers@2, F_sum _F [_F.mul(ki, xi) | ki <- k2s | xi <- x_powers])
+    y_num = F_sum _F [_F.mul(ki, xi) | ki <- k3s | xi <- x_powers]
+    y_den = _F.add (x_powers@3, F_sum _F [_F.mul(ki, xi) | ki <- k4s | xi <- x_powers])
+    x = _F.div (x_num, x_den)
+    y = _F.mul (y', _F.div(y_num, y_den))
 
 to_Fp2: ([384], [384]) -> P::t_Fp_2
 to_Fp2 (a,b) = [to_Fp b, to_Fp a] // a+b*I
