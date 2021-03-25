@@ -17,7 +17,7 @@ if [ $# -ne 0 ] && [ "$1" = "--latest" ]; then
   CRYPTOL_URL="https://cryptol.net/builds/nightly/${CRYPTOL_NIGHTLY}"
 else
   SAW_URL="https://saw.galois.com/builds/nightly/saw-0.7.0.99-2021-03-24-Linux-x86_64.tar.gz"
-  CRYPTOL_URL="https://github.com/GaloisInc/cryptol/releases/download/2.9.1/cryptol-2.9.1-Linux-x86_64.tar.gz"
+  CRYPTOL_URL="https://github.com/GaloisInc/cryptol/releases/download/2.11.0/cryptol-2.11.0-Linux-x86_64.tar.gz"
 
 fi
 
