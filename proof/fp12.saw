@@ -479,15 +479,15 @@ fp6_alg_thms <- for
 
 
 nest_fp2_thms <- for
-  [ {{ \ f (x:t_Fp_2) -> nest f x 1 == f x }}
-  , {{ \ f (x:t_Fp_2) -> nest f x 2 == f (f x) }}
-  , {{ \ f (x:t_Fp_2) -> nest f x 3 == f (f (f x)) }}
+  [ {{ \ x -> nest fp2_frobenius x 1 == fp2_frobenius x }}
+  , {{ \ x -> nest fp2_frobenius x 2 == fp2_frobenius (fp2_frobenius x) }}
+  , {{ \ x -> nest fp2_frobenius x 3 == fp2_frobenius (fp2_frobenius (fp2_frobenius x)) }}
   ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
 
 nest_fp6_thms <- for
-  [ {{ \ f (x:t_Fp_6) -> nest f x 1 == f x }}
-  , {{ \ f (x:t_Fp_6) -> nest f x 2 == f (f x) }}
-  , {{ \ f (x:t_Fp_6) -> nest f x 3 == f (f (f x)) }}
+  [ {{ \ x -> nest fp6_frobenius x 1 == fp6_frobenius x }}
+  , {{ \ x -> nest fp6_frobenius x 2 == fp6_frobenius (fp6_frobenius x) }}
+  , {{ \ x -> nest fp6_frobenius x 3 == fp6_frobenius (fp6_frobenius (fp6_frobenius x)) }}
   ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
 
 // borrowed from exp2.saw:
@@ -1257,15 +1257,17 @@ conjugate_fp12_ov <- custom_verify "conjugate_fp12"
 frobenius_map_fp2_1_ov <- custom_verify "frobenius_map_fp2"
     (concat fp_overrides fp2_overrides)
     (frobenius_map_fp2_spec 1)
-    do { unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
-         simplify (addsimps nest_fp2_thms fp_simpset);
+    do { rw_with nest_fp2_thms;
+         unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
+         simplify fp_simpset;
          w4_unint_z3 fp_unints;};
 
 frobenius_map_fp2_1_alias_ov <- custom_verify "frobenius_map_fp2"
     (concat fp_overrides fp2_overrides)
     (frobenius_map_fp2_alias_spec 1)
-    do { unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
-         simplify (addsimps nest_fp2_thms fp_simpset);
+    do { rw_with nest_fp2_thms;
+         unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
+         simplify fp_simpset;
          w4_unint_z3 fp_unints;};
 
 fp_rep_normalize_abs_thm <- admit_cryptol {{ \x -> fp_rep (Fp.normalize (fp_abs x)) == fp_normalize x }};
@@ -1273,7 +1275,8 @@ fp_rep_normalize_abs_thm <- admit_cryptol {{ \x -> fp_rep (Fp.normalize (fp_abs 
 frobenius_map_fp2_2_ov <- custom_verify "frobenius_map_fp2"
     (concat fp_overrides fp2_overrides)
     (frobenius_map_fp2_spec 2)
-    do { unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
+    do { rw_with nest_fp2_thms;
+         unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
          simplify (addsimp fp2_invariant_alt_thm (addsimps nest_fp2_thms fp_simpset));
          simplify (addsimps [fp_rep_normalize_abs_thm, fp_normalize_thm] (addsimps fp_alg_thms empty_ss));
          w4_unint_z3 fp_unints;};
@@ -1281,7 +1284,8 @@ frobenius_map_fp2_2_ov <- custom_verify "frobenius_map_fp2"
 frobenius_map_fp2_2_alias_ov <- custom_verify "frobenius_map_fp2"
     (concat fp_overrides fp2_overrides)
     (frobenius_map_fp2_alias_spec 2)
-    do { unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
+    do { rw_with nest_fp2_thms;
+         unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
          simplify (addsimp fp2_invariant_alt_thm (addsimps nest_fp2_thms fp_simpset));
          simplify (addsimps [fp_rep_normalize_abs_thm, fp_normalize_thm] (addsimps fp_alg_thms empty_ss));
          w4_unint_z3 fp_unints;};
@@ -1291,7 +1295,8 @@ fp_neg_normalize_thm <- prove_cryptol {{ \x -> Fp.neg (Fp.normalize x) == Fp.neg
 frobenius_map_fp2_3_ov <- custom_verify "frobenius_map_fp2"
     (concat fp_overrides fp2_overrides)
     (frobenius_map_fp2_spec 3)
-    do { unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
+    do { rw_with nest_fp2_thms;
+         unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
          simplify (addsimp fp2_invariant_alt_thm (addsimps nest_fp2_thms fp_simpset));
          simplify (addsimps [fp_rep_normalize_abs_thm, fp_normalize_thm, fp_neg_normalize_thm]
                             (addsimps fp_alg_thms empty_ss));
@@ -1300,7 +1305,8 @@ frobenius_map_fp2_3_ov <- custom_verify "frobenius_map_fp2"
 frobenius_map_fp2_3_alias_ov <- custom_verify "frobenius_map_fp2"
     (concat fp_overrides fp2_overrides)
     (frobenius_map_fp2_alias_spec 3)
-    do { unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
+    do { rw_with nest_fp2_thms;
+         unfolding ["fp2_rep", "fp2_frobenius", "fp2_conjugate", "f1", "fp2_abs"];
          simplify (addsimp fp2_invariant_alt_thm (addsimps nest_fp2_thms fp_simpset));
          simplify (addsimps [fp_rep_normalize_abs_thm, fp_normalize_thm, fp_neg_normalize_thm]
                             (addsimps fp_alg_thms empty_ss));
