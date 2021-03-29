@@ -17,14 +17,14 @@ let print_goal_readably_fp = do {
 // rewrites that help bring the terms we need together.    We start with them:
 
 core_rewrites <- for
-  [ "EqTrue (eq Nat (intToNat (natToInt 0)) 0)"
-  , "EqTrue (eq Nat (intToNat (natToInt 1)) 1)"
+  [ "EqTrue (equalNat (intToNat (natToInt 0)) 0)"
+  , "EqTrue (equalNat (intToNat (natToInt 1)) 1)"
 
-  , "(x: (Vec 6 (Vec 64 Bool))) -> (y: (Vec 6 (Vec 64 Bool))) -> EqTrue (eq (Vec 6 (Vec 64 Bool)) (at 2 (Vec 6 (Vec 64 Bool)) [x,y] 0) x)"
-  , "(x: (Vec 6 (Vec 64 Bool))) -> (y: (Vec 6 (Vec 64 Bool))) -> EqTrue (eq (Vec 6 (Vec 64 Bool)) (at 2 (Vec 6 (Vec 64 Bool)) [x,y] 1) y)"
+  , "(x: (Vec 6 (Vec 64 Bool))) -> (y: (Vec 6 (Vec 64 Bool))) -> EqTrue ( vecEq 6 (Vec 64 Bool) (vecEq 64 Bool boolEq) (at 2 (Vec 6 (Vec 64 Bool)) [x,y] 0) x)"
+  , "(x: (Vec 6 (Vec 64 Bool))) -> (y: (Vec 6 (Vec 64 Bool))) -> EqTrue ( vecEq 6 (Vec 64 Bool) (vecEq 64 Bool boolEq) (at 2 (Vec 6 (Vec 64 Bool)) [x,y] 1) y)"
   
-  , "(b: Bool) -> (x: (Vec 2 (Vec 6 (Vec 64 Bool)))) -> (y: (Vec 2 (Vec 6 (Vec 64 Bool)))) -> EqTrue (eq (Vec 6 (Vec 64 Bool)) (at 2 (Vec 6 (Vec 64 Bool)) (ite (Vec 2 (Vec 6 (Vec 64 Bool))) b x y) 0) (ite (Vec 6 (Vec 64 Bool)) b (at 2 (Vec 6 (Vec 64 Bool)) x 0) (at 2 (Vec 6 (Vec 64 Bool)) y 0)))"
-  , "(b: Bool) -> (x: (Vec 2 (Vec 6 (Vec 64 Bool)))) -> (y: (Vec 2 (Vec 6 (Vec 64 Bool)))) -> EqTrue (eq (Vec 6 (Vec 64 Bool)) (at 2 (Vec 6 (Vec 64 Bool)) (ite (Vec 2 (Vec 6 (Vec 64 Bool))) b x y) 1) (ite (Vec 6 (Vec 64 Bool)) b (at 2 (Vec 6 (Vec 64 Bool)) x 1) (at 2 (Vec 6 (Vec 64 Bool)) y 1)))"
+  , "(b: Bool) -> (x: (Vec 2 (Vec 6 (Vec 64 Bool)))) -> (y: (Vec 2 (Vec 6 (Vec 64 Bool)))) -> EqTrue (vecEq 6 (Vec 64 Bool) (vecEq 64 Bool boolEq) (at 2 (Vec 6 (Vec 64 Bool)) (ite (Vec 2 (Vec 6 (Vec 64 Bool))) b x y) 0) (ite (Vec 6 (Vec 64 Bool)) b (at 2 (Vec 6 (Vec 64 Bool)) x 0) (at 2 (Vec 6 (Vec 64 Bool)) y 0)))"
+  , "(b: Bool) -> (x: (Vec 2 (Vec 6 (Vec 64 Bool)))) -> (y: (Vec 2 (Vec 6 (Vec 64 Bool)))) -> EqTrue (vecEq 6 (Vec 64 Bool) (vecEq 64 Bool boolEq) (at 2 (Vec 6 (Vec 64 Bool)) (ite (Vec 2 (Vec 6 (Vec 64 Bool))) b x y) 1) (ite (Vec 6 (Vec 64 Bool)) b (at 2 (Vec 6 (Vec 64 Bool)) x 1) (at 2 (Vec 6 (Vec 64 Bool)) y 1)))"
    ] (prove_core abc);
 
 more_rewrites <- for
