@@ -1310,203 +1310,203 @@
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1264:33",
+    "loc": "/workdir/proof/fp12.saw:1265:33",
     "method": "frobenius_map_fp2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1273:27",
+    "loc": "/workdir/proof/fp12.saw:1275:27",
     "method": "frobenius_map_fp2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1281:33",
+    "loc": "/workdir/proof/fp12.saw:1284:33",
     "method": "frobenius_map_fp2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1291:27",
+    "loc": "/workdir/proof/fp12.saw:1295:27",
     "method": "frobenius_map_fp2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1300:33",
+    "loc": "/workdir/proof/fp12.saw:1305:33",
     "method": "frobenius_map_fp2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1336:27",
+    "loc": "/workdir/proof/fp12.saw:1342:27",
     "method": "frobenius_map_fp6",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1350:33",
+    "loc": "/workdir/proof/fp12.saw:1356:33",
     "method": "frobenius_map_fp6",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1390:27",
+    "loc": "/workdir/proof/fp12.saw:1396:27",
     "method": "frobenius_map_fp6",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1403:33",
+    "loc": "/workdir/proof/fp12.saw:1409:33",
     "method": "frobenius_map_fp6",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1443:27",
+    "loc": "/workdir/proof/fp12.saw:1449:27",
     "method": "frobenius_map_fp6",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1456:33",
+    "loc": "/workdir/proof/fp12.saw:1462:33",
     "method": "frobenius_map_fp6",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1478:28",
+    "loc": "/workdir/proof/fp12.saw:1484:28",
     "method": "frobenius_map_fp12",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1488:34",
+    "loc": "/workdir/proof/fp12.saw:1494:34",
     "method": "frobenius_map_fp12",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1504:28",
+    "loc": "/workdir/proof/fp12.saw:1510:28",
     "method": "frobenius_map_fp12",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1514:34",
+    "loc": "/workdir/proof/fp12.saw:1520:34",
     "method": "frobenius_map_fp12",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1531:28",
+    "loc": "/workdir/proof/fp12.saw:1537:28",
     "method": "frobenius_map_fp12",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1541:34",
+    "loc": "/workdir/proof/fp12.saw:1547:34",
     "method": "frobenius_map_fp12",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1566:18",
+    "loc": "/workdir/proof/fp12.saw:1572:18",
     "method": "redc_fp2x2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1622:15",
+    "loc": "/workdir/proof/fp12.saw:1628:15",
     "method": "sqr_fp4",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/fp12.saw:1643:33",
+    "loc": "/workdir/proof/fp12.saw:1649:33",
     "method": "mul_by_u_plus_1_fp2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/fp12.saw:1644:27",
+    "loc": "/workdir/proof/fp12.saw:1650:27",
     "method": "mul_by_u_plus_1_fp2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1664:28",
+    "loc": "/workdir/proof/fp12.saw:1670:28",
     "method": "cyclotomic_sqr_fp12",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1679:17",
+    "loc": "/workdir/proof/fp12.saw:1685:17",
     "method": "sqr_fp12",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1753:15",
+    "loc": "/workdir/proof/fp12.saw:1759:15",
     "method": "sqr_fp6",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/fp12.saw:1769:23",
+    "loc": "/workdir/proof/fp12.saw:1775:23",
     "method": "eucl_inverse_fp",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1771:19",
+    "loc": "/workdir/proof/fp12.saw:1777:19",
     "method": "inverse_fp2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1797:19",
+    "loc": "/workdir/proof/fp12.saw:1803:19",
     "method": "inverse_fp6",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1914:21",
+    "loc": "/workdir/proof/fp12.saw:1920:21",
     "method": "neg_fp6",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/fp12.saw:1957:20",
+    "loc": "/workdir/proof/fp12.saw:1963:20",
     "method": "inverse_fp12",
     "type": "method",
     "specification": "unknown"
@@ -1940,64 +1940,64 @@
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:102:27",
-    "method": "recip_sqrt_fp_3mod4",
-    "type": "method",
-    "specification": "unknown"
-  },
-  {
-    "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:219:32",
+    "loc": "/workdir/proof/hash_to_g1.saw:198:32",
     "method": "map_to_isogenous_E1",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:251:36",
+    "loc": "/workdir/proof/hash_to_g1.saw:231:36",
     "method": "isogeny_map_to_E1",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:283:18",
+    "loc": "/workdir/proof/hash_to_g1.saw:263:18",
     "method": "POINTonE1_dbl_n_add",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:287:25",
+    "loc": "/workdir/proof/hash_to_g1.saw:267:25",
     "method": "map_to_g1",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/hash_to_g1.saw:309:22",
+    "loc": "/workdir/proof/hash_to_g1.saw:289:22",
     "method": "blst_sha256_block_data_order",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:309:22",
+    "loc": "/workdir/proof/hash_to_g1.saw:289:22",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:309:22",
+    "loc": "/workdir/proof/hash_to_g1.saw:289:22",
     "method": "hash_to_field",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g1.saw:318:18",
+    "loc": "/workdir/proof/hash_to_g1.saw:298:18",
     "method": "blst_hash_to_g1",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/hash_to_g1.saw:81:27",
+    "method": "recip_sqrt_fp_3mod4",
     "type": "method",
     "specification": "unknown"
   },
@@ -3909,24 +3909,6 @@
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "(a : Prelude.Bool)\n-> (b : Prelude.Bool)\n-> Prelude.EqTrue\n     (Prelude.eq Prelude.Bool (Prelude.ite Prelude.Bool a Prelude.True b)\n        (Prelude.or a b))",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
-    "term": "(a : Prelude.Bool)\n-> (b : Prelude.Bool)\n-> Prelude.EqTrue\n     (Prelude.eq Prelude.Bool (Prelude.ite Prelude.Bool a b Prelude.False)\n        (Prelude.and a b))",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
-    "term": "(a : Prelude.Bool)\n-> Prelude.EqTrue\n     (Prelude.eq Prelude.Bool (Prelude.implies a Prelude.False) (Prelude.not a))",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
     "term": "(p1 : (Prelude.Integer * Prelude.Integer * Prelude.Integer))\n-> (booth_index : Prelude.Vec 64 Prelude.Bool)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/implementation/CurveOperation/POINTonE1_invariant\n           (cryptol:booth'#6767 (cryptol:precomputed_table#6756 p1)\n              booth_index))\n        Prelude.True)",
     "type": "property"
   },
@@ -4065,13 +4047,13 @@
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "Prelude.EqTrue\n  (Prelude.eq Prelude.Nat (Prelude.intToNat (Prelude.natToInt 0)) 0)",
+    "term": "Prelude.EqTrue (Prelude.equalNat (Prelude.intToNat (Prelude.natToInt 0)) 0)",
     "type": "property"
   },
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "Prelude.EqTrue\n  (Prelude.eq Prelude.Nat (Prelude.intToNat (Prelude.natToInt 1)) 1)",
+    "term": "Prelude.EqTrue (Prelude.equalNat (Prelude.intToNat (Prelude.natToInt 1)) 1)",
     "type": "property"
   },
   {
@@ -4197,18 +4179,6 @@
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@3 = Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool)\n      x@4 = Prelude.Vec 2 x@3\n    }\n in (b : Prelude.Bool)\n-> (x : x@4)\n-> (y : x@4)\n-> Prelude.EqTrue\n     (Prelude.eq x@3 (Prelude.at 2 x@3 (Prelude.ite x@4 b x y) 0)\n        (Prelude.ite x@3 b (Prelude.at 2 x@3 x 0) (Prelude.at 2 x@3 y 0)))",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
-    "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@3 = Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool)\n      x@4 = Prelude.Vec 2 x@3\n    }\n in (b : Prelude.Bool)\n-> (x : x@4)\n-> (y : x@4)\n-> Prelude.EqTrue\n     (Prelude.eq x@3 (Prelude.at 2 x@3 (Prelude.ite x@4 b x y) 1)\n        (Prelude.ite x@3 b (Prelude.at 2 x@3 x 1) (Prelude.at 2 x@3 y 1)))",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
     "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@3 = Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool)\n      x@4 = x@3 * x@3 * x@3\n    }\n in (c : Prelude.Bool)\n-> (p1 : x@4)\n-> (p2 : x@4)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/implementation/CurveOperation/POINTonE1_invariant\n           (Prelude.ite x@4 c p1 p2))\n        (Prelude.ite Prelude.Bool c\n           (cryptol:/implementation/CurveOperation/POINTonE1_invariant p1)\n           (cryptol:/implementation/CurveOperation/POINTonE1_invariant p2)))",
     "type": "property"
   },
@@ -4300,6 +4270,18 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@3 = Prelude.Vec 64 Prelude.Bool\n      x@4 = Prelude.Vec 6 x@3\n      x@5 = Prelude.Vec 2 x@4\n      x@6 = x@5 * x@5 * x@5\n    }\n in (x : Prelude.Bool)\n-> (y : x@6)\n-> (z : x@6)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@5\n        (Cryptol.PEqVec 2 x@4 (Cryptol.PEqVec 6 x@3 (Cryptol.PEqWord 64)))\n        (Prelude.ite x@6 x y z).2.2\n        (Prelude.ite x@5 x y.2.2 z.2.2))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@3 = Prelude.Vec 64 Prelude.Bool\n      x@4 = Prelude.Vec 6 x@3\n      x@5 = Prelude.Vec 2 x@4\n    }\n in (b : Prelude.Bool)\n-> (x : x@5)\n-> (y : x@5)\n-> Prelude.EqTrue\n     (Prelude.vecEq 6 x@3 (Prelude.vecEq 64 Prelude.Bool Prelude.boolEq)\n        (Prelude.at 2 x@4 (Prelude.ite x@5 b x y) 0)\n        (Prelude.ite x@4 b (Prelude.at 2 x@4 x 0) (Prelude.at 2 x@4 y 0)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@3 = Prelude.Vec 64 Prelude.Bool\n      x@4 = Prelude.Vec 6 x@3\n      x@5 = Prelude.Vec 2 x@4\n    }\n in (b : Prelude.Bool)\n-> (x : x@5)\n-> (y : x@5)\n-> Prelude.EqTrue\n     (Prelude.vecEq 6 x@3 (Prelude.vecEq 64 Prelude.Bool Prelude.boolEq)\n        (Prelude.at 2 x@4 (Prelude.ite x@5 b x y) 1)\n        (Prelude.ite x@4 b (Prelude.at 2 x@4 x 1) (Prelude.at 2 x@4 y 1)))",
     "type": "property"
   },
   {
@@ -5247,25 +5229,25 @@
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Bool\n      -> Prelude.Bool\n      x@2 = Prelude.Bool\n      -> x@1\n    }\n in (a : Prelude.Bool)\n-> (b : Prelude.Bool)\n-> (c : Prelude.Bool)\n-> Prelude.EqTrue\n     (Prelude.eq Prelude.Bool (Prelude.implies a (Prelude.or b c))\n        (Prelude.implies (Prelude.and a (Prelude.not b)) c))",
+    "term": "let { x@1 = Prelude.Bool\n      -> Prelude.Bool\n      -> Prelude.Bool\n    }\n in (a : Prelude.Bool)\n-> (b : Prelude.Bool)\n-> Prelude.EqTrue\n     (Prelude.boolEq (Prelude.ite Prelude.Bool a Prelude.True b)\n        (Prelude.or a b))",
     "type": "property"
   },
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Bool\n      -> Prelude.Bool\n      x@2 = Prelude.Bool\n      -> x@1\n    }\n in (a : Prelude.Bool)\n-> (b : Prelude.Bool)\n-> Prelude.EqTrue\n     (Prelude.eq Prelude.Bool (Prelude.not (Prelude.and a b))\n        (Prelude.or (Prelude.not a) (Prelude.not b)))",
+    "term": "let { x@1 = Prelude.Bool\n      -> Prelude.Bool\n      -> Prelude.Bool\n    }\n in (a : Prelude.Bool)\n-> (b : Prelude.Bool)\n-> Prelude.EqTrue\n     (Prelude.boolEq (Prelude.ite Prelude.Bool a b Prelude.False)\n        (Prelude.and a b))",
     "type": "property"
   },
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Bool\n      -> Prelude.Bool\n      x@2 = Prelude.Bool\n      -> x@1\n    }\n in (a : Prelude.Bool)\n-> (b : Prelude.Bool)\n-> Prelude.EqTrue\n     (Prelude.eq Prelude.Bool (Prelude.not (Prelude.or a b))\n        (Prelude.and (Prelude.not a) (Prelude.not b)))",
+    "term": "let { x@1 = Prelude.Bool\n      -> Prelude.Bool\n      x@2 = Prelude.Bool\n      -> x@1\n    }\n in (a : Prelude.Bool)\n-> (b : Prelude.Bool)\n-> Prelude.EqTrue\n     (Prelude.boolEq (Prelude.not (Prelude.and a b))\n        (Prelude.or (Prelude.not a) (Prelude.not b)))",
     "type": "property"
   },
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Bool\n      -> Prelude.Bool\n    }\n in (a : Prelude.Bool)\n-> (b : Prelude.Bool)\n-> Prelude.EqTrue\n     (Prelude.eq Prelude.Bool (Prelude.or (Prelude.not a) b)\n        (Prelude.implies a b))",
+    "term": "let { x@1 = Prelude.Bool\n      -> Prelude.Bool\n      x@2 = Prelude.Bool\n      -> x@1\n    }\n in (a : Prelude.Bool)\n-> (b : Prelude.Bool)\n-> Prelude.EqTrue\n     (Prelude.boolEq (Prelude.not (Prelude.or a b))\n        (Prelude.and (Prelude.not a) (Prelude.not b)))",
     "type": "property"
   },
   {
@@ -6381,24 +6363,6 @@
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = Prelude.Vec 3 x@2\n    }\n in (f : (x@3 -> x@3))\n-> (x : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@3\n        (Cryptol.PEqVec 3 x@2\n           (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger))\n        (cryptol:/implementation/Fp12/nest x@3 f x (Prelude.bvNat 64 1))\n        (f x))",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
-    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = Prelude.Vec 3 x@2\n    }\n in (f : (x@3 -> x@3))\n-> (x : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@3\n        (Cryptol.PEqVec 3 x@2\n           (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger))\n        (cryptol:/implementation/Fp12/nest x@3 f x (Prelude.bvNat 64 2))\n        (f (f x)))",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
-    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = Prelude.Vec 3 x@2\n    }\n in (f : (x@3 -> x@3))\n-> (x : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@3\n        (Cryptol.PEqVec 3 x@2\n           (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger))\n        (cryptol:/implementation/Fp12/nest x@3 f x (Prelude.bvNat 64 3))\n        (f (f (f x))))",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = Prelude.Vec 3 x@2\n    }\n in (x : (x@3 * x@3))\n-> let { x@4 = Prelude.at 3 x@2 (cryptol:/Parameters/Fp_6.2.2.2.2.2.2.2.1 x) 0\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@2 (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n         (cryptol:/Parameters/Fp_2.2.2.2.2.2.2.2.2.2.1 x@4)\n         x@4)",
     "type": "property"
   },
@@ -6466,6 +6430,24 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = Prelude.Vec 3 x@2\n    }\n in (x : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@3\n        (Cryptol.PEqSeq (Cryptol.TCNum 3) x@2\n           (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer\n              Cryptol.PEqInteger))\n        (cryptol:redc_mont_fp6#7816 x)\n        (cryptol:/implementation/CryptolHelpers/apply x@3 x@3\n           cryptol:redc_mont_fp6#7816\n           (cryptol:fp6_reduce_mod_p#7840 x)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = Prelude.Vec 3 x@2\n    }\n in (x : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@3\n        (Cryptol.PEqVec 3 x@2\n           (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger))\n        (cryptol:/implementation/Fp12/nest x@3 cryptol:/Frobenius/fp6_frobenius\n           x\n           (Prelude.bvNat 64 1))\n        (cryptol:/Frobenius/fp6_frobenius x))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = Prelude.Vec 3 x@2\n    }\n in (x : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@3\n        (Cryptol.PEqVec 3 x@2\n           (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger))\n        (cryptol:/implementation/Fp12/nest x@3 cryptol:/Frobenius/fp6_frobenius\n           x\n           (Prelude.bvNat 64 2))\n        (cryptol:/Frobenius/fp6_frobenius (cryptol:/Frobenius/fp6_frobenius x)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = Prelude.Vec 3 x@2\n    }\n in (x : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@3\n        (Cryptol.PEqVec 3 x@2\n           (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger))\n        (cryptol:/implementation/Fp12/nest x@3 cryptol:/Frobenius/fp6_frobenius\n           x\n           (Prelude.bvNat 64 3))\n        (cryptol:/Frobenius/fp6_frobenius\n           (cryptol:/Frobenius/fp6_frobenius\n              (cryptol:/Frobenius/fp6_frobenius x))))",
     "type": "property"
   },
   {
@@ -6555,24 +6537,6 @@
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (f : (x@2 -> x@2))\n-> (x : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n        (cryptol:/implementation/Fp12/nest x@2 f x (Prelude.bvNat 64 1))\n        (f x))",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
-    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (f : (x@2 -> x@2))\n-> (x : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n        (cryptol:/implementation/Fp12/nest x@2 f x (Prelude.bvNat 64 2))\n        (f (f x)))",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
-    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (f : (x@2 -> x@2))\n-> (x : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n        (cryptol:/implementation/Fp12/nest x@2 f x (Prelude.bvNat 64 3))\n        (f (f (f x))))",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (p1 : (x@2 * x@2 * x@2))\n-> (booth_index : Prelude.Vec 64 Prelude.Bool)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/implementation/CurveOperation/POINTonE2_invariant\n           (cryptol:booth'#6910 (cryptol:precomputed_table#6899 p1)\n              booth_index))\n        Prelude.True)",
     "type": "property"
   },
@@ -6616,6 +6580,24 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (x : x@2)\n-> (y : x@2)\n-> (z : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq (Prelude.Vec 3 x@2)\n        (Cryptol.PEqSeq (Cryptol.TCNum 3) x@2\n           (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer\n              Cryptol.PEqInteger))\n        (cryptol:/implementation/Field/fp6_abs\n           [ cryptol:/implementation/Field/fp2_rep x\n           , cryptol:/implementation/Field/fp2_rep y\n           , cryptol:/implementation/Field/fp2_rep z ])\n        [z, y, x])",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (x : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n        (cryptol:/implementation/Fp12/nest x@2 cryptol:/Frobenius/fp2_frobenius\n           x\n           (Prelude.bvNat 64 1))\n        (cryptol:/Frobenius/fp2_frobenius x))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (x : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n        (cryptol:/implementation/Fp12/nest x@2 cryptol:/Frobenius/fp2_frobenius\n           x\n           (Prelude.bvNat 64 2))\n        (cryptol:/Frobenius/fp2_frobenius (cryptol:/Frobenius/fp2_frobenius x)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (x : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n        (cryptol:/implementation/Fp12/nest x@2 cryptol:/Frobenius/fp2_frobenius\n           x\n           (Prelude.bvNat 64 3))\n        (cryptol:/Frobenius/fp2_frobenius\n           (cryptol:/Frobenius/fp2_frobenius\n              (cryptol:/Frobenius/fp2_frobenius x))))",
     "type": "property"
   },
   {
@@ -6730,18 +6712,6 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool)\n    }\n in (x : x@2)\n-> (y : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/implementation/Field/fp2_invariant [x, y])\n        (cryptol:/Cryptol/%2f%5c (cryptol:/implementation/Field/fp_invariant x)\n           (cryptol:/implementation/Field/fp_invariant y)))",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
-    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool)\n    }\n in (x : x@2)\n-> (y : x@2)\n-> Prelude.EqTrue (Prelude.eq x@2 x x)",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
-    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool)\n    }\n in (x : x@2)\n-> (y : x@2)\n-> Prelude.EqTrue (Prelude.eq x@2 y y)",
     "type": "property"
   },
   {
@@ -6910,6 +6880,18 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 64 Prelude.Bool\n      x@3 = Prelude.Vec 6 x@2\n    }\n in (x : Prelude.Integer)\n-> (y : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq (Prelude.Vec 2 x@3)\n        (Cryptol.PEqSeq (Cryptol.TCNum 2) x@3\n           (Cryptol.PEqSeq (Cryptol.TCNum 6) x@2\n              (Cryptol.PEqSeqBool (Cryptol.TCNum 64))))\n        (cryptol:/implementation/Field/fp2_rep [x, y])\n        [ cryptol:/implementation/Field/fp_rep y\n        , cryptol:/implementation/Field/fp_rep x ])",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 64 Prelude.Bool\n      x@3 = Prelude.Vec 6 x@2\n    }\n in (x : x@3)\n-> (y : x@3)\n-> Prelude.EqTrue\n     (Prelude.vecEq 6 x@2 (Prelude.vecEq 64 Prelude.Bool Prelude.boolEq) x x)",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 64 Prelude.Bool\n      x@3 = Prelude.Vec 6 x@2\n    }\n in (x : x@3)\n-> (y : x@3)\n-> Prelude.EqTrue\n     (Prelude.vecEq 6 x@2 (Prelude.vecEq 64 Prelude.Bool Prelude.boolEq) y y)",
     "type": "property"
   },
   {
