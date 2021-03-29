@@ -73,3 +73,6 @@ is_square_fp2 [x_2, x_1] = (tv1' != Fp_2.neg Fp_2.field_unit) where
 // fp_exp is for positive exponents only, avoiding the need for rewriting x*1 to x
 fp_exp: t_Fp -> Integer -> t_Fp
 fp_exp x e = if e == 1 then x else Fp.mul (x, fp_exp x (e-1))
+
+fp2_exp: t_Fp_2 -> Integer -> t_Fp_2
+fp2_exp x e = if e == 1 then x else Fp_2.mul (x, fp2_exp x (e-1))

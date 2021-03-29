@@ -64,12 +64,12 @@ _sqrt x = z where
     c2 = [k, P::Fp.neg k] // k*(u-1)
     c3 = [k, k] // k*(u+1)
 
-// sgn0 for m=2, from Section 4.1
-_sgn0 [x_1, x_0] =  sign_0 \/ (zero_0 /\ sign_1) where
+// sgn0 for m=2, from Section 4.1 
+_sgn0 [x_1, x_0] =  sign_0 || (zero_0 && sign_1) where
     // [x_1, x_0] because Section 2.1 asks for a little-endian order of elements
     x_0' = P::from_Fp x_0
     x_1' = P::from_Fp x_1
-    sign_0 = x_0'!0 // least-signiifcant bit
+    sign_0 = x_0'!0 // least-signifcant bit
     zero_0 = x_0' == 0 // represent the Boolean as 0 or 1
     sign_1 = x_1'!0
 

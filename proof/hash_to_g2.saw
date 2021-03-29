@@ -1,0 +1,184 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+// Imports
+
+include "helpers.saw";
+include "list_utils.saw";
+include "types.saw";
+
+m <- llvm_load_module "../build/llvm/libblst.a.bc";
+
+enable_experimental;
+
+let do_prove = false;
+
+include "proof-helpers.saw";
+//include "hash_to_field.saw";
+include "fp_overrides.saw";
+include "fp2_overrides.saw";
+include "vect.saw";
+//include "x86.saw";
+include "curve_operations.saw";
+include "curve_operations_e2.saw";
+//include "ec_mult.saw";
+include "exp.saw";
+include "exp2.saw";
+include "sgn0.saw";
+
+//let do_prove = true;
+
+import "../spec/Parameters.cry";
+import "../spec/ShortWeierstrassCurve.cry";
+import "../spec/HashToCurveE2.cry" (Z A' B' map_to_curve_simple_swu);
+import "../spec/BLSFieldExtras.cry";
+import "../spec/implementation/CurveOperation.cry";
+//Aux <- cryptol_load "../spec/HashToCurveE2Aux.cry";
+//import "../spec/implementation/HashToG2.cry";
+
+// Specs
+
+let blst_hash_to_g2_impl_spec msg_len DST_len aug_len = do {
+  p_ptr <- llvm_alloc POINTonE2_type;
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
+  (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
+  llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
+  llvm_points_to p_ptr (llvm_term {{ (POINTonE2_rep (hash_to_curve_opt_impl (aug#msg, DST))) }});
+};
+
+
+// TODO: is the ZxA' rewrite applying?
+constants_rewrites <- for [
+    {{ fp2_abs [[zero, zero, zero, zero, zero, zero], [ 0xd4c4fffffcec5869, 0x1da3f3eed25bfd79, 0x7fa833c5136fff67, 0x59261433cd540cbd, 0x48450f5f2b84682c, 0x07e05d00bf959233 ]] == Fp_2.neg A' }} // first is 15331660506401101929
+  , {{ fp2_abs [[ 0x87ebfffffff9555c, 0x656fffe5da8ffffa, 0x0fd0749345d33ad2, 0xd951e663066576f4, 0xde291a3d41e980d3, 0x0815664c7dfe040d], [ 0x43f5fffffffcaaae, 0x32b7fff2ed47fffd, 0x07e83a49a2e99d69, 0xeca8f3318332bb7a, 0xef148d1ea0f4c069, 0x040ab3263eff0206]] == Z }}
+  , {{ fp2_abs [[ 0x019af5f980a3680c, 0x4ed7da0e66063afa, 0x600354723b5d9972, 0x8b2f958b20d09d72, 0x0474938f02d461db, 0x0dcf8b9e0684ab1c], [ 0x486f252db11dd19c, 0x791ffda2c3d18950, 0x5af6c27debf95eb4, 0x73b1fd8f2a929cde, 0xfc59602a1a90b871, 0x08d7daafa8baddb3]] == sqrt_fp2 (fp2_exp Z 3) }}
+  , {{ fp2_abs [[ 0x65018f5c28f598eb, 0xe6020417f022d916, 0xd6327313288369c7, 0x622ded8eb447156f, 0xe52a2aee72c2a01f, 0x089812fb8481ffe4], [ 0x2574eb851eb8619f, 0xdba2e97912925604, 0x67e495a909e7a18e, 0xdf2da23b8145b8f7, 0xcf5d3728310ebf6d, 0x11be446236f4c116]] == Fp_2.div (Fp_2.field_unit, fp2_exp Z 3) }}
+  // ZxA'
+  , {{ fp2_abs [[ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467], [ 0xa989fffff9d8b0d2, 0x3b47e7dda4b7faf3, 0xff50678a26dffece, 0xb24c28679aa8197a, 0x908a1ebe5708d058, 0x0fc0ba017f2b2466]] == Fp_2.mul(Z, A') }}
+  // B':
+  , {{ fp2_abs [[ 0x22ea00000cf89db2, 0x6ec832df71380aa4, 0x6e1b94403db5a66e, 0x75bf3c53a79473ba, 0x3dd3a569412c0a34, 0x125cdb5e74dc4fd1], [ 0x22ea00000cf89db2, 0x6ec832df71380aa4, 0x6e1b94403db5a66e, 0x75bf3c53a79473ba, 0x3dd3a569412c0a34, 0x125cdb5e74dc4fd1]] == B' }}
+  // A':
+  , {{ fp2_abs [[zero, zero, zero, zero, zero, zero], [ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467]] == A' }}
+  // Fp_2.field_unit (BLS12_381_Rx.p2):
+  , {{ fp2_abs [
+            [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+            , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
+          , [zero, zero, zero, zero, zero, zero] ] // a single zero would introduce Prelude.replicate, which would be annoying
+          == Fp_2.field_unit }}
+  ] (\ eq -> really_custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
+
+let map_to_isogenous_E2_impl_extract_spec = do {
+  out_ptr <- llvm_alloc POINTonE2_type;
+  (u, u_ptr) <- ptr_to_fresh_readonly "u" vec384x_type;
+  llvm_precond {{ fp2_invariant u }};
+  llvm_execute_func [out_ptr, u_ptr];
+  new_out <- llvm_fresh_var "new_out" POINTonE2_type;
+  llvm_points_to out_ptr (llvm_term new_out);
+};
+
+// TODO: write high-level spec. The code does not seem to follow the optimized implementations given in the IETF spec. Instead it seems closer to the simplest, high-level spec in the IETF document.
+
+// rewrite rule to get rid of a 12 limbs array that appears in map_to_isogenous_E2_term
+// TODO: why does this appear? There's no override using (llvm_array 12 ...)
+
+fix_vec_12 <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{
+  \(x:t_Fp_2) y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 c -> (
+     [[z1, z2, z3, z4, z5, z6], [z7, z8, z9, z10, z11, z12]] == (if c then [[y1, y2, y3, y4, y5, y6], [y7, y8, y9, y10, y11, y12]] else (fp2_rep x)) where
+        [a,b] = fp2_rep x
+        [a1, a2, a3, a4, a5, a6] = a
+        [b1, b2, b3, b4, b5, b6] = b
+        z = (if c then [y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12] else [a1, a2, a3, a4, a5, a6, b1, b2, b3, b4, b5, b6])
+        [z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12] = z
+    )
+  }}) w4;
+
+fix_vec_12_2 <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{
+  \(x:t_Fp_2) -> (
+     [[a1, a2, a3, a4, a5, a6], [b1, b2, b3, b4, b5, b6]] == fp2_rep x where
+        [a,b] = fp2_rep x
+        [a1, a2, a3, a4, a5, a6] = a
+        [b1, b2, b3, b4, b5, b6] = b
+    )
+  }}) w4;
+
+_ <- crucible_llvm_compositional_extract m
+  "map_to_isogenous_E2"
+  "map_to_isogenous_E2_term"
+  (concat_all [vec_fp2_overrides, fp2_overrides, [recip_sqrt_fp2_9mod16_ov, sgn0x_pty_mont_384x_ov], sqrt_align_fp2_ovs])
+  true
+  map_to_isogenous_E2_impl_extract_spec
+  do {
+    unfolding ["select"];
+    simplify (addsimps [fix_vec_12_2, fix_vec_12] fp2_simpset);
+    print_goal_nicely;
+    w4_unint_z3 ["Fp_2","Fp"];
+  };
+
+// rewrite fp2_exp to F_expt for tractable computation:
+fp2_exp_rewrite <- admit_cryptol {{ \x -> fp2_exp x ((`p^^2-9)/16) == F_expt`{n=758} Fp_2 x ((`p^^2-9)/16) }};
+
+// TODO: why does this fail? is fp2_exp_rewrite wrong?
+_ <- really_custom_prove_cryptol
+  {{ \x -> ((affinify E' (POINTonE2_abs (map_to_isogenous_E2_term y))) == (map_to_curve_simple_swu (fp2_abs y)) where y = fp2_normalize x) }}
+do {
+  unfolding ["map_to_isogenous_E2_term","POINTonE2_abs","select"];
+  simplify (addsimp fp2_exp_rewrite empty_ss);
+  simplify fp2_simpset;
+  //print_goal_nicely;
+  //(quickcheck 1);
+  assume_unsat;
+};
+
+// let's test sqrt_align_fp2:
+let sqrt_align_fp2_extract_spec = do {
+    out_ptr <- crucible_alloc vec384x_type;
+    (ret, ret_ptr) <- ptr_to_fresh_readonly "ret" vec384x_type;
+    (sqrt, sqrt_ptr) <- ptr_to_fresh_readonly "sqrt" vec384x_type;
+    (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
+    crucible_precond {{ fp2_invariant inp }};
+    crucible_precond {{ fp2_invariant sqrt }};
+    crucible_precond {{ fp2_invariant ret }};
+    crucible_execute_func [out_ptr, ret_ptr, sqrt_ptr, inp_ptr];
+    new_out <- llvm_fresh_var "new_sqrt_align_fp2_extract_out" vec384x_type;
+    crucible_points_to out_ptr (crucible_term new_out);
+  };
+
+_ <- crucible_llvm_compositional_extract m
+  "sqrt_align_fp2"
+  "sqrt_align_fp2_term"
+  (foldr concat [vec_fp2_overrides, fp2_overrides, fp_overrides] [])
+  true
+  sqrt_align_fp2_extract_spec
+  do {
+    let rules = run (
+      for [
+          {{ \x -> (fp_invariant z == True where [_,z] = fp2_rep x) }}
+        , {{ \x -> (fp_invariant y == True where [y,_] = fp2_rep x) }}
+        , {{ \x y -> fp2_invariant [fp_rep x, fp_rep y] == True }}
+      ] (\ e -> admit_cryptol (rewrite (cryptol_ss ()) e))
+    );
+    simplify (addsimps rules fp2_simpset);
+    print_goal_nicely;
+    w4_unint_z3 ["Fp_2","Fp"];
+  };
+
+_ <- really_custom_prove_cryptol
+  {{ \inp sqrt ret -> sqrt_align_fp2_term inp sqrt ret == fp2_rep (Fp_2.mul(fp2_abs ret, sqrt_align_fp2_coeff (fp2_abs sqrt) (fp2_abs inp))) }}
+  do {
+    unfolding ["sqrt_align_fp2_term", "select"];
+    let rules = run (
+      for [
+          {{ \x -> (fp_abs u == a where [u,_] = fp2_rep x; [a,_] = x) }}
+        , {{ \x -> (fp_abs v == b where [_,v] = fp2_rep x; [_,b] = x) }}
+        , {{ \x y -> fp2_abs [fp_rep x, fp_rep y] == [x,y] }}
+      ] (\ e -> admit_cryptol (rewrite (cryptol_ss ()) e))
+    );
+    simplify (addsimps (concat_all [rules, [fix_vec_12_2, fix_vec_12]]) fp2_simpset);
+    simplify fp_simpset;
+    print_goal_nicely;
+    (quickcheck 100);
+    //assume_unsat;
+  };
