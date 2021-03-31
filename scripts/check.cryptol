@@ -1,4 +1,8 @@
-// batch file for checking Cryptol
+// Copyright (c) 2021 Galois, Inc.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+// batch file for running checks for the Cryptol specification
+
 :set tests=100
 :l tests/PolynomialTest.cry
 :check

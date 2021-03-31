@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Copyright (c) 2020 Galois, Inc.
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+ 
 # There are two sorts of validation checks in the tests directory: property checks
 # and test vectors from the specifications.
 #
