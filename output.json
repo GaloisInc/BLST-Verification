@@ -2828,6 +2828,13 @@
     "specification": "unknown"
   },
   {
+    "status": "verified",
+    "loc": "0x1a0e0",
+    "method": "sgn0x_pty_mont_384x",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
     "status": "assumed",
     "loc": "0x1a140",
     "method": "sgn0_pty_mont_384",
