@@ -280,6 +280,48 @@
     "specification": "unknown"
   },
   {
+    "status": "verified",
+    "loc": "/workdir/proof/compress-p2.saw:124:40",
+    "method": "POINTonE2_Compress_BE",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/compress-p2.saw:150:36",
+    "method": "POINTonE2_Compress_BE",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/compress-p2.saw:204:35",
+    "method": "blst_p2_compress",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/compress-p2.saw:213:31",
+    "method": "blst_p2_compress",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/compress-p2.saw:32:36",
+    "method": "POINTonE2_affine_Compress_BE",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/compress-p2.saw:60:31",
+    "method": "POINTonE2_from_Jacobian",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
     "status": "assumed",
     "loc": "/workdir/proof/core_verify.saw:190:16",
     "method": "line_dbl",
@@ -3544,6 +3586,12 @@
   {
     "status": "assumed",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = cryptol:/Parameters/Fp_2.2.2.2\n      x@4 = cryptol:/Parameters/E'\n      x@5 = x@3.2.2\n      x@6 = Prelude.Vec 2 (Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool))\n    }\n in (p : (x@6 * x@6 * x@6))\n-> let { x@7 = cryptol:/implementation/CurveOperation/POINTonE2_abs p\n         x@8 = (cryptol:/implementation/Field/fp2_abs p.2.2,x@3.1)\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit (x@5.1 x@8)\n         (Prelude.ite Prelude.Bool\n            (cryptol:/ShortWeierstrassCurve/is_point_projective x@2 x@4 x@7)\n            (cryptol:/ShortWeierstrassCurve/is_point_O x@2 x@4\n               (cryptol:/ShortWeierstrassCurve/affinify x@2 x@4 x@7))\n            (cryptol:/implementation/CryptolHelpers/apply (x@2 * x@2)\n               Prelude.Bool\n               x@5.1\n               x@8)))",
+    "type": "property"
+  },
+  {
+    "status": "assumed",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (x : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n        (cryptol:/FieldExtras/F_expt x@2 (Cryptol.TCNum 759)\n           cryptol:/Parameters/Fp_2\n           x\n           (Prelude.bvNat 759\n              1001205140483106588246484290269935788605945006208159541241399033561623546780709821462541004956387089373434649096260670658193992783731681621012512651314777238193313314641988297376025498093520728838658813979860931248214124593092836))\n        (cryptol:fp2_exp#6835 x\n           (Prelude.natToInt\n              1001205140483106588246484290269935788605945006208159541241399033561623546780709821462541004956387089373434649096260670658193992783731681621012512651314777238193313314641988297376025498093520728838658813979860931248214124593092836)))",
     "type": "property"
   },
@@ -3653,6 +3701,12 @@
     "status": "assumed",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = cryptol:/Parameters/Fp_2.2\n    }\n in (x : x@1)\n-> (y : x@1)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@1\n        (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger)\n        (x@2.1 (x@2.2.2.2.2.2.2.2.2.1 x,y))\n        (x@2.1 (x,y)))",
+    "type": "property"
+  },
+  {
+    "status": "assumed",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = cryptol:/Parameters/Fp_2.2\n    }\n in (x : x@1)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@1\n        (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger)\n        (cryptol:/BLSFieldExtras/inverse_fp2 x)\n        (x@2.1 (x@2.2.1,x)))",
     "type": "property"
   },
   {
@@ -5417,6 +5471,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = (n : Prelude.Nat)\n      -> Prelude.Nat\n      -> Prelude.Vec n Prelude.Bool\n      x@3 = Prelude.Vec 64 Prelude.Bool\n      x@4 = Prelude.bvNat 64 0\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n         (cryptol:/implementation/Field/fp2_invariant\n            [ [ Prelude.bvNat 64 3526659474838938856\n            , Prelude.bvNat 64 17562030475567847978\n            , Prelude.bvNat 64 1632777218702014455\n            , Prelude.bvNat 64 14009062335050482331\n            , Prelude.bvNat 64 3906511377122991214\n            , Prelude.bvNat 64 368068849512964448 ]\n            , [x@4, x@4, x@4, x@4, x@4, x@4] ])\n         Prelude.True)",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = (n : Prelude.Nat)\n      -> Prelude.Nat\n      -> Prelude.Vec n Prelude.Bool\n      x@3 = Prelude.Vec 64 Prelude.Bool\n      x@4 = Prelude.bvNat 64 0\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n         (cryptol:/implementation/Field/fp2_invariant\n            [ [ Prelude.bvNat 64 8505329371266088957\n            , Prelude.bvNat 64 17002214543764226050\n            , Prelude.bvNat 64 6865905132761471162\n            , Prelude.bvNat 64 8632934651105793861\n            , Prelude.bvNat 64 6631298214892334189\n            , Prelude.bvNat 64 1582556514881692819 ]\n            , [x@4, x@4, x@4, x@4, x@4, x@4] ])\n         Prelude.True)",
     "type": "property"
   },
   {
