@@ -11,7 +11,7 @@ build () {
         if [ "$2" = blst ]; then
             for p in ../../patches/*
             do
-                patch -f -p1 -t < "$p" # -f to prevent patch from automatically enabling option -R when it things it should
+                patch -f -p1 -t < "$p" # -f to prevent patch from automatically enabling option -R when it thinks it should
             done
         fi
 
