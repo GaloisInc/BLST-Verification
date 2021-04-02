@@ -253,14 +253,14 @@
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/compress-p1.saw:178:35",
+    "loc": "/workdir/proof/compress-p1.saw:177:35",
     "method": "blst_p1_compress",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/compress-p1.saw:186:31",
+    "loc": "/workdir/proof/compress-p1.saw:193:31",
     "method": "blst_p1_compress",
     "type": "method",
     "specification": "unknown"
@@ -295,14 +295,14 @@
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/compress-p2.saw:204:35",
+    "loc": "/workdir/proof/compress-p2.saw:203:35",
     "method": "blst_p2_compress",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/compress-p2.saw:213:31",
+    "loc": "/workdir/proof/compress-p2.saw:221:31",
     "method": "blst_p2_compress",
     "type": "method",
     "specification": "unknown"
@@ -6550,6 +6550,12 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = cryptol:/Parameters/Fp_2.2.2\n      x@4 = x@3.2\n      x@5 = x@4.2.2\n    }\n in (z : Prelude.Vec 2 (Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool)))\n-> let { x@6 = cryptol:/implementation/Field/fp2_abs z\n         x@7 = (x@6,x@4.1)\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit (x@5.1 x@7)\n         (Prelude.ite Prelude.Bool\n            (Cryptol.ecEq x@2\n               (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n               x@6\n               x@3.1)\n            Prelude.False\n            (cryptol:/implementation/CryptolHelpers/apply (x@2 * x@2)\n               Prelude.Bool\n               x@5.1\n               x@7)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = cryptol:/Parameters/Fp_2.2.2.2.1\n      x@4 = Prelude.Vec 3 x@2\n    }\n in (x : x@4)\n-> (y : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@4\n        (Cryptol.PEqSeq (Cryptol.TCNum 3) x@2\n           (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer\n              Cryptol.PEqInteger))\n        (cryptol:fp6_reduce_mod_p#7840\n           (cryptol:/implementation/Fp12/mul_by_0y0_fp6x2 x y))\n        (cryptol:/Parameters/Fp_6.2.2.2.2.2.2.2.1 (x,[x@3, y, x@3])))",
     "type": "property"
   },
@@ -7055,6 +7061,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.natToInt 0\n      x@3 = Prelude.Vec 2 Prelude.Integer\n    }\n in (x : Prelude.Vec 3 x@3)\n-> let { x@4 = cryptol:fp6_reduce_mod_p#7840 x\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@3 (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n         (cryptol:fp2_reduce_mod_p#7841 (Prelude.at 3 x@3 x 0))\n         (Prelude.ite x@3 (Prelude.intLe x@2 x@2)\n            (Prelude.at 3 x@3 x@4 (Prelude.intToNat x@2))\n            (Prelude.at 3 x@3 x@4 0)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = cryptol:/Parameters/Fp.2.2\n      x@3 = x@2.2\n      x@4 = x@3.2.2\n    }\n in (z : Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool))\n-> let { x@5 = cryptol:/implementation/Field/fp_abs z\n         x@6 = (x@5,x@3.1)\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit (x@4.1 x@6)\n         (Prelude.ite Prelude.Bool\n            (Cryptol.ecEq Prelude.Integer Cryptol.PEqInteger x@5 x@2.1)\n            Prelude.False\n            (cryptol:/implementation/CryptolHelpers/apply\n               (Prelude.Integer * Prelude.Integer)\n               Prelude.Bool\n               x@4.1\n               x@6)))",
     "type": "property"
   },
   {
