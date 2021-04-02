@@ -147,7 +147,6 @@ let blst_p1_compress_spec is_point_affine = do {
   if is_point_affine then do {
     // Point is affine, so Z must be 1
     crucible_precond {{ (fp_abs (inp.2)) == Fp.field_unit }};
-    crucible_precond {{ (fp_abs (inp.2)) != Fp.field_zero }};
 
     // Have the "Z=0 <=> infinity" issue again; see the notes in `map_to_g1.saw`.
     // So, passing in a value (0,0,1) would give a result not agreeing with
@@ -183,10 +182,18 @@ blst_p1_compress_projective_ov <- custom_verify "blst_p1_compress"
      w4_unint_z3 fp_unints;
   };
 
+// This trivial theorem is necessary because of fp_unints in blst_p1_compress
+// proof
+one_is_not_zero_fp_thm <- prove_cryptol (rewrite (cryptol_ss())
+    {{ \z -> Fp.is_equal (fp_abs z, Fp.field_zero) ==
+             if (fp_abs z) == Fp.field_unit
+             then False
+             else apply Fp.is_equal (fp_abs z, Fp.field_zero) }}) [];
+
 blst_p1_compress_affine_ov <- custom_verify "blst_p1_compress"
-  (concat [POINTonE1_Compress_BE_affine_ov] vec_overrides)
+  [POINTonE1_Compress_BE_affine_ov, vec_is_zero_fp_is_equal_ov]
   (blst_p1_compress_spec true)
     do {
-     simplify (addsimps [vec_is_zero_call_thm] (cryptol_ss()));
+     simplify (addsimps [vec_is_zero_call_thm, one_is_not_zero_fp_thm] (cryptol_ss()));
      w4_unint_z3 fp_unints;
   };
