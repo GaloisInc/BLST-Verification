@@ -32,7 +32,7 @@ fromx_mont_384_ov <- verify_x86 "fromx_mont_384" fromx_mont_384_spec (quickcheck
 // uninterpreted function (polymorphic functions cannot be left uninterpreted)
 let {{ I2OSP48 = I2OSP`{48, t_Fp} }};
 
-// POINTonE1_Compress_BE compresses X and returns the sign for Y
+// POINTonE1_affine_Compress_BE compresses X and returns the sign for Y
 let POINTonE1_affine_Compress_BE_spec = do {
   out_ptr <- crucible_alloc (llvm_array 48 (llvm_int 8));
   (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE1_affine_type;
@@ -72,13 +72,13 @@ let POINTonE1_from_Jacobian_spec = do {
 
 // commute mul once -- use with caution!
 mul_commutes_fp_thm <- prove_cryptol {{ \x y  -> Fp.mul (x, y) == apply Fp.mul (y,x) }} [];
-reciprocal_div_thm <- admit_cryptol {{ \x -> inverse_fp x ==  Fp.div (Fp.field_unit, x) }};
+reciprocal_div_fp_thm <- admit_cryptol {{ \x -> inverse_fp x ==  Fp.div (Fp.field_unit, x) }};
 
 POINTonE1_from_Jacobian_ov <- custom_verify "POINTonE1_from_Jacobian"
   (concat [reciprocal_fp_ov] (concat vec_select_asm_ovs fp_overrides))
   POINTonE1_from_Jacobian_spec
   do {
-    (simplify (addsimps [mul_commutes_fp_thm, reciprocal_div_thm] empty_ss));
+    (simplify (addsimps [mul_commutes_fp_thm, reciprocal_div_fp_thm] empty_ss));
     unfolding ["POINTonE1_affine_invariant", "POINTonE1_affine_rep"];
     (apply_fp_rewrites);
     w4_unint_z3 fp_unints;
@@ -147,7 +147,6 @@ let blst_p1_compress_spec is_point_affine = do {
   if is_point_affine then do {
     // Point is affine, so Z must be 1
     crucible_precond {{ (fp_abs (inp.2)) == Fp.field_unit }};
-    crucible_precond {{ (fp_abs (inp.2)) != Fp.field_zero }};
 
     // Have the "Z=0 <=> infinity" issue again; see the notes in `map_to_g1.saw`.
     // So, passing in a value (0,0,1) would give a result not agreeing with
@@ -183,10 +182,18 @@ blst_p1_compress_projective_ov <- custom_verify "blst_p1_compress"
      w4_unint_z3 fp_unints;
   };
 
+// This trivial theorem is necessary because of fp_unints in blst_p1_compress
+// proof
+one_is_not_zero_fp_thm <- prove_cryptol (rewrite (cryptol_ss())
+    {{ \z -> Fp.is_equal (fp_abs z, Fp.field_zero) ==
+             if (fp_abs z) == Fp.field_unit
+             then False
+             else apply Fp.is_equal (fp_abs z, Fp.field_zero) }}) [];
+
 blst_p1_compress_affine_ov <- custom_verify "blst_p1_compress"
-  (concat [POINTonE1_Compress_BE_affine_ov] vec_overrides)
+  [POINTonE1_Compress_BE_affine_ov, vec_is_zero_fp_is_equal_ov]
   (blst_p1_compress_spec true)
     do {
-     simplify (addsimps [vec_is_zero_call_thm] (cryptol_ss()));
+     simplify (addsimps [vec_is_zero_call_thm, one_is_not_zero_fp_thm] (cryptol_ss()));
      w4_unint_z3 fp_unints;
   };

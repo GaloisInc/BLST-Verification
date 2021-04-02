@@ -15,18 +15,30 @@ let verify_x86 name spec tactic =
   crucible_llvm_unsafe_assume_spec m name spec;
 
 import "../spec/Parameters.cry" (from_Fp p);
-import "../spec/Serialization.cry" (sign_F_p);
+import "../spec/Serialization.cry" (sign_F_p sign_F_p_2);
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/Field.cry";
-import "../spec/HashToCurveE1.cry" (sgn0);
+HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
+HE2 <- cryptol_load "../spec/HashToCurveE2.cry";
 
 let sgn0x_pty_mont_384_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
   llvm_precond {{ fp_invariant a }};
   p_ptr <- alloc_init_readonly vec384_type (llvm_term {{ vec384_rep (from_Fp `p) }});
   llvm_execute_func [a_ptr, p_ptr, crucible_term {{ 0x89f3fffcfffcfffd }}];
-  crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs a), sgn0 (fp_abs a)]):[64] }});
+  crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs a), HE1::sgn0 (fp_abs a)]):[64] }});
 };
 
 // TODO: prove (not so easy because of the Montgomery representation)
 sgn0x_pty_mont_384_ov <- verify_x86 "sgn0x_pty_mont_384" sgn0x_pty_mont_384_spec (quickcheck 16);
+
+let sgn0x_pty_mont_384x_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
+  llvm_precond {{ fp2_invariant a }};
+  p_ptr <- alloc_init_readonly vec384_type (llvm_term {{ vec384_rep (from_Fp `p) }});
+  llvm_execute_func [a_ptr, p_ptr, crucible_term {{ 0x89f3fffcfffcfffd }}];
+  crucible_return (crucible_term {{ (zext [sign_F_p_2 (fp2_abs a), HE2::sgn0 (fp2_abs a)]):[64] }});
+};
+
+// TODO: prove (not so easy because of the Montgomery representation)
+sgn0x_pty_mont_384x_ov <- verify_x86 "sgn0x_pty_mont_384x" sgn0x_pty_mont_384x_spec (quickcheck 16);
