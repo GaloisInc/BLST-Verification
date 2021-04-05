@@ -1,0 +1,977 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+/* Specifications and proofs for pairing.c.  While the Cryptol specification (and the IETF  specifications)
+   work in curve E over Fp_12, since these functions are applied to images of points on E1 and E2 many
+   optimizations are possible.
+ */
+
+/* see below
+let line_dbl_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  T_ptr <- crucible_alloc POINTonE2_type;
+  (Q, Q_ptr) <- ptr_to_fresh_readonly "line_dbl_Q" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant Q }};
+  crucible_execute_func [line_ptr, T_ptr, Q_ptr];
+  crucible_points_to T_ptr (crucible_term {{ POINTonE2_rep (point_double Fp_2 (POINTonE2_abs Q)) }});
+  new_line <- crucible_fresh_var "new_line_dbl_line" vec384fp6_type;
+  crucible_points_to line_ptr (crucible_term new_line);
+};
+
+let line_dbl_alias_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  (T, T_ptr) <- ptr_to_fresh "line_dbl_T" POINTonE2_type;
+  crucible_execute_func [line_ptr, T_ptr, T_ptr];
+  new_T <- crucible_fresh_var "new_line_dbl_T" POINTonE2_type;
+  crucible_points_to T_ptr (crucible_term new_T);
+  new_line <- crucible_fresh_var "new_line_dbl_line" vec384fp6_type;
+  crucible_points_to line_ptr (crucible_term new_line);
+};
+*/
+
+import "../cryptol-specs/Common/Field.cry";
+
+// This version avoids the extra check for z1 == 0, relative to point_add_affine
+let {{
+  point_add_affine_alt: {t} FieldRep t -> ProjectivePoint t -> AffinePoint t -> ProjectivePoint t
+  point_add_affine_alt F (x1,y1,z1) (x2,y2) = p3 where
+    z1z1 = F.sq z1
+    h = F.mul(x2,z1z1)
+    r = F.mul(F.mul(y2,z1), z1z1)
+
+    h_1 = F.sub(h, x1)
+    hh = F.sq h_1
+    i = (F.add (hh,hh))
+    i_1 = F.add (i,i)
+
+    j = F.mul (h_1, i_1)
+
+    r_1 = F.sub(r, y1)
+    r_2 = F.add(r_1, r_1)
+
+    v = F.mul(x1, i_1)
+
+    x3 = F.sub(F.sub(F.sub(F.sq r_2, j), v), v)
+
+    j_1 = F.mul(j, y1)
+    y3 = F.sub(v, x3)
+    y3_1 = F.mul(y3, r_2)
+    y3_2 = F.sub(F.sub(y3_1, j_1), j_1)
+
+    z3 = F.add(z1,h_1)
+    z3_1 = F.sq z3
+    z3_2 = F.sub (z3_1, z1z1)
+    z3_3 = F.sub (z3_2, hh)
+
+    p3 = (x3, y3_2, z3_3)
+  }};
+
+
+/* see below 
+let line_add_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  (T, T_ptr) <- ptr_to_fresh "line_add_T" POINTonE2_type;
+  (R, R_ptr) <- ptr_to_fresh_readonly "line_add_R" POINTonE2_type;
+  (Q, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" POINTonE2_affine_type;
+  crucible_precond {{ POINTonE2_invariant R }};
+  crucible_precond {{ POINTonE2_affine_invariant Q }};
+  crucible_execute_func [line_ptr, T_ptr, R_ptr, Q_ptr];
+  crucible_points_to T_ptr (crucible_term
+    {{ POINTonE2_rep (point_add_affine_alt Fp_2 (POINTonE2_abs R) (POINTonE2_affine_abs Q)) }});
+  new_line <- crucible_fresh_var "new_line_add_line" vec384fp6_type;
+  crucible_points_to line_ptr (crucible_term new_line);
+};
+
+let line_add_alias_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  (T, T_ptr) <- ptr_to_fresh "line_add_T" POINTonE2_type;
+  (Q, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" POINTonE2_affine_type;
+  crucible_execute_func [line_ptr, T_ptr, T_ptr, Q_ptr];
+  new_T <- crucible_fresh_var "new_line_add_T" POINTonE2_type;
+  crucible_points_to T_ptr (crucible_term new_T);
+  new_line <- crucible_fresh_var "new_line_add_line" vec384fp6_type;
+  crucible_points_to line_ptr (crucible_term new_line);
+};
+*/
+let {{
+  lshift_fp: t_Fp -> Size_t -> t_Fp
+  lshift_fp a c = shifts @ c where shifts = [a] # [Fp.add (a',a') | a' <- shifts ]
+
+  lshift_fp2: t_Fp_2 -> Size_t -> t_Fp_2
+  lshift_fp2 [a1,a0] c = [lshift_fp a1 c, lshift_fp a0 c]
+  }};
+
+// Only ever called with count=2, and aliased
+let lshift_mod_384_alias_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "x" vec384_type;
+  // count <- crucible_fresh_var "count" size_type;
+  n_ptr <- crucible_alloc_readonly vec384_type;
+  crucible_precond {{ fp_invariant a}};
+  crucible_points_to n_ptr p_representation;
+  crucible_execute_func [a_ptr, a_ptr, crucible_term {{2:Size_t}} , n_ptr];
+  crucible_points_to a_ptr (crucible_term {{ fp_rep (lshift_fp (fp_abs a) 2) }});
+  };
+
+let lshift_fp2_alias_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "x" vec384x_type;
+  // count <- crucible_fresh_var "count" size_type;
+  crucible_precond {{ fp2_invariant a}};
+  crucible_execute_func [a_ptr, a_ptr, crucible_term {{2:Size_t}}];
+  crucible_points_to a_ptr (crucible_term {{ fp2_rep (lshift_fp2 (fp2_abs a) 2) }});
+  };
+
+
+////////////////////////////////////////////////////////////////
+//
+// Proofs
+
+// assember routine
+lshift_mod_384_alias_ov <- admit "lshift_mod_384" lshift_mod_384_alias_spec;
+
+lshift_fp2_alias_ov <- verify "lshift_fp2" [lshift_mod_384_alias_ov] lshift_fp2_alias_spec;
+
+// The doubling code in `line_dbl` differs from POINTonE2_double only in a replacement of
+// `Z3 = 2*Z1*Y1` by `Z3 = (Y1+Z1)^2-Y1^2-Z1^2, so we can make a lemma for that.
+
+line_dbl_alg_thm <- prove_cryptol
+  {{ \ y z -> Fp_2.sub (Fp_2.sub (Fp_2.sq (Fp_2.add (y, z)), Fp_2.sq y), Fp_2.sq z)
+                == Fp_2.mul (Fp_2.add (z, z), y) }} [];
+
+/*
+// WORKS: the curve arithmetic part
+line_dbl_ov1 <- custom_verify "line_dbl"
+                      (foldr concat [vec_fp2_overrides, fp2_overrides, fp12_overrides]
+                                    [vec_is_zero_fp2_ov, lshift_fp2_alias_ov])
+                      line_dbl_spec
+                      (do {
+                        unfolding [ "POINTonE2_rep", "POINTonE2_abs", "POINTonE2_affine_rep"
+                                  , "POINTonE2_affine_abs", "point_double"];
+                        simplify simpset; // simpset is from curve_operations_e2.saw
+                        rw_with_1 line_dbl_alg_thm;
+                        // print_goal_nicely;
+                        w4_unint_z3 fp2_unints;
+                      });
+*/
+// subtracting off in the other order
+/*
+line_dbl_alg_thm_2 <- prove_cryptol
+  {{ \ y z -> Fp_2.sub (Fp_2.sub (Fp_2.sq (Fp_2.add (z, y)), Fp_2.sq z), Fp_2.sq y)
+                == Fp_2.mul (Fp_2.add (z, z), y) }} [];
+*/
+// TODO: move to implementation::Field
+// import "../cryptol-specs/Common/Field.cry";
+let {{
+  mul_by_2: {t} FieldRep t -> t -> t
+  mul_by_2 F x = F.add (x,x)
+
+  mul_by_4: {t} FieldRep t -> t -> t
+  mul_by_4 F x = mul_by_2 F (mul_by_2 F x)
+
+  mul_by_6: {t} FieldRep t -> t -> t
+  mul_by_6 F x = F.add (y, F.add (y, y)) where y = mul_by_2 F x
+  }};
+
+let {{
+  line_double_imp: (t_Fp_2, t_Fp_2, t_Fp_2) -> t_Fp_6
+  line_double_imp (X1, Y1, Z1) = [l2, l1, l0] where
+    A = Fp_2.sq X1
+    E = mul_by_3 Fp_2 A
+    F = Fp_2.sq E
+    B = Fp_2.sq Y1
+    l0_a = Fp_2.add (E, X1)
+    l0_b = Fp_2.sub (Fp_2.sq l0_a, A)
+    l0_c = Fp_2.sub (l0_b, F)
+    l0 = Fp_2.sub (l0_c, lshift_fp2 B 2)
+    l1 = Fp_2.mul (mul_by_3 Fp_2 (Fp_2.sq X1), Fp_2.sq Z1)
+    l2 = Fp_2.mul (Fp_2.mul (Fp_2.add (Z1, Z1), Y1), Fp_2.sq Z1)
+  }};
+
+lshift_by_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \ x -> lshift_fp2 x 2 == mul_by_4 Fp_2 x }}) [];
+/*
+let line_dbl_line_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  T_ptr <- crucible_alloc POINTonE2_type;
+  (Q, Q_ptr) <- ptr_to_fresh_readonly "line_dbl_Q" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant Q }};
+  crucible_execute_func [line_ptr, T_ptr, Q_ptr];
+  // crucible_points_to T_ptr (crucible_term {{ POINTonE2_rep (point_double Fp_2 (POINTonE2_abs Q)) }});
+  crucible_points_to line_ptr (crucible_term {{ fp6_rep (line_double_imp (POINTonE2_abs Q)) }});
+};
+
+let line_dbl_line_alias_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  (Q, Q_ptr) <- ptr_to_fresh "line_dbl_Q" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant Q }};
+  crucible_execute_func [line_ptr, Q_ptr, Q_ptr];
+  // crucible_points_to T_ptr (crucible_term {{ POINTonE2_rep (point_double Fp_2 (POINTonE2_abs Q)) }});
+  crucible_points_to line_ptr (crucible_term {{ fp6_rep (line_double_imp (POINTonE2_abs Q)) }});
+};
+
+// WORKS: the line_eval part (to an _imp specification)
+line_dbl_line_ov <- custom_verify "line_dbl"
+                      (foldr concat [vec_fp2_overrides, fp2_overrides, fp12_overrides]
+                                    [vec_is_zero_fp2_ov, lshift_fp2_alias_ov])
+                      line_dbl_line_spec
+                      (do {
+                        unfolding [ "POINTonE2_rep", "POINTonE2_abs", "POINTonE2_affine_rep"
+                                  , "POINTonE2_affine_abs", "line_double_imp", "fp6_rep", "fp6_abs"];
+                                  // , "mul_by_6"];
+                        simplify simpset; // simpset is from curve_operations_e2.saw
+                        rw_with [line_dbl_alg_thm]; // , lshift_by_2_thm];
+                        // goal_num_when 29 print_goal_nicely;
+                        w4_unint_z3 fp2_unints;
+                      });
+
+line_dbl_line_alias_ov <- custom_verify "line_dbl"
+                      (foldr concat [vec_fp2_overrides, fp2_overrides, fp12_overrides]
+                                    [vec_is_zero_fp2_ov, lshift_fp2_alias_ov])
+                      line_dbl_line_alias_spec
+                      (do {
+                        unfolding [ "POINTonE2_rep", "POINTonE2_abs", "POINTonE2_affine_rep"
+                                  , "POINTonE2_affine_abs", "line_double_imp", "fp6_rep", "fp6_abs"];
+                                  // , "mul_by_6"];
+                        simplify simpset; // simpset is from curve_operations_e2.saw
+                        rw_with [line_dbl_alg_thm]; // , lshift_by_2_thm];
+                        // goal_num_when 29 print_goal_nicely;
+                        w4_unint_z3 fp2_unints;
+                      });
+*/
+
+// ... line_add, matches add_affine
+
+/*
+// WORKS, curve operation part
+custom_verify "line_add"
+                      (foldr concat [vec_fp2_overrides, fp2_overrides] [vec_is_zero_fp2_ov])
+                      line_add_spec
+                      do {
+                        unfolding ["POINTonE2_rep","POINTonE2_abs","POINTonE2_affine_rep","POINTonE2_affine_abs","point_add_affine", "select"];
+                        simplify simpset;
+                        goal_num_when 29 print_goal_nicely;
+                        w4_unint_z3 fp2_unints;
+                        };
+*/
+
+let {{
+  line_add_imp (x1,y1,z1) (x2,y2) = [l2, l1, l0] where
+    F = Fp_2
+    z1z1 = F.sq z1
+    h = F.mul(x2,z1z1)
+    r = F.mul(F.mul(y2,z1), z1z1)
+
+    h_1 = F.sub(h, x1)
+    hh = F.sq h_1
+    i = (F.add (hh,hh))
+    i_1 = F.add (i,i)
+
+    r_1 = F.sub(r, y1)
+    r_2 = F.add(r_1, r_1)
+
+    z3 = F.add(z1,h_1)
+    z3_1 = F.sq z3
+    z3_2 = F.sub (z3_1, z1z1)
+    z3_3 = F.sub (z3_2, hh)
+
+    l0 = mul_by_2 F (F.sub (F.mul (r_2, x2), F.mul (y2, z3_3)))
+    l1 = r_2
+    l2 = z3_3
+  }};
+
+/*
+let line_add_imp_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  (T, T_ptr) <- ptr_to_fresh "line_add_T" POINTonE2_type;
+  (R, R_ptr) <- ptr_to_fresh_readonly "line_add_R" POINTonE2_type;
+  (Q, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" POINTonE2_affine_type;
+  crucible_precond {{ POINTonE2_invariant R }};
+  crucible_precond {{ POINTonE2_affine_invariant Q }};
+  crucible_execute_func [line_ptr, T_ptr, R_ptr, Q_ptr];
+  // crucible_points_to T_ptr (crucible_term
+  //  {{ POINTonE2_rep (point_add_affine_alt Fp_2 (POINTonE2_abs R) (POINTonE2_affine_abs Q)) }});
+  // new_line <- crucible_fresh_var "new_line_add_imp" vec384fp6_type;
+  crucible_points_to line_ptr (crucible_term
+    {{ fp6_rep (line_add_imp (POINTonE2_abs R) (POINTonE2_affine_abs Q)) }});
+};
+
+// WORKS
+custom_verify "line_add"
+                      (foldr concat [vec_fp2_overrides, fp2_overrides] [vec_is_zero_fp2_ov])
+                      line_add_imp_spec
+                      do {
+                        unfolding [ "POINTonE2_rep","POINTonE2_abs","POINTonE2_affine_rep"
+                                  , "POINTonE2_affine_abs","point_add_affine"];
+                        simplify simpset;
+                        goal_num_when 29 print_goal_nicely;
+                        w4_unint_z3 fp2_unints;
+                        };
+*/
+//// line_by_Px2
+
+let {{
+  line_by_Px2: t_Fp_6 -> (t_Fp, t_Fp) -> t_Fp_6
+  line_by_Px2 [[l2_1, l2_0], [l1_1, l1_0], l0]  (Px, Py) = [l2', l1', l0] where
+    l1' = [Fp.mul (l1_1, Px), Fp.mul (l1_0, Px)]
+    l2' = [Fp.mul (l2_1, Py), Fp.mul (l2_0, Py)]
+  }};
+
+let line_by_Px2_spec = do {
+    (line, line_ptr) <- ptr_to_fresh "line" vec384fp6_type;
+    (Px2, Px2_ptr) <- ptr_to_fresh_readonly "Px2" POINTonE1_affine_type;
+    crucible_precond {{ POINTonE1_affine_invariant Px2 }};
+    crucible_precond {{ fp6_invariant line }};
+    crucible_execute_func [line_ptr, Px2_ptr];
+    crucible_points_to line_ptr (crucible_term
+      {{ fp6_rep (line_by_Px2 (fp6_abs line) (POINTonE1_affine_abs Px2)) }});
+};
+
+line_by_Px2_ov <- custom_verify "line_by_Px2" fp_overrides line_by_Px2_spec
+  do { unfolding ["line_by_Px2", "fp6_rep", "fp6_abs", "fp2_rep", "fp2_abs"];
+       simplify fp_simpset;
+       z3; };
+
+/// start_dbl_n
+/// Q: which n do we need?  This goes to aggregation?   We set up here got whatever n is selected
+
+let {{
+  start_dbl_n_imp: {n} (fin n, n >= 1) => [n](t_Fp_2, t_Fp_2, t_Fp_2) -> [n](t_Fp, t_Fp) -> t_Fp_12
+  start_dbl_n_imp Ts Px2s = rets!0 where
+    line_a = line_double_imp (Ts@0)
+    // [line_b_2, line_b_1, line_b_0] = line_by_Px2 line_a (Px2s@0)
+    //ret_a: t_Fp_12
+    //ret_a = [[z,line_b_2,], [z, line_b_1, line_b_0]] // compare xy00z0 _expander
+    line_b = line_by_Px2 line_a (Px2s@0)
+    ret_a = fp6_to_fp12_xy00z0 line_b
+    // standard loop-to-comprehension transcription of the C code
+    // rets = [ret_a] # [mul_by_xy00z0_fp12 ret line | ret <- rets | line <- lines]
+    rets = [ret_a] # [Fp_12.mul (ret,  fp6_to_fp12_xy00z0 line) | ret <- rets | line <- lines]
+    lines = [line_by_Px2 (line_double_imp T) P | T <- tail Ts | P <- tail Px2s]
+    }};
+
+/*
+let start_dbl_n_spec n = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (T, T_ptr) <- ptr_to_fresh "T" (llvm_array n POINTonE2_type);
+  (Px2, Px2_ptr) <- ptr_to_fresh_readonly "Px2" (llvm_array n POINTonE1_affine_type);
+  crucible_precond {{ all POINTonE2_invariant T }};
+  crucible_precond {{ all POINTonE1_affine_invariant Px2 }};
+  crucible_execute_func [ret_ptr, T_ptr, Px2_ptr, llvm_term {{ (`n:Size_t) }}];
+  crucible_points_to ret_ptr (llvm_term
+    {{ fp12_rep (start_dbl_n_imp (map POINTonE2_abs T) (map POINTonE1_affine_abs Px2)) }});
+  // TODO: also all Ts are doubled
+  };
+*/
+
+let curve_unints =
+    [ "POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant", "POINTonE1_normalize"
+    , "POINTonE1_affine_abs", "POINTonE1_affine_rep", "POINTonE1_affine_invariant" // , "POINTonE1_affine_normalize"
+    , "POINTonE2_abs", "POINTonE2_rep", "POINTonE2_invariant", "POINTonE2_normalize"
+    //, "point_add_fp", "point_double_fp", "point_neg_fp"
+    //, "point_add_affine_fp", "point_dadd_fp", "point_dadd_affine_fp"
+    // , "add_E", "add'_E", "affinify_E", "projectify_E"
+    // , "e1_scalar_mult", "e1_order"
+    ];
+
+let foo_unints_small = (concat_all [ curve_unints, fp12_unints
+                                   , ["line_by_Px2", "line_double_imp"]]);
+
+let foo_unints = (concat_all [ curve_unints //, fp12_unints
+                             , fp2_unints, fp_unints
+                             , ["line_by_Px2", "line_double_imp" // , "fp6_abs", "fp6_rep"
+                               , "Fp_12"
+                               ]]);
+
+fp2_rep_zero_thm <- prove_cryptol
+  (rewrite (cryptol_ss ()) {{ fp2_rep [0,0] == zero }}) [];
+
+fp2_invariant_zero_thm <- prove_cryptol
+  (rewrite (cryptol_ss ()) {{ fp2_invariant [z,z] == True where z = [0,0,0,0,0,0]}}) [];
+
+fp2_abs_zero_thm <- prove_cryptol
+  (rewrite (cryptol_ss ()) {{ fp2_abs [z,z] == zero  where z = [0,0,0,0,0,0]}}) [];
+
+
+let start_dbl_n_ss = addsimps [ unrip_thm, fp2_unrip_thm, fp6_unrip_thm, fp2_rep_unrip_thm
+                              , fp2_rep_zero_thm, fp2_invariant_zero_thm, fp2_abs_zero_thm]
+                           fp2_simpset;
+
+/*
+// n=1, just the effect on `line`
+
+custom_verify "start_dbl_n"
+   (concat [line_dbl_line_ov, line_dbl_line_alias_ov, line_by_Px2_ov] mul_by_xy00z0_fp12_ovs)
+   (start_dbl_n_spec 1)
+   do { // print_goal_consts;
+        goal_eval_unint foo_unints;
+        simplify (addsimps [unrip_thm, fp2_unrip_thm, fp6_unrip_thm, fp2_rep_unrip_thm, fp2_rep_zero_thm]
+                           fp2_simpset);
+        w4_unint_z3 foo_unints;
+        };
+
+// n=2
+let foo_unints' = (concat_all [ curve_unints //, fp12_unints
+                             , fp2_unints, fp_unints
+                             , ["line_by_Px2", "line_double_imp" // , "fp6_abs", "fp6_rep"
+                               , "Fp_12", "start_dbl_n_imp"
+                               ]]);
+
+//WORKS
+custom_verify "start_dbl_n"
+   (concat [line_dbl_line_ov, line_dbl_line_alias_ov, line_by_Px2_ov] mul_by_xy00z0_fp12_ovs)
+   (start_dbl_n_spec 2)
+   do { goal_eval_unint foo_unints;
+        simplify start_dbl_n_ss;
+        w4_unint_z3 foo_unints;
+        };
+
+// WORKS
+custom_verify "start_dbl_n"
+   (concat [line_dbl_line_ov, line_dbl_line_alias_ov, line_by_Px2_ov] mul_by_xy00z0_fp12_ovs)
+   (start_dbl_n_spec 3)
+   do { goal_eval_unint foo_unints;
+        simplify start_dbl_n_ss;
+        w4_unint_z3 foo_unints;
+        };
+*/
+
+////////////////
+//
+// With combined functionality
+
+let line_dbl_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  T_ptr <- crucible_alloc POINTonE2_type;
+  (Q, Q_ptr) <- ptr_to_fresh_readonly "line_dbl_Q" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant Q }};
+  crucible_execute_func [line_ptr, T_ptr, Q_ptr];
+  crucible_points_to T_ptr (crucible_term {{ POINTonE2_rep (point_double Fp_2 (POINTonE2_abs Q)) }});
+  crucible_points_to line_ptr (crucible_term {{ fp6_rep (line_double_imp (POINTonE2_abs Q)) }});
+};
+
+let line_dbl_alias_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  (T, T_ptr) <- ptr_to_fresh "line_dbl_T" POINTonE2_type;
+  crucible_precond {{ POINTonE2_invariant T }};
+  crucible_execute_func [line_ptr, T_ptr, T_ptr];
+  crucible_points_to T_ptr (crucible_term {{ POINTonE2_rep (point_double Fp_2 (POINTonE2_abs T)) }});
+  crucible_points_to line_ptr (crucible_term {{ fp6_rep (line_double_imp (POINTonE2_abs T)) }});
+};
+
+line_dbl_line_ovs <- for [line_dbl_spec, line_dbl_alias_spec]
+  (\ spec ->  custom_verify "line_dbl"
+                      (foldr concat [vec_fp2_overrides, fp2_overrides, fp12_overrides]
+                                    [vec_is_zero_fp2_ov, lshift_fp2_alias_ov])
+                      spec
+                      do {
+                        unfolding [ "POINTonE2_rep", "POINTonE2_abs", "POINTonE2_affine_rep"
+                                  , "POINTonE2_affine_abs", "point_double", "line_double_imp"
+                                  , "fp6_rep", "fp6_abs"];
+                                  // , "mul_by_6"];
+                        simplify simpset; // simpset is from curve_operations_e2.saw
+                        rw_with_1 line_dbl_alg_thm; // , lshift_by_2_thm];
+                        //goal_num_when 29 print_goal_nicely;
+                        w4_unint_z3 fp2_unints;
+                      });
+
+
+let line_add_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  (T, T_ptr) <- ptr_to_fresh "line_add_T" POINTonE2_type;
+  (R, R_ptr) <- ptr_to_fresh_readonly "line_add_R" POINTonE2_type;
+  (Q, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" POINTonE2_affine_type;
+  crucible_precond {{ POINTonE2_invariant R }};
+  crucible_precond {{ POINTonE2_affine_invariant Q }};
+  crucible_execute_func [line_ptr, T_ptr, R_ptr, Q_ptr];
+  crucible_points_to T_ptr (crucible_term
+    {{ POINTonE2_rep (point_add_affine_alt Fp_2 (POINTonE2_abs R) (POINTonE2_affine_abs Q)) }});
+  crucible_points_to line_ptr (crucible_term
+    {{ fp6_rep (line_add_imp (POINTonE2_abs R) (POINTonE2_affine_abs Q)) }});
+};
+
+let line_add_alias_spec = do {
+  line_ptr <- crucible_alloc vec384fp6_type;
+  (T, T_ptr) <- ptr_to_fresh "line_add_T" POINTonE2_type;
+  (Q, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" POINTonE2_affine_type;
+  crucible_precond {{ POINTonE2_invariant T }};
+  crucible_precond {{ POINTonE2_affine_invariant Q }};
+  crucible_execute_func [line_ptr, T_ptr, T_ptr, Q_ptr];
+  crucible_points_to T_ptr (crucible_term
+    {{ POINTonE2_rep (point_add_affine_alt Fp_2 (POINTonE2_abs T) (POINTonE2_affine_abs Q)) }});
+  crucible_points_to line_ptr (crucible_term
+    {{ fp6_rep (line_add_imp (POINTonE2_abs T) (POINTonE2_affine_abs Q)) }});
+};
+
+line_add_ovs <- for [line_add_spec, line_add_alias_spec]
+  ( \ spec -> custom_verify "line_add"
+                      fp2_overrides
+                      spec        
+                      do {
+                        unfolding ["POINTonE2_rep","POINTonE2_abs","POINTonE2_affine_rep","POINTonE2_affine_abs","point_add_affine", "select"];
+                        simplify simpset;
+                        // goal_num_when 29 print_goal_nicely;
+                        w4_unint_z3 fp2_unints;
+                        });
+
+// line_by_Px2 OK as above
+
+// start_dbl_n, full effect
+
+let start_dbl_n_spec n = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (T, T_ptr) <- ptr_to_fresh "T" (llvm_array n POINTonE2_type);
+  (Px2, Px2_ptr) <- ptr_to_fresh_readonly "Px2" (llvm_array n POINTonE1_affine_type);
+  crucible_precond {{ all POINTonE2_invariant T }};
+  crucible_precond {{ all POINTonE1_affine_invariant Px2 }};
+  crucible_execute_func [ret_ptr, T_ptr, Px2_ptr, llvm_term {{ (`n:Size_t) }}];
+  crucible_points_to ret_ptr (llvm_term
+    {{ fp12_rep (start_dbl_n_imp (map POINTonE2_abs T) (map POINTonE1_affine_abs Px2)) }});
+  crucible_points_to T_ptr (crucible_term {{ map (\ Q -> POINTonE2_rep (point_double Fp_2 (POINTonE2_abs Q))) T }});
+  };
+
+start_dbl_n_1_ov <- custom_verify "start_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_dbl_line_ovs, mul_by_xy00z0_fp12_ovs])
+   (start_dbl_n_spec 1)
+   do { goal_eval_unint foo_unints;
+        simplify start_dbl_n_ss;
+        w4_unint_z3 foo_unints;
+        };
+
+for [1,2,3,4,5]
+ (\ n -> custom_verify "start_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_dbl_line_ovs, mul_by_xy00z0_fp12_ovs])
+   (start_dbl_n_spec n)
+   do { goal_eval_unint foo_unints;
+        simplify start_dbl_n_ss;
+        w4_unint_z3 foo_unints;
+        });
+
+// TEMPORARY: special case for n=1, avoid use of "all"
+
+let start_dbl_n_spec_1 = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (T, T_ptr) <- ptr_to_fresh "T" (llvm_array 1 POINTonE2_type);
+  (Px2, Px2_ptr) <- ptr_to_fresh_readonly "Px2" (llvm_array 1 POINTonE1_affine_type);
+  crucible_precond {{ POINTonE2_invariant T0 where [T0] = T }};
+  crucible_precond {{ POINTonE1_affine_invariant Px20 where [Px20] = Px2  }};
+  crucible_execute_func [ret_ptr, T_ptr, Px2_ptr, llvm_term {{ (1:Size_t) }}];
+  crucible_points_to ret_ptr (llvm_term
+    {{ fp12_rep (start_dbl_n_imp (map POINTonE2_abs T) (map POINTonE1_affine_abs Px2)) }});
+  // crucible_points_to T_ptr (crucible_term {{ map (\ Q -> POINTonE2_rep (point_double Fp_2 (POINTonE2_abs Q))) T }});
+  crucible_points_to T_ptr (crucible_term {{ map (\ Q -> POINTonE2_rep (point_double_fp2 (POINTonE2_abs Q))) T }});
+  };
+
+start_dbl_n_1_ov' <- custom_verify "start_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_dbl_line_ovs, mul_by_xy00z0_fp12_ovs])
+   (start_dbl_n_spec_1)
+   do { goal_eval_unint foo_unints;
+        simplify start_dbl_n_ss;
+        w4_unint_z3 foo_unints;
+        };
+
+// add_n_dbl_n
+// focus just on the n=1 case for now.
+
+// effect on point T -- each of the T_i, Q_i affected independently in the same way
+let {{
+  add_n_dbl: {k} (fin k) => ProjectivePoint t_Fp_2 ->  AffinePoint t_Fp_2 -> ProjectivePoint t_Fp_2
+  add_n_dbl T Q = doubles@`k where
+    doubles = [point_add_affine_alt Fp_2 T Q] # [ point_double Fp_2 D | D <- doubles]
+  }};
+
+// effect on ret - n=1 case
+let {{
+  add_n_dbl_ret: {k} (fin k) =>
+      t_Fp_12 -> ProjectivePoint t_Fp_2 -> AffinePoint t_Fp_2 -> AffinePoint t_Fp -> t_Fp_12
+  add_n_dbl_ret r T Q Px2 = rets@`k where
+    ret_a = Fp_12.mul (r, fp6_to_fp12_xy00z0 (line_by_Px2 (line_add_imp T Q) Px2))
+    T_a = point_add_affine_alt Fp_2 T Q
+    
+    // standard loop-to-comprehension transcription of the C code, for the loop on `k`
+    Ts = [T_a] # [point_double Fp_2 Ti | Ti <- Ts]
+    lines = [line_by_Px2 (line_double_imp Ti) Px2 | Ti <- Ts ]
+    rets = [ret_a] # [Fp_12.mul (Fp_12.sq ret, fp6_to_fp12_xy00z0 line) | ret <- rets | line <- lines]
+    }};
+
+let add_n_dbl_n_1_spec k = do {
+  (ret, ret_ptr) <- ptr_to_fresh "ret_add_n_dbl_n" vec384fp12_type;
+  (T, T_ptr) <- ptr_to_fresh "T" POINTonE2_type;
+  (Q, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" POINTonE2_affine_type;
+  (Px2, Px2_ptr) <- ptr_to_fresh_readonly "Px2" POINTonE1_affine_type;
+  crucible_precond {{ fp12_invariant ret }};
+  crucible_precond {{ POINTonE2_invariant T }};
+  crucible_precond {{ POINTonE2_affine_invariant Q }};
+  crucible_precond {{ POINTonE1_affine_invariant Px2 }};
+  crucible_execute_func [ret_ptr, T_ptr, Q_ptr, Px2_ptr, llvm_term {{ (1:Size_t) }}
+                        , llvm_term {{ (`k:Size_t) }}];
+  crucible_points_to ret_ptr (llvm_term
+    {{ fp12_rep (add_n_dbl_ret`{k} (fp12_abs ret) (POINTonE2_abs T) (POINTonE2_affine_abs Q) (POINTonE1_affine_abs Px2)) }});
+  crucible_points_to T_ptr (llvm_term
+    {{ POINTonE2_rep (add_n_dbl`{k}  (POINTonE2_abs T) (POINTonE2_affine_abs Q)) }});
+  };
+
+// Just as for the proofs of scalar multiplication, we need a non-higher-order cover function
+// for point_add_affine_alt.
+
+let {{ point_add_affine_alt_fp2 = point_add_affine_alt Fp_2 }};
+
+point_add_affine_alt_fp2_thm <- prove_cryptol {{  \p1 p2 -> point_add_affine_alt Fp_2 p1 p2 == point_add_affine_alt_fp2 p1 p2 }} ["Fp_2"];
+
+let remove_higher_order_function_simpset_alt =
+    addsimp point_add_affine_alt_fp2_thm  remove_higher_order_function_simpset;
+
+let add_n_dbl_n_unints = (concat_all [ curve_unints, fp12_unints
+                                     , fp2_unints, fp_unints
+                                     , [ "line_by_Px2", "line_double_imp", "line_add_imp", "xy00z0_expander"
+                                       , "point_add_affine_alt_fp2", "Fp_12", "fp6_to_fp12_xy00z0"
+                                       // , "fp6_invariant", "fp6_rep", "fp6_abs", "Fp_6"
+                                       ] ] );
+
+let add_n_dbl_n_unints' = concat ["fp6_invariant", "fp6_rep", "fp6_abs", "Fp_6"]
+                                 add_n_dbl_n_unints;
+
+/*
+fp12_unrip_rep_thm <- prove_cryptol
+  (rewrite (cryptol_ss ()) {{ \ (x:Fp_12_rep_t) -> ([[x0,x1,x2],[x3,x4,x5]] == x where [[x0,x1,x2],[x3,x4,x5]] = x) }})
+  [];
+*/
+
+fp12_unrip_thms <- for
+  [ {{ \ (x:Fp_12_rep_t) -> ([[x0,x1,x2],[x3,x4,x5]] == x where [[x0,x1,x2],[x3,x4,x5]] = x) }}
+  , {{ \ (x:Fp_12_rep_t) -> ([x0,x1] == x where [x0,x1] = x) }}
+  , {{ \ (x: t_Fp_12) -> ([x0,x1] == x where [x0,x1] = x) }}
+  , {{ \ (x: Fp_6_rep_t) -> ([x0,x1,x2] == x where  [x0,x1,x2] = x) }} 
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []) ;
+
+e2_unrip_thm <- prove_cryptol
+  (rewrite (cryptol_ss ()) {{ \ (x:POINTonE2_t) -> ((x0,x1,x2) == x where (x0,x1,x2) = x) }})
+  [];
+
+fp6_extra_abs_rep_thms <- for
+  [ {{ \ x y -> fp6_abs (fp6_rep (line_by_Px2 x y)) == line_by_Px2 x y }}
+  , {{ \ x y -> fp6_abs (fp6_rep (line_add_imp x y)) == line_add_imp x y }}
+  , {{ \ x   -> fp6_abs (fp6_rep (line_double_imp x)) == line_double_imp x }}
+  ] (\ t -> custom_prove_cryptol t
+            do { unfolding ["fp6_abs", "fp6_rep", "fp2_abs", "fp2_rep"];
+                 simplify fp_simpset;
+                 w4_unint_z3 fp_unints; });
+
+let add_n_dbl_n_ss = addsimps (concat_all[ fp12_rep_thms, POINTonE2_thms, fp12_unrip_thms
+                                         , fp6_extra_abs_rep_thms
+                                         , [ e2_unrip_thm
+                                           , fp12_abs_ite_thm, fp12_invariant_ite_thm
+                                           , fp12_rep_ite_thm]])
+                              start_dbl_n_ss;
+
+// For proof development, allow Fp_12 fields to be printed readably
+
+let {{
+  ff_zero_fp12 = Fp_12.field_zero
+  ff_unit_fp12 = Fp_12.field_unit
+  ff_mul_fp12 = Fp_12.mul
+  ff_sq_fp12  = Fp_12.sq
+  ff_add_fp12 = Fp_12.add
+  ff_sub_fp12 = Fp_12.sub
+  ff_neg_fp12 = Fp_12.neg
+  ff_div_fp12 = Fp_12.div
+  ff_normalize_fp12 = Fp_12.normalize
+  ff_is_val_fp12 = Fp_12.is_val
+}};
+
+ff12_cover_thms <- for
+ [ {{ Fp_12.field_zero == ff_zero_fp12 }}
+ , {{ Fp_12.field_unit == ff_unit_fp12 }}
+ , {{ \x -> Fp_12.mul x == ff_mul_fp12 x}}
+ , {{ \x -> Fp_12.add x == ff_add_fp12 x }}
+ , {{ \x -> Fp_12.sub x == ff_sub_fp12 x }}
+ , {{ \x -> Fp_12.sq x == ff_sq_fp12 x }}
+ , {{ \x -> Fp_12.neg x == ff_neg_fp12 x }}
+ , {{ \x -> Fp_12.div x == ff_div_fp12 x }}
+ , {{ \x -> Fp_12.is_val x == ff_is_val_fp12 x }}
+ , {{ \x -> Fp_12.normalize x == ff_normalize_fp12 x }}
+ ] ( \t -> prove_cryptol t ["Fp_12"] );
+
+ff12_uncover_thms <- for
+ [ {{ ff_zero_fp12 == Fp_12.field_zero }}
+ , {{ ff_unit_fp12 == Fp_12.field_unit }}
+ , {{ \x -> ff_mul_fp12 x == Fp_12.mul x }}
+ , {{ \x -> ff_add_fp12 x == Fp_12.add x }}
+ , {{ \x -> ff_sub_fp12 x == Fp_12.sub x }}
+ , {{ \x -> ff_sq_fp12 x == Fp_12.sq x }}
+ , {{ \x -> ff_neg_fp12 x == Fp_12.neg x }}
+ , {{ \x -> ff_div_fp12 x == Fp_12.div x }}
+ , {{ \x -> ff_normalize_fp12 x == Fp_12.normalize x }}
+ , {{ \x -> ff_is_val_fp12 x == Fp_12.is_val x }}
+ ] ( \t -> prove_cryptol t ["Fp_12"] );
+
+let print_nicely = do {
+    unfolding ["/\\", "\\/", "==>"];
+    simplify (addsimps ff12_cover_thms (cryptol_ss ()));
+    simplify prop_simpset;
+    print_goal;
+    simplify (addsimps ff12_uncover_thms (cryptol_ss ())); // put things back. ish
+    };
+
+xy00z0_expander_thm <- prove_cryptol
+  {{ \x -> fp12_abs (xy00z0_expander x) == fp6_to_fp12_xy00z0 (fp6_abs x) }} [] ;
+
+/*
+// WORKS
+custom_verify "add_n_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
+   (add_n_dbl_n_1_spec 1)
+   do { unfolding ["add_n_dbl_ret", "add_n_dbl"];
+        simplify remove_higher_order_function_simpset_alt;
+        print_nicely;
+        goal_num_ite 8
+          do { goal_eval_unint add_n_dbl_n_unints';
+               simplify (addsimp xy00z0_expander_thm add_n_dbl_n_ss);
+               w4_unint_z3 add_n_dbl_n_unints; }
+          do { goal_eval_unint add_n_dbl_n_unints; // evaluate the comprehensions in the Cryptol spec
+               simplify add_n_dbl_n_ss;
+               w4_unint_z3 add_n_dbl_n_unints;
+               }; };
+
+// FAILS
+custom_verify "add_n_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
+   (add_n_dbl_n_1_spec 1)
+   do { unfolding ["add_n_dbl_ret", "add_n_dbl"];
+        simplify remove_higher_order_function_simpset_alt;
+        print_nicely;
+        goal_eval_unint add_n_dbl_n_unints';
+        simplify (addsimp xy00z0_expander_thm add_n_dbl_n_ss);
+        w4_unint_z3 add_n_dbl_n_unints; };
+
+
+// Actual k values used are:
+//  2, 3, 9, 32, and 16
+
+// WORKS k=2
+custom_verify "add_n_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
+   (add_n_dbl_n_1_spec 2)
+   do { unfolding ["add_n_dbl_ret", "add_n_dbl"];
+        simplify remove_higher_order_function_simpset_alt;
+        print_nicely; // print_goal_consts;
+        goal_num_ite 12
+          do { goal_eval_unint add_n_dbl_n_unints';
+               simplify (addsimp xy00z0_expander_thm add_n_dbl_n_ss);
+               w4_unint_z3 add_n_dbl_n_unints; }
+          do { goal_eval_unint add_n_dbl_n_unints; // evaluate the comprehensions in the Cryptol spec
+               simplify add_n_dbl_n_ss;
+               w4_unint_z3 add_n_dbl_n_unints;
+               }; };
+*/
+
+// WORKS: all the needed k!
+add_dbl_n_ovs <- for [(2,12), (3,16), (9, 40), (16, 68), (32, 132)] // (k, 4k+4)
+ (\ (k, goal_n) -> 
+  custom_verify "add_n_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
+   (add_n_dbl_n_1_spec k)
+   do { unfolding ["add_n_dbl_ret", "add_n_dbl"];
+        simplify remove_higher_order_function_simpset_alt;
+        // print_goal_consts;
+        goal_num_ite goal_n
+          do { goal_eval_unint add_n_dbl_n_unints';
+               simplify (addsimp xy00z0_expander_thm add_n_dbl_n_ss);
+               w4_unint_z3 add_n_dbl_n_unints; }
+          do { goal_eval_unint add_n_dbl_n_unints; // evaluate the comprehensions in the Cryptol spec
+               simplify add_n_dbl_n_ss;
+               w4_unint_z3 add_n_dbl_n_unints;
+               }; });
+
+//// miller_loop_n
+// focus just on the n=1 case for now.
+
+let {{
+  miller_loop_n_1_imp:  AffinePoint t_Fp_2 -> AffinePoint t_Fp -> t_Fp_12
+  miller_loop_n_1_imp Q P = (if Q == (z2,z2) \/ P == (z1,z1)
+                             then Fp_12.field_unit
+                             else fp12_conjugate ret_f) where
+    z1 = Fp.field_zero
+    z2 = Fp_2.field_zero
+    (xP, yP) = P
+    Px2 = (Fp.neg (Fp.add (xP, xP)), Fp.add (yP, yP))
+    (xQ, yQ) = Q
+    T = (xQ, yQ, Fp_2.field_unit)
+    ret_a = start_dbl_n_imp [T] [Px2]
+    T_a = point_double Fp_2 T
+    ret_b = add_n_dbl_ret`{2} ret_a T_a Q Px2
+    T_b = add_n_dbl`{2} T_a Q
+    ret_c = add_n_dbl_ret`{3} ret_b T_b Q Px2
+    T_c = add_n_dbl`{3} T_b Q
+    ret_d = add_n_dbl_ret`{9} ret_c T_c Q Px2
+    T_d = add_n_dbl`{9} T_c Q
+    ret_e = add_n_dbl_ret`{32} ret_d T_d Q Px2
+    T_e = add_n_dbl`{32} T_d Q
+    ret_f = add_n_dbl_ret`{16} ret_e T_e Q Px2
+    }};
+
+let miller_loop_n_1_spec = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (Q, Q_ptr) <- ptr_to_fresh "Q" POINTonE2_affine_type; // array in general
+  (P, P_ptr) <- ptr_to_fresh_readonly "P" POINTonE1_affine_type; // array in general
+  crucible_precond {{ POINTonE2_affine_invariant Q }};
+  crucible_precond {{ POINTonE1_affine_invariant P }};
+  crucible_execute_func [ret_ptr, Q_ptr, P_ptr, llvm_term {{ (1:Size_t) }}];
+  crucible_points_to ret_ptr (llvm_term
+    {{ fp12_rep (miller_loop_n_1_imp (POINTonE2_affine_abs Q) (POINTonE1_affine_abs P)) }});
+  };
+
+let ovs_for_miller_loop =
+  concat_all [ add_dbl_n_ovs, fp_overrides, fp12_overrides, vec_overrides, vec_fp2_overrides
+             , [start_dbl_n_1_ov, vec_copy_fp12_ov]];
+//    concat_all [ add_dbl_n_ovs, fp_overrides, fp12_overrides
+//               , [ start_dbl_n_1_ov, vec_copy_fp12_ov, vec_copy_POINTonE2_affine_ov
+//                 , vec_copy_POINTonE1_affine_ov, vec_is_zero_fp_ov, vec_is_zero_fp2_ov]];
+
+let miller_loop_n_unints =
+  concat_all [ fp_unints, fp2_unints, fp12_unints
+             , ["add_n_dbl", "add_n_dbl_ret", "start_dbl_n_imp", "point_double_fp2"
+             , "fp12_conjugate"]]; // why is that not in fp12_unints?
+
+/*
+ For miller_loop_n:
+ - need BLS12_381_Rx.p12 == fp12_rep Fp_12.field_unit
+ - Know POINTonE1_invariant P, want fp_invariant on the coordinates (for the add_fp calls)
+ - there are 3 vec_copy calls: an fp12_element (576 bytes), two coordinates on E' (192 bytes), 
+   and a third coordinate (96 bytes)
+     576: vec_copy_fp12_ov; 192: vec_copy_POINTonE2_affine_ov; 96: vec_copy_POINTonE1_affine_ov?
+ - 2 calls to vec_is_zero: 192 (fp2), 96 (fp)
+*/
+
+let {{
+  one_mont_p = [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+              , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
+
+  bls12_381_rx = [one_mont_p, [0,0,0,0,0,0]]
+  bls12_381_rx_p12 = [[bls12_381_rx,z2,z2], [z2,z2,z2]] where z2 = [z,z]; z = [0,0,0,0,0,0]
+ }};
+
+bls12_381_rx_thms <- for
+  [ {{ fp2_invariant bls12_381_rx == True }}
+  , {{ fp2_abs bls12_381_rx == Fp_2.field_unit }}
+  , {{ fp12_rep Fp_12.field_unit == bls12_381_rx_p12 }}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss())
+                            (unfold_term ["one_mont_p", "bls12_381_rx", "bls12_381_rx_p12"] t)) []);
+
+// start_n_dbl has preconditions
+//  crucible_precond {{ all POINTonE2_invariant T }};
+//  crucible_precond {{ all POINTonE1_affine_invariant Px2 }};
+
+all_expansion_n_1_thms <- for
+  [ {{ \ T -> all POINTonE2_invariant [T] == POINTonE2_invariant T }}
+  , {{ \ P -> all POINTonE1_affine_invariant [P] == POINTonE1_affine_invariant P }}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
+// FAILS: all_expansion does not apply?
+
+/*
+// to_cnf
+
+cnf_thms <- for
+  [ "(a:Bool) -> (b:Bool) -> (c:Bool) -> EqTrue (eq Bool (ite Bool a b c) (and (or a c) (or (not a) b)))"
+  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (and a b)) (or (not a) (not b)))"
+  , "(a:Bool) -> (b:Bool) -> EqTrue (eq Bool (not (or a b)) (and (not a) (not b)))"
+  , "(a:Bool) -> EqTrue (eq Bool (not (not a)) a)"
+  , "(a:Bool) -> (b:Bool) -> (c:Bool) -> EqTrue (eq Bool (or a (and b c)) (and (or a b) (or a c)))"
+  , "(a:Bool) -> (b:Bool) -> (c:Bool) -> EqTrue (eq Bool (or (and a b) c) (and (or a c) (or b c)))"
+  ] (prove_core abc);
+
+let cnf_ss = add_prelude_eqs
+  [ "not_True", "not_False"
+  , "and_True1", "and_True2", "and_False1", "and_False2", "and_idem"
+  ,  "or_True1", "or_True2", "or_False1", "or_False2", "or_idem"
+  , "and_assoc", "or_assoc"] (addsimps cnf_thms empty_ss);
+
+let to_cnf = simplify cnf_ss;
+*/
+
+seq_ite_thms <- for
+  [ {{ \ x (y0:Integer) y1 z0 z1 -> [if x then y0 else z0, if x then y1 else z1] ==
+           if x then [y0,y1] else [z0,z1] }}
+  ,  {{ \ x (y0:[2]Integer) y1 y2 z0 z1 z2 ->
+           [if x then y0 else z0, if x then y1 else z1, if x then y2 else z2] ==
+           if x then [y0,y1,y2] else [z0,z1,z2] }}
+  , {{ \ x (y0:[3][2]Integer) y1 z0 z1 -> [if x then y0 else z0, if x then y1 else z1] ==
+           if x then [y0,y1] else [z0,z1] }}
+  ] (\ t -> prove_cryptol t []);
+
+
+field_rewrites_for_miller_loop <- for
+  [ {{ Fp.field_zero == 0 }}
+  , {{ Fp_2.field_zero == [0,0] }}
+  , {{ \ x y -> Fp.is_equal (x,y) == (x==y) }}
+  , {{ \ x y -> Fp_2.is_equal (x,y) == (x==y) }}
+  ] (\ t -> prove_cryptol t []);
+
+/*
+// WORKS!
+miller_loop_n_1_ov <- custom_verify "miller_loop_n"
+  // ovs_for_miller_loop
+  (concat_all [ add_dbl_n_ovs, fp_overrides, fp12_overrides //, vec_overrides, vec_fp2_overrides
+              , [vec_is_zero_2fp_ov, vec_is_zero_2fp2_ov]
+              , [ start_dbl_n_1_ov', vec_copy_fp12_ov, vec_copy_POINTonE2_affine_ov
+                , vec_copy_POINTonE1_affine_ov]])
+  miller_loop_n_1_spec
+  do { // simplify (cryptol_ss());
+       simplify fp_simpset;
+       // goal_num_when 5 print_goal;
+       rw_with (concat all_expansion_n_1_thms POINTonE2_thms);
+       unfolding ["POINTonE2_invariant", "POINTonE2_affine_invariant", "POINTonE1_affine_invariant", "/\\"];
+       simplify (addsimps bls12_381_rx_thms fp2_simpset);
+       simplify fp_simpset;
+       simplify fp12_simpset;
+       simplify prop_simpset;
+       // rw_with (concat all_expansion_n_1_thms POINTonE2_thms);
+       // print_goal;
+       unfolding ["miller_loop_n_1_imp"]; //  to expose the contained "point_double", for the next step...
+       simplify remove_higher_order_function_simpset_alt;
+       do {
+            // goal_num_when 13 print_goal_nicely;
+            goal_eval_unint miller_loop_n_unints; // ... otherwise "point_double" is unfolded here!
+            rw_with (concat fp12_unrip_thms
+                            (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
+            simplify fp_simpset;
+            simplify fp2_simpset;
+            simplify fp12_simpset;
+            rw_with (concat_all [bls12_381_rx_thms, POINTonE2_thms, field_rewrites_for_miller_loop]);
+            // to_cnf;
+            // split_goal;
+            goal_num_when 13
+            do {
+              //goal_eval_unint miller_loop_n_unints;
+              //rw_with (concat fp12_unrip_thms
+              //                (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
+              // print_goal_nicely; }; };
+       w4_unint_z3 miller_loop_n_unints;
+       };
+*/
+
+miller_loop_n_1_ov <- custom_verify "miller_loop_n"
+  // ovs_for_miller_loop
+  (concat_all [ add_dbl_n_ovs, fp_overrides, fp12_overrides //, vec_overrides, vec_fp2_overrides
+              , [vec_is_zero_2fp_ov, vec_is_zero_2fp2_ov]
+              , [ start_dbl_n_1_ov', vec_copy_fp12_ov, vec_copy_POINTonE2_affine_ov
+                , vec_copy_POINTonE1_affine_ov]])
+  miller_loop_n_1_spec
+  do { simplify fp_simpset;
+       rw_with (concat all_expansion_n_1_thms POINTonE2_thms);
+       unfolding ["POINTonE2_invariant", "POINTonE2_affine_invariant", "POINTonE1_affine_invariant", "/\\"];
+       simplify (addsimps bls12_381_rx_thms fp2_simpset);
+       simplify fp_simpset;
+       simplify fp12_simpset;
+       simplify prop_simpset;
+       unfolding ["miller_loop_n_1_imp"]; //  to expose the contained "point_double", for the next step...
+       simplify remove_higher_order_function_simpset_alt;
+       goal_eval_unint miller_loop_n_unints; // ... otherwise "point_double" is unfolded here!
+       // the goal_eval was needed to deal with the `all` and `map` functions, now undo the damage:
+       rw_with (concat fp12_unrip_thms
+                       (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
+       simplify fp_simpset;
+       simplify fp2_simpset;
+       simplify fp12_simpset;
+       rw_with (concat_all [bls12_381_rx_thms, POINTonE2_thms, field_rewrites_for_miller_loop]);
+       w4_unint_z3 miller_loop_n_unints;
+       };
