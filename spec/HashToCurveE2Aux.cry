@@ -1,0 +1,13 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+module HashToCurveE2Aux where
+
+import Parameters (t_Fp_2)
+import ShortWeierstrassCurve (AffinePoint)
+
+// See https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#appendix-G.4
+clear_cofactor_E2_with_psi: AffinePoint t_Fp_2 -> AffinePoint t_Fp_2
+clear_cofactor_E2_with_psi = undefined

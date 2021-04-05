@@ -75,10 +75,8 @@ _sgn0 [x_1, x_0] =  sign_0 || (zero_0 && sign_1) where
 
 _inv0 x = F_expt`{n=width _q} _F x `(_q-2) // but could be F.div (_F.field_unit, x)
 
-// for the isogenous curve
-private
-    to_Fp  = P::to_Fp
-
+to_Fp2: ([384], [384]) -> P::t_Fp_2
+to_Fp2 (a,b) = [P::to_Fp b, P::to_Fp a] // a+b*I
 
 // Constants from Section 8.8.2
 _Z = _F.neg [1, 2] // -(2+I)
@@ -100,9 +98,6 @@ _iso_map (x', y') = (x, y) where
     y_den = _F.add (x_powers@3, F_sum _F [_F.mul(ki, xi) | ki <- k4s | xi <- x_powers])
     x = _F.div (x_num, x_den)
     y = _F.mul (y', _F.div(y_num, y_den))
-
-to_Fp2: ([384], [384]) -> P::t_Fp_2
-to_Fp2 (a,b) = [to_Fp b, to_Fp a] // a+b*I
 
 k1s = map to_Fp2
    [ (0x05c759507e8e333ebb5b7a9a47d7ed8532c52d39fd3a042a88b58423c50ae15d5c2638e343d9c71c6238aaaaaaaa97d6,

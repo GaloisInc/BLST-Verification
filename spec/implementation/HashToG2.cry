@@ -1,0 +1,39 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+import Parameters (Fp_2, t_Fp_2)
+import ShortWeierstrassCurve (ProjectivePoint)
+/* import BLSFieldExtras (sqrt_fp, fp_exp) */
+import ExpandMessage (Expandable)
+import implementation::CurveOperation (point_dadd, point_add, point_double)
+import HashToCurveE2
+/* import HashToCurveE2Aux as Aux */
+
+map_to_curve_E2_prime_impl : t_Fp_2 -> ProjectivePoint t_Fp_2
+map_to_curve_E2_prime_impl = undefined
+
+isogeny_map_to_E2_impl: ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
+isogeny_map_to_E2_impl = undefined
+
+clear_cofactor_E2_impl:  ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
+clear_cofactor_E2_impl = undefined
+
+map_to_g2_impl: [2]t_Fp_2 -> ProjectivePoint t_Fp_2
+map_to_g2_impl uv = P where
+    Q0 = map_to_curve_E2_prime_impl (uv@0)
+    Q2 = map_to_curve_E2_prime_impl (uv@2)
+    R = point_dadd Fp_2 Q0 Q2 A' False // This is addition on the isogenous curve E'
+    S = isogeny_map_to_E2_impl R
+    P = clear_cofactor_E2_impl S
+
+hash_to_curve_opt_impl: {msg_len, DST_len}
+               (fin msg_len, fin DST_len
+               , DST_len <= 255
+               , Expandable msg_len DST_len
+               , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384
+               ) =>
+               ([msg_len][8], [DST_len][8]) -> ProjectivePoint t_Fp_2
+hash_to_curve_opt_impl (msg,dst) = map_to_g2_impl u where
+    u = hash_to_field`{count=2} msg dst

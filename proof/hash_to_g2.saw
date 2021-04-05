@@ -32,11 +32,11 @@ include "sgn0.saw";
 
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/HashToCurveE2.cry" (Z A' B' map_to_curve_simple_swu hash_to_field Curve_E');
+import "../spec/HashToCurveE2.cry" (Z A' B' map_to_curve_simple_swu hash_to_field Curve_E' clear_cofactor);
 import "../spec/BLSFieldExtras.cry";
 import "../spec/implementation/CurveOperation.cry";
-//Aux <- cryptol_load "../spec/HashToCurveE2Aux.cry";
-//import "../spec/implementation/HashToG2.cry";
+Aux <- cryptol_load "../spec/HashToCurveE2Aux.cry";
+import "../spec/implementation/HashToG2.cry";
 
 // Specs
 
@@ -48,6 +48,10 @@ let blst_hash_to_g2_impl_spec msg_len DST_len aug_len = do {
   llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
   llvm_points_to p_ptr (llvm_term {{ (POINTonE2_rep (hash_to_curve_opt_impl (aug#msg, DST))) }});
 };
+
+// Assumptions
+
+clear_cofactor_with_psi_thm <- custom_prove_cryptol {{ \p -> Aux::clear_cofactor_E2_with_psi p == clear_cofactor p }};
 
 
 // TODO: is the ZxA' rewrite applying?
@@ -113,7 +117,6 @@ _ <- crucible_llvm_compositional_extract m
   do {
     unfolding ["select"];
     simplify (addsimps [fix_vec_12_2, fix_vec_12] fp2_simpset);
-    print_goal_nicely;
     w4_unint_z3 ["Fp_2","Fp"];
   };
 
