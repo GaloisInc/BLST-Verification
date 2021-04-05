@@ -586,8 +586,6 @@ let vec_select_alias_1_2_spec bytes = do {
 // Proofs
 ///////////////////////////////////////////////////////////////////////////////
 
-let do_prove_x86 = false;
-
 // add_mod_384
 add_mod_384_ov <- verify_x86 "add_mod_384" add_mod_384_spec w4;
 add_mod_384_alias_ret_a_ov <- verify_x86 "add_mod_384" add_mod_384_alias_ret_a_spec w4;
@@ -658,11 +656,12 @@ mul_by_1_plus_i_mod_384x_alias_ret_a_ov <- verify_x86 "mul_by_1_plus_i_mod_384x"
 // sgn0_pty_mod_384
 sgn0_pty_mod_384_ov <- verify_x86 "sgn0_pty_mod_384" sgn0_pty_mod_384_spec w4;
 
-// doesn't match no_asm implementation - investigate
+// doesn't match no_asm implementation - this is fixed in blst commit 668f17b664e285b02b8158ecb37adc36a8d553ff
 // sgn0_pty_mod_384x
+let do_prove_x86 = false;
 sgn0_pty_mod_384x_ov <- verify_x86 "sgn0_pty_mod_384x" sgn0_pty_mod_384x_spec w4;
-
 let do_prove_x86 = true;
+
 // vec_select
 let mk_vec_select_ov bytes = verify_x86 (str_concat "vec_select_" (show bytes)) (vec_select_spec bytes) w4;
 let mk_vec_select_alias_1_2_ov bytes = verify_x86 (str_concat "vec_select_" (show bytes)) (vec_select_alias_1_2_spec bytes) w4;
@@ -674,7 +673,6 @@ vec_select_ovs <- do {
   ovs_1_3  <- (for vec_select_sizes mk_vec_select_alias_1_3_ov);
   return (foldr concat [ovs, ovs_1_2] ovs_1_3);
 };
-exit 1;
 
 let add_mod_384_overrides = concat
   [ add_mod_384_ov
