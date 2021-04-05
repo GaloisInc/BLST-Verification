@@ -1,0 +1,102 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+///////////////////////////////////////////////////////////////////////////////
+// Specifications
+///////////////////////////////////////////////////////////////////////////////
+
+// mulq_mont_sparse_256
+let mulq_mont_sparse_256_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr, crucible_term n0];
+  new_mul_mont_sparse_256_ret <- crucible_fresh_var "new_mul_mont_sparse_256_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_mul_mont_sparse_256_ret);
+};
+
+let mulq_mont_sparse_256_alias_ret_a_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term n0];
+  new_mul_mont_sparse_256_alias_ret <- crucible_fresh_var "new_mul_mont_sparse_256_alias_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_mul_mont_sparse_256_alias_ret);
+};
+
+// sqrq_mont_sparse_256
+let sqrq_mont_sparse_256_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term n0];
+  new_sqr_mont_sparse_256_ret <- crucible_fresh_var "new_sqr_mont_sparse_256_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_sqr_mont_sparse_256_ret);
+};
+
+// fromq_mont_256
+let fromq_mont_256_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term n0];
+  new_from_mont_256_ret <- crucible_fresh_var "new_from_mont_256_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_from_mont_256_ret);
+};
+
+// redcq_mont_256
+let redcq_mont_256_spec = do {
+  ret_ptr <- crucible_alloc vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec512_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, crucible_term n0];
+  new_redc_mont_256_ret <- crucible_fresh_var "new_redc_mont_256_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_redc_mont_256_ret);
+};
+
+let redcq_mont_256_alias_ret_a_spec = do {
+  (_, a_ptr) <- ptr_to_fresh "a" vec512_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [a_ptr, a_ptr, b_ptr, crucible_term n0];
+  new_redc_mont_256_alias_1_2_a <- crucible_fresh_var "new_redc_mont_256_alias_1_2_a" vec512_type;
+  crucible_points_to a_ptr (crucible_term new_redc_mont_256_alias_1_2_a);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Proofs
+///////////////////////////////////////////////////////////////////////////////
+
+// mulq_mont_sparse_256
+mulq_mont_sparse_256_ov <- verify_x86_noadx "mul_mont_sparse_256" mulq_mont_sparse_256_spec;
+mulq_mont_sparse_256_alias_ret_a_ov <- verify_x86_noadx "mul_mont_sparse_256" mulq_mont_sparse_256_alias_ret_a_spec;
+
+// sqrq_mont_sparse_256
+sqrq_mont_sparse_256_ov <- verify_x86_noadx "sqr_mont_sparse_256" sqrq_mont_sparse_256_spec;
+
+// fromq_mont_256
+fromq_mont_256_ov <- verify_x86_noadx "from_mont_256" fromq_mont_256_spec;
+
+// redcq_mont_256
+redcq_mont_256_ov <- verify_x86_noadx "redc_mont_256" redcq_mont_256_spec;
+redcq_mont_256_alias_ret_a_ov <- verify_x86_noadx "redc_mont_256" redcq_mont_256_alias_ret_a_spec;
+
+let mulq_mont_256_overrides =
+  [ mulq_mont_sparse_256_ov
+  , mulq_mont_sparse_256_alias_ret_a_ov
+
+  , sqrq_mont_sparse_256_ov
+
+  , fromq_mont_256_ov
+
+  , redcq_mont_256_ov
+  , redcq_mont_256_alias_ret_a_ov
+  ];

@@ -1,0 +1,351 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+// Overrides needed for the elliptic curve arithmetic operations
+// These are the basic field operations for Fp or Fp2.
+// Here, we assume the specs, but eventually we will prove them
+//
+
+/* for X in {fp, fp2}:
+  add_X, sub_X, sqr_X, mul_X, mul_by_3_X, mul_by_8_X
+*/
+
+// There are three approaches to writing the postconditions, either
+// abs method: - (abs result) = fn (abs arg)
+// concrete method: - result = rep (fn (abs arg)) --- OK, if we have a rewrite (abs (rep x)) == x
+// direct method: - result = fn' arg --- OK, but need implementation_specific definition for fn',
+//                        and then a proof abs (fn' arg) == fn (abs arg).
+
+let use_abs_method = false;
+let use_concrete_method = true;
+
+import "../../../spec/Parameters.cry";
+import "../../../spec/PrimeField.cry";
+import "../../../spec/implementation/Types.cry";
+import "../../../spec/implementation/Field.cry";
+import "../../../spec/implementation/CryptolHelpers.cry";
+
+// generic unary operation specification, pass-by-reference, no aliasing
+let unop_spec name llvm_type inv rep abs op = do {
+  ret_ptr <- crucible_alloc llvm_type;
+  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
+  crucible_precond {{ inv x }};
+  crucible_execute_func [ret_ptr, x_ptr];
+  if use_abs_method
+  then do {
+    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
+    crucible_points_to ret_ptr (crucible_term ret);
+    crucible_postcond {{inv ret }};
+    crucible_postcond {{ abs ret == op (abs x) }};
+    }
+  else if use_concrete_method
+  then crucible_points_to ret_ptr (crucible_term {{ rep (op (abs x)) }})
+  else crucible_points_to ret_ptr (crucible_term {{ op x }});
+};
+
+// generic unary operation specification, pass-by-reference, aliasing
+let unop_alias_1_2_spec name llvm_type inv rep abs op = do {
+  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
+  crucible_precond {{ inv x }};
+  crucible_execute_func [x_ptr, x_ptr];
+  if use_abs_method
+  then do {
+    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
+    crucible_points_to x_ptr (crucible_term ret);
+    crucible_postcond {{inv ret }};
+    crucible_postcond {{ abs ret == op (abs x) }};
+    }
+  else if use_concrete_method
+  then crucible_points_to x_ptr (crucible_term {{ rep (op (abs x)) }})
+  else crucible_points_to x_ptr (crucible_term {{ op x }});
+};
+
+// generic binary operation specification, pass-by-reference, no aliasing
+let binop_spec name llvm_type inv rep abs op = do {
+  ret_ptr <- crucible_alloc llvm_type;
+  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
+  (y, y_ptr) <- ptr_to_fresh_readonly "y" llvm_type;
+  crucible_precond {{ inv x /\ inv y }};
+  crucible_execute_func [ret_ptr, x_ptr, y_ptr];
+  if use_abs_method
+  then do {
+    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
+    crucible_points_to ret_ptr (crucible_term ret);
+    crucible_postcond {{inv ret }};
+    crucible_postcond {{ abs ret == op (abs x, abs y) }};
+    }
+  else if use_concrete_method
+  then crucible_points_to ret_ptr (crucible_term {{ rep (op (abs x, abs y)) }})
+  else crucible_points_to ret_ptr (crucible_term {{ op x y }});
+};
+
+// generic binary operation specification, pass-by-reference, aliasing return with first arg
+let binop_alias_1_2_spec name llvm_type inv rep abs op = do {
+  (x, x_ptr) <- ptr_to_fresh "x" llvm_type;
+  (y, y_ptr) <- ptr_to_fresh_readonly "y" llvm_type;
+  crucible_precond {{ inv x /\ inv y }};
+  crucible_execute_func [x_ptr, x_ptr, y_ptr];
+  if use_abs_method
+  then do {
+    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
+    crucible_points_to x_ptr (crucible_term ret);
+    crucible_postcond {{inv ret }};
+    crucible_postcond {{ abs ret == op (abs x, abs y) }};
+    }
+  else if use_concrete_method
+  then crucible_points_to x_ptr (crucible_term {{ rep (op (abs x, abs y)) }})
+  else crucible_points_to x_ptr (crucible_term {{ op x y }});
+};
+
+// generic binary operation specification, pass-by-reference, aliasing return with second arg
+// (concrete method only)
+let binop_alias_1_3_spec name llvm_type inv rep abs op = do {
+  (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
+  (y, y_ptr) <- ptr_to_fresh "y" llvm_type;
+  crucible_precond {{ inv x /\ inv y }};
+  crucible_execute_func [y_ptr, x_ptr, y_ptr];
+  crucible_points_to y_ptr (crucible_term {{ rep (op (abs x, abs y)) }});
+};
+
+let binop_alias_1_2_3_spec name llvm_type inv rep abs op = do {
+  (x, x_ptr) <- ptr_to_fresh "x" llvm_type;
+  crucible_precond {{ inv x }};
+  crucible_execute_func [x_ptr, x_ptr, x_ptr];
+  crucible_points_to x_ptr (crucible_term {{ rep (op (abs x, abs x)) }});
+};
+
+////////////////////////////////////////////////////////////////
+//
+// Fp operations
+//
+
+// .. theorems (useful rewrites)
+
+// abs and rep theorems, good rewrites, will hold in the `prime_field` model but not the others
+fp_rep_thms <- for
+  [ {{ \x -> fp_invariant (fp_rep x) == True }}
+  , {{ \x -> fp_abs (fp_rep x) == x }}
+  , {{ \x -> fp_rep (fp_abs x) == if fp_invariant x then x else fp_normalize x}}
+  ] admit_cryptol;
+
+// a conditional rewrite for normalization.  This uses "apply" to avoid having
+// "fp_normalize x" in the right-hand side (we have "(apply fp_normalize) x" instead),
+// so that there is no infinite loop when the rewrite is applied.
+
+// This rule is not included in the main fp_simplification rules as it is seldom needed.
+fp_normalize_thm <- admit_cryptol
+  {{ \x -> fp_normalize x == if fp_invariant x then x else apply fp_normalize x }};
+
+// we sometimes need to undo SAW's rip-and-restitching of vectors.  It is a bit tricky 
+let at0 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 0";
+let at1 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 1";
+let at2 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 2";
+let at3 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 3";
+let at4 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 4";
+let at5 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 5";
+
+unrip_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[6][64]) -> [at0 x, at1 x, at2 x, at3 x, at4 x, at5 x] == x }}) [];
+
+// ... and sometimes the rip-and-restitch has if-then-else pushed inside, so here we hoist out
+seq_ite_thm <-
+  prove_cryptol
+  (rewrite (cryptol_ss ()) {{ \x (y0:[64]) y1 y2 y3 y4 y5 z0 z1 z2 z3 z4 z5 ->
+                                  [ if x then y0 else z0
+                                  , if x then y1 else z1
+                                  , if x then y2 else z2
+                                  , if x then y3 else z3
+                                  , if x then y4 else z4
+                                  , if x then y5 else z5]
+                            == if x then [y0,y1,y2,y3,y4,y5] else [z0,z1,z2,z3,z4,z5] }})
+   [];
+
+
+// ... we also sometimes want to hoist `if`-terms out of function arguments, so that
+//     rewrite rules can apply (e.g, if `f y` might match a rewrite)
+
+let hoist f unints =
+  prove_cryptol {{\x y z -> f (if x then y else z) == if x then f y else f z}} unints;
+
+fp_abs_ite_thm <- hoist {{fp_abs}} ["fp_abs"] ;
+fp_invariant_ite_thm <- hoist {{fp_invariant}} [] ; 
+fp_rep_ite_thm <- hoist {{fp_rep}} ["fp_rep"] ;
+
+fp_abstract_invariant_thm <- prove_cryptol {{ \x -> Fp.is_val (fp_abs x) == True }} [];
+
+let fp_simpset = addsimps (concat fp_rep_thms
+                           [ fp_abs_ite_thm, fp_invariant_ite_thm, fp_rep_ite_thm
+                           , fp_abstract_invariant_thm
+                           , unrip_thm, seq_ite_thm
+                           ])  (cryptol_ss ());
+
+let apply_fp_rewrites = simplify fp_simpset;
+
+
+// ... we also need some algebraic rewrites
+
+/* This would be the way to go if we need to refer to individual rules:
+mul_assoc_thm <- prove_cryptol
+  {{ \ x y z -> Fp.mul (Fp.mul (x, y), z) == Fp.mul (x, Fp.mul (y, z)) }}
+  [];
+add_assoc_thm <- prove_cryptol {{ \ x y z -> Fp.add (Fp.add (x, y), z) == Fp.add (x, Fp.add (y, z)) }} [];
+sub_elim_thm <- prove_cryptol {{ \ x y -> Fp.sub (x, y) == Fp.add (x, Fp.neg y) }} [];
+neg_neg_thm <- prove_cryptol {{ \ x -> Fp.neg (Fp.neg x) == Fp.normalize x }} [];
+neg_add_thm <- prove_cryptol {{ \ x y -> Fp.neg (Fp.add (x, y)) == Fp.add (Fp.neg x, Fp.neg y) }} [];
+distr_left_thm <- prove_cryptol
+  {{ \ x y z -> Fp.mul (Fp.add (x, y), z) == Fp.add (Fp.mul (x,z), Fp.mul(y,z)) }} [];
+distr_right_thm <- prove_cryptol
+  {{ \ x y z -> Fp.mul (z, Fp.add (x, y)) == Fp.add (Fp.mul (z,x), Fp.mul(z,y)) }} [];
+mul_0_left_thm <- prove_cryptol {{ \x -> Fp.mul (x, Fp.field_zero) == Fp.field_zero }} [];
+mul_0_right_thm <- prove_cryptol {{ \x -> Fp.mul (Fp.field_zero, x) == Fp.field_zero }} [];
+mul_1_left_thm <- prove_cryptol {{ \x -> Fp.mul (x, Fp.field_unit) == Fp.normalize x }} [];
+mul_1_right_thm <- prove_cryptol {{ \x -> Fp.mul (Fp.field_unit, x) == Fp.normalize x }} [];
+add_0_left_thm <- prove_cryptol {{ \x -> Fp.add (x, Fp.field_zero) == Fp.normalize x }} [];
+add_0_right_thm <- prove_cryptol {{ \x -> Fp.add (Fp.field_zero, x) == Fp.normalize x }} [];
+neg_0_thm <- prove_cryptol {{ Fp.neg Fp.field_zero == Fp.field_zero }} [];
+
+let fp_alg_thms = [ mul_assoc_thm, add_assoc_thm, sub_elim_thm, neg_neg_thm, neg_add_thm
+                  , mul_0_left_thm, mul_0_right_thm, mul_1_left_thm, mul_1_right_thm
+                  , add_0_left_thm, add_0_right_thm
+                  ]; // , distr_left_thm, distr_right_thm];
+
+... but it is more concise to defined them as follows:
+*/
+
+fp_alg_thms <- for
+  [ {{ \ x y z -> Fp.mul (Fp.mul (x, y), z) == Fp.mul (x, Fp.mul (y, z)) }} // mul associates
+  , {{ \x -> Fp.mul (x, Fp.field_zero) == Fp.field_zero }} // x*0 = 0
+  , {{ \x -> Fp.mul (Fp.field_zero, x) == Fp.field_zero }} // 0*x = 0
+  , {{ \x -> Fp.mul (x, Fp.field_unit) == Fp.normalize x }} // x*1 = x ish
+  // , {{ \x -> Fp.mul (x, Fp.field_unit) == x }} // x*1 = x TODO: OK in the `Z p` model
+  , {{ \x -> Fp.mul (Fp.field_unit, x) == Fp.normalize x }} // 1*x = x ish
+  // , {{ \x -> Fp.mul (Fp.field_unit, x) == x }} // 1*x = x TODO
+
+  , {{ \x -> Fp.sq x == Fp.mul (x,x) }} // eliminate squaring.  Not always a good idea
+
+  , {{ \ x y z -> Fp.add (Fp.add (x, y), z) == Fp.add (x, Fp.add (y, z)) }} // add associates
+  , {{ \x -> Fp.add (x, Fp.field_zero) == Fp.normalize x }} // x+0 = x ish
+  , {{ \x -> Fp.add (Fp.field_zero, x) == Fp.normalize x }}//  0+x = x ish
+
+  , {{ \ x y -> Fp.sub (x, y) == Fp.add (x, Fp.neg y) }} // eliminate sub in favour of neg
+
+  , {{ \ x -> Fp.neg (Fp.neg x) == Fp.normalize x }} // double negative
+  , {{ \ x y -> Fp.neg (Fp.add (x, y)) == Fp.add (Fp.neg x, Fp.neg y) }} // push neg inside a sum
+  , {{ Fp.neg Fp.field_zero == Fp.field_zero }} // -0 = 0
+  ] (\ t -> prove_cryptol t []);
+
+
+////////////////////////////////////////////////////////////////
+//
+// Overrides for the fp_operations
+
+// ... binary ops
+
+let fp_binop_ovs name op tactic = do {
+  let plain_spec = binop_spec name vec384_type {{fp_invariant}} {{fp_rep}} {{fp_abs}} op;
+  plain_ov <- verify_x86 name plain_spec tactic;
+
+  let alias_1_2_spec = binop_alias_1_2_spec name vec384_type {{fp_invariant}} {{fp_rep}} {{fp_abs}} op;
+  alias_1_2_ov <- verify_x86 name alias_1_2_spec tactic;
+
+  let alias_1_3_spec = binop_alias_1_3_spec name vec384_type {{fp_invariant}} {{fp_rep}} {{fp_abs}} op;
+  alias_1_3_ov <- verify_x86 name alias_1_3_spec tactic;
+
+  let alias_1_2_3_spec = binop_alias_1_2_3_spec name vec384_type {{fp_invariant}} {{fp_rep}} {{fp_abs}} op;
+  alias_1_2_3_ov <- verify_x86 name alias_1_2_3_spec tactic;
+
+  return [plain_ov, alias_1_2_ov, alias_1_3_ov, alias_1_2_3_ov];
+  };
+
+let {{
+  left x y = vec384_rep (from_Fp ((to_Fp (vec384_abs x) + to_Fp (vec384_abs y)) % `p))
+  right x y = vec384_rep ((vec384_abs x + vec384_abs y) % `p)
+  
+  cex_x = [11770010685683113399, 7979110814911175838, 14617672723781192160, 9937711080555337716, 5423887978590399043, 13867983430199764171] : [6][64]
+  cex_y = [10831632833377263549, 3306133538376981365, 15455975002373102588, 9359590381538790925, 7719442772441986087, 10250428162971359784] : [6][64]
+}};
+  
+print {{ left cex_x cex_y }};
+print {{ right cex_x cex_y }};
+
+add_int_add_bv <- test_cryptol {{ \x y ->
+  to_Fp (vec384_abs x) < `p ==>
+  to_Fp (vec384_abs y) < `p ==>
+  vec384_rep (from_Fp ((to_Fp (vec384_abs x) + to_Fp (vec384_abs y)) % `p)) == vec384_rep ((vec384_abs x + vec384_abs y) % `p)
+}};
+
+let fp_int_thms = [add_int_add_bv];
+
+let fp_int_ss = addsimps fp_int_thms empty_ss;
+
+add_fp_ovs <- fp_binop_ovs "add_fp" {{Fp.add}} do {
+  goal_eval_unint ["fp_abs", "fp_rep"];
+  apply_fp_rewrites;
+  simplify fp_int_ss;
+  print_goal;
+  w4_unint_z3 [];
+};
+let do_prove_x86 = false;
+sub_fp_ovs <- fp_binop_ovs "sub_fp" {{Fp.sub}} w4;
+mul_fp_ovs <- fp_binop_ovs "mul_fp" {{Fp.mul}} w4;
+let do_prove_x86 = true;
+
+// ... unary ops
+
+let sqr_fp_spec =
+  unop_spec "sqr_fp" vec384_type {{ fp_invariant }} {{fp_rep}} {{fp_abs}} {{Fp.sq}};
+
+sqr_fp_ov <- admit "sqr_fp" sqr_fp_spec;
+
+let sqr_fp_alias_1_2_spec =
+  unop_alias_1_2_spec "sqr_fp" vec384_type {{ fp_invariant }} {{fp_rep}} {{fp_abs}} {{Fp.sq}};
+
+sqr_fp_alias_1_2_ov <- admit "sqr_fp" sqr_fp_alias_1_2_spec;
+
+let mul_by_3_fp_alias_1_2_spec =
+  unop_alias_1_2_spec "mul_by_3_fp" vec384_type {{ fp_invariant }} {{fp_rep}} {{fp_abs}} {{ mul_by_3 Fp }};
+
+mul_by_3_fp_alias_1_2_ov <- admit "mul_by_3_fp" mul_by_3_fp_alias_1_2_spec;
+
+let mul_by_8_fp_alias_1_2_spec =
+  unop_alias_1_2_spec "mul_by_8_fp" vec384_type {{ fp_invariant }} {{fp_rep}} {{fp_abs}} {{ mul_by_8 Fp }};
+
+mul_by_8_fp_alias_1_2_ov <- admit "mul_by_8_fp" mul_by_8_fp_alias_1_2_spec;
+
+// ... other ops
+
+// TODO: include the other possible forms of this spec (abstract_method etc.)
+let cneg_fp_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
+  cbit <- crucible_fresh_var "cbit" limb_type;
+  crucible_precond {{ fp_invariant a }};
+  crucible_execute_func [ret_ptr, a_ptr, crucible_term cbit];
+  crucible_points_to ret_ptr (crucible_term {{ if cbit != 0 then fp_rep (Fp.neg (fp_abs a)) else a }});
+};
+
+cneg_fp_ov <- admit "cneg_fp" cneg_fp_spec;
+
+let cneg_fp_alias_1_2_spec = do {
+  (a, a_ptr) <- ptr_to_fresh "a" vec384_type;
+  cbit <- crucible_fresh_var "cbit" limb_type;
+  crucible_precond {{ fp_invariant a }};
+  crucible_execute_func [a_ptr, a_ptr, crucible_term cbit];
+  crucible_points_to a_ptr (crucible_term {{ if cbit != 0 then fp_rep (Fp.neg (fp_abs a)) else a }});
+};
+
+cneg_fp_alias_1_2_ov <- admit "cneg_fp" cneg_fp_alias_1_2_spec;
+
+// ... variables useful for proof scripts:
+
+let fp_overrides = foldr concat [add_fp_ovs, sub_fp_ovs, mul_fp_ovs]
+                     [sqr_fp_ov, sqr_fp_alias_1_2_ov
+                     , mul_by_3_fp_alias_1_2_ov, mul_by_8_fp_alias_1_2_ov
+                     , cneg_fp_ov, cneg_fp_alias_1_2_ov];
+
+let fp_unints = ["fp_abs", "fp_invariant", "fp_rep", "fp_normalize", "Fp"
+                // these remaining names only come up in proof debugging:
+                , "mod_add", "mod_sub", "mod_neg", "mod_mul", "mod_half", "mod_div"
+                , "mod_add_Z", "mod_sub_Z", "mod_neg_Z", "mod_mul_Z", "mod_half_Z", "mod_div_Z"
+                ];
