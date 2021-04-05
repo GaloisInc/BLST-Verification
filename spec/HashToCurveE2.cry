@@ -104,7 +104,7 @@ _iso_map (x', y') = (x, y) where
 to_Fp2: ([384], [384]) -> P::t_Fp_2
 to_Fp2 (a,b) = [to_Fp b, to_Fp a] // a+b*I
 
-k1s = map to_Fp2 
+k1s = map to_Fp2
    [ (0x05c759507e8e333ebb5b7a9a47d7ed8532c52d39fd3a042a88b58423c50ae15d5c2638e343d9c71c6238aaaaaaaa97d6,
       0x05c759507e8e333ebb5b7a9a47d7ed8532c52d39fd3a042a88b58423c50ae15d5c2638e343d9c71c6238aaaaaaaa97d6)
 
