@@ -6,9 +6,8 @@
 module HashToCurveE1Aux where
 
 import Parameters
-import FieldExtras
 import BLSFieldExtras (fp_exp, sqrt_fp)
-import ShortWeierstrassCurve
+/* import ShortWeierstrassCurve */
 
 h_eff = 0xd201000000010001 // For clearing the cofactor
 
