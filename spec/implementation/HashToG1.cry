@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import Parameters (Fp, t_Fp, to_Fp, E)
-import ShortWeierstrassCurve (ProjectivePoint, AffinePoint)
-import BLSFieldExtras (sqrt_fp, fp_exp)
+import Parameters (Fp, t_Fp)
+import ShortWeierstrassCurve (ProjectivePoint)
+import BLSFieldExtras (sqrt_fp)
 import ExpandMessage (Expandable)
 import implementation::CurveOperation (point_dadd, point_add, point_double)
 import HashToCurveE1
