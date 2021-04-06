@@ -137,9 +137,20 @@ dadd_thm <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ p1 p2 -> affinify Curve_
 point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Curve_E' (point_dadd Fp p q A' False) == if is_point_projective Curve_E' p /\ is_point_projective Curve_E' q then True else apply is_point_projective Curve_E' (point_dadd Fp p q A' False) }};
 
 // adding a point to its double can be done with POINTonE1_add (cheaper than dadd) because the double of a point is never equal to the point unless the point is point_O:
-// TODO: derive from the following:
-// double_neq_lemma <- admit_cryptol {{ \p -> same_point_affine E (add E p p) p == is_point_O Curve_E' p }};
-add_double_lemma <- admit_cryptol {{ \p -> affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) }};
+double_neq_lemma <- simp_then_admit {{ \p -> ((add E p p) == p) == is_point_O E p }};
+add_zero_lemma <-  simp_then_admit {{ \p -> add E (add E p p) p == if is_point_O E p then (point_O E) else apply add E (add E p p) p }};
+add_double_lemma <- really_custom_prove_cryptol {{ \p -> affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) }}
+  do {
+    simplify (addsimps e1_curve_op_thms empty_ss);
+    unfolding ["add'"];
+    simplify (addsimps [add_zero_lemma, double_neq_lemma, is_point_O_E_thm] empty_ss);
+    simplify remove_higher_order_function_simpset;
+    simplify (addsimp add_zero_lemma empty_ss);
+    print_goal_consts;
+    print_readably;
+    w4_unint_z3 ["add_E","is_point_O_E","E","affinify_E"];
+  };
+
 //_ <- really_custom_prove_cryptol {{ \(x:[1]) (y:[1]) (z:[1]) -> (affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
 
 // Assumptions we should probably prove:
