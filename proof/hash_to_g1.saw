@@ -147,7 +147,6 @@ dadd_thm <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ p1 p2 -> affinify Curve_
 point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Curve_E' (point_dadd Fp p q A' False) == if is_point_projective Curve_E' p /\ is_point_projective Curve_E' q then True else apply is_point_projective Curve_E' (point_dadd Fp p q A' False) }};
 
 // adding a point to its double can be done with POINTonE1_add (cheaper than dadd) because the double of a point is never equal to the point unless the point is point_O:
-// TODO: is this rule okay?
 add_double_lemma <- admit_cryptol {{ \p -> affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) }};
 //_ <- really_custom_prove_cryptol {{ \(x:[1]) (y:[1]) (z:[1]) -> (affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
 
