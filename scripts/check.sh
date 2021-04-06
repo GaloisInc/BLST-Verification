@@ -32,4 +32,6 @@ cryptol << EOF
 :check
 :l tests/G2SubGroupCheckTests.cry
 :check
+:l tests/ClearCofactorTests.cry
+:check
 EOF

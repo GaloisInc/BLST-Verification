@@ -1,0 +1,26 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+module HashToCurveE2Aux where
+
+import G2SubGroupCheck
+import Parameters
+import ShortWeierstrassCurve
+
+// C1 as a positive value
+pos_c1 = toInteger 0xd201000000010000
+
+psi_psi_double : AffinePoint t_Fp_2 -> AffinePoint t_Fp_2
+psi_psi_double P = psi (psi (double E' P))
+
+// https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-10#appendix-G.4
+clear_cofactor_bls12381_g2 : AffinePoint t_Fp_2 -> AffinePoint t_Fp_2
+clear_cofactor_bls12381_g2 P = sub E' t3' P where
+  t1  = neg E' (scalar_mult E' pos_c1 P)
+  t2  = psi P
+  t3  = sub E' (psi_psi_double P) t2
+  t2' = neg E' (scalar_mult E' pos_c1 (add E' t1 t2))
+  t3' = sub E' (add E' t3 t2') t1
+

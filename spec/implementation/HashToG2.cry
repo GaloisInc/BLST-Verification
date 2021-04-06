@@ -1,0 +1,45 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+module implementation::HashToG2 where
+
+import HashToCurveE2Aux
+import Parameters
+import ShortWeierstrassCurve
+
+import implementation::CurveOperation
+import implementation::Psi
+
+add_n_dbl : {n} (fin n, n >= 1) =>
+            ProjectivePoint t_Fp_2 ->
+            ProjectivePoint t_Fp_2 ->
+            ProjectivePoint t_Fp_2
+add_n_dbl out p = doublings ! 0 where
+  outp = point_dadd Fp_2 out p Fp_2.field_zero True
+  doublings = [outp] # [point_double Fp_2 d | d <- doublings | i <- [1 .. n]]
+
+times_minus_z : ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
+times_minus_z P = out6 where
+  out1 = point_double Fp_2 P
+  out2 = add_n_dbl`{2} out1 P
+  out3 = add_n_dbl`{3} out2 P
+  out4 = add_n_dbl`{9} out3 P
+  out5 = add_n_dbl`{32} out4 P
+  out6 = add_n_dbl`{16} out5 P
+
+psi_psi_double_impl: ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
+psi_psi_double_impl P = psi_imp (psi_imp (point_double Fp_2 P))
+
+clear_cofactor_E2_impl:  ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
+clear_cofactor_E2_impl P = out4 where
+  out1 = psi_psi_double_impl P
+  t0_1 = point_neg Fp_2 P
+  t1   = psi_imp t0_1
+  out2 = point_dadd Fp_2 out1 t0_1 Fp_2.field_zero True
+  out3 = point_dadd Fp_2 out2 t1 Fp_2.field_zero True
+  t0_2 = point_dadd Fp_2 (times_minus_z P) P Fp_2.field_zero True
+  t0_3 = point_dadd Fp_2 t0_2 t1 Fp_2.field_zero True
+  t1'  = times_minus_z t0_3
+  out4 = point_dadd Fp_2 out3 t1' Fp_2.field_zero True

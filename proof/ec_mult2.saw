@@ -33,9 +33,7 @@ let fp2_simpset_x = addsimps [seq_ite_thm, unrip_thm, seq_ite_2_thm, unrip_thm_2
 // ... so first we define scalar multiplication with an Integer exponent
 let {{
   e2_scalar_mult: Integer -> AffinePoint t_Fp_2 -> AffinePoint t_Fp_2
-  e2_scalar_mult k P = if k < 0 then e2_scalar_mult (-k) (neg E' P)
-                       else if k == 0 then point_O E'
-                       else add E' P (e2_scalar_mult (k-1) P)
+  e2_scalar_mult = scalar_mult E'
 
   e2_order: AffinePoint t_Fp_2 -> Integer
   e2_order P = undefined 

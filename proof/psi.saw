@@ -11,6 +11,7 @@ import "../spec/G2SubGroupCheck.cry";
 import "../spec/Pairing.cry" (alpha); // for "alpha"
 import "../spec/ShortWeierstrassCurve.cry"; // for ProjectivePoint, affinify
 import "../spec/implementation/CurveOperation.cry"; // for POINTonE2_invariant, _abs, etc.
+import "../spec/implementation/Psi.cry";
 
 fp_inv_fp2_rep_thms <- for [0,1]
   (\ i -> custom_prove_cryptol (rewrite (cryptol_ss()) {{ \ x -> fp_invariant ((fp2_rep x) @ (`i:[1])) == True }})
@@ -32,15 +33,13 @@ fp2_mult_constant_rev_thm <- prove_cryptol
 // fp2_frobenius_thm <- prove_cryptol {{ \ x y -> fp2_frobenius [x, y] == [Fp.neg x, y]}} [] ;
 fp2_frobenius_rev_thm <- prove_cryptol {{ \ x y -> [Fp.neg x, y] == fp2_frobenius [x, y]}} [] ;
 
-// We define two functions here: `qi_x_imp` coirresponds fairly closely to the code, and `qi_x_abs`
-// is a more abstract and compact description of the effect.  We will prove them equivalent.
+// We define `qi_x_imp` here, which corresponds fairly closely to the code.
+// We will prove it equivalent to `qi_x_abs`, which is a more abstract and
+// compact description of the effect defined in Psi.cry
 let {{
   // qi_x_imp' x = [Fp.neg (Fp.mul (x@0, psi_c1@0)), Fp.mul (x@1, psi_c1@0)]
   qi_x_imp' x = [Fp.neg (Fp.mul (fp2_at0 x, psi_c1@0)), Fp.mul (fp2_at1 x, psi_c1@0)]
   qi_x_imp x = qi_x_imp' (Fp_2.mul (x, alpha))
-
-  psi_x_factor = Fp_2.mul (alpha, [Fp.field_zero,psi_c1@0])
-  qi_x_abs x = fp2_frobenius (Fp_2.mul (x, psi_x_factor))
   }};
 
 qi_x_spec_equiv_thm <- custom_prove_cryptol
@@ -152,16 +151,13 @@ qi_x_iwsc_alias_ov <- custom_verify "qi_x_iwsc"
 //prove z3 {{ \a x y -> Fp_2.mul ([Fp.neg a, a], [x,y]) == [Fp.mul(a, Fp.sub(x,y)), Fp.mul (a, Fp.add (x,y))] }};
 //prove z3 {{ \a x y -> Fp_2.mul ([a, Fp.neg a], [x,y]) == [Fp.mul(a, Fp.sub(y,x)), Fp.neg (Fp.mul (a, Fp.add (x,y)))] }};
 
-// As for `qi_x_iwsc`, we give two definitions of the effect of the function
+// As for `qi_x_iwsc`, we define a version corresponding closely with the code.
 let {{
   qi_y_imp' x = [Fp.mul (out1, psi_c2@0), Fp.mul (out0, psi_c2@0)] where
       out0 = Fp.add (fp2_at1 x, fp2_at0 x)
       out1 = Fp.sub (fp2_at1 x, fp2_at0 x)
 
   qi_y_imp x = qi_y_imp' (Fp_2.mul (x, alpha))
-
-  psi_y_factor = Fp_2.mul (alpha, Fp_2.neg psi_c2)
-  qi_y_abs x = fp2_frobenius (Fp_2.mul (x, psi_y_factor))
   }};
 
 mul_neg_psi_c2_thm <- prove_cryptol
@@ -213,28 +209,6 @@ qi_y_iwsc_alias_ov <- custom_verify "qi_y_iwsc"
                  (addsimps fp_inv_fp2_rep_thms (addsimps fp_abs_fp2_rep_thms fp_simpset)));
         w4_unint_z3 fp_unints;
         };
-
-// psi
-
-let {{
-  psi_imp: ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
-  psi_imp P = projective_pair_to_jacobian_imp qpp where
-    pp = jacobian_to_projective_pair P
-    qpp = psi_projective_imp pp
-
-  psi_projective_imp (xn, xd, yn, yd) = (qxn, qxd, qyn, qyd) where
-    qxn = Fp_2.mul (qi_x_abs xn, psi_c1)
-    qxd = qi_x_abs xd
-    qyn = Fp_2.mul (qi_y_abs yn, psi_c2)
-    qyd = qi_y_abs yd
-
-  // This is a simple algebraic reanrrangement of `projective_pair_to_jacobian`
-  projective_pair_to_jacobian_imp: projective_pair_fp2 -> ProjectivePoint t_Fp_2
-  projective_pair_to_jacobian_imp (xn, xd, yn, yd) = (X', Y', Z') where
-    X' = Fp_2.mul (xn, Fp_2.mul (yd, Z'))
-    Y' = Fp_2.mul (Fp_2.sq Z', Fp_2.mul (xd, yn))
-    Z' = Fp_2.mul (xd, yd)
-  }};
 
 // Proved algebraically, outside SAW
 psi_equiv_thm <- admit_cryptol {{ \P -> psi (affinify E' P) == affinify E' (psi_imp P) }} ;
