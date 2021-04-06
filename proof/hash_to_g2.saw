@@ -49,11 +49,101 @@ let blst_hash_to_g2_impl_spec msg_len DST_len aug_len = do {
   llvm_points_to p_ptr (llvm_term {{ (POINTonE2_rep (hash_to_curve_opt_impl (aug#msg, DST))) }});
 };
 
+let map_to_isogenous_E2_impl_spec = do {
+  out_ptr <- llvm_alloc POINTonE2_type;
+  (u, u_ptr) <- ptr_to_fresh_readonly "u" vec384x_type;
+  llvm_precond {{ fp2_invariant u }};
+  llvm_execute_func [out_ptr, u_ptr];
+  llvm_points_to out_ptr (llvm_term {{ POINTonE2_rep (map_to_curve_E2_prime_impl (fp2_abs u)) }});
+};
+
+let isogeny_map_to_E2_impl_alias_spec = do {
+  (out, out_ptr) <- ptr_to_fresh "out" POINTonE2_type;
+  llvm_precond {{ POINTonE2_invariant out }};
+  llvm_execute_func [out_ptr, out_ptr];
+  llvm_points_to out_ptr (llvm_term {{ POINTonE2_rep (isogeny_map_to_E2_impl (POINTonE2_abs out)) }} );
+};
+
+let map_to_g1_nonnull_spec = do {
+  out_ptr <- llvm_alloc POINTonE2_type;
+  (u,u_ptr) <- ptr_to_fresh_readonly "u" vec384x_type;
+  (v,v_ptr) <- ptr_to_fresh_readonly "v" vec384x_type;
+  llvm_precond {{ fp2_invariant u }};
+  llvm_precond {{ fp2_invariant v }};
+  llvm_execute_func [out_ptr, u_ptr, v_ptr];
+  llvm_points_to out_ptr (llvm_term {{ POINTonE2_rep (map_to_g2_impl [fp2_abs u, fp2_abs v]) }});
+};
+
 // Assumptions
 
+// TODO: move somewhere else
+let simp_then_admit r = admit_cryptol (rewrite (cryptol_ss ()) r);
+
+// The optimized version of clear_cofactor given in the IETF spec is correct:
 clear_cofactor_with_psi_thm <- custom_prove_cryptol {{ \p -> Aux::clear_cofactor_E2_with_psi p == clear_cofactor p }};
 
-// 
+// The SWU map maps to the isogenous curve:
+swu_on_curve <- simp_then_admit {{ \u -> is_point_affine Curve_E' (map_to_curve_simple_swu u) == True }};
+
+// the addition of two points on the curve is on the curve:
+point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Curve_E' (point_dadd Fp_2 p q A' False) == if is_point_projective Curve_E' p /\ is_point_projective Curve_E' q then True else apply is_point_projective Curve_E' (point_dadd Fp_2 p q A' False) }};
+
+// If p is a projective point on the isogenous and `affinify p` is point_O, then p's Z coordinate is 0:
+on_curve_is_point_O_lemma <- simp_then_admit {{ \p -> is_point_O Curve_E' (affinify Curve_E' p) == if (is_point_projective Curve_E' p /\ ~is_zero Fp_2 p.2) then False else apply is_point_O Curve_E' (affinify Curve_E' p) }};
+
+// The implementation of map_to_curve never returns something of the form (0,0,_) or (_,_,0)
+swu_impl_xy_nz <- simp_then_admit {{ \u -> (~((x,y) == (Fp_2.field_zero,Fp_2.field_zero) \/ z == Fp_2.field_zero) where (x,y,z) = map_to_curve_E2_prime_impl u) == True }};
+
+let {{
+  affinify_nz (x, y, z) = (Fp_2.mul(lambda2, x), Fp_2.mul(lambda3, y)) where
+      lambda = Fp_2.div (Fp_2.field_unit, z)
+      lambda2 = Fp_2.sq lambda
+      lambda3 = Fp_2.mul(lambda, lambda2)
+}};
+
+// This holds because Fp_2.div(x,0) == 0
+affinify_lemma <- simp_then_admit {{ \p -> affinify E' p == affinify_nz p }};
+affinify_lemma' <- simp_then_admit {{ \p -> affinify Curve_E' p == affinify_nz p }};
+// affinify_lemma <- really_custom_prove_cryptol {{ \ (x1:[2]) (x2:[2]) (y1:[2]) (y2:[2]) (z1:[2]) (z2:[2]) -> (affinify E' p == affinify_nz p where p = ([toInteger x1,toInteger x2],[toInteger y1, toInteger y2],[toInteger z1, toInteger z2])) }} (quickcheck 64);
+// affinify_lemma <- really_custom_prove_cryptol {{ affinify E' p == affinify_nz p where p = (zero,zero,zero) }} (quickcheck 1);
+
+// Proofs
+
+// rewrite rule to get rid of a 12 limbs array that appears in map_to_isogenous_E2_term
+// TODO: why does this appear? There's no override using (llvm_array 12 ...)
+
+fix_vec_12 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{
+  \(x:t_Fp_2) y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 c -> (
+     [[z1, z2, z3, z4, z5, z6], [z7, z8, z9, z10, z11, z12]] == (if c then [[y1, y2, y3, y4, y5, y6], [y7, y8, y9, y10, y11, y12]] else (fp2_rep x)) where
+        [a,b] = fp2_rep x
+        [a1, a2, a3, a4, a5, a6] = a
+        [b1, b2, b3, b4, b5, b6] = b
+        z = (if c then [y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12] else [a1, a2, a3, a4, a5, a6, b1, b2, b3, b4, b5, b6])
+        [z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12] = z
+    )
+  }}) w4;
+
+fix_vec_12_2 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{
+  \(x:t_Fp_2) -> (
+     [[a1, a2, a3, a4, a5, a6], [b1, b2, b3, b4, b5, b6]] == fp2_rep x where
+        [a,b] = fp2_rep x
+        [a1, a2, a3, a4, a5, a6] = a
+        [b1, b2, b3, b4, b5, b6] = b
+    )
+  }}) w4;
+
+map_to_isogenous_E2_impl_ov <- really_custom_verify
+  "map_to_isogenous_E2"
+  (concat_all [vec_fp2_overrides, fp2_overrides, [recip_sqrt_fp2_9mod16_ov, sgn0x_pty_mont_384x_ov], sqrt_align_fp2_ovs])
+  map_to_isogenous_E2_impl_spec
+  (goal_num_ite 36
+    assume_unsat
+    (do {
+      unfolding ["select"];
+      simplify (addsimps [fix_vec_12_2, fix_vec_12] fp2_simpset);
+      simplify basic_ss; // NOTE: does not work without this...
+      w4_unint_z3 ["Fp_2","Fp"];
+    }));
 
 // TODO: is the ZxA' rewrite applying?
 constants_rewrites <- for [
@@ -86,29 +176,6 @@ let map_to_isogenous_E2_impl_extract_spec = do {
 
 // TODO: write high-level spec. The code does not seem to follow the optimized implementations given in the IETF spec. Instead it seems closer to the simplest, high-level spec in the IETF document.
 
-// rewrite rule to get rid of a 12 limbs array that appears in map_to_isogenous_E2_term
-// TODO: why does this appear? There's no override using (llvm_array 12 ...)
-
-fix_vec_12 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{
-  \(x:t_Fp_2) y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 c -> (
-     [[z1, z2, z3, z4, z5, z6], [z7, z8, z9, z10, z11, z12]] == (if c then [[y1, y2, y3, y4, y5, y6], [y7, y8, y9, y10, y11, y12]] else (fp2_rep x)) where
-        [a,b] = fp2_rep x
-        [a1, a2, a3, a4, a5, a6] = a
-        [b1, b2, b3, b4, b5, b6] = b
-        z = (if c then [y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12] else [a1, a2, a3, a4, a5, a6, b1, b2, b3, b4, b5, b6])
-        [z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12] = z
-    )
-  }}) w4;
-
-fix_vec_12_2 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{
-  \(x:t_Fp_2) -> (
-     [[a1, a2, a3, a4, a5, a6], [b1, b2, b3, b4, b5, b6]] == fp2_rep x where
-        [a,b] = fp2_rep x
-        [a1, a2, a3, a4, a5, a6] = a
-        [b1, b2, b3, b4, b5, b6] = b
-    )
-  }}) w4;
-
 _ <- crucible_llvm_compositional_extract m
   "map_to_isogenous_E2"
   "map_to_isogenous_E2_term"
@@ -118,6 +185,7 @@ _ <- crucible_llvm_compositional_extract m
   do {
     unfolding ["select"];
     simplify (addsimps [fix_vec_12_2, fix_vec_12] fp2_simpset);
+    simplify basic_ss; // NOTE: does not work without this...
     w4_unint_z3 ["Fp_2","Fp"];
   };
 
