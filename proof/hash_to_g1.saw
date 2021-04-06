@@ -385,7 +385,7 @@ do {
  //_ <- custom_prove_cryptol {{ \(x:[2]) (y:[2]) (z:[2])  -> (iso_map (affinify Curve_E' p) == if is_zero Fp p.2 then point_O E else apply iso_map (affinify Curve_E' p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
 
 // Second case: Z is not zero
-let {{
+let {{ // this is the "else" term in the definition of iso_map
   iso_map_nz (x', y') = (x, y) where
     x_powers = [Fp.field_unit] # [Fp.mul(x', xi) | xi <- x_powers]
     x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k1s | xi <- x_powers]
