@@ -53,6 +53,7 @@ let blst_hash_to_g2_impl_spec msg_len DST_len aug_len = do {
 
 clear_cofactor_with_psi_thm <- custom_prove_cryptol {{ \p -> Aux::clear_cofactor_E2_with_psi p == clear_cofactor p }};
 
+// 
 
 // TODO: is the ZxA' rewrite applying?
 constants_rewrites <- for [
@@ -72,7 +73,7 @@ constants_rewrites <- for [
             , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
           , [zero, zero, zero, zero, zero, zero] ] // a single zero would introduce Prelude.replicate, which would be annoying
           == Fp_2.field_unit }}
-  ] (\ eq -> really_custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
+  ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
 
 let map_to_isogenous_E2_impl_extract_spec = do {
   out_ptr <- llvm_alloc POINTonE2_type;
@@ -88,7 +89,7 @@ let map_to_isogenous_E2_impl_extract_spec = do {
 // rewrite rule to get rid of a 12 limbs array that appears in map_to_isogenous_E2_term
 // TODO: why does this appear? There's no override using (llvm_array 12 ...)
 
-fix_vec_12 <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{
+fix_vec_12 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{
   \(x:t_Fp_2) y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 c -> (
      [[z1, z2, z3, z4, z5, z6], [z7, z8, z9, z10, z11, z12]] == (if c then [[y1, y2, y3, y4, y5, y6], [y7, y8, y9, y10, y11, y12]] else (fp2_rep x)) where
         [a,b] = fp2_rep x
@@ -99,7 +100,7 @@ fix_vec_12 <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{
     )
   }}) w4;
 
-fix_vec_12_2 <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{
+fix_vec_12_2 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{
   \(x:t_Fp_2) -> (
      [[a1, a2, a3, a4, a5, a6], [b1, b2, b3, b4, b5, b6]] == fp2_rep x where
         [a,b] = fp2_rep x
@@ -123,7 +124,7 @@ _ <- crucible_llvm_compositional_extract m
 // rewrite fp2_exp to F_expt for tractable computation:
 fp2_exp_rewrite <- admit_cryptol {{ \x -> fp2_exp x ((`p^^2-9)/16) == F_expt`{n=758} Fp_2 x `((p^^2-9)/16) }};
 
-_ <- really_custom_prove_cryptol
+_ <- custom_prove_cryptol
   {{ \x -> ((affinify E' (POINTonE2_abs (map_to_isogenous_E2_term y))) == (map_to_curve_simple_swu (fp2_abs y)) where y = fp2_normalize x) }}
 do {
   unfolding ["map_to_isogenous_E2_term","POINTonE2_abs","select"];
