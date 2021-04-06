@@ -196,3 +196,10 @@ mult C d S = if d == 0 then point_O C
              | ki <- k
              | hi <- h
              | Ri <- Rs ]
+
+// Scalar multiplication with an Integer exponent
+scalar_mult: {t} EllipticCurve t -> Integer -> AffinePoint t -> AffinePoint t
+scalar_mult C k P = if k < 0 then scalar_mult C (-k) (neg C P)
+                     else if k == 0 then point_O C
+                     else add C P (scalar_mult C (k-1) P)
+

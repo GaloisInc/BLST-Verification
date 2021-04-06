@@ -31,10 +31,13 @@ include "curve_operations_e2.saw";
 include "ec_mult2.saw";
 include "psi.saw";
 include "map_to_g2.saw";
+include "compress-p2.saw";
 include "deserialize-p2.saw";
+include "clear_cofactor_p2.saw";
+include "hash_to_g2.saw";
+
 include "api-extra-for-release-2.saw";
 include "integer-and-bv.saw";
 include "384x384_ops.saw";
 include "fp12.saw";
 
-include "hash_to_g2.saw";
