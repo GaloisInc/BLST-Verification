@@ -23,16 +23,6 @@ let blst_hash_to_g1_impl_spec msg_len DST_len aug_len = do {
   llvm_points_to p_ptr (llvm_term {{ (POINTonE1_rep (hash_to_curve_opt_impl (aug#msg, DST))) }});
 };
 
-let map_to_g1_impl_nonnull_spec = do {
-  out_ptr <- llvm_alloc POINTonE1_type;
-  (u,u_ptr) <- ptr_to_fresh_readonly "u" vec384_type;
-  (v,v_ptr) <- ptr_to_fresh_readonly "v" vec384_type;
-  llvm_precond {{ fp_invariant u }};
-  llvm_precond {{ fp_invariant v }};
-  llvm_execute_func [out_ptr, u_ptr, v_ptr];
-  llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (map_to_g1_impl [fp_abs u, fp_abs v]) }});
-};
-
 let isogeny_map_to_E1_impl_alias_spec = do {
   (out, out_ptr) <- ptr_to_fresh "out" POINTonE1_type;
   llvm_precond {{ POINTonE1_invariant out }};
