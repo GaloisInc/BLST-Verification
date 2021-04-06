@@ -32,7 +32,7 @@ include "sgn0.saw";
 
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/HashToCurveE2.cry" (Z A' B' map_to_curve_simple_swu hash_to_field Curve_E' clear_cofactor);
+import "../spec/HashToCurveE2.cry" (Z A' B' map_to_curve_simple_swu hash_to_field Curve_E' clear_cofactor k1s k2s k3s k4s);
 import "../spec/BLSFieldExtras.cry";
 import "../spec/implementation/CurveOperation.cry";
 Aux <- cryptol_load "../spec/HashToCurveE2Aux.cry";
@@ -109,6 +109,41 @@ affinify_lemma' <- simp_then_admit {{ \p -> affinify Curve_E' p == affinify_nz p
 
 // Proofs
 
+// isogeny_map_to_E2
+
+let {{ // this is the "else" term in the definition of iso_map
+  iso_map' (x', y') = (x, y) where
+      x_powers = [Fp_2.field_unit] # [Fp_2.mul(x', xi) | xi <- x_powers]
+      x_num = F_sum Fp_2 [Fp_2.mul(ki, xi) | ki <- k1s | xi <- x_powers]
+      x_den = Fp_2.add (x_powers@2, F_sum Fp_2 [Fp_2.mul(ki, xi) | ki <- k2s | xi <- x_powers])
+      y_num = F_sum Fp_2 [Fp_2.mul(ki, xi) | ki <- k3s | xi <- x_powers]
+      y_den = Fp_2.add (x_powers@3, F_sum Fp_2 [Fp_2.mul(ki, xi) | ki <- k4s | xi <- x_powers])
+      x = Fp_2.div (x_num, x_den)
+      y = Fp_2.mul (y', Fp_2.div(y_num, y_den))
+}};
+
+let isogeny_map_to_E2_impl_alias_extract_spec = do {
+  (out, out_ptr) <- ptr_to_fresh "out" POINTonE2_type;
+  llvm_precond {{ POINTonE2_invariant out }};
+  llvm_execute_func [out_ptr, out_ptr];
+  new_out <- llvm_fresh_var "new_out" POINTonE2_type;
+  llvm_points_to out_ptr (llvm_term new_out);
+};
+
+_ <- crucible_llvm_compositional_extract m
+  "isogeny_map_to_E2"
+  "isogeny_map_to_E2_term"
+  fp2_overrides
+  true
+  isogeny_map_to_E2_impl_alias_extract_spec
+  do {
+    simplify fp2_simpset;
+    w4_unint_z3 ["fp2_rep"];
+  };
+
+iso_map_main_lemma <- really_custom_prove_cryptol {{ \(x1:[2]) (x2:[2]) (y1:[2]) (y2:[2]) (z1:[2]) (z2:[2]) -> (iso_map' (affinify_nz (POINTonE2_abs p)) == if ~Fp_2.is_equal((POINTonE2_abs p).2, Fp_2.field_zero) then affinify_nz (POINTonE2_abs (isogeny_map_to_E2_term p)) else apply iso_map' (affinify_nz (POINTonE2_abs p)) where p = POINTonE2_rep ([toInteger x1,toInteger x2],[toInteger y1, toInteger y2],[toInteger z1, toInteger z2])) }} (quickcheck 64);
+// iso_map_main_lemma <- simp_then_admit {{ \p -> iso_map' (affinify_nz p) == if ~Fp.is_equal(p.2, Fp.field_zero) then affinify_nz (isogeny_map_to_E2_impl p) else apply iso_map' (affinify_nz p) }};
+
 // rewrite rule to get rid of a 12 limbs array that appears in map_to_isogenous_E2_term
 // TODO: why does this appear? There's no override using (llvm_array 12 ...)
 
@@ -137,7 +172,7 @@ map_to_isogenous_E2_impl_ov <- really_custom_verify
   (concat_all [vec_fp2_overrides, fp2_overrides, [recip_sqrt_fp2_9mod16_ov, sgn0x_pty_mont_384x_ov], sqrt_align_fp2_ovs])
   map_to_isogenous_E2_impl_spec
   (goal_num_ite 36
-    assume_unsat
+    assume_unsat // TODO
     (do {
       unfolding ["select"];
       simplify (addsimps [fix_vec_12_2, fix_vec_12] fp2_simpset);
