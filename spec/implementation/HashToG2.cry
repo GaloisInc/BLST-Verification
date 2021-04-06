@@ -37,3 +37,12 @@ hash_to_curve_opt_impl: {msg_len, DST_len}
                ([msg_len][8], [DST_len][8]) -> ProjectivePoint t_Fp_2
 hash_to_curve_opt_impl (msg,dst) = map_to_g2_impl u where
     u = hash_to_field`{count=2} msg dst
+
+// NOTE: this does not follow jacobian_to_projective_pair in G2SubGroupCheck.cry
+to_jacobian xn xd yn yd = (X, Y, Z) where
+  Z = Fp_2.mul (xd, yd)
+  X = Fp_2.mul (Fp_2.mul (xn, yd) , Z)
+  Y = Fp_2.mul (Fp_2.mul (Fp_2.sq Z, xd) , yn)
+
+Zz_powers : t_Fp_2 -> [3]t_Fp_2
+Zz_powers Z = reverse [Fp_2.sq Z, Fp_2.sq (Fp_2.sq Z), Fp_2.mul (Fp_2.sq Z, Fp_2.sq (Fp_2.sq Z))]
