@@ -137,7 +137,7 @@ swu_3mod4_correct <- admit_cryptol
         == map_to_curve_simple_swu u
   }};
 
-// The SWU map maps to the curve E'
+// The SWU map maps to the isogenous curve:
 swu_on_curve <- simp_then_admit {{ \u -> is_point_affine Curve_E' (map_to_curve_simple_swu u) == True }};
 
 // point_dadd implements add:
@@ -147,6 +147,8 @@ dadd_thm <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ p1 p2 -> affinify Curve_
 point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Curve_E' (point_dadd Fp p q A' False) == if is_point_projective Curve_E' p /\ is_point_projective Curve_E' q then True else apply is_point_projective Curve_E' (point_dadd Fp p q A' False) }};
 
 // adding a point to its double can be done with POINTonE1_add (cheaper than dadd) because the double of a point is never equal to the point unless the point is point_O:
+// TODO: derive from the following:
+// double_neq_lemma <- admit_cryptol {{ \p -> same_point_affine E (add E p p) p == is_point_O Curve_E' p }};
 add_double_lemma <- admit_cryptol {{ \p -> affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) }};
 //_ <- really_custom_prove_cryptol {{ \(x:[1]) (y:[1]) (z:[1]) -> (affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
 
@@ -163,10 +165,10 @@ let {{
 affinify_lemma <- simp_then_admit {{ \p -> affinify E p == affinify_nz p }};
 affinify_lemma' <- simp_then_admit {{ \p -> affinify Curve_E' p == affinify_nz p }};
 
-// If p is a projective point on the curve E' and `affinify p` is point_O, then p's Z coordinate is 0
+// If p is a projective point on the isogenous curve and `affinify p` is point_O, then p's Z coordinate is 0
 on_curve_is_point_O_lemma <- simp_then_admit {{ \p -> is_point_O Curve_E' (affinify Curve_E' p) == if (is_point_projective Curve_E' p /\ ~is_zero Fp p.2) then False else apply is_point_O Curve_E' (affinify Curve_E' p) }};
 
-// The implementation of the SWU map never return something of the form (0,0,_) or (_,_,0)
+// The implementatimn of the SWU map never returns something of the form (0,0,_) or (_,_,0)
 swu_impl_xy_nz <- simp_then_admit {{ \u -> (~((x,y) == (0,0) \/ z == 0) where (x,y,z) = map_to_curve_simple_swu_impl u) == True }};
 
 // A projective point p, such that `affinify p` is on the curve and p is not of the form (0,0,_) or (_,_,0), is on the curve:
