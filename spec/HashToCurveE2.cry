@@ -90,7 +90,7 @@ h_eff = 0xbc69f08f2ee75b3584c6a0ea91b352888e2a8e9145ad7689986ff031508ffe1329c2f1
 _clear_cofactor P = EC::mult _C h_eff P
 
 _iso_map: (_t_F, _t_F) -> (_t_F, _t_F)
-_iso_map (x', y') = (x, y) where
+_iso_map (x', y') = if EC::is_point_O _C (x',y') then EC::point_O _C else (x, y) where
     x_powers = [_F.field_unit] # [_F.mul(x', xi) | xi <- x_powers]
     x_num = F_sum _F [_F.mul(ki, xi) | ki <- k1s | xi <- x_powers]
     x_den = _F.add (x_powers@2, F_sum _F [_F.mul(ki, xi) | ki <- k2s | xi <- x_powers])
