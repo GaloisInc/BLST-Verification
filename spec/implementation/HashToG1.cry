@@ -93,6 +93,7 @@ map_fp_times_Zz ks zzs = zipWith (curry Fp.mul) (take`{front=n}ks) (drop`{back=n
 map_fp kzzs x = last rs where
   rs = [last kzzs] # [Fp.add (Fp.mul (ri, x), kzzi) | kzzi <- tail (reverse kzzs) | ri <- rs]
 
+// NOTE: this does not follow jacobian_to_projective_pair in G2SubGroupCheck.cry
 to_jacobian xn xd yn yd = (X, Y, Z) where
   Z = Fp.mul (xd, yd)
   X = Fp.mul (Fp.mul (xn, yd) , Z)
