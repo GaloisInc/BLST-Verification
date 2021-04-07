@@ -141,6 +141,8 @@ _ <- crucible_llvm_compositional_extract m
     w4_unint_z3 ["fp2_rep"];
   };
 
+really_custom_prove_cryptol {{ \(x1:[2]) (x2:[2]) (y1:[2]) (y2:[2]) (z1:[2]) (z2:[2]) -> (POINTonE2_abs (isogeny_map_to_E2_term (POINTonE2_rep p)) == isogeny_map_to_E2_impl p where p = ([toInteger x1,toInteger x2],[toInteger y1, toInteger y2],[toInteger z1, toInteger z2])) }} (quickcheck 64);
+
 iso_map_main_lemma <- really_custom_prove_cryptol {{ \(x1:[2]) (x2:[2]) (y1:[2]) (y2:[2]) (z1:[2]) (z2:[2]) -> (iso_map' (affinify_nz (POINTonE2_abs p)) == if ~Fp_2.is_equal((POINTonE2_abs p).2, Fp_2.field_zero) then affinify_nz (POINTonE2_abs (isogeny_map_to_E2_term p)) else apply iso_map' (affinify_nz (POINTonE2_abs p)) where p = POINTonE2_rep ([toInteger x1,toInteger x2],[toInteger y1, toInteger y2],[toInteger z1, toInteger z2])) }} (quickcheck 64);
 // iso_map_main_lemma <- simp_then_admit {{ \p -> iso_map' (affinify_nz p) == if ~Fp.is_equal(p.2, Fp.field_zero) then affinify_nz (isogeny_map_to_E2_impl p) else apply iso_map' (affinify_nz p) }};
 
