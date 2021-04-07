@@ -43,13 +43,13 @@ isogeny_map_to_E2_impl (X, Y, Z) = to_jacobian xn xd yn yd where
   zzs = Zz_powers Z
   xn = map_fp2 (kzzs#[last Aux::k1s]) X where
     kzzs = map_fp2_times_Zz`{n=3} Aux::k1s zzs
-  xd = Fp_2.mul (xs, last zzs) where
+  xd = Fp_2.mul (xs, last zzs) where // multiply by Z^2
     xs = map_fp2 ((take`{front=1}kzzs)#[xkzz1]) X
     xkzz1 = Fp_2.add (X, last kzzs)
     kzzs = map_fp2_times_Zz`{n=2} Aux::k2s zzs
   yn = Fp_2.mul (map_fp2 (kzzs#[last Aux::k3s]) X, Y) where
     kzzs = map_fp2_times_Zz`{n=3} Aux::k3s zzs
-  yd = Fp_2.mul (Fp_2.mul (xs, Z), last zzs) where
+  yd = Fp_2.mul (Fp_2.mul (xs, Z), last zzs) where // multiply by Z^3
     xs = map_fp2 ((take`{front=2}kzzs)#[xkzz2]) X
     xkzz2 = Fp_2.add (X, last kzzs)
     kzzs = map_fp2_times_Zz`{n=3} Aux::k4s zzs
