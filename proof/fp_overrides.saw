@@ -23,6 +23,7 @@ let use_concrete_method = true;
 
 import "../spec/Parameters.cry";
 import "../spec/PrimeField.cry";
+import "../spec/FieldExtras.cry" (mul_by_3  mul_by_8);
 import "../spec/implementation/Field.cry";
 import "../spec/implementation/CryptolHelpers.cry";
 

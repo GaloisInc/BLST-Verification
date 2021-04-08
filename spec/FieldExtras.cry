@@ -52,3 +52,23 @@ k_expt F b e = acc!0 where
     small_powers = [F.field_unit] # [F.mul(b, sp) | sp <- small_powers] // 1, b, b^2, ...
     acc = [small_powers@(digits@0)] # [F.mul(small_powers@d, kth_square`{k} F a) | a <- acc | d <- tail digits]
 
+// Multiplication by small constants
+
+mul_by_2: {t} FieldRep t -> t -> t
+mul_by_2 F x = F.add (x,x)
+
+mul_by_3: {t} FieldRep t -> t -> t
+mul_by_3 F x = F.add (x, F.add (x, x))
+
+mul_by_4: {t} FieldRep t -> t -> t
+mul_by_4 F x = mul_by_2 F (mul_by_2 F x)
+
+mul_by_6: {t} FieldRep t -> t -> t
+// mul_by_6 F x = F.add (y, F.add (y, y)) where y = mul_by_2 F x
+mul_by_6 F x = mul_by_3 F (mul_by_2 F x)
+
+mul_by_8: {t} FieldRep t -> t -> t
+mul_by_8 F x = x8 where
+  x2 = F.add (x, x)
+  x4 = F.add (x2, x2)
+  x8 = F.add (x4, x4)
