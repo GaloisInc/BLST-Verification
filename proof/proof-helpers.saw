@@ -130,6 +130,14 @@ let rw_with thms = simplify (addsimps thms (cryptol_ss ()));
 // ... or just one
 let rw_with_1 thm = simplify (addsimp thm (cryptol_ss ()));
 
+// Evaluate a closed Cryptol term
+
+let eval_term t = do {
+  r <- sat z3 {{ \x -> x == t }};
+  return (caseSatResult r {{ undefined }} ( \ x -> x ));
+  };
+
+
 // useful things for proof development, to tidy up the goal formula before printing it.
 
 propositional_rewrites <- for
