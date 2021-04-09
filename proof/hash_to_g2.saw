@@ -109,7 +109,109 @@ affinify_lemma' <- simp_then_admit {{ \p -> affinify Curve_E' p == affinify_nz p
 
 // Proofs
 
+let {{
+  fp2_mul = Fp_2.mul
+  fp2_sq = Fp_2.sq
+  fp2_add = Fp_2.add
+  fp2_div = Fp_2.div
+  fp2_zero = Fp_2.field_zero
+  fp2_unit = Fp_2.field_unit
+  fp2_is_equal = Fp_2.is_equal
+  fp2_neg = Fp_2.neg
+}};
+
+readability_rewrites <- for [
+  {{ \p q -> Fp_2.mul (p,q) == fp2_mul (p,q) }}
+, {{ \p q -> Fp_2.add (p,q) == fp2_add (p,q) }}
+, {{ \p -> Fp_2.sq p == fp2_sq p }}
+, {{ \p -> Fp_2.neg p == fp2_neg p }}
+, {{ \p q -> Fp_2.div (p, q) == fp2_div (p, q) }}
+, {{ Fp_2.field_zero == fp2_zero }}
+, {{ Fp_2.field_unit == fp2_unit }}
+, {{ \x y -> Fp_2.is_equal (x,y) == fp2_is_equal (x,y) }}
+  ] simp_then_admit;
+
+let print_readably =  do {
+    simplify (addsimps readability_rewrites empty_ss); // NOTE this modifies the goal
+    print_goal;
+};
+
 // isogeny_map_to_E2
+
+isogeny_const_rewrites <- for [
+    {{ fp2_abs [[ 0x47f671c71ce05e62, 0x06dd57071206393e, 0x7c80cd2af3fd71a2, 0x048103ea9e6cd062, 0xc54516acc8d037f6, 0x13808f550920ea41], [ 0x47f671c71ce05e62, 0x06dd57071206393e, 0x7c80cd2af3fd71a2, 0x048103ea9e6cd062, 0xc54516acc8d037f6, 0x13808f550920ea41]] == Aux::k1s@0 }}
+  , {{ fp2_abs [ [zero,zero,zero,zero,zero,zero], [ 0x5fe55555554c71d0, 0x873fffdd236aaaa3, 0x6a6b4619b26ef918, 0x21c2888408874945, 0x2836cda7028cabc5, 0x0ac73310a7fd5abd ]] == Aux::k1s@1 }}
+  , {{ fp2_abs [[ 0x0a0c5555555971c3, 0xdb0c00101f9eaaae, 0xb1fb2f941d797997, 0xd3960742ef416e1c, 0xb70040e2c20556f4, 0x149d7861e581393b], [ 0xaff2aaaaaaa638e8, 0x439fffee91b55551, 0xb535a30cd9377c8c, 0x90e144420443a4a2, 0x941b66d3814655e2, 0x0563998853fead5e ]] == Aux::k1s@2 }}
+  , {{ fp2_abs [[ 0x40aac71c71c725ed, 0x190955557a84e38e, 0xd817050a8f41abc3, 0xd86485d4c87f6fb1, 0x696eb479f885d059, 0x198e1a74328002d2 ], [zero,zero,zero,zero,zero,zero]] == Aux::k1s@3 }}
+  , {{ fp2_abs [[zero,zero,zero,zero,zero,zero], [ 0x1f3affffff13ab97, 0xf25bfc611da3ff3e, 0xca3757cb3819b208, 0x3e6427366f8cec18, 0x03977bc86095b089, 0x04f69db13f39a952 ]] == Aux::k2s@0 }}
+  , {{ fp2_abs [[ 0x447600000027552e, 0xdcb8009a43480020, 0x6f7ee9ce4a6e8b59, 0xb10330b7c0a95bc6, 0x6140b1fcfb1e54b7, 0x0381be097f0bb4e1 ], [ 0x7588ffffffd8557d, 0x41f3ff646e0bffdf, 0xf7b1e8d2ac426aca, 0xb3741acd32dbb6f8, 0xe9daf5b9482d581f, 0x167f53e0ba7431b8 ]] == Aux::k2s@1 }}
+  , {{ fp2_abs [[ 0x96d8f684bdfc77be, 0xb530e4f43b66d0e2, 0x184a88ff379652fd, 0x57cb23ecfae804e1, 0x0fd2e39eada3eba9, 0x08c8055e31c5d5c3 ], [ 0x96d8f684bdfc77be, 0xb530e4f43b66d0e2, 0x184a88ff379652fd, 0x57cb23ecfae804e1, 0x0fd2e39eada3eba9, 0x08c8055e31c5d5c3 ]] == Aux::k3s@0}}
+  , {{ fp2_abs [[zero,zero,zero,zero,zero,zero], [ 0xbf0a71c71c91b406, 0x4d6d55d28b7638fd, 0x9d82f98e5f205aee, 0xa27aa27b1d1a18d5, 0x02c3b2b2d2938e86, 0x0c7d13420b09807f ]] == Aux::k3s@1 }}
+  , {{ fp2_abs [[ 0xd7f9555555531c74, 0x21cffff748daaaa8, 0x5a9ad1866c9bbe46, 0x4870a2210221d251, 0x4a0db369c0a32af1, 0x02b1ccc429ff56af ], [ 0xe205aaaaaaac8e37, 0xfcdc000768795556, 0x0c96011a8a1537dd, 0x1c06a963f163406e, 0x010df44c82a881e6, 0x174f45260f808feb ]]  == Aux::k3s@2 }}
+  , {{ fp2_abs [[ 0xa470bda12f67f35c, 0xc0fe38e23327b425, 0xc9d3d0f2c6f0678d, 0x1c55c9935b5a982e, 0x27f6c0e2f0746764, 0x117c5e6e28aa9054 ], [zero,zero,zero,zero,zero,zero]]  == Aux::k3s@3 }}
+  , {{ fp2_abs [[ 0x0162fffffa765adf, 0x8f7bea480083fb75, 0x561b3c2259e93611, 0x11e19fc1a9c875d5, 0xca713efc00367660, 0x03c6a03d41da1151 ], [ 0x0162fffffa765adf, 0x8f7bea480083fb75, 0x561b3c2259e93611, 0x11e19fc1a9c875d5, 0xca713efc00367660, 0x03c6a03d41da1151 ]] == Aux::k4s@0 }}
+  , {{ fp2_abs [[zero,zero,zero,zero,zero,zero], [ 0x5db0fffffd3b02c5, 0xd713f52358ebfdba, 0x5ea60761a84d161a, 0xbb2c75a34ea6c44a, 0x0ac6735921c1119b, 0x0ee3d913bdacfbf6 ]] == Aux::k4s@1 }}
+  , {{ fp2_abs [[ 0x66b10000003affc5, 0xcb1400e764ec0030, 0xa73e5eb56fa5d106, 0x8984c913a0fe09a9, 0x11e10afb78ad7f13, 0x05429d0e3e918f52 ], [ 0x534dffffffc4aae6, 0x5397ff174c67ffcf, 0xbff273eb870b251d, 0xdaf2827152870915, 0x393a9cbaca9e2dc3, 0x14be74dbfaee5748 ]] == Aux::k4s@2 }}
+] (\ eq -> really_custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
+
+isogeny_invs <- for [
+    {{ fp2_invariant [[ 0x47f671c71ce05e62, 0x06dd57071206393e, 0x7c80cd2af3fd71a2, 0x048103ea9e6cd062, 0xc54516acc8d037f6, 0x13808f550920ea41], [ 0x47f671c71ce05e62, 0x06dd57071206393e, 0x7c80cd2af3fd71a2, 0x048103ea9e6cd062, 0xc54516acc8d037f6, 0x13808f550920ea41]] == True }}
+  , {{ fp2_invariant [ [zero,zero,zero,zero,zero,zero], [ 0x5fe55555554c71d0, 0x873fffdd236aaaa3, 0x6a6b4619b26ef918, 0x21c2888408874945, 0x2836cda7028cabc5, 0x0ac73310a7fd5abd ]] == True }}
+  , {{ fp2_invariant [[ 0x0a0c5555555971c3, 0xdb0c00101f9eaaae, 0xb1fb2f941d797997, 0xd3960742ef416e1c, 0xb70040e2c20556f4, 0x149d7861e581393b], [ 0xaff2aaaaaaa638e8, 0x439fffee91b55551, 0xb535a30cd9377c8c, 0x90e144420443a4a2, 0x941b66d3814655e2, 0x0563998853fead5e ]] == True }}
+  , {{ fp2_invariant [[ 0x40aac71c71c725ed, 0x190955557a84e38e, 0xd817050a8f41abc3, 0xd86485d4c87f6fb1, 0x696eb479f885d059, 0x198e1a74328002d2 ], [zero,zero,zero,zero,zero,zero]] == True }}
+  , {{ fp2_invariant [[zero,zero,zero,zero,zero,zero], [ 0x1f3affffff13ab97, 0xf25bfc611da3ff3e, 0xca3757cb3819b208, 0x3e6427366f8cec18, 0x03977bc86095b089, 0x04f69db13f39a952 ]] == True }}
+  , {{ fp2_invariant [[ 0x447600000027552e, 0xdcb8009a43480020, 0x6f7ee9ce4a6e8b59, 0xb10330b7c0a95bc6, 0x6140b1fcfb1e54b7, 0x0381be097f0bb4e1 ], [ 0x7588ffffffd8557d, 0x41f3ff646e0bffdf, 0xf7b1e8d2ac426aca, 0xb3741acd32dbb6f8, 0xe9daf5b9482d581f, 0x167f53e0ba7431b8 ]] == True }}
+  , {{ fp2_invariant [[ 0x96d8f684bdfc77be, 0xb530e4f43b66d0e2, 0x184a88ff379652fd, 0x57cb23ecfae804e1, 0x0fd2e39eada3eba9, 0x08c8055e31c5d5c3 ], [ 0x96d8f684bdfc77be, 0xb530e4f43b66d0e2, 0x184a88ff379652fd, 0x57cb23ecfae804e1, 0x0fd2e39eada3eba9, 0x08c8055e31c5d5c3 ]] == True }}
+  , {{ fp2_invariant [[zero,zero,zero,zero,zero,zero], [ 0xbf0a71c71c91b406, 0x4d6d55d28b7638fd, 0x9d82f98e5f205aee, 0xa27aa27b1d1a18d5, 0x02c3b2b2d2938e86, 0x0c7d13420b09807f ]] == True }}
+  , {{ fp2_invariant [[ 0xd7f9555555531c74, 0x21cffff748daaaa8, 0x5a9ad1866c9bbe46, 0x4870a2210221d251, 0x4a0db369c0a32af1, 0x02b1ccc429ff56af ], [ 0xe205aaaaaaac8e37, 0xfcdc000768795556, 0x0c96011a8a1537dd, 0x1c06a963f163406e, 0x010df44c82a881e6, 0x174f45260f808feb ]]  == True }}
+  , {{ fp2_invariant [[ 0xa470bda12f67f35c, 0xc0fe38e23327b425, 0xc9d3d0f2c6f0678d, 0x1c55c9935b5a982e, 0x27f6c0e2f0746764, 0x117c5e6e28aa9054 ], [zero,zero,zero,zero,zero,zero]]  == True }}
+  , {{ fp2_invariant [[ 0x0162fffffa765adf, 0x8f7bea480083fb75, 0x561b3c2259e93611, 0x11e19fc1a9c875d5, 0xca713efc00367660, 0x03c6a03d41da1151 ], [ 0x0162fffffa765adf, 0x8f7bea480083fb75, 0x561b3c2259e93611, 0x11e19fc1a9c875d5, 0xca713efc00367660, 0x03c6a03d41da1151 ]] == True }}
+  , {{ fp2_invariant [[zero,zero,zero,zero,zero,zero], [ 0x5db0fffffd3b02c5, 0xd713f52358ebfdba, 0x5ea60761a84d161a, 0xbb2c75a34ea6c44a, 0x0ac6735921c1119b, 0x0ee3d913bdacfbf6 ]] == True }}
+  , {{ fp2_invariant [[ 0x66b10000003affc5, 0xcb1400e764ec0030, 0xa73e5eb56fa5d106, 0x8984c913a0fe09a9, 0x11e10afb78ad7f13, 0x05429d0e3e918f52 ], [ 0x534dffffffc4aae6, 0x5397ff174c67ffcf, 0xbff273eb870b251d, 0xdaf2827152870915, 0x393a9cbaca9e2dc3, 0x14be74dbfaee5748 ]] == True }}
+] (\ eq -> really_custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
+
+// vim macro:
+// vip:s/{/[/g|'<,'>s/}/]/g|'<,'>s/TO_LIMB_T(//g|'<,'>s/),/,/g|'<,'>s/)//g\<CR>vipJ\<CR>
+
+isogeny_algebra_rules <- for [
+    {{ \x y -> Fp_2.mul(x,y) == Fp_2.mul(y,x) }}
+  , {{ \x y z -> Fp_2.mul(Fp_2.mul(x,y),z) == Fp_2.mul(x, Fp_2.mul(y,z)) }}
+  // , {{ \x y z -> Fp_2.mul(x, Fp_2.mul(y,z)) == Fp_2.mul(Fp_2.mul(x,y),z) }}
+  , {{ \x y -> Fp_2.add(x,y) == Fp_2.add(y,x) }}
+  , {{ \x y z -> Fp_2.add(Fp_2.add(x,y),z) == Fp_2.add(x, Fp_2.add(y,z)) }}
+  // , {{ \x y z -> Fp_2.add(x, Fp_2.add(y,z)) == Fp_2.add(Fp_2.add(x,y),z) }}
+] admit_cryptol;
+
+isogeny_restiching_rules <- for [
+    {{ \(a:[2]Integer) -> ([x,y] == a where [x,y] = a) }}
+  , {{ \(a:[2][6][64]) -> ([x,y] == a where [x,y] = a) }}
+  , {{ \(a:[6][64]) -> ([a1,a2,a3,a4,a5,a6] == a where [a1,a2,a3,a4,a5,a6] = a) }}
+// TODO: how to rewrite equalities involving bvEq? This does not work as it produces ecEq terms
+  // , {{ \(a:[6][64]) (b:[6][64]) p -> ((p /\ a1 == b1 /\ a2 == b2 /\ a3 == b3 /\ a4 == b4 /\ a5 == b5 /\ a6 == b6) == (p /\ (a == b)) where [a1,a2,a3,a4,a5,a6] = a; [b1,b2,b3,b4,b5,b6] = b) }}
+] (\ eq -> really_custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
+
+// NOTE: this is going nowhere...
+let test_simpset = add_cryptol_defs ["ecAtBack","reverse","map","take","drop","append","seq_cong1","gen"] empty_ss;
+
+isogeny_map_to_E2_impl_alias_ov <- really_custom_verify // TODO
+  "isogeny_map_to_E2"
+  fp2_overrides
+  isogeny_map_to_E2_impl_alias_spec
+  (goal_num_ite 44 // 44 is the main safety goal
+    (do {
+      simplify fp2_simpset; // eliminate `abs . rep` etc.
+      simplify (addsimps isogeny_invs empty_ss); // NOTE: unecessary
+      goal_eval_unint ["Fp_2","Fp","fp2_rep","fp2_abs","fp2_invariant","HashToCurveE2Aux::k1s","HashToCurveE2Aux::k2s","HashToCurveE2Aux::k3s","HashToCurveE2Aux::k4s"]; // TODO: why do we need to keep the kns opaque?
+      simplify (addsimps (concat isogeny_restiching_rules isogeny_algebra_rules) empty_ss);
+      print_readably;
+      w4_unint_z3  ["fp2_rep","Fp_2"]; // TODO: keeping Fp_2 unfolded makes it fail; why?
+    })
+    (do { // discharge simulation side-conditions:
+      unfolding ["POINTonE2_invariant"];
+      simplify (addsimps isogeny_invs fp2_simpset);
+      w4_unint_z3 ["fp2_rep"];
+    })
+  );
 
 let {{ // this is the "else" term in the definition of iso_map
   iso_map' (x', y') = (x, y) where

@@ -67,4 +67,4 @@ map_fp2 kzzs x = last rs where
   rs = [last kzzs] # [F.add (F.mul (ri, x), kzzi) | kzzi <- tail (reverse kzzs) | ri <- rs]
 
 Zz_powers : t_Fp_2 -> [3]t_Fp_2
-Zz_powers Z = reverse [Fp_2.sq Z, Fp_2.sq (Fp_2.sq Z), Fp_2.mul (Fp_2.sq Z, Fp_2.sq (Fp_2.sq Z))]
+Zz_powers Z = reverse [Fp_2.sq Z, Fp_2.sq (Fp_2.sq Z), Fp_2.mul (Fp_2.sq (Fp_2.sq Z), Fp_2.sq Z)]
