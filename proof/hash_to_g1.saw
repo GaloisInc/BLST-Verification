@@ -363,7 +363,7 @@ do {
 isogeny_map_to_E1_impl_thm_z <- custom_prove_cryptol {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if is_zero Fp p.2 then iso_map (affinify Curve_E' p) else apply affinify E (isogeny_map_to_E1_impl p) }}
 do {
   let lemma_1 = run (
-    simp_then_admit {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if is_zero Fp p.2 then point_O E else apply affinify E (isogeny_map_to_E1_impl p) }} // TODO
+    simp_then_admit {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if is_zero Fp p.2 then point_O E else apply affinify E (isogeny_map_to_E1_impl p) }} // TODO: here we need to reason about the propagation of zero in formulas... note that x_den is zero, thus, in to_jacobian, Z is zero and Y is zero. We get (0,0,0). Should not be too hard...
   );
   let lemma_2 = run (
     custom_prove_cryptol {{ \p -> iso_map (affinify Curve_E' p) == if is_zero Fp p.2 then point_O E else apply iso_map (affinify Curve_E' p) }}
