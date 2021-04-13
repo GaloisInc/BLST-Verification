@@ -140,7 +140,7 @@ point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Curve_E' (
 double_neq_lemma <- simp_then_admit {{ \p -> ((add E p p) == p) == is_point_O E p }};
 add_zero_lemma <-  simp_then_admit {{ \p -> add E (add E p p) p == if is_point_O E p then (point_O E) else apply add E (add E p p) p }};
 
-//_ <- really_custom_prove_cryptol {{ \(x:[1]) (y:[1]) (z:[1]) -> (affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
+//_ <- custom_prove_cryptol {{ \(x:[1]) (y:[1]) (z:[1]) -> (affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
 
 // Assumptions we should probably prove:
 
@@ -319,7 +319,7 @@ let {{
 
 // TODO: should be a simple algebraic fact
 e2_lemma <- simp_then_admit (unfold_term ["e2_eqn"] {{ e2_eqn }});
-//_ <- really_custom_prove_cryptol {{ \(gx1:[2]) (xd:[2]) -> e2_eqn (toInteger gx1) (toInteger xd) }} (quickcheck 16);
+//_ <- custom_prove_cryptol {{ \(gx1:[2]) (xd:[2]) -> e2_eqn (toInteger gx1) (toInteger xd) }} (quickcheck 16);
 
 swu_impl_equiv_3mod4_impl <- custom_prove_cryptol {{ \u -> map_to_curve_simple_swu_impl u == map_to_curve_simple_swu_3mod4_impl u }}
   do {
@@ -330,7 +330,7 @@ swu_impl_equiv_3mod4_impl <- custom_prove_cryptol {{ \u -> map_to_curve_simple_s
     w4_unint_z3 (concat ["Fp"] ["sqrt_fp","fp_exp"]);
   };
 
-//_ <- really_custom_prove_cryptol {{ \(xn_:[2]) (xd_:[2]) (yn_:[2]) -> (affinify_nz (Fp.mul (xn, xd), Fp.mul (yn, gxd), xd) == if ~Fp.is_equal(xd, Fp.field_zero) then (Fp.div(xn,xd), Fp.div(yn,Fp.field_unit)) else apply affinify_nz (Fp.mul (xn, xd), Fp.mul (yn, gxd), xd) where gxd = Fp.mul(xd, Fp.sq xd); xn = toInteger xn_; xd = toInteger xd_; yn = toInteger yn_ )}} (quickcheck 64);
+//_ <- custom_prove_cryptol {{ \(xn_:[2]) (xd_:[2]) (yn_:[2]) -> (affinify_nz (Fp.mul (xn, xd), Fp.mul (yn, gxd), xd) == if ~Fp.is_equal(xd, Fp.field_zero) then (Fp.div(xn,xd), Fp.div(yn,Fp.field_unit)) else apply affinify_nz (Fp.mul (xn, xd), Fp.mul (yn, gxd), xd) where gxd = Fp.mul(xd, Fp.sq xd); xn = toInteger xn_; xd = toInteger xd_; yn = toInteger yn_ )}} (quickcheck 64);
 
 swu_3mod4_abs_thm <- custom_prove_cryptol {{ \u -> affinify Curve_E' (map_to_curve_simple_swu_3mod4_impl u) ==
   ((Fp.div(xn,xd), Fp.div(yn,yd)) where (xn, xd, yn, yd) = Aux::map_to_curve_simple_swu_3mod4 u) }}
@@ -366,14 +366,25 @@ do {
     simp_then_admit {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if is_zero Fp p.2 then point_O E else apply affinify E (isogeny_map_to_E1_impl p) }} // TODO
   );
   let lemma_2 = run (
-    simp_then_admit {{ \p -> iso_map (affinify Curve_E' p) == if is_zero Fp p.2 then point_O E else apply iso_map (affinify Curve_E' p) }} // TODO
+    custom_prove_cryptol {{ \p -> iso_map (affinify Curve_E' p) == if is_zero Fp p.2 then point_O E else apply iso_map (affinify Curve_E' p) }}
+      do {
+        // For this proof we are only concerned about the corner cases for zero. So we rewrite things so that we never have to unfold iso_map or affinify.
+        let lemmas = run (
+          for [
+              {{ \p -> iso_map p == if is_point_O E p then point_O E else apply iso_map p }}
+            , {{ \p -> affinify Curve_E' p == if is_zero Fp p.2 then point_O E else apply affinify Curve_E' p }}
+          ] (\ eq -> custom_prove_cryptol eq do { unfolding ["iso_map","affinify"]; w4_unint_z3 ["Fp"];})
+        );
+        unfolding ["apply"];
+        simplify (addsimps lemmas empty_ss);
+        unfolding ["apply"];
+        simplify remove_higher_order_function_simpset; // we have to rewrite iso_map to something monomorphic for w4_unit_z3...
+        w4_unint_z3 ["iso_map","affinify_Curve_E'"];
+      }
   );
   simplify (addsimps [lemma_1, lemma_2] (cryptol_ss ()));
   w4_unint_z3 ["isogeny_map_to_E1_impl","iso_map","Fp"];
 };
-
-//_ <- custom_prove_cryptol {{ \(x:[2]) (y:[2]) (z:[2]) -> (affinify E (isogeny_map_to_E1_impl p) == if is_zero Fp p.2 then point_O E else apply affinify E (isogeny_map_to_E1_impl p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
- //_ <- custom_prove_cryptol {{ \(x:[2]) (y:[2]) (z:[2])  -> (iso_map (affinify Curve_E' p) == if is_zero Fp p.2 then point_O E else apply iso_map (affinify Curve_E' p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
 
 // Second case: Z is not zero
 let {{ // this is the "else" term in the definition of iso_map
@@ -460,7 +471,7 @@ final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (dst:[DST_len][8]) -> a
   do {
     unfolding ["hash_to_curve_opt_impl","map_to_g1_impl"];
     simplify (addsimps [mult_by_doubling_thm, isogeny_map_to_E1_impl_thm_z] (cryptol_ss ()));
-    unfolding ["apply"];
+  unfolding ["apply"];
     simplify (addsimps [isogeny_map_to_E1_impl_thm_nz,map_to_curve_simple_swu_impl_on_curve,point_dadd_on_curve] (cryptol_ss ()));
     simplify (addsimps [dadd_thm,map_to_isogenous_E1_thm] (cryptol_ss ()));
     w4_unint_z3 (concat fp_unints ["iso_map","map_to_curve_simple_swu","clear_cofactor","HashToCurveE1::hash_to_field"]); // TODO: why is the HashToCurveE1 prefix necessary?
