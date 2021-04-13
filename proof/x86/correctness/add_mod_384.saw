@@ -298,6 +298,13 @@ let mul_by_8_mod_384x_alias_ret_a_spec = do {
   points_to_vec384x ret_ptr new_ret_r new_ret_i;
 };
 
+let {{
+  sub_mod a b = if diff @ 0 then diff + vec384_abs modulus else diff
+    where diff = vec384_abs a - vec384_abs b
+}};
+
+let counterc = {{[1801017638483099649, 1009369257894608895, 216172783992860672, 14356874983899167, 426060755861507, 962479513600] : [6][64]}};
+
 // mul_by_b_onE2
 let mul_by_b_onE2_spec = do {
   crucible_alloc_global "BLS12_381_P";
@@ -306,10 +313,18 @@ let mul_by_b_onE2_spec = do {
     (crucible_term modulus);
 
   out_ptr <- crucible_alloc vec384x_type;
+
+  // in_ptr <- crucible_alloc vec384x_type;
+  // let in_r = counterc;
+  // let in_i = counterc;
+  // points_to_vec384x in_ptr in_r in_i;
+
   (in_r, in_i, in_ptr) <- ptr_to_fresh_vec384x_readonly "in";
+  lt_modulus in_r;
+  lt_modulus in_i;
   crucible_execute_func [out_ptr, in_ptr];
-  let new_out_r = {{ vec384_rep (repeat_double_mod 2 (vec384_abs in_r)) : Vec384}};
-  let new_out_i = {{ vec384_rep (repeat_double_mod 2 (vec384_abs in_i)) : Vec384}};
+  let new_out_r = {{ vec384_rep (repeat_double_mod 2 (sub_mod in_r in_i)) : Vec384}};
+  let new_out_i = {{ vec384_rep (repeat_double_mod 2 ((vec384_abs in_r + vec384_abs in_i) % vec384_abs modulus)) : Vec384}};
   points_to_vec384x out_ptr new_out_r new_out_i;
 };
 let mul_by_b_onE2_alias_out_in_spec = do {
@@ -322,7 +337,7 @@ let mul_by_b_onE2_alias_out_in_spec = do {
   lt_modulus in_r;
   lt_modulus in_i;
   crucible_execute_func [out_ptr, out_ptr];
-  let new_out_r = {{ vec384_rep (repeat_double_mod 2 ((vec384_abs in_r - vec384_abs in_i) % vec384_abs modulus)) : Vec384}};
+  let new_out_r = {{ vec384_rep (repeat_double_mod 2 (sub_mod in_r in_i)) : Vec384}};
   let new_out_i = {{ vec384_rep (repeat_double_mod 2 ((vec384_abs in_r + vec384_abs in_i) % vec384_abs modulus)) : Vec384}};
   points_to_vec384x out_ptr new_out_r new_out_i;
 };
@@ -362,11 +377,6 @@ let cneg_mod_384_alias_ret_a_spec = do {
   let new_ret = {{ if (vec_abs a != 0) && (flag != 0) then vec384_rep (vec_abs modulus - vec_abs a) else a : Vec384 }};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
-
-let {{
-  sub_mod a b = if diff @ 0 then diff + vec384_abs modulus else diff
-    where diff = vec384_abs a - vec384_abs b
-}};
 
 // sub_mod_384
 let sub_mod_384_spec = do {
@@ -586,6 +596,8 @@ let vec_select_alias_1_2_spec bytes = do {
 // Proofs
 ///////////////////////////////////////////////////////////////////////////////
 
+let do_prove_x86 = false;
+
 // add_mod_384
 add_mod_384_ov <- verify_x86 "add_mod_384" add_mod_384_spec w4;
 add_mod_384_alias_ret_a_ov <- verify_x86 "add_mod_384" add_mod_384_alias_ret_a_spec w4;
@@ -618,7 +630,6 @@ mul_by_8_mod_384_alias_ret_a_ov <- verify_x86 "mul_by_8_mod_384" mul_by_8_mod_38
 mul_by_b_onE1_ov <- verify_x86 "mul_by_b_onE1" mul_by_b_onE1_spec w4;
 mul_by_b_onE1_alias_out_in_ov <- verify_x86 "mul_by_b_onE1" mul_by_b_onE1_alias_out_in_spec w4;
 
-
 // mul_by_3_mod_384x - these take ~30minutes each
 mul_by_3_mod_384x_ov <- verify_x86 "mul_by_3_mod_384x" mul_by_3_mod_384x_spec w4;
 mul_by_3_mod_384x_alias_ret_a_ov <- verify_x86 "mul_by_3_mod_384x" mul_by_3_mod_384x_alias_ret_a_spec w4;
@@ -627,8 +638,14 @@ mul_by_3_mod_384x_alias_ret_a_ov <- verify_x86 "mul_by_3_mod_384x" mul_by_3_mod_
 mul_by_8_mod_384x_ov <- verify_x86 "mul_by_8_mod_384x" mul_by_8_mod_384x_spec w4;
 mul_by_8_mod_384x_alias_ret_a_ov <- verify_x86 "mul_by_8_mod_384x" mul_by_8_mod_384x_alias_ret_a_spec w4;
 
-// mul_by_b_onE2 - need to finish subtract for this
-mul_by_b_onE2_ov <- verify_x86 "mul_by_b_onE2" mul_by_b_onE2_spec w4;
+let do_prove_x86 = true;
+// mul_by_b_onE2
+mul_by_b_onE2_ov <- verify_x86 "mul_by_b_onE2" mul_by_b_onE2_spec (do {
+  goal_eval;
+  print_goal;
+  w4;
+});
+exit 1;
 mul_by_b_onE2_alias_out_in_ov <- verify_x86 "mul_by_b_onE2" mul_by_b_onE2_alias_out_in_spec w4;
 
 // cneg_mod_384
