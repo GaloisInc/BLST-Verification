@@ -363,7 +363,41 @@ do {
 isogeny_map_to_E1_impl_thm_z <- custom_prove_cryptol {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if is_zero Fp p.2 then iso_map (affinify Curve_E' p) else apply affinify E (isogeny_map_to_E1_impl p) }}
 do {
   let lemma_1 = run (
-    simp_then_admit {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if is_zero Fp p.2 then point_O E else apply affinify E (isogeny_map_to_E1_impl p) }} // TODO: here we need to reason about the propagation of zero in formulas... note that x_den is zero, thus, in to_jacobian, Z is zero and Y is zero. We get (0,0,0). Should not be too hard...
+    custom_prove_cryptol {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if is_zero Fp p.2 then point_O E else affinify E (apply isogeny_map_to_E1_impl p) }}
+    do {
+      // First we introduce an explicit zero term:
+      let rule_1 = run (
+        custom_prove_cryptol {{ \p -> isogeny_map_to_E1_impl p == if is_zero Fp p.2 then apply isogeny_map_to_E1_impl (p.0, p.1, Fp.field_zero) else apply isogeny_map_to_E1_impl p }} w4
+      );
+      simplify (addsimp rule_1 empty_ss);
+      // Then, for clarity, we get rid of the non-zero case:
+      let rule_2 = run (
+        custom_prove_cryptol {{ \b x y -> affinify E (if b then x else y) == if b then affinify E x else affinify E y }} do {simplify remove_higher_order_function_simpset; w4_unint_z3 ["affinify_E"];}
+      );
+      let rule_3 = run (
+        custom_prove_cryptol {{ \b (x:(Integer,Integer)) y z -> ((if b then y else x) == (if b then z else x)) == (b ==> y == z) }} do {simplify remove_higher_order_function_simpset; w4_unint_z3 ["affinify_E"];}
+      );
+      simplify (addsimps [rule_2,rule_3] empty_ss);
+      unfolding ["apply"];
+      let lemma = run (
+        custom_prove_cryptol {{ \x y -> isogeny_map_to_E1_impl (x, y, Fp.field_zero) == (Fp.field_zero, Fp.field_zero, Fp.field_zero) }}
+          do {
+            unfolding ["isogeny_map_to_E1_impl"];
+            let fp_exp_rules = (concat [me_1, me_2, me_3, me_4, me_5, me_6] fp_alg_thms);
+            let additional_rules = run (
+              for [
+                  {{ \n -> fp_exp Fp.field_zero n == Fp.field_zero }}
+              ] admit_cryptol
+            );
+            goal_eval_unint ["Fp"];
+            simplify (addsimps (concat fp_exp_rules additional_rules) empty_ss);
+            w4;
+          }
+      );
+      simplify (addsimp lemma empty_ss);
+      unfolding ["affinify","E"];
+      w4;
+    }
   );
   let lemma_2 = run (
     custom_prove_cryptol {{ \p -> iso_map (affinify Curve_E' p) == if is_zero Fp p.2 then point_O E else apply iso_map (affinify Curve_E' p) }}
@@ -372,14 +406,14 @@ do {
         let lemmas = run (
           for [
               {{ \p -> iso_map p == if is_point_O E p then point_O E else apply iso_map p }}
-            , {{ \p -> affinify Curve_E' p == if is_zero Fp p.2 then point_O E else apply affinify Curve_E' p }}
+            , {{ \p -> affinify Curve_E' p == if is_zero Fp p.2 then point_O E else apply affinify E p }}
           ] (\ eq -> custom_prove_cryptol eq do { unfolding ["iso_map","affinify"]; w4_unint_z3 ["Fp"];})
         );
         unfolding ["apply"];
         simplify (addsimps lemmas empty_ss);
         unfolding ["apply"];
         simplify remove_higher_order_function_simpset; // we have to rewrite iso_map to something monomorphic for w4_unit_z3...
-        w4_unint_z3 ["iso_map","affinify_Curve_E'"];
+        w4_unint_z3 ["iso_map","affinify_E"];
       }
   );
   simplify (addsimps [lemma_1, lemma_2] (cryptol_ss ()));
