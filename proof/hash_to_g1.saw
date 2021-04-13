@@ -145,6 +145,7 @@ div_0 <- admit_cryptol {{ \x -> Fp.div(x, Fp.field_zero) == Fp.field_zero }};
 // Assumptions we should probably prove:
 
 // If p is a projective point on the isogenous curve and `affinify p` is point_O, then p's Z coordinate is 0
+// (0,0,0) is not on the curve, and this should follow
 on_curve_is_point_O_lemma <- simp_then_admit {{ \p -> is_point_O Curve_E' (affinify Curve_E' p) == if (is_point_projective Curve_E' p /\ ~is_zero Fp p.2) then False else apply is_point_O Curve_E' (affinify Curve_E' p) }};
 
 // The implementatimn of the SWU map never returns something of the form (0,0,_) or (_,_,0)
@@ -409,14 +410,8 @@ do {
         custom_prove_cryptol {{ \x y -> isogeny_map_to_E1_impl (x, y, Fp.field_zero) == (Fp.field_zero, Fp.field_zero, Fp.field_zero) }}
           do {
             unfolding ["isogeny_map_to_E1_impl"];
-            let fp_exp_rules = (concat [me_1, me_2, me_3, me_4, me_5, me_6] fp_alg_thms);
-            let additional_rules = run (
-              for [
-                  {{ \n -> fp_exp Fp.field_zero n == Fp.field_zero }}
-              ] admit_cryptol
-            );
             goal_eval_unint ["Fp"];
-            simplify (addsimps (concat fp_exp_rules additional_rules) empty_ss);
+            simplify fp_exp_simps;
             w4;
           }
       );
@@ -490,7 +485,12 @@ dbl_n_add_unfold_thms <- for [
     , {{ \p q -> dbl_n_add p 9 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p))))))))) q Fp.field_zero True }}
     , {{ \p q -> dbl_n_add p 32 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))))))))))))))))))) q Fp.field_zero True }}
     , {{ \p q -> dbl_n_add p 16 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))) q Fp.field_zero True }}
-  ] simp_then_admit;
+  ] (\ eq -> really_custom_prove_cryptol eq do {
+      unfolding ["dbl_n_add"];
+      simplify remove_higher_order_function_simpset;
+      goal_eval_unint ["point_double_fp", "point_dadd_fp"];
+      w4;
+    });
 
 let prove_dbl_lemma n = custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q -> affinify E (dbl_n_add p `n q) == add E (e1_scalar_mult (2^^(`n)) (affinify E p)) (affinify E q) }})
   (do {
