@@ -1,0 +1,22 @@
+name: Release
+on:
+  release:
+    types: [published]
+
+jobs:
+  proofs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - run: |
+          tar -czvf blst-verification.tar.gz *
+          zip -r blst-verification.zip * -x blst-verification.tar.gz
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            blst-verification.tar.gz
+            blst-verification.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
