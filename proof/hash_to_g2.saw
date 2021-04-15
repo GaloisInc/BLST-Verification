@@ -155,7 +155,7 @@ isogeny_algebra_rules <- for [
   , {{ \x y -> Fp_2.add(x,y) == Fp_2.add(y,x) }}
   , {{ \x y z -> Fp_2.add(Fp_2.add(x,y),z) == Fp_2.add(x, Fp_2.add(y,z)) }}
   // , {{ \x y z -> Fp_2.add(x, Fp_2.add(y,z)) == Fp_2.add(Fp_2.add(x,y),z) }}
-] admit_cryptol;
+] (\ eq -> really_prove_cryptol eq []);
 
 isogeny_restiching_rules <- for [
     {{ \(a:[2]Integer) -> ([x,y] == a where [x,y] = a) }}
