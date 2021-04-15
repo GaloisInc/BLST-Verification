@@ -7,7 +7,7 @@
 
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/HashToCurveE1.cry" (Z A' B' Curve_E' clear_cofactor iso_map hash_to_curve_opt map_to_curve_simple_swu sgn0);
+import "../spec/HashToCurveE1.cry" (Z A' B' Isogenous_Curve clear_cofactor iso_map hash_to_curve_opt map_to_curve_simple_swu sgn0);
 import "../spec/implementation/CurveOperation.cry";
 Aux <- cryptol_load "../spec/HashToCurveE1Aux.cry";
 import "../spec/implementation/HashToG1.cry";
@@ -128,13 +128,13 @@ swu_3mod4_correct <- admit_cryptol
   }};
 
 // The SWU map maps to the isogenous curve:
-swu_on_curve <- simp_then_admit {{ \u -> is_point_affine Curve_E' (map_to_curve_simple_swu u) == True }};
+swu_on_curve <- simp_then_admit {{ \u -> is_point_affine Isogenous_Curve (map_to_curve_simple_swu u) == True }};
 
 // point_dadd implements add:
-dadd_thm <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ p1 p2 -> affinify Curve_E' (point_dadd Fp p1 p2 A' False) == add Curve_E' (affinify Curve_E' p1) (affinify Curve_E' p2) }});
+dadd_thm <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ p1 p2 -> affinify Isogenous_Curve (point_dadd Fp p1 p2 A' False) == add Isogenous_Curve (affinify Isogenous_Curve p1) (affinify Isogenous_Curve p2) }});
 
 // the addition of two points on the curve is on the curve:
-point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Curve_E' (point_dadd Fp p q A' False) == if is_point_projective Curve_E' p /\ is_point_projective Curve_E' q then True else apply is_point_projective Curve_E' (point_dadd Fp p q A' False) }};
+point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Isogenous_Curve (point_dadd Fp p q A' False) == if is_point_projective Isogenous_Curve p /\ is_point_projective Isogenous_Curve q then True else apply is_point_projective Isogenous_Curve (point_dadd Fp p q A' False) }};
 
 // Adding a point to its double can be done with POINTonE1_add (cheaper than dadd) because the double of a point is never equal to the point unless the point is point_O. We need the following assumptions to prove this fact (add_double_lemma):
 double_neq_lemma <- simp_then_admit {{ \p -> ((add E p p) == p) == is_point_O E p }};
@@ -146,13 +146,13 @@ div_0 <- admit_cryptol {{ \x -> Fp.div(x, Fp.field_zero) == Fp.field_zero }};
 
 // If p is a projective point on the isogenous curve and `affinify p` is point_O, then p's Z coordinate is 0
 // (0,0,0) is not on the curve, and this should follow
-on_curve_is_point_O_lemma <- simp_then_admit {{ \p -> is_point_O Curve_E' (affinify Curve_E' p) == if (is_point_projective Curve_E' p /\ ~is_zero Fp p.2) then False else apply is_point_O Curve_E' (affinify Curve_E' p) }};
+on_curve_is_point_O_lemma <- simp_then_admit {{ \p -> is_point_O Isogenous_Curve (affinify Isogenous_Curve p) == if (is_point_projective Isogenous_Curve p /\ ~is_zero Fp p.2) then False else apply is_point_O Isogenous_Curve (affinify Isogenous_Curve p) }};
 
 // The implementatimn of the SWU map never returns something of the form (0,0,_) or (_,_,0)
 swu_impl_xy_nz <- simp_then_admit {{ \u -> (~((x,y) == (0,0) \/ z == 0) where (x,y,z) = map_to_curve_simple_swu_impl u) == True }};
 
 // A projective point p, such that `affinify p` is on the curve and p is not of the form (0,0,_) or (_,_,0), is on the curve:
-is_point_projective_lemma <- simp_then_admit {{ \p -> is_point_projective Curve_E' p == if is_point_affine Curve_E' (affinify Curve_E' p) /\ ~((p.0, p.1) == (0,0) \/ p.2 == 0) then True else apply is_point_projective Curve_E' p }};
+is_point_projective_lemma <- simp_then_admit {{ \p -> is_point_projective Isogenous_Curve p == if is_point_affine Isogenous_Curve (affinify Isogenous_Curve p) /\ ~((p.0, p.1) == (0,0) \/ p.2 == 0) then True else apply is_point_projective Isogenous_Curve p }};
 
 // NOTE: there are more assumptions sprinkled throughout
 
@@ -289,7 +289,7 @@ hash_to_g1_ov <- custom_verify
 
 // Now we go all the way to the abstract spec
 
-// First, the SWU map: `affinify Curve_E' (map_to_curve_simple_swu_impl u) == map_to_curve_simple_swu u`
+// First, the SWU map: `affinify Isogenous_Curve (map_to_curve_simple_swu_impl u) == map_to_curve_simple_swu u`
 
 // We need to rewrite `e2`, which is computed differently in the C code compared to the specification
 // The implementation seems to test whether tv4=gx1(gxd^3) is square by testing (tv4/sqrt(tv4))^2=tv4
@@ -348,17 +348,17 @@ do {
   w4_unint_z3 ["Fp"];
 };
 
-affinify_lemma' <- really_custom_prove_cryptol {{ \p -> affinify Curve_E' p == affinify_nz p }}
+affinify_lemma' <- really_custom_prove_cryptol {{ \p -> affinify Isogenous_Curve p == affinify_nz p }}
 do {
   let rule_1 = run (
-    really_custom_prove_cryptol {{ \p -> affinify Curve_E' p == affinify E p}} do {unfolding ["affinify","Curve_E'"]; w4_unint_z3 ["Fp"];}
+    really_custom_prove_cryptol {{ \p -> affinify Isogenous_Curve p == affinify E p}} do {unfolding ["affinify","Isogenous_Curve"]; w4_unint_z3 ["Fp"];}
   );
   simplify (addsimps [rule_1,affinify_lemma] empty_ss);
   w4_unint_z3 ["Fp"];
 };
 
 
-swu_3mod4_abs_thm <- custom_prove_cryptol {{ \u -> affinify Curve_E' (Aux::map_to_curve_simple_swu_3mod4_proj u) ==
+swu_3mod4_abs_thm <- custom_prove_cryptol {{ \u -> affinify Isogenous_Curve (Aux::map_to_curve_simple_swu_3mod4_proj u) ==
   ((Fp.div(xn,xd), Fp.div(yn,yd)) where (xn, xd, yn, yd) = Aux::map_to_curve_simple_swu_3mod4 u) }}
   do {
     let algebra_rewrite = run ( simp_then_admit {{ \xn xd yn -> (affinify_nz (Fp.mul (xn, xd), Fp.mul (yn, gxd), xd) == if ~Fp.is_equal(xd, Fp.field_zero) then (Fp.div(xn,xd), Fp.div(yn,Fp.field_unit)) else apply affinify_nz (Fp.mul (xn, xd), Fp.mul (yn, gxd), xd) where gxd = Fp.mul(xd, Fp.sq xd) )}} ); // TODO
@@ -370,14 +370,14 @@ swu_3mod4_abs_thm <- custom_prove_cryptol {{ \u -> affinify Curve_E' (Aux::map_t
   };
 
 // putting it all together:
-map_to_isogenous_E1_thm <- custom_prove_cryptol {{ \u -> affinify Curve_E' (map_to_curve_simple_swu_impl u) == map_to_curve_simple_swu u }}
+map_to_isogenous_E1_thm <- custom_prove_cryptol {{ \u -> affinify Isogenous_Curve (map_to_curve_simple_swu_impl u) == map_to_curve_simple_swu u }}
   do {
     simplify (addsimps [swu_impl_equiv_3mod4_impl, swu_3mod4_abs_thm, swu_3mod4_correct] empty_ss);
     w4;
   };
 
 // we will also need this:
-map_to_curve_simple_swu_impl_on_curve <- custom_prove_cryptol {{ \u -> is_point_projective Curve_E' (map_to_curve_simple_swu_impl u) == True }}
+map_to_curve_simple_swu_impl_on_curve <- custom_prove_cryptol {{ \u -> is_point_projective Isogenous_Curve (map_to_curve_simple_swu_impl u) == True }}
 do {
   simplify (addsimps [is_point_projective_lemma,swu_impl_xy_nz,map_to_isogenous_E1_thm,swu_on_curve] empty_ss);
   w4_unint_z3 fp_unints;
@@ -386,7 +386,7 @@ do {
 // isogeny_map_to_E1
 
 // First case: Z is zero
-isogeny_map_to_E1_impl_thm_z <- custom_prove_cryptol {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if is_zero Fp p.2 then iso_map (affinify Curve_E' p) else apply affinify E (isogeny_map_to_E1_impl p) }}
+isogeny_map_to_E1_impl_thm_z <- custom_prove_cryptol {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if is_zero Fp p.2 then iso_map (affinify Isogenous_Curve p) else apply affinify E (isogeny_map_to_E1_impl p) }}
 do {
   let lemma_1 = run (
     custom_prove_cryptol {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if is_zero Fp p.2 then point_O E else affinify E (apply isogeny_map_to_E1_impl p) }}
@@ -420,13 +420,13 @@ do {
     }
   );
   let lemma_2 = run (
-    custom_prove_cryptol {{ \p -> iso_map (affinify Curve_E' p) == if is_zero Fp p.2 then point_O E else apply iso_map (affinify Curve_E' p) }}
+    custom_prove_cryptol {{ \p -> iso_map (affinify Isogenous_Curve p) == if is_zero Fp p.2 then point_O E else apply iso_map (affinify Isogenous_Curve p) }}
       do {
         // For this proof we are only concerned about the corner cases for zero. So we rewrite things so that we never have to unfold iso_map or affinify.
         let lemmas = run (
           for [
               {{ \p -> iso_map p == if is_point_O E p then point_O E else apply iso_map p }}
-            , {{ \p -> affinify Curve_E' p == if is_zero Fp p.2 then point_O E else apply affinify E p }}
+            , {{ \p -> affinify Isogenous_Curve p == if is_zero Fp p.2 then point_O E else apply affinify E p }}
           ] (\ eq -> custom_prove_cryptol eq do { unfolding ["iso_map","affinify"]; w4_unint_z3 ["Fp"];})
         );
         unfolding ["apply"];
@@ -456,10 +456,10 @@ let {{ // this is the "else" term in the definition of iso_map
 iso_map_main_lemma <- simp_then_admit {{ \p -> iso_map_nz (affinify_nz p) == if ~Fp.is_equal(p.2, Fp.field_zero) then affinify_nz (isogeny_map_to_E1_impl p) else apply iso_map_nz (affinify_nz p) }};
 //_ <- really_custom_prove_cryptol {{ \(x:[2]) (y:[2]) (z:[2])-> (iso_map_nz (affinify_nz p) == if ~Fp.is_equal(p.2, Fp.field_zero) then affinify_nz (isogeny_map_to_E1_impl p) else apply iso_map_nz (affinify_nz p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
 
-isogeny_map_to_E1_impl_thm_nz <- custom_prove_cryptol {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if (is_point_projective Curve_E' p /\ ~is_zero Fp p.2) then iso_map (affinify Curve_E' p) else apply affinify E (isogeny_map_to_E1_impl p) }}
+isogeny_map_to_E1_impl_thm_nz <- custom_prove_cryptol {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if (is_point_projective Isogenous_Curve p /\ ~is_zero Fp p.2) then iso_map (affinify Isogenous_Curve p) else apply affinify E (isogeny_map_to_E1_impl p) }}
 do {
   let lemma_1 = run (
-    custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> iso_map p == if is_point_O Curve_E' p then point_O E else iso_map_nz p }}) (w4_unint_z3 ["Fp"])
+    custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> iso_map p == if is_point_O Isogenous_Curve p then point_O E else iso_map_nz p }}) (w4_unint_z3 ["Fp"])
   );
   simplify (addsimps [lemma_1, on_curve_is_point_O_lemma] empty_ss); // get rid of ite term in `iso_map`
   unfolding ["apply"]; // NOTE: otherwise the next rewrite does not apply to both sides

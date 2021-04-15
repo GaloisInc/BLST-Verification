@@ -111,7 +111,7 @@ hash_to_curve_opt (msg,dst) = P where
     u = hash_to_field`{count=2} msg dst // spec does not mention the dst here
     Q0 = map_to_curve_simple_swu (u@0) //, Z, A', B')
     Q1 = map_to_curve_simple_swu (u@1) //, Z, A', B')
-    R = EC::add Curve_E' Q0 Q1
+    R = EC::add Isogenous_Curve Q0 Q1
     P = clear_cofactor (iso_map R)
 
 
@@ -188,5 +188,5 @@ map_to_curve_simple_swu_AB0(u) = (x, y) where
     (x', y') = map_to_curve_simple_swu (u) // (x', y') is on E'
     (x, y) = iso_map(x', y')               // (x, y) is on E
 
-Curve_E': EC::EllipticCurve t_F
-Curve_E' = {base_field=F, a = A', b = B'}
+Isogenous_Curve: EC::EllipticCurve t_F
+Isogenous_Curve = {base_field=F, a = A', b = B'}

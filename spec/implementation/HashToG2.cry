@@ -23,7 +23,7 @@ clear_cofactor_E2_impl = undefined
 map_to_g2_impl: [2]t_Fp_2 -> ProjectivePoint t_Fp_2
 map_to_g2_impl uv = P where
     Q0 = map_to_curve_E2_prime_impl (uv@0)
-    Q2 = map_to_curve_E2_prime_impl (uv@2)
+    Q2 = map_to_curve_E2_prime_impl (uv@1)
     R = point_dadd Fp_2 Q0 Q2 A' False // This is addition on the isogenous curve E'
     S = isogeny_map_to_E2_impl R
     P = clear_cofactor_E2_impl S
