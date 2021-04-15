@@ -13,12 +13,6 @@ import HashToCurveE1Aux as Aux
 
 // the SWU map
 
-// Projective version of map_to_curve_simple_swu_3mod4:
-map_to_curve_simple_swu_3mod4_impl : t_Fp -> ProjectivePoint t_Fp
-map_to_curve_simple_swu_3mod4_impl u = (Fp.mul (xn, xd), Fp.mul (y, gxd), xd) where
-  (xn, xd, y, _) = Aux::map_to_curve_simple_swu_3mod4 u
-  gxd = Fp.mul(xd, Fp.sq xd) // xd^3
-
 // This is what the implementation does:
 map_to_curve_simple_swu_impl : t_Fp -> ProjectivePoint t_Fp
 map_to_curve_simple_swu_impl u = res where

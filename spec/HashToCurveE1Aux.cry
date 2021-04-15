@@ -7,7 +7,7 @@ module HashToCurveE1Aux where
 
 import Parameters
 import BLSFieldExtras (fp_exp, sqrt_fp)
-/* import ShortWeierstrassCurve */
+import ShortWeierstrassCurve (ProjectivePoint)
 
 h_eff = 0xd201000000010001 // For clearing the cofactor
 
@@ -128,3 +128,10 @@ map_to_curve_simple_swu_3mod4 u = res where
   res = (xn, xd_b, y_a, Fp.field_unit)
   // NOTE: gxd = xd^3, so in Jacobian coordinates we get
   // res = (Fp.mul (xn, xd_b), Fp.mul (y_a, gxd), xd_b)
+
+// Projective version of map_to_curve_simple_swu_3mod4:
+map_to_curve_simple_swu_3mod4_proj : t_Fp -> ProjectivePoint t_Fp
+map_to_curve_simple_swu_3mod4_proj u = (Fp.mul (xn, xd), Fp.mul (y, gxd), xd) where
+  (xn, xd, y, _) = map_to_curve_simple_swu_3mod4 u
+  gxd = Fp.mul(xd, Fp.sq xd) // xd^3
+
