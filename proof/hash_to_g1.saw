@@ -138,11 +138,10 @@ point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Isogenous_
 
 // Adding a point to its double can be done with POINTonE1_add (cheaper than dadd) because the double of a point is never equal to the point unless the point is point_O. We need the following assumptions to prove this fact (add_double_lemma):
 double_neq_lemma <- simp_then_admit {{ \p -> ((add E p p) == p) == is_point_O E p }};
-add_zero_lemma <-  simp_then_admit {{ \p -> add E (add E p p) p == if is_point_O E p then (point_O E) else apply add E (add E p p) p }};
-// We defined div that way:
-div_0 <- admit_cryptol {{ \x -> Fp.div(x, Fp.field_zero) == Fp.field_zero }};
 
 // Assumptions we should probably prove:
+
+add_zero_lemma <-  simp_then_admit {{ \p -> add E (add E p p) p == if is_point_O E p then (point_O E) else apply add E (add E p p) p }};
 
 // If p is a projective point on the isogenous curve and `affinify p` is point_O, then p's Z coordinate is 0
 // (0,0,0) is not on the curve, and this should follow
@@ -327,6 +326,8 @@ let {{
       lambda2 = Fp.sq lambda
       lambda3 = Fp.mul(lambda, lambda2)
 }};
+
+div_0 <- prove_cryptol {{ \x -> Fp.div(x, Fp.field_zero) == Fp.field_zero }} [];
 
 // This holds because Fp.div(x,0) == 0
 affinify_lemma <- really_custom_prove_cryptol {{ \p -> affinify E p == affinify_nz p }}
