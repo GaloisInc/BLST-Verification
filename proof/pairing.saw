@@ -120,6 +120,37 @@ let add_n_dbl_n_1_spec k = do {
     {{ POINTonE2_rep (add_n_dbl`{k}  (POINTonE2_abs T) (POINTonE2_affine_abs Q)) }});
   };
 
+let {{
+  add_n_dbl_n_ret: {n, k} (fin n, n >= 1, fin k) =>
+     t_Fp_12 ->[n](ProjectivePoint t_Fp_2) -> [n](AffinePoint t_Fp_2) -> [n](AffinePoint t_Fp) -> t_Fp_12
+  add_n_dbl_n_ret r Ts Qs Px2s = F_prod Fp_12 rets where
+    rets = [add_n_dbl_ret`{k} r (Ts@0) (Qs@0) (Px2s@0)] #
+           [add_n_dbl_ret`{k} Fp_12.field_unit T Q Px2 | T <- tail Ts | Q <- tail Qs | Px2 <- tail Px2s]
+  }};
+  
+let add_n_dbl_n_spec n k = do {
+  (ret, ret_ptr) <- ptr_to_fresh "ret_add_n_dbl_n" vec384fp12_type;
+  (T, T_ptr) <- ptr_to_fresh "T" (llvm_array n POINTonE2_type);
+  (Q, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" (llvm_array n POINTonE2_affine_type);
+  (Px2, Px2_ptr) <- ptr_to_fresh_readonly "Px2" (llvm_array n POINTonE1_affine_type);
+  crucible_precond {{ fp12_invariant ret }};
+  crucible_precond {{ all POINTonE2_invariant T }};
+  crucible_precond {{ all POINTonE2_affine_invariant Q }};
+  crucible_precond {{ all POINTonE1_affine_invariant Px2 }};
+  crucible_execute_func [ret_ptr, T_ptr, Q_ptr, Px2_ptr, llvm_term {{ (`n:Size_t) }}
+                        , llvm_term {{ (`k:Size_t) }}];
+  crucible_points_to ret_ptr (llvm_term
+    {{ fp12_rep (add_n_dbl_n_ret`{n,k} (fp12_abs ret) (map POINTonE2_abs T)
+                                       (map POINTonE2_affine_abs Q) (map POINTonE1_affine_abs Px2)) }});
+  crucible_points_to T_ptr (llvm_term
+    {{ [ POINTonE2_rep (add_n_dbl`{k} (POINTonE2_abs Ti) (POINTonE2_affine_abs Qi)) | Ti <- T | Qi <- Q ] }});
+  };
+
+// The Miller loop `miller_loop_n` takes three arrays of `n` inputs each, and behaves a bit
+// differently when n=1.  So here I have separated out that case into a separate spec.
+
+// TODO: recast these in terms of `miller_loop_opt`.
+
 let miller_loop_n_1_spec = do {
   ret_ptr <- crucible_alloc vec384fp12_type;
   (Q, Q_ptr) <- ptr_to_fresh "Q" POINTonE2_affine_type; // array in general
@@ -131,10 +162,28 @@ let miller_loop_n_1_spec = do {
     {{ fp12_rep (miller_loop_n_1_imp (POINTonE2_affine_abs Q) (POINTonE1_affine_abs P)) }});
   };
 
+// In the general case, n >= 2, we get the product of several Miller loop results.
+let miller_loop_n_spec n = do {
+  ret_ptr <- crucible_alloc vec384fp12_type;
+  (Qs, Q_ptr) <- ptr_to_fresh "Q" (llvm_array n POINTonE2_affine_type);
+  (Ps, P_ptr) <- ptr_to_fresh_readonly "P" (llvm_array n POINTonE1_affine_type);
+  crucible_precond {{ all POINTonE2_affine_invariant Qs }};
+  crucible_precond {{ all POINTonE1_affine_invariant Ps }};
+  crucible_execute_func [ret_ptr, Q_ptr, P_ptr, llvm_term {{ (`n:Size_t) }}];
+  crucible_points_to ret_ptr (llvm_term
+    {{ fp12_rep (F_prod Fp_12 [miller_loop_imp Q P | Q <- map POINTonE2_affine_abs Qs
+                                                   | P <- map POINTonE1_affine_abs Ps ]) }});
+  };
+
 
 ////////////////////////////////////////////////////////////////
 //
 // Proofs
+
+// We prove the miller_loop_n function for just a few concrete values of `n`, as
+// SW cannot do a fully generic proof.
+
+let miller_loop_n_values_proved = [1,2,3];
 
 // we only use this on E', over Fp_2.
 point_add_affine_alt_equiv_thm <- prove_cryptol
@@ -162,7 +211,7 @@ line_by_Px2_ov <- custom_verify "line_by_Px2" fp_overrides line_by_Px2_spec
        simplify fp_simpset;
        z3; };
 
-// line_by_Px2 just does multiplications in FP_2
+// line_by_Px2 just does multiplications in Fp_2
 line_py_Px2_equiv_thm <- prove_cryptol
   {{ \ A P -> (
     line_by_Px2 A P == [l2', l1', l0] where
@@ -178,20 +227,6 @@ line_double_equiv_thm <- prove_cryptol
            Px2 = (Fp.neg (Fp.add (xP, xP)), Fp.add (yP, yP))) }}
    [];
 
-/* Using the fuller set of algebraic laws:
-custom_prove_cryptol
-  {{ \T Q P -> (fp6_to_fp12_xy00z0 (line_by_Px2 (line_add_imp T Q) Px2) == line_add_opt T Q P
-     where (xP, yP) = P
-           Px2 = (Fp.neg (Fp.add (xP, xP)), Fp.add (yP, yP))) }}
-   do { unfolding ["line_add_opt", "line_add_imp", "mul_by_4", "mul_by_2"];
-        rw_with_1 line_py_Px2_equiv_thm;
-        // rw_with (concat fp_laws fp2_laws);
-        rw_with (concat_all [fp_laws, fp2_laws, fp_to_fp2_thms]);
-        //print_goal_nicely;
-        z3; };
-// NOTE: did not rewrite to the same forms.  Because we do not cancel terms in sums.
-*/
-
 line_add_equiv_thm <- custom_prove_cryptol
   {{ \T Q P -> (fp6_to_fp12_xy00z0 (line_by_Px2 (line_add_imp T Q) Px2) == line_add_opt T Q P
      where (xP, yP) = P
@@ -202,12 +237,12 @@ line_add_equiv_thm <- custom_prove_cryptol
         z3; };
 
 
-/// start_dbl_n
 
 let curve_unints =
     [ "POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant", "POINTonE1_normalize"
     , "POINTonE1_affine_abs", "POINTonE1_affine_rep", "POINTonE1_affine_invariant"
     , "POINTonE2_abs", "POINTonE2_rep", "POINTonE2_invariant", "POINTonE2_normalize"
+    , "POINTonE2_affine_abs", "POINTonE2_affine_rep", "POINTonE2_affine_invariant"
     ];
 
 let foo_unints_small = (concat_all [ curve_unints, fp12_unints
@@ -260,53 +295,6 @@ line_add_ovs <- for [line_add_spec, line_add_alias_spec]
 
 // start_dbl_n
 
-start_dbl_n_1_ov <- custom_verify "start_dbl_n"
-   (concat_all [[line_by_Px2_ov], line_dbl_line_ovs, mul_by_xy00z0_fp12_ovs])
-   (start_dbl_n_spec 1)
-   do { goal_eval_unint foo_unints;
-        simplify start_dbl_n_ss;
-        w4_unint_z3 foo_unints;
-        };
-
-for [1,2,3,4,5]
- (\ n -> custom_verify "start_dbl_n"
-   (concat_all [[line_by_Px2_ov], line_dbl_line_ovs, mul_by_xy00z0_fp12_ovs])
-   (start_dbl_n_spec n)
-   do { goal_eval_unint foo_unints;
-        simplify start_dbl_n_ss;
-        w4_unint_z3 foo_unints;
-        });
-
-// add_n_dbl_n
-// focus just on the n=1 case for now.
-
-// Just as for the proofs of scalar multiplication, we need a non-higher-order cover function
-// for point_add_affine_alt.
-
-let {{ point_add_affine_alt_fp2 = point_add_affine_alt Fp_2 }};
-
-point_add_affine_alt_fp2_thm <- prove_cryptol
-  {{  \p1 p2 -> point_add_affine_alt Fp_2 p1 p2 == point_add_affine_alt_fp2 p1 p2 }} ["Fp_2"];
-
-let remove_higher_order_function_simpset_alt =
-    addsimp point_add_affine_alt_fp2_thm  remove_higher_order_function_simpset;
-
-let add_n_dbl_n_unints = (concat_all [ curve_unints, fp12_unints
-                                     , fp2_unints, fp_unints
-                                     , [ "line_by_Px2", "line_double_imp", "line_add_imp", "xy00z0_expander"
-                                       , "point_add_affine_alt_fp2", "Fp_12", "fp6_to_fp12_xy00z0"
-                                       // , "fp6_invariant", "fp6_rep", "fp6_abs", "Fp_6"
-                                       ] ] );
-
-let add_n_dbl_n_unints' = concat ["fp6_invariant", "fp6_rep", "fp6_abs", "Fp_6"]
-                                 add_n_dbl_n_unints;
-
-/*
-fp12_unrip_rep_thm <- prove_cryptol
-  (rewrite (cryptol_ss ()) {{ \ (x:Fp_12_rep_t) -> ([[x0,x1,x2],[x3,x4,x5]] == x where [[x0,x1,x2],[x3,x4,x5]] = x) }})
-  [];
-*/
-
 fp12_unrip_thms <- for
   [ {{ \ (x:Fp_12_rep_t) -> ([[x0,x1,x2],[x3,x4,x5]] == x where [[x0,x1,x2],[x3,x4,x5]] = x) }}
   , {{ \ (x:Fp_12_rep_t) -> ([x0,x1] == x where [x0,x1] = x) }}
@@ -327,12 +315,100 @@ fp6_extra_abs_rep_thms <- for
                  simplify fp_simpset;
                  w4_unint_z3 fp_unints; });
 
+
 let add_n_dbl_n_ss = addsimps (concat_all[ fp12_rep_thms, POINTonE2_thms, fp12_unrip_thms
                                          , fp6_extra_abs_rep_thms
                                          , [ e2_unrip_thm
                                            , fp12_abs_ite_thm, fp12_invariant_ite_thm
                                            , fp12_rep_ite_thm]])
                               start_dbl_n_ss;
+let {{
+  start_dbl_1: (t_Fp_2, t_Fp_2, t_Fp_2) -> (t_Fp, t_Fp) -> t_Fp_12
+  start_dbl_1 T Px2 = ret where
+    line_a = line_double_imp T
+    line_b = line_by_Px2 line_a Px2
+    ret = fp6_to_fp12_xy00z0 line_b
+  }};
+
+/*
+for [2,3,4,5,6] (\ n -> 
+ custom_prove_cryptol
+  {{ \ Ts Ps -> start_dbl_n_imp`{n} Ts Ps == F_prod Fp_12 [start_dbl_1 T P | T <- Ts | P <- Ps] }}
+  do { goal_eval_unint foo_unints;
+       simplify add_n_dbl_n_ss; // TODO: forward reference in this file
+       rw_with fp12_laws;
+       // print_goal_nicely;
+       w4_unint_z3 foo_unints;
+       });
+*/
+
+// Fails for n=1!
+start_dbl_n_equiv_thms <- for [2,3] (\ n ->  
+ custom_prove_cryptol
+  {{ \ Ts Ps -> start_dbl_n_imp`{n} Ts Ps == F_prod Fp_12 [start_dbl_1 T P | T <- Ts | P <- Ps] }}
+  do { goal_eval_unint foo_unints;
+       simplify add_n_dbl_n_ss; // TODO: forward reference in this file
+       rw_with fp12_laws;
+       w4_unint_z3 foo_unints;
+       });
+
+start_dbl_n_1_equiv_thm <- custom_prove_cryptol
+  {{ \ T P -> start_dbl_n_imp [T] [P] == start_dbl_1 T P }}
+  do { goal_eval_unint foo_unints;
+       simplify add_n_dbl_n_ss; // TODO: forward reference in this file
+       rw_with fp12_laws;
+       w4_unint_z3 foo_unints;
+       };
+
+/*
+// TODO: drop these first two overrides, use the list instead.
+start_dbl_n_1_ov <- custom_verify "start_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_dbl_line_ovs, mul_by_xy00z0_fp12_ovs])
+   (start_dbl_n_spec 1)
+   do { goal_eval_unint foo_unints;
+        simplify start_dbl_n_ss;
+        w4_unint_z3 foo_unints;
+        };
+
+start_dbl_n_2_ov <- custom_verify "start_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_dbl_line_ovs, mul_by_xy00z0_fp12_ovs])
+   (start_dbl_n_spec 2)
+   do { goal_eval_unint foo_unints;
+        simplify start_dbl_n_ss;
+        w4_unint_z3 foo_unints;
+        };
+*/
+
+start_dbl_n_ovs <- for miller_loop_n_values_proved
+ (\ n -> custom_verify "start_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_dbl_line_ovs, mul_by_xy00z0_fp12_ovs])
+   (start_dbl_n_spec n)
+   do { goal_eval_unint foo_unints;
+        simplify start_dbl_n_ss;
+        w4_unint_z3 foo_unints;
+        });
+
+// add_n_dbl_n
+
+// Just as for the proofs of scalar multiplication, we need a non-higher-order cover function
+// for point_add_affine_alt.
+
+let {{ point_add_affine_alt_fp2 = point_add_affine_alt Fp_2 }};
+
+point_add_affine_alt_fp2_thm <- prove_cryptol
+  {{  \p1 p2 -> point_add_affine_alt Fp_2 p1 p2 == point_add_affine_alt_fp2 p1 p2 }} ["Fp_2"];
+
+let remove_higher_order_function_simpset_alt =
+    addsimp point_add_affine_alt_fp2_thm  remove_higher_order_function_simpset;
+
+let add_n_dbl_n_unints = (concat_all [ curve_unints, fp12_unints
+                                     , fp2_unints, fp_unints
+                                     , [ "line_by_Px2", "line_double_imp", "line_add_imp", "xy00z0_expander"
+                                       , "point_add_affine_alt_fp2", "Fp_12", "fp6_to_fp12_xy00z0"
+                                       ] ] );
+
+let add_n_dbl_n_unints' = concat ["fp6_invariant", "fp6_rep", "fp6_abs", "Fp_6"]
+                                 add_n_dbl_n_unints;
 
 /*
 // For proof development, allow Fp_12 fields to be printed readably
@@ -376,7 +452,6 @@ ff12_uncover_thms <- for
  , {{ \x -> ff_is_val_fp12 x == Fp_12.is_val x }}
  ] ( \t -> prove_cryptol t ["Fp_12"] );
 
-/*
 let print_nicely = do {
     unfolding ["/\\", "\\/", "==>"];
     simplify (addsimps ff12_cover_thms (cryptol_ss ()));
@@ -384,7 +459,6 @@ let print_nicely = do {
     print_goal;
     simplify (addsimps ff12_uncover_thms (cryptol_ss ())); // put things back. ish
     };
-*/
 
 let print_goal_nicely = do {
     unfolding ["/\\", "\\/", "==>"];
@@ -414,7 +488,6 @@ custom_verify "add_n_dbl_n"
    (add_n_dbl_n_1_spec 1)
    do { unfolding ["add_n_dbl_ret", "add_n_dbl"];
         simplify remove_higher_order_function_simpset_alt;
-        print_nicely;
         goal_num_ite 8
           do { goal_eval_unint add_n_dbl_n_unints';
                simplify (addsimp xy00z0_expander_thm add_n_dbl_n_ss);
@@ -434,6 +507,31 @@ custom_verify "add_n_dbl_n"
         goal_eval_unint add_n_dbl_n_unints';
         simplify (addsimp xy00z0_expander_thm add_n_dbl_n_ss);
         w4_unint_z3 add_n_dbl_n_unints; };
+
+
+// EXPERIMENT
+*/
+
+fp6_extra_inv_rep_thms <- for
+  [ {{ \ x y -> fp6_invariant (fp6_rep (line_by_Px2 x y)) == True }}
+  , {{ \ x y -> fp6_invariant (fp6_rep (line_add_imp x y)) == True }}
+  , {{ \ x   -> fp6_invariant (fp6_rep (line_double_imp x)) == True }}
+  ] (\ t -> custom_prove_cryptol t
+            do { unfolding ["fp6_invariant", "fp6_rep"];
+                 simplify fp2_simpset;
+                 w4_unint_z3 fp2_unints; });
+/*
+
+//WORKS
+custom_verify "add_n_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
+   (add_n_dbl_n_1_spec 1)
+   do { unfolding ["add_n_dbl_ret", "add_n_dbl"];
+        simplify remove_higher_order_function_simpset_alt;
+        goal_eval_unint add_n_dbl_n_unints';
+        simplify (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss));
+        print_goal_nicely;
+        w4_unint_z3 add_n_dbl_n_unints'; };
 
 
 // Actual k values used are:
@@ -456,7 +554,7 @@ custom_verify "add_n_dbl_n"
                }; };
 */
 
-// WORKS: all the needed k!
+// WORKS: all the needed k! (for n=1).  Slow, ~11m on my hardware
 add_dbl_n_ovs <- for [(2,12), (3,16), (9, 40), (16, 68), (32, 132)] // (k, 4k+4)
  (\ (k, goal_n) ->
   custom_verify "add_n_dbl_n"
@@ -464,7 +562,6 @@ add_dbl_n_ovs <- for [(2,12), (3,16), (9, 40), (16, 68), (32, 132)] // (k, 4k+4)
    (add_n_dbl_n_1_spec k)
    do { unfolding ["add_n_dbl_ret", "add_n_dbl"];
         simplify remove_higher_order_function_simpset_alt;
-        // print_goal_consts;
         goal_num_ite goal_n
           do { goal_eval_unint add_n_dbl_n_unints';
                simplify (addsimp xy00z0_expander_thm add_n_dbl_n_ss);
@@ -473,6 +570,250 @@ add_dbl_n_ovs <- for [(2,12), (3,16), (9, 40), (16, 68), (32, 132)] // (k, 4k+4)
                simplify add_n_dbl_n_ss;
                w4_unint_z3 add_n_dbl_n_unints;
                }; });
+
+// Larger n
+
+/*
+// ... def alternative, breaking the add_n_dbl_ret into two parts
+
+let {{
+  add_n_dbl_ret': {k} (fin k) =>
+      t_Fp_12 -> ProjectivePoint t_Fp_2 -> AffinePoint t_Fp_2 -> AffinePoint t_Fp -> t_Fp_12
+  add_n_dbl_ret' r T Q Px2 = add_n_dbl_ret_k_loop`{k} ret_a T_a Px2 where
+    (ret_a, T_a) = add_n_dbl_n_start r T Q Px2
+
+  add_n_dbl_n_start: t_Fp_12 -> ProjectivePoint t_Fp_2 -> AffinePoint t_Fp_2 -> AffinePoint t_Fp
+                     -> (t_Fp_12, ProjectivePoint t_Fp_2)
+  add_n_dbl_n_start r T Q Px2 = (ret_a, T_a) where
+    ret_a = Fp_12.mul (r, fp6_to_fp12_xy00z0 (line_by_Px2 (line_add_imp T Q) Px2))
+    T_a = point_add_affine_alt Fp_2 T Q
+
+  add_n_dbl_ret_k_loop: {k} (fin k) =>
+      t_Fp_12 -> ProjectivePoint t_Fp_2 -> AffinePoint t_Fp -> t_Fp_12
+  add_n_dbl_ret_k_loop ret_a T_a Px2 = rets@`k where
+    // standard loop-to-comprehension transcription of the C code, for the loop on `k`
+    Ts = [T_a] # [point_double Fp_2 Ti | Ti <- Ts]
+    lines = [line_by_Px2 (line_double_imp Ti) Px2 | Ti <- Ts ]
+    rets = [ret_a] # [Fp_12.mul (Fp_12.sq ret, fp6_to_fp12_xy00z0 line) | ret <- rets | line <- lines] 
+  }};
+  
+custom_prove_cryptol
+  {{ \ r T Q P -> add_n_dbl_ret'`{2} r T Q P == add_n_dbl_ret`{2} r T Q P }}
+  (w4_unint_z3 foo_unints);
+
+custom_prove_cryptol
+  {{ \ r T Q P -> add_n_dbl_ret'`{16} r T Q P == add_n_dbl_ret`{16} r T Q P }}
+  (w4_unint_z3 foo_unints);
+
+custom_prove_cryptol
+  {{ \ r T Q P -> add_n_dbl_ret'`{32} r T Q P == add_n_dbl_ret`{32} r T Q P }}
+  (w4_unint_z3 foo_unints);
+
+prove_cryptol
+  {{ \ r T Q P -> add_n_dbl_ret'`{32} r T Q P == add_n_dbl_ret`{32} r T Q P }}
+  foo_unints;
+
+let {{
+  add_n_dbl_n_ret_imp: {n, k} (fin n, n >= 1, fin k) =>
+     t_Fp_12 ->[n](ProjectivePoint t_Fp_2) -> [n](AffinePoint t_Fp_2) -> [n](AffinePoint t_Fp) -> t_Fp_12
+  add_n_dbl_n_ret_imp r Ts Qs Px2s =
+    // first loop
+    start_rets = [r] # [add_n_dbl_start r' T Q Px2 | r' <- start_rets | T <- Ts | Q <- Qs | Px2 <- Px2s]
+    // second loop
+    rets = [start_rets!0] #
+           [add_n_dbl_ret'`{k} ( T Q Px2 | T <- tail Ts | Q <- tail Qs | Px2 <- tail Px2s]
+  }};
+*/
+
+/* CHECK are these needed
+size_2_expander_thms <- for
+  [ {{ \ xs -> (all POINTonE2_invariant xs == (POINTonE2_invariant x0 /\ POINTonE2_invariant x1)
+                where [x0,x1] = xs) }}
+  , {{ \ xs -> (all POINTonE2_affine_invariant xs ==
+                  (POINTonE2_affine_invariant x0 /\ POINTonE2_affine_invariant x1)
+                where [x0,x1] = xs) }}
+  , {{ \ xs -> (all POINTonE1_affine_invariant xs ==
+                  (POINTonE1_affine_invariant x0 /\ POINTonE1_affine_invariant x1)
+               where [x0,x1] = xs) }}
+  , {{ \ xs -> (map POINTonE2_abs xs == [POINTonE2_abs x0, POINTonE2_abs x1] where [x0,x1] = xs) }}
+  , {{ \ xs -> (map POINTonE2_affine_abs xs == [POINTonE2_affine_abs x0, POINTonE2_affine_abs x1] where [x0,x1] = xs) }}
+  , {{ \ xs -> (map POINTonE1_affine_abs xs == [POINTonE1_affine_abs x0, POINTonE1_affine_abs x1] where [x0,x1] = xs) }}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
+
+
+let add_n_dbl_n_2_expander_term k =
+ {{ \ r T0 T1 Q0 Q1 P0 P1 ->
+       add_n_dbl_n_ret`{2,k} r [T0,T1] [Q0,Q1] [P0,P1] ==
+       add_n_dbl_ret`{k} (add_n_dbl_ret`{k} r T0 Q0 P0) T1 Q1 P1 }};
+
+add_n_dbl_n_2_expander_thms <- [1,2,3]
+  ( \ k -> prove_cryptol (rewrite (cryptol_ss()) (add_n_dbl_n_2_expander_term k)) ["add_n_dbl_ret"]);
+*/
+/*
+// WORKS
+custom_verify "add_n_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
+   (add_n_dbl_n_spec 2 1) // n=2 k=1
+   do { rw_with (concat size_2_expander_thms add_n_dbl_n_2_expander_thms);
+        unfolding ["add_n_dbl_ret", "add_n_dbl"];
+        simplify remove_higher_order_function_simpset_alt;
+        goal_num_ite 14
+          do { // print_goal_consts;
+               goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
+               // lost control there, some point_add_affine_alt still getting expanded.
+               unfolding ["point_add_affine_alt_fp2", "point_add_affine_alt"];
+               simplify (addsimp xy00z0_expander_thm add_n_dbl_n_ss);
+               rw_with fp12_laws;
+               //print_goal_nicely;
+               w4_unint_z3 add_n_dbl_n_unints; }
+          do { goal_eval_unint add_n_dbl_n_unints; // evaluate the comprehensions in the Cryptol spec
+               simplify add_n_dbl_n_ss;
+               w4_unint_z3 add_n_dbl_n_unints;
+               }; };
+
+// To avoid opening up the point operations, cannot just leave them uninterpreted, as they are
+// higher-order.  See saw-script issue #906.  So we need to unfold:
+//  "add_n_dbl_ret", "add_n_dbl", add_n_dbl_n_ret
+
+// WORKS
+custom_verify "add_n_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
+   (add_n_dbl_n_spec 2 2) // n=2 k=2
+   do { rw_with (concat size_2_expander_thms add_n_dbl_n_2_expander_thms);
+        unfolding ["add_n_dbl_ret", "add_n_dbl", "add_n_dbl_n_ret"];
+        simplify remove_higher_order_function_simpset_alt;
+        // print_goal_nicely;
+        goal_num_ite 21
+          do { // print_goal_consts;
+               goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
+               // lost control there, some point_add_affine_alt still getting expanded.
+               // unfolding ["point_add_affine_alt_fp2", "point_add_affine_alt"];
+               simplify (addsimp xy00z0_expander_thm add_n_dbl_n_ss);
+               rw_with fp12_laws;
+               //print_goal_nicely;
+               w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints); }
+          do { goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints); // evaluate the comprehensions in the Cryptol spec
+               simplify add_n_dbl_n_ss;
+               // w4_unint_z3 add_n_dbl_n_unints;
+               w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints);
+               }; };
+
+// WORKS
+custom_verify "add_n_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
+   (add_n_dbl_n_spec 2 3) // n=2 k=3
+   do { rw_with (concat size_2_expander_thms add_n_dbl_n_2_expander_thms);
+        unfolding ["add_n_dbl_ret", "add_n_dbl", "add_n_dbl_n_ret"];
+        simplify remove_higher_order_function_simpset_alt;
+        // print_goal_nicely;
+        goal_num_ite 28
+          do { // print_goal_consts;
+               goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
+               // lost control there, some point_add_affine_alt still getting expanded.
+               // unfolding ["point_add_affine_alt_fp2", "point_add_affine_alt"];
+               simplify (addsimp xy00z0_expander_thm add_n_dbl_n_ss);
+               rw_with fp12_laws;
+               //print_goal_nicely;
+               w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints); }
+          do { goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints); // evaluate the comprehensions in the Cryptol spec
+               simplify add_n_dbl_n_ss;
+               // w4_unint_z3 add_n_dbl_n_unints;
+               w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints);
+               }; };
+
+*/
+/*
+add_dbl_n_2_ovs <- for [(16,119)] // [(2,21), (3,28), (9, 70), (16, 112), (32, 224)] // (k, 7(k+1))
+ (\ (k, goal_n) -> custom_verify "add_n_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
+   (add_n_dbl_n_spec 2 k) // n=2
+   do { rw_with (concat size_2_expander_thms add_n_dbl_n_2_expander_thms);
+        unfolding ["add_n_dbl_ret", "add_n_dbl", "add_n_dbl_n_ret"];
+        simplify remove_higher_order_function_simpset_alt;
+        // 
+        goal_num_ite goal_n
+          do { // print_goal_consts;
+               goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
+               simplify (addsimp xy00z0_expander_thm add_n_dbl_n_ss);
+               rw_with fp12_laws;
+               print_goal_nicely;
+               w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints); }
+          do { goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints); // evaluate the comprehensions in the Cryptol spec
+               simplify add_n_dbl_n_ss;
+               // print_goal_nicely;
+               w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints);
+               }; });
+
+// Approx. 4h 20m for this proof.  (13,98) takes about 1h 7m, k=10 or 11 in minutes.
+add_dbl_n_2_ovs <- for [(14,105)] // [(16,119)] // [(2,21), (3,28), (9, 70), (16, 112), (32, 224)] // (k, 7(k+1))
+ (\ (k, goal_n) -> custom_verify "add_n_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
+   (add_n_dbl_n_spec 2 k) // n=2
+   do { rw_with (concat size_2_expander_thms add_n_dbl_n_2_expander_thms);
+        unfolding ["add_n_dbl_ret", "add_n_dbl", "add_n_dbl_n_ret"];
+        simplify remove_higher_order_function_simpset_alt;
+        //let junk1 = run (print "before goal_eval_unint");
+        goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
+        //let junk2 = run (print "before simplify");
+        simplify (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss));
+        let junk3 =run (print "before fp12 laws");
+        // goal_num_when goal_n print_goal_nicely;
+        goal_num_when goal_n print_goal_size;
+        rw_with fp12_laws;
+        let junk4 = run (print "before z3");
+        goal_num_when goal_n print_goal_size;
+        w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints'); });
+*/
+
+// Another idea: customize the fp12_laws to avoid exapanding sq.
+
+/* works
+add_dbl_n_2_ovs <- for [(32,238)] // [(16,119)] // [(2,21), (3,28), (9, 70), (16, 112), (32, 224)] // (k, 7(k+1))
+ (\ (k, goal_n) -> custom_verify "add_n_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
+   (add_n_dbl_n_spec 2 k) // n=2
+   do { rw_with (concat size_2_expander_thms add_n_dbl_n_2_expander_thms);
+        unfolding ["add_n_dbl_ret", "add_n_dbl", "add_n_dbl_n_ret"];
+        simplify remove_higher_order_function_simpset_alt;
+        //let junk1 = run (print "before goal_eval_unint");
+        goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
+        //let junk2 = run (print "before simplify");
+        simplify (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss));
+        //let junk3 =run (print "before fp12 laws");
+        // goal_num_when goal_n print_goal_nicely;
+        goal_num_when goal_n print_goal_size;
+        rw_with fp12_ring_laws;
+        //let junk4 = run (print "before z3");
+        goal_num_when goal_n print_goal_size;
+        w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints'); });
+*/
+
+// WORKS, but a long proof.  About 27 minutes on my hardware!
+add_dbl_n_2_ovs <- for [2,3,9,16,32]
+ (\ k -> custom_verify "add_n_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
+   (add_n_dbl_n_spec 2 k) // n=2
+   do { // rw_with (concat size_2_expander_thms add_n_dbl_n_2_expander_thms); // CHECK-may be needed
+        unfolding ["add_n_dbl_ret", "add_n_dbl", "add_n_dbl_n_ret"];
+        simplify remove_higher_order_function_simpset_alt;
+        goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
+        simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
+        w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints'); });
+
+add_dbl_n_3_ovs <- for [2,3,9,16,32]
+ (\ k -> custom_verify "add_n_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
+   (add_n_dbl_n_spec 3 k) // n=2
+   do { //let junk = run (print "... start proof script");
+        // rw_with (concat size_2_expander_thms add_n_dbl_n_2_expander_thms);
+        unfolding ["add_n_dbl_ret", "add_n_dbl", "add_n_dbl_n_ret"];
+        //let junk1 = run (print "... after rw, unfold");
+        simplify remove_higher_order_function_simpset_alt;
+        goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
+        //let junk2 = run (print "... after simplify, goal_eval_unint");
+        simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
+        w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints'); });
+
 
 // miller_loop_n, for n=1
 
@@ -522,7 +863,6 @@ miller_loop_n_1_equiv_thm <- custom_prove_cryptol
                                [ unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm
                                , e2_unrip_thm, e2_unrip_affine_thm, e2_hoist_thm]));
        rw_with (concat small_algebra_fp12 [line_add_equiv_thm, line_double_equiv_thm]);
-       // print_nicely;
        w4_unint_z3 [ "point_add_affine_alt_fp2", "Fp_12", "fp6_to_fp12_xy00z0"
                        , "Fp_2", "Fp", "fp12_conjugate", "point_double_fp2", "line_add_imp"
                        , "line_double_imp", "line_by_Px2", "line_add_opt", "line_double_opt"
@@ -532,8 +872,8 @@ miller_loop_n_1_equiv_thm <- custom_prove_cryptol
 
 
 let ovs_for_miller_loop =
-  concat_all [ add_dbl_n_ovs, fp_overrides, fp12_overrides, vec_overrides, vec_fp2_overrides
-             , [start_dbl_n_1_ov, vec_copy_fp12_ov]];
+  concat_all [ add_dbl_n_ovs, start_dbl_n_ovs, fp_overrides, fp12_overrides, vec_overrides, vec_fp2_overrides
+             , [vec_copy_fp12_ov]];
 
 let miller_loop_n_unints =
   concat_all [ fp_unints, fp2_unints, fp12_unints
@@ -574,7 +914,8 @@ all_expansion_n_1_thms <- for
   [ {{ \ T -> all POINTonE2_invariant [T] == POINTonE2_invariant T }}
   , {{ \ P -> all POINTonE1_affine_invariant [P] == POINTonE1_affine_invariant P }}
   ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
-// FAILS: all_expansion does not apply?
+
+// BUT: For some reason all_expansion does not apply when we try to use it later.
 */
 
 field_rewrites_for_miller_loop <- for
@@ -585,14 +926,12 @@ field_rewrites_for_miller_loop <- for
   ] (\ t -> prove_cryptol t []);
 
 miller_loop_n_1_ov <- custom_verify "miller_loop_n"
-  // ovs_for_miller_loop
-  (concat_all [ add_dbl_n_ovs, fp_overrides, fp12_overrides //, vec_overrides, vec_fp2_overrides
+  (concat_all [ add_dbl_n_ovs, start_dbl_n_ovs, fp_overrides, fp12_overrides
               , [vec_is_zero_2fp_ov, vec_is_zero_2fp2_ov]
-              , [ start_dbl_n_1_ov, vec_copy_fp12_ov, vec_copy_POINTonE2_affine_ov
+              , [ vec_copy_fp12_ov, vec_copy_POINTonE2_affine_ov
                 , vec_copy_POINTonE1_affine_ov]])
   miller_loop_n_1_spec
   do { simplify fp_simpset;
-       // rw_with (concat all_expansion_n_1_thms POINTonE2_thms);
        rw_with POINTonE2_thms;
        unfolding ["POINTonE2_invariant", "POINTonE2_affine_invariant", "POINTonE1_affine_invariant", "/\\"];
        simplify (addsimps bls12_381_rx_thms fp2_simpset);
@@ -610,4 +949,179 @@ miller_loop_n_1_ov <- custom_verify "miller_loop_n"
        simplify fp12_simpset;
        rw_with (concat_all [bls12_381_rx_thms, POINTonE2_thms, field_rewrites_for_miller_loop]);
        w4_unint_z3 miller_loop_n_unints;
+       };
+
+// for n > 2.  Here n=2.
+
+let {{
+  miller_loop_imp:  AffinePoint t_Fp_2 -> AffinePoint t_Fp -> t_Fp_12
+  miller_loop_imp Q P = fp12_conjugate ret_f where
+    z1 = Fp.field_zero
+    z2 = Fp_2.field_zero
+    (xP, yP) = P
+    Px2 = (Fp.neg (Fp.add (xP, xP)), Fp.add (yP, yP))
+    (xQ, yQ) = Q
+    T = (xQ, yQ, Fp_2.field_unit)
+    ret_a = start_dbl_n_imp [T] [Px2]
+    T_a = point_double Fp_2 T
+    ret_b = add_n_dbl_ret`{2} ret_a T_a Q Px2
+    T_b = add_n_dbl`{2} T_a Q
+    ret_c = add_n_dbl_ret`{3} ret_b T_b Q Px2
+    T_c = add_n_dbl`{3} T_b Q
+    ret_d = add_n_dbl_ret`{9} ret_c T_c Q Px2
+    T_d = add_n_dbl`{9} T_c Q
+    ret_e = add_n_dbl_ret`{32} ret_d T_d Q Px2
+    T_e = add_n_dbl`{32} T_d Q
+    ret_f = add_n_dbl_ret`{16} ret_e T_e Q Px2
+  }};
+
+/* The plan:
+
+The miller_loop_n implementation does not just multiply together the results of several miller_loop
+evaluations, but instead interleaves the computations.  So the proof is mostly an exercise in
+showing that the order of multiplications does not matter.
+
+The single miller loop
+
+We have shown that start_dbl_n Ts Ps returns  `start_dbl_n_inp Ts Ps`, then in theorems
+start_dbl_n_equiv_thms andstart_dbl_n_1_equiv_thm shown
+   `start_dbl_n_inp Ts Ps == product [start_dbl_n_1 T P | t <- Ts | P <- Ps ]
+
+We have shown (for the specific values of `k` used in the miller loop), that calling
+`add_n_dbl_n` Ts Qs Ps returns `add_n_dbl_n_ret Ts Ps Qs`, which is defined as 
+  product [ZZZ T Q P | ...]
+
+*/
+
+miller_loop_imp_equiv_thm <- custom_prove_cryptol
+    {{ \ Q P -> miller_loop_imp Q P == miller_loop_opt P Q }}
+  do { // open up the _imp, and simplify
+       unfolding ["miller_loop_opt", "miller_step_opt", "miller_loop_imp", "add_n_dbl", "add_n_dbl_ret"];
+       simplify remove_higher_order_function_simpset_alt;
+       goal_eval_unint [ "point_add_affine_alt_fp2", "Fp_12", "fp6_to_fp12_xy00z0"
+                       , "Fp_2", "Fp", "fp12_conjugate", "point_double_fp2", "line_add_imp"
+                       , "line_double_imp", "line_by_Px2", "line_add_opt", "line_double_opt"
+                       , "point_add_affine_fp2"];
+       rw_with (concat fp12_unrip_thms
+                       (concat seq_ite_thms
+                               [ unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm
+                               , e2_unrip_thm, e2_unrip_affine_thm, e2_hoist_thm]));
+       rw_with (concat small_algebra_fp12 [line_add_equiv_thm, line_double_equiv_thm]);
+       w4_unint_z3 [ "point_add_affine_alt_fp2", "Fp_12", "fp6_to_fp12_xy00z0"
+                       , "Fp_2", "Fp", "fp12_conjugate", "point_double_fp2", "line_add_imp"
+                       , "line_double_imp", "line_by_Px2", "line_add_opt", "line_double_opt"
+                       , "point_add_affine_fp2"];
+       };
+
+fp12_conjugate_thms <- for
+  [ {{ \ x y -> fp12_conjugate (Fp_12.mul (x,y)) == Fp_12.mul (fp12_conjugate x, fp12_conjugate y) }}
+  , {{ fp12_conjugate Fp_12.field_unit == Fp_12.field_unit }}
+  ] (\ t -> prove_cryptol t []);
+
+
+// WORKS!
+add_n_dbl_n_ret_n2_thms <- for [2,3,9,16,32] (\ k ->
+  custom_prove_cryptol
+    {{ \ r0 r1 T0 T1 Q0 Q1 P0 P1 ->
+       add_n_dbl_n_ret`{2,k} (Fp_12.mul (r0,r1)) [T0,T1] [Q0,Q1] [P0,P1] ==
+       Fp_12.mul (add_n_dbl_ret`{k} r0 T0 Q0 P0, add_n_dbl_ret`{k} r1 T1 Q1 P1) }}
+  do { let unints =  concat_all [ fp_unints, fp2_unints, fp12_unints
+                                , ["point_add_affine_alt_fp2", "point_double_fp2" , "fp12_conjugate"
+                                 , "fp6_to_fp12_xy00z0", "line_by_Px2", "line_double_imp"]];
+       unfolding ["add_n_dbl_n_ret", "add_n_dbl_ret"];
+       simplify remove_higher_order_function_simpset_alt;
+       goal_eval_unint unints;
+       rw_with (concat fp12_unrip_thms
+                       (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
+       rw_with fp12_ring_laws;
+       w4_unint_z3 unints; });
+
+let miller_loop_n_2_unints =
+  concat_all [ fp_unints, fp2_unints, fp12_unints
+             , ["add_n_dbl", "add_n_dbl_ret", "add_n_dbl_n_ret", "start_dbl_n_imp", "start_dbl_1"
+               , "point_double_fp2", "point_add_affine_alt_fp2"
+               , "fp12_conjugate"]];
+
+
+miller_loop_n_2_ov <- custom_verify "miller_loop_n"
+  (concat_all [ add_dbl_n_2_ovs, start_dbl_n_ovs, fp_overrides, fp12_overrides
+              , [vec_is_zero_2fp_ov, vec_is_zero_2fp2_ov]
+              , [ vec_copy_fp12_ov, vec_copy_POINTonE2_affine_ov
+                , vec_copy_POINTonE1_affine_ov]])
+  (miller_loop_n_spec 2)
+  do { simplify fp_simpset;
+       rw_with POINTonE2_thms;
+       unfolding ["POINTonE2_invariant", "POINTonE2_affine_invariant", "POINTonE1_affine_invariant", "/\\"];
+       simplify (addsimps bls12_381_rx_thms fp2_simpset);
+       simplify fp_simpset;
+       simplify fp12_simpset;
+       simplify prop_simpset;
+       rw_with (concat [start_dbl_n_1_equiv_thm] start_dbl_n_equiv_thms);
+       unfolding ["miller_loop_imp"]; //  to expose the contained "point_double", for the next step...
+       simplify remove_higher_order_function_simpset_alt;
+       goal_eval_unint miller_loop_n_2_unints; // ... otherwise "point_double" is unfolded here!
+       // the goal_eval was needed to deal with the `all` and `map` functions, now undo the damage:
+       rw_with (concat fp12_unrip_thms
+                       (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
+       simplify fp_simpset;
+       simplify fp2_simpset;
+       // simplify fp12_simpset;
+       rw_with (concat fp12_ring_laws fp12_conjugate_thms);
+       rw_with (concat_all [ bls12_381_rx_thms, POINTonE2_thms, field_rewrites_for_miller_loop
+                           , add_n_dbl_n_ret_n2_thms]);
+       rw_with (concat [start_dbl_n_1_equiv_thm] start_dbl_n_equiv_thms);
+       rw_with fp12_conjugate_thms; // Why do I need this again?
+       // goal_num_when 13 print_goal_nicely;
+       w4_unint_z3 miller_loop_n_2_unints;
+       };
+
+add_n_dbl_n_ret_n3_thms <- for [2,3,9,16,32] (\ k ->
+  custom_prove_cryptol
+    {{ \ r0 r1 r2 T0 T1 T2 Q0 Q1 Q2 P0 P1 P2 ->
+       add_n_dbl_n_ret`{3,k} (Fp_12.mul (r0,Fp_12.mul (r1,r2))) [T0,T1,T2] [Q0,Q1,Q2] [P0,P1,P2] ==
+       Fp_12.mul (add_n_dbl_ret`{k} r0 T0 Q0 P0,
+                  Fp_12.mul (add_n_dbl_ret`{k} r1 T1 Q1 P1,
+                             add_n_dbl_ret`{k} r2 T2 Q2 P2)) }}
+  do { let unints =  concat_all [ fp_unints, fp2_unints, fp12_unints
+                                , ["point_add_affine_alt_fp2", "point_double_fp2" , "fp12_conjugate"
+                                 , "fp6_to_fp12_xy00z0", "line_by_Px2", "line_double_imp"]];
+       unfolding ["add_n_dbl_n_ret", "add_n_dbl_ret"];
+       simplify remove_higher_order_function_simpset_alt;
+       goal_eval_unint unints;
+       rw_with (concat fp12_unrip_thms
+                       (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
+       rw_with fp12_ring_laws;
+       w4_unint_z3 unints; });
+
+
+miller_loop_n_3_ov <- custom_verify "miller_loop_n"
+  (concat_all [ add_dbl_n_3_ovs, fp_overrides, fp12_overrides, start_dbl_n_ovs
+              , [vec_is_zero_2fp_ov, vec_is_zero_2fp2_ov]
+              , [ vec_copy_fp12_ov, vec_copy_POINTonE2_affine_ov
+                , vec_copy_POINTonE1_affine_ov]])
+  (miller_loop_n_spec 3)
+  do { simplify fp_simpset;
+       rw_with POINTonE2_thms;
+       unfolding ["POINTonE2_invariant", "POINTonE2_affine_invariant", "POINTonE1_affine_invariant", "/\\"];
+       simplify (addsimps bls12_381_rx_thms fp2_simpset);
+       simplify fp_simpset;
+       simplify fp12_simpset;
+       simplify prop_simpset;
+       rw_with (concat [start_dbl_n_1_equiv_thm] start_dbl_n_equiv_thms);
+       unfolding ["miller_loop_imp"]; //  to expose the contained "point_double", for the next step...
+       simplify remove_higher_order_function_simpset_alt;
+       goal_eval_unint miller_loop_n_2_unints; // ... otherwise "point_double" is unfolded here!
+       // the goal_eval was needed to deal with the `all` and `map` functions, now undo the damage:
+       rw_with (concat fp12_unrip_thms
+                       (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
+       simplify fp_simpset;
+       simplify fp2_simpset;
+       // simplify fp12_simpset;
+       rw_with (concat fp12_ring_laws fp12_conjugate_thms);
+       rw_with (concat_all [ bls12_381_rx_thms, POINTonE2_thms, field_rewrites_for_miller_loop
+                           , add_n_dbl_n_ret_n3_thms]);
+       rw_with (concat [start_dbl_n_1_equiv_thm] start_dbl_n_equiv_thms);
+       rw_with fp12_conjugate_thms; // Why do I need this again?
+       // goal_num_when 13 print_goal_nicely;
+       w4_unint_z3 miller_loop_n_2_unints;
        };
