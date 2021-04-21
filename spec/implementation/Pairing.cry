@@ -48,7 +48,7 @@
 
 module implementation::Pairing where
 
-import Parameters (t_Fp, t_Fp_2, t_Fp_6, t_Fp_12, Fp, Fp_2, Fp_12, Fp_to_Fp_2)
+import Parameters (t_Fp, t_Fp_2, t_Fp_6, t_Fp_12, Fp, Fp_2, Fp_12, Fp_to_Fp_2, E, E')
 import Parameters as P
 import ShortWeierstrassCurve as EC
 import Common::Field (FieldRep)
@@ -250,6 +250,12 @@ miller_loop_opt P Q =  fp12_conjugate last_f where
    negative_t = <| x^^63 + x^^62 + x^^60 + x^^57 + x^^48 + x^^16 |>
 
 
+miller_loop_opt_checked:  EC::AffinePoint t_Fp -> EC::AffinePoint t_Fp_2 -> t_Fp_12
+miller_loop_opt_checked P Q =
+    if EC::is_point_O E' Q  \/ EC::is_point_O E P
+    then Fp_12.field_unit
+    else miller_loop_opt P Q
+
 ////////////////////////////////////////////////////////////////
 //
 // The as-implemented functions
@@ -345,6 +351,13 @@ start_dbl_n_imp Ts Px2s = rets!0 where
     rets = [ret_a] # [Fp_12.mul (ret,  fp6_to_fp12_xy00z0 line) | ret <- rets | line <- lines]
     lines = [line_by_Px2 (line_double_imp T) P | T <- tail Ts | P <- tail Px2s]
 
+// effect of one point.
+start_dbl_1: (t_Fp_2, t_Fp_2, t_Fp_2) -> (t_Fp, t_Fp) -> t_Fp_12
+start_dbl_1 T Px2 = ret where
+    line_a = line_double_imp T
+    line_b = line_by_Px2 line_a Px2
+    ret = fp6_to_fp12_xy00z0 line_b
+
 // effect on point T -- each of the T_i, Q_i affected independently in the same way
 add_n_dbl: {k} (fin k) => EC::ProjectivePoint t_Fp_2 ->  EC::AffinePoint t_Fp_2 -> EC::ProjectivePoint t_Fp_2
 add_n_dbl T Q = doubles@`k where
@@ -361,16 +374,18 @@ add_n_dbl_ret r T Q Px2 = rets@`k where
     lines = [line_by_Px2 (line_double_imp Ti) Px2 | Ti <- Ts ]
     rets = [ret_a] # [Fp_12.mul (Fp_12.sq ret, fp6_to_fp12_xy00z0 line) | ret <- rets | line <- lines]
 
+// and for n >= 1
+add_n_dbl_n_ret: {n, k} (fin n, n >= 1, fin k) =>
+     t_Fp_12 ->[n](EC::ProjectivePoint t_Fp_2) -> [n](EC::AffinePoint t_Fp_2) -> [n](EC::AffinePoint t_Fp)
+     -> t_Fp_12
+add_n_dbl_n_ret r Ts Qs Px2s = F_prod Fp_12 rets where
+    rets = [add_n_dbl_ret`{k} r (Ts@0) (Qs@0) (Px2s@0)] #
+           [add_n_dbl_ret`{k} Fp_12.field_unit T Q Px2 | T <- tail Ts | Q <- tail Qs | Px2 <- tail Px2s]
 
 //// miller_loop_n
-// focus just on the n=1 case for now.
 
-miller_loop_n_1_imp:  EC::AffinePoint t_Fp_2 -> EC::AffinePoint t_Fp -> t_Fp_12
-miller_loop_n_1_imp Q P = (if Q == (z2,z2) \/ P == (z1,z1)
-                           then Fp_12.field_unit
-                           else fp12_conjugate ret_f) where
-    z1 = Fp.field_zero
-    z2 = Fp_2.field_zero
+miller_loop_imp: EC::AffinePoint t_Fp_2 -> EC::AffinePoint t_Fp -> t_Fp_12
+miller_loop_imp Q P = fp12_conjugate ret_f where
     (xP, yP) = P
     Px2 = (Fp.neg (Fp.add (xP, xP)), Fp.add (yP, yP))
     (xQ, yQ) = Q
@@ -387,3 +402,9 @@ miller_loop_n_1_imp Q P = (if Q == (z2,z2) \/ P == (z1,z1)
     T_e = add_n_dbl`{32} T_d Q
     ret_f = add_n_dbl_ret`{16} ret_e T_e Q Px2
 
+miller_loop_n_1_imp:  EC::AffinePoint t_Fp_2 -> EC::AffinePoint t_Fp -> t_Fp_12
+miller_loop_n_1_imp Q P = (if Q == (z2,z2) \/ P == (z1,z1)
+                           then Fp_12.field_unit
+                           else miller_loop_imp Q P) where
+    z1 = Fp.field_zero
+    z2 = Fp_2.field_zero
