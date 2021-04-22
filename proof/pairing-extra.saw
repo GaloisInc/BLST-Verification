@@ -1,0 +1,91 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+/* Some additional proofs for the functions in pairing.c
+
+   These simply take too long for inclusion in the normal CI process,
+   but can be run for some extra assurance.
+ */
+
+// requires that `pairing.saw` is loaded beforehand
+
+start_dbl_n_8_ov <-custom_verify "start_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_dbl_line_ovs, mul_by_xy00z0_fp12_ovs])
+   (start_dbl_n_spec 8)
+   do { goal_eval_unint start_dbl_n_unints;
+        simplify start_dbl_n_ss;
+        w4_unint_z3 start_dbl_n_unints;
+        };
+
+start_dbl_n_8_equiv_thm <- custom_prove_cryptol
+  {{ \ Ts Ps -> start_dbl_n_imp`{8} Ts Ps == F_prod Fp_12 [start_dbl_1 T P | T <- Ts | P <- Ps] }}
+  do { goal_eval_unint start_dbl_n_unints;
+       simplify add_n_dbl_n_ss;
+       rw_with fp12_laws;
+       w4_unint_z3 start_dbl_n_unints;
+       };
+
+add_dbl_n_8_ovs <-for [2,3,9,16,32]
+ (\ k -> custom_verify "add_n_dbl_n"
+   (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
+   (add_n_dbl_n_spec 8 k) // n=8
+   do { unfolding ["add_n_dbl_ret", "add_n_dbl", "add_n_dbl_n_ret"];
+        simplify remove_higher_order_function_simpset_alt;
+        goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
+        simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
+        w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints'); });
+
+// The worst loop there, for k=32, executes 32 times, and contains one
+// call and a loop executed n=8 times, with 3 calls in that loop, so
+// that's 32*(1+8*3) = 800 calls; there are 8*3 = 24 more calls before
+// that, for 824.  In all there are 826 goals to be proved, as there
+// are two "points_to" postconditions.
+//
+// On my machine this takes about 2 and a half hours.  Doing all 5 k values
+// takes about 4 hours.
+
+add_n_dbl_n_ret_n8_thms <- for [2,3,9,16,32] (\ k ->
+  custom_prove_cryptol
+    {{ \ rs Ts Ps Qs ->
+       add_n_dbl_n_ret`{8,k} (F_prod`{n=8} Fp_12 rs) Ts Qs Ps ==
+       F_prod Fp_12 [add_n_dbl_ret`{k} r T Q P | r <- rs | T <- Ts | Q <- Qs | P <- Ps] }}
+  do { let unints =  concat_all [ fp_unints, fp2_unints, fp12_unints
+                                , ["point_add_affine_alt_fp2", "point_double_fp2" , "fp12_conjugate"
+                                 , "fp6_to_fp12_xy00z0", "line_by_Px2", "line_double_imp"]];
+       unfolding ["add_n_dbl_n_ret", "add_n_dbl_ret"];
+       simplify remove_higher_order_function_simpset_alt;
+       goal_eval_unint unints;
+       rw_with (concat fp12_unrip_thms
+                       (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
+       rw_with fp12_ring_laws;
+       w4_unint_z3 unints; });
+
+
+miller_loop_n_8_ov <- custom_verify "miller_loop_n"
+  (concat_all [ add_dbl_n_8_ovs, fp_overrides, fp12_overrides, [start_dbl_n_8_ov]
+              , [vec_is_zero_2fp_ov, vec_is_zero_2fp2_ov]
+              , [ vec_copy_fp12_ov, vec_copy_POINTonE2_affine_ov
+                , vec_copy_POINTonE1_affine_ov]])
+  (miller_loop_n_spec 8)
+  do { rw_with_1 miller_loop_imp_equiv_thm; // replace `miller_loop_opt` by `miller_loop_imp` in the post.
+       simplify (addsimps POINTonE2_thms fp_simpset);
+       unfolding ["POINTonE2_invariant", "POINTonE2_affine_invariant", "POINTonE1_affine_invariant", "/\\"];
+       simplify (addsimps bls12_381_rx_thms fp2_simpset);
+       simplify fp_simpset;
+       simplify fp12_simpset;
+       simplify prop_simpset;
+       rw_with (concat add_n_dbl_n_ret_n8_thms [start_dbl_n_1_equiv_thm, start_dbl_n_8_equiv_thm]);
+       unfolding ["miller_loop_imp"]; //  to expose the contained "point_double", for the next step...
+       simplify remove_higher_order_function_simpset_alt;
+       goal_eval_unint miller_loop_n_2_unints; // ... otherwise "point_double" is unfolded here!
+       // the goal_eval was needed to deal with the `all` and `map` functions, now undo the damage:
+       simplify (addsimps (concat_all [fp12_unrip_thms, seq_ite_thms
+                                      , [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]
+                                      ]) fp_simpset) ;
+       simplify (addsimps  (concat_all [ fp12_ring_laws, fp12_conjugate_thms, bls12_381_rx_thms
+                                       , POINTonE2_thms, field_rewrites_for_miller_loop
+                                       , [start_dbl_n_1_equiv_thm] ]) fp2_simpset);
+       w4_unint_z3 miller_loop_n_2_unints;
+       };
