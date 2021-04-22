@@ -12,6 +12,32 @@
 
 import "../spec/implementation/Pairing.cry";
 
+/* Notes:
+
+  1.  We show here that the `miller_loop_n` function computes what the specification
+  `miller_loop_opt` describes.  This is not the same thing as what `ate_pairing'`
+  computes; instead it is something that will give the same result after the final
+  exponentiation step.  Callers will need to apply some assumption like
+
+    (*) final_exponentiation_opt (miller_loop_opt P Q) == ate_pairing P Q
+
+  which is justified by the informal notes in spec/implementation/Pairing.cry.
+  (But the assumption  will not look exactly like that because the final exponentiation
+  implementation is not applied directly to the result of the miller loop.)
+
+  2.  The ate pairing should only be applied to points that are in the subgroups,
+  that is, P should be in G1 and Q in G2.  Possibly this should be added as a
+  precondition to the functions here, although it has not been needed for the code
+  proofs. 
+
+  3. Property (*) only holds when  Q is not the point at infinity.  This is
+  checked by `miller_loop_n` when n==1 (which then returns the correct result for that
+  case).  It is not checked for when n > 1, and indeed we can compute
+
+    miller_loop_opt P::BP ([0,0],[0,0]) == Fp_12.field_zero
+
+ */
+  
 ////////////////////////////////////////////////////////////////
 //
 // Specifications
