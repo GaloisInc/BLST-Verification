@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-/* For stand-alone testing:
+// For standalone:
 import "../spec/Parameters.cry";
 include "helpers.saw";
 m <- llvm_load_module "../build/llvm/libblst.a.bc";
 let do_prove = true;
 include "proof-helpers.saw";
-*/
+// .. end for
 
 /* SAW recently acquired the ability to handle permutative rewrite rules, allow for the
    use of rewrite rules for properties like commutativity.  This new set of algebraic laws
@@ -17,8 +17,8 @@ include "proof-helpers.saw";
 
    The strategy use here is as follows:
 
-   - sums and products are associated to the right, and the summands (or multiplicands) will be
-     sorted.
+   - sums and products are associated to the right, and the summands (or
+     multiplicands) will be sorted.
 
    - subtraction is eliminated, being replaced by addition of a negation
 
@@ -40,10 +40,31 @@ include "proof-helpers.saw";
      This makes some rules more complex, or even conditional.  For example, we do not have
      x+0 == x, but instead x+0 == normalize x.
 
-  Division introduces additional problems.  TODO: describe and address them.
- */
+  Division introduces additional problems.  While Z3 can prove most of the
+  algebraic laws, including those for multiplication, we do not get far with
+  division.  So the rules are split into two blocks, one for the provable rules
+  and another for those we will just quickcheck.
 
-let base_alg_laws_for_ring F = 
+  There are 3 rule sets for each field:
+
+  1. First, only those rewrites that will not duplicate any terms.  These will
+     not make a formula larger, and there is no harm in applying them.
+     ("basic_algebraic_thms")
+
+  2. A set that expands on (1) by also eliminating the squaring operation, and
+     applying the distributive laws.
+
+  3.  Some rules for eliminating division in favour of multiplication.
+
+  Finally, there are some laws for the homomorphic properties of the map from one field
+  to another that contains it, e.g. Fp_to_Fp_2.
+  */
+
+// We define the laws in two parts, because those not involving `div` are
+// provable, while we sometimes need to `admit` the
+
+// non-duplicating rwrites, part 1:
+let base_alg_laws_for_ring F =  // no division
   [ // multiplication
     {{ \ x y   -> F.mul (x, y) == F.mul (y,x) }} // mul commutes
   , {{ \ x y z -> F.mul (F.mul (x, y), z) == F.mul (x, F.mul (y, z)) }} // mul associates
@@ -101,131 +122,101 @@ let base_alg_laws_for_ring F =
   , {{ \ x   -> F.is_val (F.neg x) == True }}
   ];
 
-
-let alg_laws_for_field F = 
-  [ // multiplication
-    {{ \ x y -> F.mul (x, y) == F.mul (y,x) }} // mul commutes
-  , {{ \ x y z -> F.mul (F.mul (x, y), z) == F.mul (x, F.mul (y, z)) }} // mul associates
-  , {{ \ x y z -> F.mul (x, F.mul (y, z)) == F.mul (y, F.mul (x, z)) }} // mul commutes, again
-  , {{ \x -> F.mul (x, F.field_zero) == F.field_zero }} // x*0 = 0
-  , {{ \x -> F.mul (F.field_zero, x) == F.field_zero }} // 0*x = 0
-  , {{ \x -> F.mul (x, F.field_unit) == F.normalize x }} // x*1 = x ish
-  , {{ \x -> F.mul (F.field_unit, x) == F.normalize x }} // 1*x = x ish
-
-  , {{ \x -> F.sq x == F.mul (x,x) }} // eliminate squaring.  Not always a good idea
-
-  // division
-  // , {{ \x -> F.div (x, F.field_unit) == F.normalize x }} // x/1 = x ish
-  // , {{ \x -> F.div (x, F.field_zero) == F.field_zero }} // x/0 = 0
-  // , {{ \ x y z -> F.div (F.div (x, y), z) == F.div (x, F.mul (y, z)) }} // CHECK
-  // , {{ \ x y z -> F.div (x, F.div (y, z)) == F.div (F.mul (x, z), y) }} // CHECK
-  // , {{ \ x y z -> F.mul (F.div (x, y), z) == F.div (F.mul (x, z), y) }} // CHECK
-  // , {{ \ x y z -> F.mul (x, F.div (y, z)) == F.div (F.mul (x, y), z) }} // CHECK
-
-  // addition
-  , {{ \ x y -> F.add (x, y) == F.add (y,x) }} // add commutes
-  , {{ \ x y z -> F.add (F.add (x, y), z) == F.add (x, F.add (y, z)) }} // add associates
-  , {{ \ x y z -> F.add (x, F.add (y, z)) == F.add (y, F.add (x, z)) }} // add commutes, again
-  , {{ \x -> F.add (x, F.field_zero) == F.normalize x }} // x+0 = x ish
-  , {{ \x -> F.add (F.field_zero, x) == F.normalize x }}//  0+x = x ish
-  , {{ \ x y z -> F.mul (x, F.add (y, z)) == F.add (F.mul (x, y), F.mul (x, z)) }} // distributive
-  , {{ \ x y z -> F.mul (F.add (x, y), z) == F.add (F.mul (x, z), F.mul (y, z)) }} // distributive
-
-  // ,  {{ \ x y z -> F.div (F.add (x, y), z) == F.add (F.div (x, z), F.div (y, z)) }} // distributive
-
-  // subtraction
-  , {{ \ x y -> F.sub (x, y) == F.add (x, F.neg y) }} // eliminate sub in favour of neg
-
-  // negation
-  , {{ F.neg F.field_zero == F.field_zero }} // -0 = 0
-  , {{ \ x y -> F.neg (F.add (x, y)) == F.add (F.neg x, F.neg y) }} // push neg inside a sum
-  , {{ \ x y -> F.mul (x, F.neg y) == F.neg (F.mul (x, y)) }} // pull neg outside a product
-  , {{ \ x y -> F.mul (F.neg x, y) == F.neg (F.mul (x, y)) }} // pull neg outside a product
-  //, {{ \ x y -> F.div (x, F.neg y) == F.neg (F.div (x, y)) }} // pull neg outside a quotient
-  //, {{ \ x y -> F.div (F.neg x, y) == F.neg (F.div (x, y)) }} // pull neg outside a quotient
-  , {{ \ x -> F.neg (F.neg x) == F.normalize x }} // double negative
-
-  // normalization
-  // ... eliminate normalization in a argument position
-  , {{ \ x y -> F.mul (F.normalize x, y) == F.mul (x, y) }}
-  , {{ \ x y -> F.mul (x, F.normalize y) == F.mul (x, y) }}
-  // , {{ \ x y -> F.div (F.normalize x, y) == F.div (x, y) }}
-  // , {{ \ x y -> F.div (x, F.normalize y) == F.div (x, y) }}
-  , {{ \ x y -> F.add (F.normalize x, y) == F.add (x, y) }}
-  , {{ \ x y -> F.add (x, F.normalize y) == F.add (x, y) }}
-  , {{ \ x -> F.neg (F.normalize x) == F.neg x }}
-  , {{ \ x -> F.normalize (F.normalize x) == F.normalize x }}
-  // ... results are normalized
-  , {{ \ x y -> F.normalize (F.mul (x, y)) == F.mul (x, y) }}
-  // , {{ \ x y -> F.normalize (F.div (x, y)) == F.div (x, y) }}
-  , {{ \ x y -> F.normalize (F.add (x, y)) == F.add (x, y) }}
-  , {{ \ x   -> F.normalize (F.neg x) == F.neg x }}
-  , {{          F.normalize F.field_zero == F.field_zero }}
-  , {{          F.normalize F.field_unit == F.field_unit }}
-  
-  // is_val
-  , {{ \ x y -> F.is_val (F.mul (x, y)) == True }}
-  // , {{ \ x y -> F.is_val (F.div (x, y)) == True }}
-  , {{ \ x y -> F.is_val (F.add (x, y)) == True }}
-  , {{ \ x   -> F.is_val (F.neg x) == True }}
+// non-duplicating rewrites, part 2:
+let base_alg_laws_for_div F = 
+  [ {{ \x -> F.div (x, F.field_unit) == F.normalize x }} // x/1 = x ish
+  , {{ \x -> F.div (x, F.field_zero) == F.field_zero }} // x/0 = 0
+  , {{ \ x y z -> F.div (F.div (x, y), z) == F.div (x, F.mul (y, z)) }} // CHECK
+  , {{ \ x y z -> F.div (x, F.div (y, z)) == F.div (F.mul (x, z), y) }} // CHECK
+  , {{ \ x y z -> F.mul (F.div (x, y), z) == F.div (F.mul (x, z), y) }} // CHECK
+  , {{ \ x y z -> F.mul (x, F.div (y, z)) == F.div (F.mul (x, y), z) }} // CHECK
+  , {{ \ x y -> F.div (x, F.neg y) == F.neg (F.div (x, y)) }} // pull neg outside a quotient
+  , {{ \ x y -> F.div (F.neg x, y) == F.neg (F.div (x, y)) }} // pull neg outside a quotient
+  , {{ \ x y -> F.div (F.normalize x, y) == F.div (x, y) }}
+  , {{ \ x y -> F.div (x, F.normalize y) == F.div (x, y) }}
+  , {{ \ x y -> F.normalize (F.div (x, y)) == F.div (x, y) }}
+  , {{ \ x y -> F.is_val (F.div (x, y)) == True }}
   ];
 
-let Fp_2_test_values = eval_list
-  {{ [[0,0], [0,1], [1,0], [2^^200, 2^^10], [3^^100, 11], [`(p+1), 2], [7, `(p+5)], [-1,-2]]:[_]t_Fp_2 }};
+// duplicating rewrites, part 1
+let expansion_laws_for_ring F =
+  [ {{ \x -> F.sq x == F.mul (x,x) }} // eliminate squaring.  Not always a good idea
+  , {{ \ x y z -> F.mul (x, F.add (y, z)) == F.add (F.mul (x, y), F.mul (x, z)) }} // distributive
+  , {{ \ x y z -> F.mul (F.add (x, y), z) == F.add (F.mul (x, z), F.mul (y, z)) }} // distributive
+  ];
 
-let test_fp2_single t = 
-    for Fp_2_test_values (\v -> prove z3 {{ t v }} );
+// duplicating rewrites, part 2
+let expansion_laws_for_div F =
+  [ {{ \ x y z -> F.div (F.add (x, y), z) == F.add (F.div (x, z), F.div (y, z)) }} // distributive
+  ];
 
-let test_fp2_double t =
-  for Fp_2_test_values (\v -> for Fp_2_test_values (\w -> prove z3 {{ t v w}} ));
+// elimination of div from equality tests
+let div_elimination_rules F =
+  [ {{ \ x y z -> (x == F.div(y, z)) ==
+         (if F.normalize z == F.field_zero
+          then x == F.field_zero
+          else F.is_val x /\ F.normalize y == F.mul (x, z)) }}
+  , {{ \ x y z -> (F.div(y, z) == x) ==
+         (if F.normalize z == F.field_zero
+          then x == F.field_zero
+          else F.is_val x /\ F.normalize y == F.mul (x, z)) }}
+  ];
 
-// for (alg_laws_for_field {{Fp}}) test_cryptol;
+let make_base_alg_laws F = do {
+  //let n_tests = 2500;
+  laws_part_1 <- for (base_alg_laws_for_ring F) (\ t -> prove_cryptol t []);
+  laws_part_2 <- for (base_alg_laws_for_div F) test_cryptol;
+  // laws_part_2 <- for (base_alg_laws_for_div F) (prove_print (quickcheck n_tests));
+  let base_laws = concat laws_part_1 laws_part_2;
+  laws_part_3 <- for (expansion_laws_for_ring F) (\ t -> prove_cryptol t []);
+  laws_part_4 <- for (expansion_laws_for_div F) test_cryptol;
+  // laws_part_4 <- for (expansion_laws_for_div F) (prove_print (quickcheck n_tests));
+  div_elim_rules <- for (div_elimination_rules F) test_cryptol;
+  return  (base_laws, concat base_laws (concat laws_part_3 laws_part_4), div_elim_rules);
+  };
+
+/*
+print "F11";
+import "../spec/PrimeField.cry";
+let {{ F11 = prime_field_integer 11 }};
+make_base_alg_laws {{F11}};
+*/
+
 print "Fp";
-fp_laws <- for (alg_laws_for_field {{Fp}}) (\ t -> prove_cryptol t []);
+fp_base <- make_base_alg_laws {{Fp}};
+let (fp_laws, fp_all_laws, fp_div_elim_thms) = fp_base;
 
-print "Fp_2";
-fp2_laws <- for (alg_laws_for_field {{Fp_2}}) (\ t -> prove_cryptol t []);
+print "Fp2";
+fp2_base <- make_base_alg_laws {{Fp_2}};
+let (fp2_laws, fl2_all_laws, fp2_div_elim_thms) = fp2_base;
 
-print "Fp_6";
-fp6_laws <- for (alg_laws_for_field {{Fp_6}}) (\ t -> prove_cryptol t []);
+print "Fp6";
+fp6_base <- make_base_alg_laws {{Fp_6}};
+let (fp6_laws, fl6_all_laws, fp6_div_elim_thms) = fp6_base;
 
-print "Fp_12";
-fp12_laws <- for (alg_laws_for_field {{Fp_12}}) (\ t -> prove_cryptol t []);
-fp12_ring_laws <- for (base_alg_laws_for_ring {{Fp_12}})
-  (\ t -> custom_prove_cryptol t do { rw_with fp12_laws; w4_unint_z3 ["Fp_12"]; });
+print "Fp12";
+fp12_base <- make_base_alg_laws {{Fp_12}};
+let (fp12_laws, fl12_all_laws, fp12_div_elim_thms) = fp12_base;
+
 
 // When F_to_G: t_F -> t_G is a homomorphism for fields F and G
-let homomorphism_laws F_to_G F G =
+let homomorphism_laws_1 F_to_G F G =
   [ {{ F_to_G F.field_zero == G.field_zero }}
   , {{ F_to_G F.field_unit == G.field_unit }}
   , {{ \ x y -> F_to_G (F.add (x,y)) == G.add (F_to_G x, F_to_G y) }}
   , {{ \ x y -> F_to_G (F.sub (x,y)) == G.sub (F_to_G x, F_to_G y) }}
   , {{ \ x y -> F_to_G (F.mul (x,y)) == G.mul (F_to_G x, F_to_G y) }}
-  // , {{ \ x y -> F_to_G (F.div (x,y)) == G.div (F_to_G x, F_to_G y) }}
+  // , {{ \ x y -> F_to_G (F.div (x,y)) == G.div (F_to_G x, F_to_G y) }} // in part 2
   , {{ \ x -> F_to_G (F.neg x) == G.neg (F_to_G x) }}
-  // ?? , {{ \ x -> F_to_G (F.normalize x) == G.normalize (F_to_G x) }}
+  , {{ \ x -> F_to_G (F.normalize x) == G.normalize (F_to_G x) }}
+  ];
+
+let homomorphism_laws_2 F_to_G F G =
+  [ {{ \ x y -> F_to_G (F.div (x,y)) == G.div (F_to_G x, F_to_G y) }}
   ];
 
 print "Fp_to_Fp_2";
-fp_to_fp2_thms <- for (homomorphism_laws {{ Fp_to_Fp_2}} {{ Fp}} {{Fp_2}}) (\ t -> prove_cryptol t []);
+fp_to_fp2_thms_1 <- for (homomorphism_laws_1 {{ Fp_to_Fp_2}} {{ Fp}} {{Fp_2}}) (\ t -> prove_cryptol t []);
+fp_to_fp2_thms_2 <- for (homomorphism_laws_2 {{ Fp_to_Fp_2}} {{ Fp}} {{Fp_2}}) test_cryptol;
 
-/*
-////////////////
-//
-// Cancellation.  These rules are order-sensitive!  SAW currently applies rules in the
-// opposite order they are added to simpset, so in `addsimps [a,b] (addsimps [c,d] empty_ss`,
-// rules are tried in order b, a, d, c.  So "catch-all" rules must appear first.
-
-let {{ cancel: {t} Field_rep t -> t -> t -> t
-       cancel F x y = F.div (F.normalize x, F.normalize y) }};
-
-let cancel_rules F =
-  [ {{ \x y z -> cancel F x F.mul(y,z) == F.mul (y, cancel F x z) }}
-  , {{ \x z -> cancel F x F.mul (x, z)) ==  if F.is_zero(x) then F.field_zero else F.normalize z }}
-  , {{ \x y -> cancel F x (F.sq y) == F.mul (x, (F.sq (cancel F x y)))
-  , {{ \x y -> cancel F (F.sq x) (F.sq y) == F.sq (cancel F  x y) }}
-  , {{ \x y z -> cancel F (F.mul (x, y)) z = cancel F x (cancel F y z) }}
-  , {{ \x y z -> (F.mul (x,y) == z) == (y == cancel F x z) }}
-  ];
-
-*/
+let fp_to_fp2_thms = concat fp_to_fp2_thms_1 fp_to_fp2_thms_2;
