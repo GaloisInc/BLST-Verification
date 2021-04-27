@@ -56,10 +56,19 @@ mod_sq_Z (p,x) = mod_mul_Z (p, x, x)
 mod_half_Z: (Integer,Integer)-> Integer
 mod_half_Z (p, x) = if (x%2==0) then x/2 else (x+p)/2
 
+/* Not "obviously terminating" 
+mod_pow_Z: (Integer,Integer,Integer) -> Integer
+mod_pow_Z (p, x, e) = mod_pow_loop (x, e%(p-1)) where // handles negative exponents, x^(p-1) = 1 or 0
+  mod_pow_loop (b, e') =
+    if e' == 0 then 1
+     | (e'%2) == 0 then mod_pow_loop (mod_sq_Z (p, b), e'/2)
+    else mod_mul_Z (p, b, mod_pow_loop (mod_sq_Z (p, b), e'/2))
+*/
+
 /* Returns x/y in F_p using Euler's binary gcd algorithm. */
 /* Taken from [HMV] */
 mod_div_Z : (Integer,Integer,Integer) -> Integer
-mod_div_Z (p,x,y) = egcd(p,0,y,x)
+mod_div_Z (p,x,y) = egcd(p,0,y%p,x%p)
   where
     /* In code below, a is always odd. */
     egcd(a,ra,b,rb) =
