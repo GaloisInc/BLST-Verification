@@ -370,6 +370,11 @@ map_to_isogenous_E2_impl_ov <- really_custom_verify
           simplify (addsimps [rewrite_xor, rewrite_1, rewrite_2] empty_ss);
       // Now we deal with the term extracted from the Cryptol code:
         unfolding ["map_to_curve_E2_prime_impl","recip_ZZZ","F_is_zero","POINTonE2_rep"];
+        let hoist_ifs = run (for [
+            {{ \ c (x1:t_Fp_2) (x2:t_Fp_2) y1 y2 -> (if c then (x1,x2) else (y1,y2)).0 == if c then x1 else y1 }}
+          , {{ \ c (x1:t_Fp_2) (x2:t_Fp_2) y1 y2 -> (if c then (x1,x2) else (y1,y2)).1 == if c then x2 else y2 }}
+        ] (\e -> really_custom_prove_cryptol e w4));
+        simplify (addsimps hoist_ifs empty_ss);
         let F_rewrites = run (for [ // unfolds F_prod and F_sum
             {{ \(x:[5]t_Fp_2) -> (F_prod Fp_2 x == Fp_2.mul(a, Fp_2.mul(b, Fp_2.mul(c, Fp_2.mul(d, e)))) where [a,b,c,d,e] = x) }}
           , {{ \(x:[3]t_Fp_2) -> (F_prod Fp_2 x == Fp_2.mul(a, Fp_2.mul(b, c)) where [a,b,c] = x) }}
@@ -379,6 +384,7 @@ map_to_isogenous_E2_impl_ov <- really_custom_verify
         simplify (addsimps fp2_laws empty_ss); // try to normalize field expression
         simplify (add_cryptol_defs ["ecEq","PEqBit"] empty_ss); // transform those to boolEq?
       // Finally:
+        // assume_unsat;
         w4_unint_z3 ["fp_rep", "fp_abs","sqrt_align","Fp_2","sqrt_fp2","is_square_fp2","fp2_exp","HashToCurveE2::sgn0","fp2_invariant","A'","B'","Z","ZZZ"];
     })
     (do {
