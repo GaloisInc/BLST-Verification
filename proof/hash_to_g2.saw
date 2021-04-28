@@ -66,7 +66,7 @@ let map_to_isogenous_E2_impl_spec = do {
   (u, u_ptr) <- ptr_to_fresh_readonly "u" vec384x_type;
   llvm_precond {{ fp2_invariant u }};
   llvm_execute_func [out_ptr, u_ptr];
-  llvm_points_to out_ptr (llvm_term {{ POINTonE2_rep (map_to_curve_E2_prime_impl_test (fp2_abs u)) }});
+  llvm_points_to out_ptr (llvm_term {{ POINTonE2_rep (map_to_curve_E2_prime_impl (fp2_abs u)) }});
 };
 
 let isogeny_map_to_E2_impl_alias_spec = do {
@@ -209,26 +209,6 @@ final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (dst:[DST_len][8]) -> a
     w4_unint_z3 (concat fp_unints ["iso_map","map_to_curve_simple_swu","clear_cofactor","HashToCurveE2::hash_to_field"]);
   };
 
-fix_vec_12 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{
-  \(x:t_Fp_2) y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 c -> (
-     [[z1, z2, z3, z4, z5, z6], [z7, z8, z9, z10, z11, z12]] == (if c then [[y1, y2, y3, y4, y5, y6], [y7, y8, y9, y10, y11, y12]] else (fp2_rep x)) where
-        [a,b] = fp2_rep x
-        [a1, a2, a3, a4, a5, a6] = a
-        [b1, b2, b3, b4, b5, b6] = b
-        z = (if c then [y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12] else [a1, a2, a3, a4, a5, a6, b1, b2, b3, b4, b5, b6])
-        [z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12] = z
-    )
-  }}) w4;
-
-fix_vec_12_2 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{
-  \(x:t_Fp_2) -> (
-     [[a1, a2, a3, a4, a5, a6], [b1, b2, b3, b4, b5, b6]] == fp2_rep x where
-        [a,b] = fp2_rep x
-        [a1, a2, a3, a4, a5, a6] = a
-        [b1, b2, b3, b4, b5, b6] = b
-    )
-  }}) w4;
-
 // overrides we need for the SWU map:
 
 let sqrt_align_fp2_spec_for_extract = do {
@@ -349,85 +329,61 @@ map_to_iso_constants <- for [
           , [zero, zero, zero, zero, zero, zero] ]  == True}}
   ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
 
-let {{
-  F_prod_fp2 = F_prod Fp_2; F_sum_fp2 = F_sum Fp_2
-}};
+// Below are two rules to "fix" the extract C term:
 
-// F_rewrites <- for [ // unfolds F_prod and F_sum
-    // {{ \(x:[5]t_Fp_2) -> F_prod Fp_2 x == Fp_2.mul(x@0, F_prod Fp_2 (tail x)) }}
-  // , {{ \(x:[4]t_Fp_2) -> F_prod Fp_2 x == Fp_2.mul(x@0, F_prod Fp_2 (tail x)) }}
-  // , {{ \(x:[3]t_Fp_2) -> F_prod Fp_2 x == Fp_2.mul(x@0, F_prod Fp_2 (tail x)) }}
-  // , {{ \(x:[2]t_Fp_2) -> F_prod Fp_2 x == Fp_2.mul(x@0, F_prod Fp_2 (tail x)) }}
-  // , {{ \(x:[1]t_Fp_2) -> F_prod Fp_2 x == x@0 }}
-  // , {{ \(x:[3]t_Fp_2) -> F_sum Fp_2 x == Fp_2.add(x@0, F_sum Fp_2 (tail x)) }}
-  // , {{ \(x:[2]t_Fp_2) -> F_sum Fp_2 x == Fp_2.add(x@0, F_sum Fp_2 (tail x)) }}
-  // , {{ \(x:[1]t_Fp_2) -> F_sum Fp_2 x == x@0 }}
-  // ] (\ e -> really_custom_prove_cryptol e assume_unsat);
+fix_vec_12 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{
+  \(x:t_Fp_2) y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 c -> (
+     [[z1, z2, z3, z4, z5, z6], [z7, z8, z9, z10, z11, z12]] == (if c then [[y1, y2, y3, y4, y5, y6], [y7, y8, y9, y10, y11, y12]] else (fp2_rep x)) where
+        [a,b] = fp2_rep x
+        [a1, a2, a3, a4, a5, a6] = a
+        [b1, b2, b3, b4, b5, b6] = b
+        z = (if c then [y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12] else [a1, a2, a3, a4, a5, a6, b1, b2, b3, b4, b5, b6])
+        [z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12] = z
+    )
+  }}) w4;
 
-F_rewrites <- for [ // unfolds F_prod and F_sum
-    {{ \(x:[5]t_Fp_2) -> (F_prod Fp_2 x == Fp_2.mul(a, Fp_2.mul(b, Fp_2.mul(c, Fp_2.mul(d, e)))) where [a,b,c,d,e] = x) }}
-  , {{ \(x:[3]t_Fp_2) -> (F_prod Fp_2 x == Fp_2.mul(a, Fp_2.mul(b, c)) where [a,b,c] = x) }}
-  , {{ \(x:[3]t_Fp_2) -> (F_sum Fp_2 x == Fp_2.add(a, Fp_2.add(b, c)) where [a,b,c] = x)}}
-  ] (\ e -> really_custom_prove_cryptol e w4);
-
-// Let's first try to remove all bitvector operations from the extracted term:
-
-let bvEq_term = parse_core "\\ (x:Vec 64 Bool) (y:Vec 64 Bool) -> bvEq 64 x y";
-rewrite_xor <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \a b c d -> bvEq_term (((1:[64]) && (zext [a,b])) ^ ((1:[64]) && (zext [c,d]))) (0:[64]) == (b == d) }}) w4;
-
-let bvEq_term_2 = parse_core "\\ (x:Bool) (f:Bool -> Vec 64 Bool) -> not (bvEq 64 (f x) (bvNat 64 0))";
-rewrite_1 <- really_custom_prove_cryptol (beta_reduce_term {{ \x -> bvEq_term_2 x bool_to_limb == x }}) w4;
-
-rewrite_2 <- really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x -> bvEq_term (if (Fp_2.is_equal (x, Fp_2.field_zero)) then (1:[64]) else (0:[64])) zero == ~(Fp_2.is_equal (x, Fp_2.field_zero)) }}) w4;
-
-let intLe_term = parse_core "\\ (x:Integer) (y:Integer) -> intLe x y";
-
-intLe_rules <- for [
-    {{ \x -> intLe_term x x == True}}
-  , {{ intLe_term 0 2 == True}}
-  , {{ intLe_term 0 1 == True}}
-] (\ e -> really_custom_prove_cryptol (beta_reduce_term e) w4);
-
-// hoisting ifs
-hoist_fp2_add_left_thm <- really_prove_cryptol
-  (rewrite (cryptol_ss ())
-    {{\ c x y z -> Fp_2.add (if c then x else y, z) ==
-                   if c then Fp_2.add (x, z) else Fp_2.add (y,z) }})
-    ["Fp_2"];
-
-hoist_fp2_add_right_thm <-  really_prove_cryptol
-  (rewrite (cryptol_ss ())
-    {{\ c x y z -> Fp_2.add (z, if c then x else y) ==
-                   if c then Fp_2.add (z, x) else Fp_2.add (z, y) }} )
-    ["Fp_2"];
-
-let hoist_if_rules = [hoist_fp2_mul_left_thm, hoist_fp2_mul_right_thm,hoist_fp2_add_left_thm, hoist_fp2_add_right_thm];
-
-if_rule <- really_custom_prove_cryptol {{ \(x:[2]Integer) y a b c -> (if c then (if c then x else y) else (if c then a else b)) == if c then x else b }} w4;
+fix_vec_12_2 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{
+  \(x:t_Fp_2) -> (
+     [[a1, a2, a3, a4, a5, a6], [b1, b2, b3, b4, b5, b6]] == fp2_rep x where
+        [a,b] = fp2_rep x
+        [a1, a2, a3, a4, a5, a6] = a
+        [b1, b2, b3, b4, b5, b6] = b
+    )
+  }}) w4;
 
 map_to_isogenous_E2_impl_ov <- really_custom_verify
   "map_to_isogenous_E2"
   (concat_all [vec_fp2_overrides, fp2_overrides, [recip_sqrt_fp2_ov, sgn0x_pty_mont_384x_ov, sqrt_align_fp2_unint_ov]])
   map_to_isogenous_E2_impl_spec
-  (goal_num_ite 23 //34
+  (goal_num_ite 34
     (do {
       // First we deal with the term extracted from the C code:
-      unfolding ["select"];
-      simplify (addsimps (concat map_to_iso_constants [fix_vec_12_2, fix_vec_12]) fp2_simpset);
-      // simplify (addsimps (concat_all [intLe_rules, [rewrite_xor, rewrite_1, rewrite_2,if_rule]]) empty_ss);
-        // just for clarity:
-        unfolding ["/\\", "\\/", "==>"];
-        simplify (cryptol_ss());
-        simplify cleanup_simpset;
+        unfolding ["select"];
+        // deal with constants and SAW mangling
+          simplify (addsimps (concat map_to_iso_constants [fix_vec_12_2, fix_vec_12]) fp2_simpset);
+        // We get rid of bitvector ops:
+          let bvEq_term = parse_core "\\ (x:Vec 64 Bool) (y:Vec 64 Bool) -> bvEq 64 x y";
+          let rewrite_xor = run ( really_custom_prove_cryptol (rewrite (cryptol_ss ()) (beta_reduce_term {{ \a b c d -> bvEq_term (((1:[64]) && (zext [a,b])) ^ ((1:[64]) && (zext [c,d]))) (0:[64]) == (b == d) }})) w4);
+          let bvEq_term_2 = parse_core "\\ (x:Bool) (f:Bool -> Vec 64 Bool) -> not (bvEq 64 (f x) (bvNat 64 0))";
+          let rewrite_1 = run (really_custom_prove_cryptol (beta_reduce_term {{ \x -> bvEq_term_2 x bool_to_limb == x }}) w4);
+          let rewrite_2 = run (really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x -> bvEq_term (if (Fp_2.is_equal (x, Fp_2.field_zero)) then (1:[64]) else (0:[64])) zero == ~(Fp_2.is_equal (x, Fp_2.field_zero)) }}) w4);
+          simplify (addsimps [rewrite_xor, rewrite_1, rewrite_2] empty_ss);
       // Now we deal with the term extracted from the Cryptol code:
-      unfolding ["map_to_curve_E2_prime_impl_test","recip_ZZZ","F_is_zero","POINTonE2_rep"];
-      simplify (addsimps (concat F_rewrites fp2_laws) fp2_simpset);
-      print_readably;
-      w4_unint_z3 ["fp_rep", "fp_abs","sqrt_align","Fp_2","sqrt_fp2","is_square_fp2","fp2_exp","HashToCurveE2::sgn0","sign_F_p_2","fp2_invariant","A'","B'","Z","ZZZ"];
+        unfolding ["map_to_curve_E2_prime_impl","recip_ZZZ","F_is_zero","POINTonE2_rep"];
+        let F_rewrites = run (for [ // unfolds F_prod and F_sum
+            {{ \(x:[5]t_Fp_2) -> (F_prod Fp_2 x == Fp_2.mul(a, Fp_2.mul(b, Fp_2.mul(c, Fp_2.mul(d, e)))) where [a,b,c,d,e] = x) }}
+          , {{ \(x:[3]t_Fp_2) -> (F_prod Fp_2 x == Fp_2.mul(a, Fp_2.mul(b, c)) where [a,b,c] = x) }}
+          , {{ \(x:[3]t_Fp_2) -> (F_sum Fp_2 x == Fp_2.add(a, Fp_2.add(b, c)) where [a,b,c] = x)}}
+          ] (\ e -> really_custom_prove_cryptol e w4));
+        simplify (addsimps F_rewrites (cryptol_ss ())); // get rid of F_prod and F_sum
+        simplify (addsimps fp2_laws empty_ss); // try to normalize field expression
+        simplify (add_cryptol_defs ["ecEq","PEqBit"] empty_ss); // transform those to boolEq?
+      // Finally:
+        w4_unint_z3 ["fp_rep", "fp_abs","sqrt_align","Fp_2","sqrt_fp2","is_square_fp2","fp2_exp","HashToCurveE2::sgn0","fp2_invariant","A'","B'","Z","ZZZ"];
     })
     (do {
-      assume_unsat;
-      // unfolding ["select"];
-      // simplify (addsimps [fix_vec_12_2, fix_vec_12] fp2_simpset);
-      // w4_unint_z3 ["Fp_2","Fp","sqrt_align"];
+      unfolding ["select"];
+      simplify (addsimps [fix_vec_12_2, fix_vec_12] fp2_simpset);
+      simplify basic_ss; // NOTE: does not work without this...
+      w4_unint_z3 ["Fp_2","Fp","sqrt_align"];
     }));

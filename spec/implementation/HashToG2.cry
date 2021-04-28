@@ -54,7 +54,9 @@ map_to_curve_E2_prime_impl u = res where
   y2' = sqrt_align y1'_sqrt_ZZZ (Fp_2.mul(y1'_sqrt_ZZZ, tv4_recip_ZZZ)) tv4_recip_ZZZ // see assumption about sqrt_align
   y2 = F_prod Fp_2 [y2', gx1, gxd, Fp_2.sq u, u]
   // xn and y:
-  (xn,y') = if e2 then (x1n,y1) else (x2n,y2)
+  /* (xn,y') = if e2 then (x1n,y1) else (x2n,y2) */
+  xn = if e2 then x1n else x2n
+  y' = if e2 then y1 else y2
   y = if sgn0(u) == sgn0(y') then y' else Fp_2.neg y'
   // convert to Jacobian coordinates
   res = (Fp_2.mul (xn, xd), Fp_2.mul (y, gxd), xd)
