@@ -14,26 +14,27 @@ include "proof-helpers.saw";
 
 include "hash_to_field.saw";
 include "fp_overrides.saw";
-include "fp2_overrides.saw";
 include "vect.saw";
 include "exp.saw";
 include "curve_operations.saw";
 include "ec_mult.saw";
 include "map_to_g1.saw";
+include "sgn0.saw";
+include "hash_to_g1.saw";
+// include "compress-p1.saw";
+include "deserialize-p1.saw";
+
+include "fp2_overrides.saw";
 include "exp2.saw";
 include "curve_operations_e2.saw";
 include "ec_mult2.saw";
 include "psi.saw";
 include "map_to_g2.saw";
-include "sgn0.saw";
-include "compress-p1.saw";
-include "compress-p2.saw";
-include "deserialize-p1.saw";
 include "deserialize-p2.saw";
 include "api-extra-for-release-2.saw";
 include "integer-and-bv.saw";
 include "384x384_ops.saw";
 include "fp12.saw";
-include "hash_to_g1.saw";
-include "algebraic-laws.saw";
-include "pairing.saw";
+
+// TODO: for now, hash_to_g2 cannot be added here because of name clashes when hash_to_g1.saw comes beforehand
+// include "hash_to_g2.saw";
