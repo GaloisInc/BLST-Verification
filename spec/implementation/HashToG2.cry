@@ -6,8 +6,8 @@
 module implementation::HashToG2 where
 
 import FieldExtras (F_is_zero, F_sum, F_prod, F_expt)
-import BLSFieldExtras (sqrt_fp2, is_square_fp2, fp2_exp)
-import Parameters (Fp_2, t_Fp_2)
+import BLSFieldExtras (sqrt_fp2, is_square_fp2, fp2_exp, sqrt_fp2_c2, sqrt_fp2_c3)
+import Parameters (Fp_2, t_Fp_2, u)
 import ShortWeierstrassCurve (ProjectivePoint, point_O, projectify)
 /* import BLSFieldExtras (sqrt_fp, fp_exp) */
 import ExpandMessage (Expandable)
@@ -43,7 +43,15 @@ map_to_curve_E2_prime_impl u = res where
   res = (Fp_2.mul (xn, xd), Fp_2.mul (y, gxd), xd)
 
 sqrt_align : t_Fp_2 -> t_Fp_2 -> t_Fp_2 -> t_Fp_2
-sqrt_align x y z = undefined // will be left undefined for now
+sqrt_align x y z = Fp_2.mul (x, sqrt_align_fp2_coeff y z)
+
+// TODO: factor with exp2.saw
+sqrt_align_fp2_coeff: t_Fp_2 -> t_Fp_2 -> t_Fp_2
+sqrt_align_fp2_coeff s inp =
+  if Fp_2.sq (Fp_2.mul(sqrt_fp2_c3, s)) == inp then sqrt_fp2_c3
+   | Fp_2.sq (Fp_2.mul(sqrt_fp2_c2, s)) == inp then sqrt_fp2_c2
+   | Fp_2.sq (Fp_2.mul(          u, s)) == inp then u
+  else Fp_2.field_unit
 
 recip_ZZZ = Fp_2.div(Fp_2.field_unit, ZZZ)
 ZZZ = Fp_2.mul(Z, Fp_2.sq Z)

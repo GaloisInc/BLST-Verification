@@ -1,0 +1,16 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+ */
+
+import HashToCurveE2
+import HashToCurveE2Aux
+import Serialization
+import ShortWeierstrassCurve
+import implementation::HashToG2
+
+test u = (affinify C (map_to_curve_E2_prime_impl u)) == map_to_curve_simple_swu u
+
+us = [zero, [324,33], [1,0],[`p-1,7]]
+
+property prop = all test us
