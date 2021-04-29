@@ -17,7 +17,7 @@ import ShortWeierstrassCurve as EC
 import ExpandMessage
 import Common::bv
 
-// TODO: use the trick described here: https://github.com/GaloisInc/cryptol/issues/1092
+// NOTE: we use the trick described here: https://github.com/GaloisInc/cryptol/issues/1092
 parameter
     type _p: # // the field characteristic
     type constraint fin _p
