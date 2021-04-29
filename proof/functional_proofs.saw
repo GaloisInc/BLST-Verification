@@ -22,7 +22,7 @@ include "ec_mult.saw";
 include "map_to_g1.saw";
 include "sgn0.saw";
 include "hash_to_g1.saw";
-// include "compress-p1.saw";
+include "compress-p1.saw";
 include "deserialize-p1.saw";
 
 include "fp2_overrides.saw";
