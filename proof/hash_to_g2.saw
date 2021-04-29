@@ -16,20 +16,17 @@ enable_experimental;
 let do_prove = false;
 
 include "proof-helpers.saw";
-//include "hash_to_field.saw";
 include "fp_overrides.saw";
 include "fp2_overrides.saw";
 include "vect.saw";
-//include "x86.saw";
 include "curve_operations.saw";
 include "curve_operations_e2.saw";
-//include "ec_mult.saw";
 include "exp.saw";
 include "exp2.saw";
 include "sgn0.saw";
 include "algebraic-laws.saw";
 
-//let do_prove = true;
+let do_prove = true;
 
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
@@ -40,6 +37,16 @@ Aux <- cryptol_load "../spec/HashToCurveE2Aux.cry";
 import "../spec/implementation/HashToG2.cry";
 
 // Specs
+let blst_hash_to_g2_spec msg_len DST_len aug_len = do {
+  p_ptr <- llvm_alloc POINTonE2_type;
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
+  (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
+  llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
+  new_p <- llvm_fresh_var "new_blst_hash_to_g2_p" POINTonE2_type;
+  llvm_points_to p_ptr (llvm_term new_p);
+  llvm_postcond {{ affinify E (POINTonE2_abs new_p) == hash_to_curve_opt (aug#msg, DST) }};
+};
 
 let blst_hash_to_g2_impl_spec msg_len DST_len aug_len = do {
   p_ptr <- llvm_alloc POINTonE2_type;
@@ -59,7 +66,6 @@ let map_to_g2_nonnull_spec = do {
   llvm_execute_func [out_ptr, u_ptr, v_ptr];
   llvm_points_to out_ptr (llvm_term {{ POINTonE2_rep (map_to_g2_impl [fp2_abs u, fp2_abs v]) }});
 };
-
 
 let map_to_isogenous_E2_impl_spec = do {
   out_ptr <- llvm_alloc POINTonE2_type;
@@ -85,6 +91,37 @@ let clear_cofactor_E2_impl_spec = do {
 
 // Assumptions
 
+let recip_sqrt_fp2_spec = do {
+  out_ptr <- llvm_alloc vec384x_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
+  crucible_precond {{ fp2_invariant inp }};
+  crucible_execute_func [out_ptr, inp_ptr];
+  crucible_points_to out_ptr (crucible_term
+      {{ if is_square_fp2 (fp2_abs inp)
+          then fp2_rep (Fp_2.div(sqrt_fp2 (fp2_abs inp), fp2_abs inp))
+          else fp2_rep (F_expt`{n=758} Fp_2 (fp2_abs inp) `((p^^2-9)/16))
+      }});
+  crucible_return (crucible_term {{ bool_to_limb (is_square_fp2 (fp2_abs inp)) }});
+  };
+
+recip_sqrt_fp2_ov <- admit "recip_sqrt_fp2" recip_sqrt_fp2_spec;
+
+let sqrt_align_fp2_unint_spec = do {
+  (ret, ret_ptr) <- ptr_to_fresh "ret" vec384x_type;
+  (sqrt, sqrt_ptr) <- ptr_to_fresh_readonly "sqrt" vec384x_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
+  crucible_precond {{ fp2_invariant inp }};
+  crucible_precond {{ fp2_invariant sqrt }};
+  crucible_precond {{ fp2_invariant ret }};
+  crucible_execute_func [ret_ptr, ret_ptr, sqrt_ptr, inp_ptr];
+  crucible_points_to ret_ptr (crucible_term
+      {{ fp2_rep (sqrt_align (fp2_abs ret) (fp2_abs sqrt) (fp2_abs inp)) }});
+  is_sqrt <- llvm_fresh_var "is_sqrt" limb_type;
+  crucible_return (crucible_term {{ is_sqrt }}); // NOTE: return value not used here
+  };
+
+sqrt_align_fp2_unint_ov <-admit "sqrt_align_fp2" sqrt_align_fp2_unint_spec;
+
 // TODO: move somewhere else
 let simp_then_admit r = admit_cryptol (rewrite (cryptol_ss ()) r);
 
@@ -95,7 +132,7 @@ clear_cofactor_with_psi_thm <- custom_prove_cryptol {{ \p -> Aux::clear_cofactor
 swu_on_curve <- simp_then_admit {{ \u -> is_point_affine Isogenous_Curve (map_to_curve_simple_swu u) == True }};
 
 // point_dadd implements add:
-dadd_thm <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ p1 p2 -> affinify Isogenous_Curve (point_dadd Fp_2 p1 p2 A' False) == add Isogenous_Curve (affinify Isogenous_Curve p1) (affinify Isogenous_Curve p2) }});
+dadd_thm <- simp_then_admit {{ \ p1 p2 -> affinify Isogenous_Curve (point_dadd Fp_2 p1 p2 A' False) == add Isogenous_Curve (affinify Isogenous_Curve p1) (affinify Isogenous_Curve p2) }};
 
 // the addition of two points on the curve is on the curve:
 point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Isogenous_Curve (point_dadd Fp_2 p q A' False) == if is_point_projective Isogenous_Curve p /\ is_point_projective Isogenous_Curve q then True else apply is_point_projective Isogenous_Curve (point_dadd Fp_2 p q A' False) }};
@@ -106,6 +143,7 @@ on_curve_is_point_O_lemma <- simp_then_admit {{ \p -> is_point_O Isogenous_Curve
 // The implementation of map_to_curve never returns something of the form (0,0,_) or (_,_,0)
 swu_impl_xy_nz <- simp_then_admit {{ \u -> (~((x,y) == (Fp_2.field_zero,Fp_2.field_zero) \/ z == Fp_2.field_zero) where (x,y,z) = map_to_curve_E2_prime_impl u) == True }};
 
+// a relation between is_point_projective and is_point_affine:
 is_point_projective_lemma <- simp_then_admit {{ \p -> is_point_projective Isogenous_Curve p == if is_point_affine Isogenous_Curve (affinify Isogenous_Curve p) /\ ~((p.0, p.1) == (Fp_2.field_zero,Fp_2.field_zero) \/ p.2 == Fp_2.field_zero) then True else apply is_point_projective Isogenous_Curve p }};
 
 // Proofs
@@ -158,19 +196,19 @@ isogeny_map_to_E2_impl_alias_ov <- custom_verify
       simplify fp2_simpset; // eliminate `abs . rep` etc.
       // simplify (addsimps isogeny_invs empty_ss); // NOTE: unecessary
       goal_eval_unint ["Fp_2","Fp","fp2_rep","fp2_abs","fp2_invariant","HashToCurveE2Aux::k1s","HashToCurveE2Aux::k2s","HashToCurveE2Aux::k3s","HashToCurveE2Aux::k4s"]; // TODO: why do we need to keep the kns opaque?
-      let isogeny_algebra_rules = run (for [ // here we only use a subset of the fp2_laws; as a whole it's too slow (or is it looping?)
+      let algebra_rules = run (for [ // here we only use a subset of the fp2_laws; as a whole it's too slow (or is it looping?)
           {{ \x y -> Fp_2.mul(x,y) == Fp_2.mul(y,x) }}
         , {{ \x y z -> Fp_2.mul(Fp_2.mul(x,y),z) == Fp_2.mul(x, Fp_2.mul(y,z)) }}
         , {{ \x y -> Fp_2.add(x,y) == Fp_2.add(y,x) }}
         , {{ \x y z -> Fp_2.add(Fp_2.add(x,y),z) == Fp_2.add(x, Fp_2.add(y,z)) }}
       ] (\ eq -> prove_cryptol eq []));
-      let isogeny_restiching_rules = run (for [
+      let restiching_rules = run (for [
           {{ \(a:[2]Integer) -> ([x,y] == a where [x,y] = a) }}
         , {{ \(a:[2][6][64]) -> ([x,y] == a where [x,y] = a) }}
         , {{ \(a:[6][64]) -> ([a1,a2,a3,a4,a5,a6] == a where [a1,a2,a3,a4,a5,a6] = a) }}
       ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4));
-      simplify (addsimps (concat isogeny_restiching_rules isogeny_algebra_rules) empty_ss);
-      w4_unint_z3  ["fp2_rep"]; // TODO: keeping Fp_2 unfolded makes it fail; why?
+      simplify (addsimps (concat restiching_rules algebra_rules) empty_ss);
+      w4_unint_z3  ["fp2_rep"];
     })
     (do { // discharge simulation side-conditions:
       unfolding ["POINTonE2_invariant"];
@@ -179,118 +217,7 @@ isogeny_map_to_E2_impl_alias_ov <- custom_verify
     })
   );
 
-// Next we prove that the implementation-level spec is equivalent to the abstract spec
-
-// Temporary assumptions:
-
-clear_cofactor_correct <- admit_cryptol {{ \p -> affinify E' (clear_cofactor_E2_impl p) == clear_cofactor (affinify E' p) }};
-
-map_to_E2_prime_correct <- admit_cryptol {{ \u -> affinify Isogenous_Curve (map_to_curve_E2_prime_impl u) == map_to_curve_simple_swu u }};
-
-isogeny_map_to_E2_correct <- admit_cryptol {{ \p -> affinify E' (isogeny_map_to_E2_impl p) == if is_point_projective Isogenous_Curve p then iso_map (affinify Isogenous_Curve p) else affinify E' (apply isogeny_map_to_E2_impl p) }};
-
-// We need to establish that we get a point on Isogenous_Curve:
-map_to_curve_E2_prime_on_curve <- custom_prove_cryptol {{ \u -> is_point_projective Isogenous_Curve (map_to_curve_E2_prime_impl u) == True }}
-do {
-  simplify (addsimps [is_point_projective_lemma,swu_impl_xy_nz,map_to_E2_prime_correct,swu_on_curve] empty_ss);
-  w4_unint_z3 (concat fp_unints ["map_to_curve_E2_prime_impl"]);
-};
-
-let aug_len = 48; // aug_len should be 96 or 48
-let msg_len = 32;
-let DST_len= 8;
-
-final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (dst:[DST_len][8]) -> affinify E' (hash_to_curve_opt_impl (msg,dst)) == hash_to_curve_opt (msg, dst) }}
-  do {
-    unfolding ["hash_to_curve_opt_impl","map_to_g2_impl"];
-    simplify (addsimps [clear_cofactor_correct, isogeny_map_to_E2_correct,point_dadd_on_curve,map_to_curve_E2_prime_on_curve,dadd_thm,map_to_E2_prime_correct] (cryptol_ss ()));
-    unfolding ["/\\"];
-    simplify cleanup_simpset;
-    w4_unint_z3 (concat fp_unints ["iso_map","map_to_curve_simple_swu","clear_cofactor","HashToCurveE2::hash_to_field"]);
-  };
-
-// overrides we need for the SWU map:
-
-let sqrt_align_fp2_spec_for_extract = do {
-  out_ptr <- crucible_alloc vec384x_type;
-  (ret, ret_ptr) <- ptr_to_fresh_readonly "ret" vec384x_type;
-  (sqrt, sqrt_ptr) <- ptr_to_fresh_readonly "sqrt" vec384x_type;
-  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
-  crucible_precond {{ fp2_invariant inp }};
-  crucible_precond {{ fp2_invariant sqrt }};
-  crucible_precond {{ fp2_invariant ret }};
-  crucible_execute_func [out_ptr, ret_ptr, sqrt_ptr, inp_ptr];
-  out <- crucible_fresh_var "out" vec384x_type;
-  crucible_points_to out_ptr (crucible_term out);
-};
-
-crucible_llvm_compositional_extract m
- "sqrt_align_fp2"
- "sqrt_align_fp2_term"
- (foldr concat [vec_fp2_overrides, fp2_overrides, fp_overrides] [])
- true
- sqrt_align_fp2_spec_for_extract
- do { unfolding ["fp2_invariant"]; // unfold to get preconditions for the fp functions
-      simplify (addsimps fp_inv_fp2_rep_thms (cryptol_ss()));
-      w4_unint_z3 ["Fp_2"];
-      };
-
-// rewrite fp2_exp to F_expt for tractable computation:
-fp2_exp_rewrite <- admit_cryptol {{ \x -> fp2_exp x `((p^^2-9)/16) == F_expt`{n=758} Fp_2 x `((p^^2-9)/16) }};
-// fp2_exp_rewrite <- admit_cryptol {{ \x -> fp2_exp x ((`p^^2+7)/16) == F_expt`{n=758} Fp_2 x `((p^^2+7)/16) }};
-
-// We will assume:
-sqrt_align_assm <- really_custom_prove_cryptol {{
-  \x -> (sqrt_align y2 tv3 tv4 == if is_square_fp2 tv4 then Fp_2.div(sqrt_fp2 tv4, tv4) else apply sqrt_align y2 tv3 tv4 where
-      tv4 = Fp_2.mul (x, recip_ZZZ); y2 = Fp_2.mul (fp2_exp x `((p^^2-9)/16), sqrt_fp2 ZZZ); tv3 = Fp_2.mul (y2, tv4))
-}} assume_unsat;
-
-sqrt_align_assm <- custom_prove_cryptol {{ // TODO: fails
-  \x -> (Fp_2.mul (sqrt_align_fp2_coeff tv3 tv4, y2) == if is_square_fp2 tv4 then Fp_2.div(sqrt_fp2 tv4, tv4) else apply Fp_2.mul (sqrt_align_fp2_coeff tv3 tv4, y2) where
-      x' = Fp_2.normalize x; tv4 = Fp_2.mul (x', recip_ZZZ); y2 = Fp_2.mul (fp2_exp x' `((p^^2-9)/16), sqrt_fp2 ZZZ); tv3 = Fp_2.mul (y2, tv4))
-}}
-do {
-  unfolding ["apply"];
-  let elim_ite = run (
-    really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[2]Integer) y b -> (x == if b then y else x) == (b ==> x == y) }}) w4
-  );
-  simplify (addsimps [elim_ite] empty_ss);
-  simplify (addsimps [fp2_exp_rewrite] empty_ss);
-  print_readably;
-  assume_unsat;
-  // quickcheck 2;
-};
-
-let recip_sqrt_fp2_spec = do {
-  out_ptr <- llvm_alloc vec384x_type;
-  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
-  crucible_precond {{ fp2_invariant inp }};
-  crucible_execute_func [out_ptr, inp_ptr];
-  crucible_points_to out_ptr (crucible_term
-      {{ if is_square_fp2 (fp2_abs inp)
-          then fp2_rep (Fp_2.div(sqrt_fp2 (fp2_abs inp), fp2_abs inp))
-          else fp2_rep (fp2_exp (fp2_abs inp) `((p^^2-9)/16))
-      }});
-  crucible_return (crucible_term {{ bool_to_limb (is_square_fp2 (fp2_abs inp)) }});
-  };
-
-recip_sqrt_fp2_ov <- admit "recip_sqrt_fp2" recip_sqrt_fp2_spec;
-
-let sqrt_align_fp2_unint_spec = do {
-  (ret, ret_ptr) <- ptr_to_fresh "ret" vec384x_type;
-  (sqrt, sqrt_ptr) <- ptr_to_fresh_readonly "sqrt" vec384x_type;
-  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
-  crucible_precond {{ fp2_invariant inp }};
-  crucible_precond {{ fp2_invariant sqrt }};
-  crucible_precond {{ fp2_invariant ret }};
-  crucible_execute_func [ret_ptr, ret_ptr, sqrt_ptr, inp_ptr];
-  crucible_points_to ret_ptr (crucible_term
-      {{ fp2_rep (sqrt_align (fp2_abs ret) (fp2_abs sqrt) (fp2_abs inp)) }});
-  is_sqrt <- llvm_fresh_var "is_sqrt" limb_type;
-  crucible_return (crucible_term {{ is_sqrt }}); // NOTE: return value not used
-  };
-
-sqrt_align_fp2_unint_ov <-admit "sqrt_align_fp2" sqrt_align_fp2_unint_spec;
+//map_to_isogenous
 
 map_to_iso_constants <- for [
     {{ fp2_abs [[zero, zero, zero, zero, zero, zero], [ 0xd4c4fffffcec5869, 0x1da3f3eed25bfd79, 0x7fa833c5136fff67, 0x59261433cd540cbd, 0x48450f5f2b84682c, 0x07e05d00bf959233 ]] == Fp_2.neg A' }} // first is 15331660506401101929
@@ -329,67 +256,147 @@ map_to_iso_constants <- for [
           , [zero, zero, zero, zero, zero, zero] ]  == True}}
   ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
 
-// Below are two rules to "fix" the extract C term:
-
-fix_vec_12 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{
-  \(x:t_Fp_2) y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 c -> (
-     [[z1, z2, z3, z4, z5, z6], [z7, z8, z9, z10, z11, z12]] == (if c then [[y1, y2, y3, y4, y5, y6], [y7, y8, y9, y10, y11, y12]] else (fp2_rep x)) where
-        [a,b] = fp2_rep x
-        [a1, a2, a3, a4, a5, a6] = a
-        [b1, b2, b3, b4, b5, b6] = b
-        z = (if c then [y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12] else [a1, a2, a3, a4, a5, a6, b1, b2, b3, b4, b5, b6])
-        [z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12] = z
-    )
-  }}) w4;
-
-fix_vec_12_2 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{
-  \(x:t_Fp_2) -> (
-     [[a1, a2, a3, a4, a5, a6], [b1, b2, b3, b4, b5, b6]] == fp2_rep x where
-        [a,b] = fp2_rep x
-        [a1, a2, a3, a4, a5, a6] = a
-        [b1, b2, b3, b4, b5, b6] = b
-    )
-  }}) w4;
-
-map_to_isogenous_E2_impl_ov <- really_custom_verify
+map_to_isogenous_E2_impl_ov <- custom_verify
   "map_to_isogenous_E2"
   (concat_all [vec_fp2_overrides, fp2_overrides, [recip_sqrt_fp2_ov, sgn0x_pty_mont_384x_ov, sqrt_align_fp2_unint_ov]])
   map_to_isogenous_E2_impl_spec
-  (goal_num_ite 34
-    (do {
-      // First we deal with the term extracted from the C code:
+  (do {
+    // Below are two rules to "fix" the extract C term:
+    let fix_vec_12 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{
+      \(x:t_Fp_2) y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 c -> (
+         [[z1, z2, z3, z4, z5, z6], [z7, z8, z9, z10, z11, z12]] == (if c then [[y1, y2, y3, y4, y5, y6], [y7, y8, y9, y10, y11, y12]] else (fp2_rep x)) where
+            [a,b] = fp2_rep x
+            [a1, a2, a3, a4, a5, a6] = a
+            [b1, b2, b3, b4, b5, b6] = b
+            z = (if c then [y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12] else [a1, a2, a3, a4, a5, a6, b1, b2, b3, b4, b5, b6])
+            [z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12] = z
+        )
+      }}) w4);
+    let fix_vec_12_2 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{
+      \(x:t_Fp_2) -> (
+         [[a1, a2, a3, a4, a5, a6], [b1, b2, b3, b4, b5, b6]] == fp2_rep x where
+            [a,b] = fp2_rep x
+            [a1, a2, a3, a4, a5, a6] = a
+            [b1, b2, b3, b4, b5, b6] = b
+        )
+      }}) w4);
+    (goal_num_ite 34
+      (do {
+        // First we deal with the term extracted from the C code:
+          unfolding ["select"];
+          // deal with constants and SAW mangling
+            simplify (addsimps (concat map_to_iso_constants [fix_vec_12_2, fix_vec_12]) fp2_simpset);
+          // We get rid of bitvector ops:
+            let bvEq_term = parse_core "\\ (x:Vec 64 Bool) (y:Vec 64 Bool) -> bvEq 64 x y";
+            let rewrite_xor = run ( custom_prove_cryptol (rewrite (cryptol_ss ()) (beta_reduce_term {{ \a b c d -> bvEq_term (((1:[64]) && (zext [a,b])) ^ ((1:[64]) && (zext [c,d]))) (0:[64]) == (b == d) }})) w4);
+            let bvEq_term_2 = parse_core "\\ (x:Bool) (f:Bool -> Vec 64 Bool) -> not (bvEq 64 (f x) (bvNat 64 0))";
+            let rewrite_1 = run (custom_prove_cryptol (beta_reduce_term {{ \x -> bvEq_term_2 x bool_to_limb == x }}) w4);
+            let rewrite_2 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x -> bvEq_term (if (Fp_2.is_equal (x, Fp_2.field_zero)) then (1:[64]) else (0:[64])) zero == ~(Fp_2.is_equal (x, Fp_2.field_zero)) }}) w4);
+            simplify (addsimps [rewrite_xor, rewrite_1, rewrite_2] empty_ss);
+        // Now we deal with the term extracted from the Cryptol code:
+          unfolding ["map_to_curve_E2_prime_impl","recip_ZZZ","F_is_zero","POINTonE2_rep"];
+          let hoist_ifs = run (for [
+              {{ \ c (x1:t_Fp_2) (x2:t_Fp_2) y1 y2 -> (if c then (x1,x2) else (y1,y2)).0 == if c then x1 else y1 }}
+            , {{ \ c (x1:t_Fp_2) (x2:t_Fp_2) y1 y2 -> (if c then (x1,x2) else (y1,y2)).1 == if c then x2 else y2 }}
+          ] (\e -> custom_prove_cryptol e w4));
+          simplify (addsimps hoist_ifs empty_ss);
+          let F_rewrites = run (for [ // unfolds F_prod and F_sum; note the use of pattern matching to produce "nice" saw-core terms
+              {{ \(x:[5]t_Fp_2) -> (F_prod Fp_2 x == Fp_2.mul(a, Fp_2.mul(b, Fp_2.mul(c, Fp_2.mul(d, e)))) where [a,b,c,d,e] = x) }}
+            , {{ \(x:[3]t_Fp_2) -> (F_prod Fp_2 x == Fp_2.mul(a, Fp_2.mul(b, c)) where [a,b,c] = x) }}
+            , {{ \(x:[3]t_Fp_2) -> (F_sum Fp_2 x == Fp_2.add(a, Fp_2.add(b, c)) where [a,b,c] = x)}}
+            ] (\ e -> custom_prove_cryptol e w4));
+          simplify (addsimps F_rewrites (cryptol_ss ())); // get rid of F_prod and F_sum
+          simplify (addsimps fp2_laws empty_ss); // try to normalize field expression
+          simplify (add_cryptol_defs ["ecEq","PEqBit"] empty_ss); // transform those to boolEq?
+        // Finally:
+          let F_expt_rewrite = run (admit_cryptol {{ \x -> F_expt`{n=758} Fp_2 x `((p^^2-9)/16) == fp2_exp x `((p^^2-9)/16) }} );
+          simplify (addsimp F_expt_rewrite empty_ss);
+          w4_unint_z3 ["fp_rep", "fp_abs","sqrt_align","Fp_2","sqrt_fp2","is_square_fp2","fp2_exp","HashToCurveE2::sgn0","fp2_invariant","A'","B'","Z","ZZZ"];
+      })
+      (do {
         unfolding ["select"];
-        // deal with constants and SAW mangling
-          simplify (addsimps (concat map_to_iso_constants [fix_vec_12_2, fix_vec_12]) fp2_simpset);
-        // We get rid of bitvector ops:
-          let bvEq_term = parse_core "\\ (x:Vec 64 Bool) (y:Vec 64 Bool) -> bvEq 64 x y";
-          let rewrite_xor = run ( really_custom_prove_cryptol (rewrite (cryptol_ss ()) (beta_reduce_term {{ \a b c d -> bvEq_term (((1:[64]) && (zext [a,b])) ^ ((1:[64]) && (zext [c,d]))) (0:[64]) == (b == d) }})) w4);
-          let bvEq_term_2 = parse_core "\\ (x:Bool) (f:Bool -> Vec 64 Bool) -> not (bvEq 64 (f x) (bvNat 64 0))";
-          let rewrite_1 = run (really_custom_prove_cryptol (beta_reduce_term {{ \x -> bvEq_term_2 x bool_to_limb == x }}) w4);
-          let rewrite_2 = run (really_custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x -> bvEq_term (if (Fp_2.is_equal (x, Fp_2.field_zero)) then (1:[64]) else (0:[64])) zero == ~(Fp_2.is_equal (x, Fp_2.field_zero)) }}) w4);
-          simplify (addsimps [rewrite_xor, rewrite_1, rewrite_2] empty_ss);
-      // Now we deal with the term extracted from the Cryptol code:
-        unfolding ["map_to_curve_E2_prime_impl","recip_ZZZ","F_is_zero","POINTonE2_rep"];
-        let hoist_ifs = run (for [
-            {{ \ c (x1:t_Fp_2) (x2:t_Fp_2) y1 y2 -> (if c then (x1,x2) else (y1,y2)).0 == if c then x1 else y1 }}
-          , {{ \ c (x1:t_Fp_2) (x2:t_Fp_2) y1 y2 -> (if c then (x1,x2) else (y1,y2)).1 == if c then x2 else y2 }}
-        ] (\e -> really_custom_prove_cryptol e w4));
-        simplify (addsimps hoist_ifs empty_ss);
-        let F_rewrites = run (for [ // unfolds F_prod and F_sum
-            {{ \(x:[5]t_Fp_2) -> (F_prod Fp_2 x == Fp_2.mul(a, Fp_2.mul(b, Fp_2.mul(c, Fp_2.mul(d, e)))) where [a,b,c,d,e] = x) }}
-          , {{ \(x:[3]t_Fp_2) -> (F_prod Fp_2 x == Fp_2.mul(a, Fp_2.mul(b, c)) where [a,b,c] = x) }}
-          , {{ \(x:[3]t_Fp_2) -> (F_sum Fp_2 x == Fp_2.add(a, Fp_2.add(b, c)) where [a,b,c] = x)}}
-          ] (\ e -> really_custom_prove_cryptol e w4));
-        simplify (addsimps F_rewrites (cryptol_ss ())); // get rid of F_prod and F_sum
-        simplify (addsimps fp2_laws empty_ss); // try to normalize field expression
-        simplify (add_cryptol_defs ["ecEq","PEqBit"] empty_ss); // transform those to boolEq?
-      // Finally:
-        // assume_unsat;
-        w4_unint_z3 ["fp_rep", "fp_abs","sqrt_align","Fp_2","sqrt_fp2","is_square_fp2","fp2_exp","HashToCurveE2::sgn0","fp2_invariant","A'","B'","Z","ZZZ"];
-    })
-    (do {
-      unfolding ["select"];
-      simplify (addsimps [fix_vec_12_2, fix_vec_12] fp2_simpset);
-      simplify basic_ss; // NOTE: does not work without this...
-      w4_unint_z3 ["Fp_2","Fp","sqrt_align"];
-    }));
+        simplify (addsimps [fix_vec_12_2, fix_vec_12] fp2_simpset);
+        simplify basic_ss; // NOTE: does not work without this...
+        w4_unint_z3 ["Fp_2","Fp","sqrt_align"];
+      }));
+  });
+
+// TODO: clear_cofactor
+
+// Next we prove that the implementation-level spec is equivalent to the abstract spec
+
+// Temporary assumptions:
+
+clear_cofactor_correct <- admit_cryptol {{ \p -> affinify E' (clear_cofactor_E2_impl p) == clear_cofactor (affinify E' p) }};
+
+map_to_E2_prime_correct <- admit_cryptol {{ \u -> affinify Isogenous_Curve (map_to_curve_E2_prime_impl u) == map_to_curve_simple_swu u }};
+
+isogeny_map_to_E2_correct <- admit_cryptol {{ \p -> affinify E' (isogeny_map_to_E2_impl p) == if is_point_projective Isogenous_Curve p then iso_map (affinify Isogenous_Curve p) else affinify E' (apply isogeny_map_to_E2_impl p) }};
+
+// We need to establish that we get a point on the Isogenous_Curve:
+map_to_curve_E2_prime_on_curve <- custom_prove_cryptol {{ \u -> is_point_projective Isogenous_Curve (map_to_curve_E2_prime_impl u) == True }}
+do {
+  simplify (addsimps [is_point_projective_lemma,swu_impl_xy_nz,map_to_E2_prime_correct,swu_on_curve] empty_ss);
+  w4_unint_z3 (concat fp_unints ["map_to_curve_E2_prime_impl"]);
+};
+
+let aug_len = 48; // aug_len should be 96 or 48
+let msg_len = 32;
+let DST_len= 8;
+
+final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> affinify E' (hash_to_curve_opt_impl (aug#msg,dst)) == hash_to_curve_opt (aug#msg, dst) }}
+  do {
+    unfolding ["hash_to_curve_opt_impl","map_to_g2_impl"];
+    simplify (addsimps [clear_cofactor_correct, isogeny_map_to_E2_correct,point_dadd_on_curve,map_to_curve_E2_prime_on_curve,dadd_thm,map_to_E2_prime_correct] (cryptol_ss ()));
+    unfolding ["/\\"];
+    simplify cleanup_simpset;
+    w4_unint_z3 (concat fp_unints ["iso_map","map_to_curve_simple_swu","clear_cofactor","HashToCurveE2::hash_to_field"]);
+  };
+
+// experimentation:
+
+let sqrt_align_fp2_spec_for_extract = do {
+  out_ptr <- crucible_alloc vec384x_type;
+  (ret, ret_ptr) <- ptr_to_fresh_readonly "ret" vec384x_type;
+  (sqrt, sqrt_ptr) <- ptr_to_fresh_readonly "sqrt" vec384x_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
+  crucible_precond {{ fp2_invariant inp }};
+  crucible_precond {{ fp2_invariant sqrt }};
+  crucible_precond {{ fp2_invariant ret }};
+  crucible_execute_func [out_ptr, ret_ptr, sqrt_ptr, inp_ptr];
+  out <- crucible_fresh_var "out" vec384x_type;
+  crucible_points_to out_ptr (crucible_term out);
+};
+
+crucible_llvm_compositional_extract m
+ "sqrt_align_fp2"
+ "sqrt_align_fp2_term"
+ (foldr concat [vec_fp2_overrides, fp2_overrides, fp_overrides] [])
+ true
+ sqrt_align_fp2_spec_for_extract
+ do { unfolding ["fp2_invariant"]; // unfold to get preconditions for the fp functions
+      simplify (addsimps fp_inv_fp2_rep_thms (cryptol_ss()));
+      w4_unint_z3 ["Fp_2"];
+      };
+
+// rewrite fp2_exp to F_expt for tractable computation:
+fp2_exp_rewrite <- admit_cryptol {{ \x -> fp2_exp x `((p^^2-9)/16) == F_expt`{n=758} Fp_2 x `((p^^2-9)/16) }};
+// fp2_exp_rewrite <- admit_cryptol {{ \x -> fp2_exp x ((`p^^2+7)/16) == F_expt`{n=758} Fp_2 x `((p^^2+7)/16) }};
+
+// assumption (wrong?):
+sqrt_align_assm <- custom_prove_cryptol {{
+  \x -> (sqrt_align y2 tv3 tv4 == if is_square_fp2 tv4 then Fp_2.div(sqrt_fp2 tv4, tv4) else apply sqrt_align y2 tv3 tv4 where
+      tv4 = Fp_2.mul (x, recip_ZZZ); y2 = Fp_2.mul (fp2_exp x `((p^^2-9)/16), sqrt_fp2 ZZZ); tv3 = Fp_2.mul (y2, tv4))
+}} assume_unsat;
+
+// TODO: fails
+sqrt_align_assm <- custom_prove_cryptol {{
+  \x -> (is_square_fp2 tv4 ==> Fp_2.mul (sqrt_align_fp2_coeff tv3 tv4, y2) == Fp_2.div(sqrt_fp2 tv4, tv4) where
+      x' = Fp_2.normalize x; tv4 = Fp_2.mul (x', recip_ZZZ); y2 = Fp_2.mul (fp2_exp x' `((p^^2-9)/16), sqrt_fp2 ZZZ); tv3 = Fp_2.mul (y2, tv4))
+}}
+do {
+  simplify (addsimps [fp2_exp_rewrite] empty_ss);
+  print_readably;
+  assume_unsat;
+  // quickcheck 2;
+};
