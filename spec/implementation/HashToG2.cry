@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
+module implementation::HashToG2 where
+
 import FieldExtras (F_is_zero, F_sum, F_prod, F_expt)
 import BLSFieldExtras (sqrt_fp2, is_square_fp2, fp2_exp)
 import Parameters (Fp_2, t_Fp_2)
@@ -12,25 +14,6 @@ import ExpandMessage (Expandable)
 import implementation::CurveOperation (point_dadd, point_add, point_double)
 import HashToCurveE2
 import HashToCurveE2Aux as Aux
-
-map_to_curve_E2_prime_impl_test : t_Fp_2 -> ProjectivePoint t_Fp_2
-map_to_curve_E2_prime_impl_test u = res where
-  // x1n, x2n, and xd:
-  Zuu = Fp_2.mul (Z, Fp_2.sq u)
-  tv2 = Fp_2.add (Fp_2.sq Zuu, Zuu)
-  x1n = Fp_2.mul (Fp_2.add (tv2, Fp_2.field_unit), B')
-  x2n = Fp_2.mul (Zuu, x1n)
-  xd' = Fp_2.mul (Fp_2.neg A', tv2)
-  xd = if F_is_zero Fp_2 xd' then Fp_2.mul(Z,A') else xd'
-  // y1:
-  gxd = Fp_2.mul(xd, Fp_2.sq xd) // xd^3
-  gx1 = F_sum Fp_2 [Fp_2.mul(x1n, Fp_2.sq x1n), F_prod Fp_2 [A', x1n, Fp_2.sq xd], Fp_2.mul(B', gxd)]
-  tv4 = F_prod Fp_2 [gx1, gxd, Fp_2.sq gxd] // gx1 gxd^3
-  e2 = is_square_fp2 tv4
-  // xn and y:
-  xn = if e2 then x1n else x2n
-  // convert to Jacobian coordinates
-  res = (Fp_2.mul (xn, xd), Fp_2.mul (Fp_2.field_unit, gxd), xd)
 
 map_to_curve_E2_prime_impl : t_Fp_2 -> ProjectivePoint t_Fp_2
 map_to_curve_E2_prime_impl u = res where
@@ -46,12 +29,12 @@ map_to_curve_E2_prime_impl u = res where
   gx1 = F_sum Fp_2 [Fp_2.mul(x1n, Fp_2.sq x1n), F_prod Fp_2 [A', x1n, Fp_2.sq xd], Fp_2.mul(B', gxd)]
   tv4 = F_prod Fp_2 [gx1, gxd, Fp_2.sq gxd] // gx1 gxd^3
   e2 = is_square_fp2 tv4
-  y1' = if e2 then Fp_2.div (sqrt_fp2 tv4, tv4) else fp2_exp tv4 `((p^^2-9)/16)
+  y1' = if e2 then Fp_2.div (sqrt_fp2 tv4, tv4) else (F_expt`{n=758} Fp_2 tv4 `((p^^2-9)/16))
   y1 = F_prod Fp_2 [gx1, gxd, y1']
-  // y2:
+  // y2 (TODO: I'm still not sure why this computes the right thing):
   tv4_recip_ZZZ = (Fp_2.mul (tv4, recip_ZZZ))
   y1'_sqrt_ZZZ = Fp_2.mul (y1', sqrt_fp2 ZZZ)
-  y2' = sqrt_align y1'_sqrt_ZZZ (Fp_2.mul(y1'_sqrt_ZZZ, tv4_recip_ZZZ)) tv4_recip_ZZZ // see assumption about sqrt_align
+  y2' = sqrt_align y1'_sqrt_ZZZ (Fp_2.mul(y1'_sqrt_ZZZ, tv4_recip_ZZZ)) tv4_recip_ZZZ // TODO: we'll need an assumption about what sqrt_align does
   y2 = F_prod Fp_2 [y2', gx1, gxd, Fp_2.sq u, u]
   // xn and y:
   (xn,y') = if e2 then (x1n,y1) else (x2n,y2)
@@ -60,15 +43,10 @@ map_to_curve_E2_prime_impl u = res where
   res = (Fp_2.mul (xn, xd), Fp_2.mul (y, gxd), xd)
 
 sqrt_align : t_Fp_2 -> t_Fp_2 -> t_Fp_2 -> t_Fp_2
-sqrt_align = undefined // will be left undefined for now
+sqrt_align x y z = undefined // will be left undefined for now
 
 recip_ZZZ = Fp_2.div(Fp_2.field_unit, ZZZ)
 ZZZ = Fp_2.mul(Z, Fp_2.sq Z)
-
-test x = sqrt_align y2 tv3 tv4 == sqrt_fp2 (Fp_2.div(Fp_2.field_unit, tv4)) where
-  tv4 = Fp_2.mul (x, Fp_2.div(Fp_2.field_unit, ZZZ))
-  y2 = fp2_exp x `((p^^2-9)/16)
-  tv3 = Fp_2.mul (y2, tv4)
 
 clear_cofactor_E2_impl:  ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
 clear_cofactor_E2_impl = undefined

@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
+module implementation::HashToG1 where
+
 import Parameters (Fp, t_Fp)
 import ShortWeierstrassCurve (ProjectivePoint)
 import BLSFieldExtras (sqrt_fp)
