@@ -11,6 +11,7 @@ m <- llvm_load_module "../build/llvm/libblst.a.bc";
 let do_prove = true;
 
 include "proof-helpers.saw";
+include "algebraic-laws.saw";
 
 include "hash_to_field.saw";
 include "fp_overrides.saw";
@@ -36,5 +37,4 @@ include "integer-and-bv.saw";
 include "384x384_ops.saw";
 include "fp12.saw";
 
-// TODO: for now, hash_to_g2 cannot be added here because of name clashes when hash_to_g1.saw comes beforehand
-// include "hash_to_g2.saw";
+include "hash_to_g2.saw";

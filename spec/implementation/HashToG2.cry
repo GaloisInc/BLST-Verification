@@ -67,14 +67,14 @@ map_to_g2_impl uv = P where
     S = isogeny_map_to_E2_impl R
     P = clear_cofactor_E2_impl S
 
-hash_to_curve_opt_impl: {msg_len, DST_len}
+hash_to_curve_E2_opt_impl: {msg_len, DST_len}
                (fin msg_len, fin DST_len
                , DST_len <= 255
                , Expandable msg_len DST_len
                , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384
                ) =>
                ([msg_len][8], [DST_len][8]) -> ProjectivePoint t_Fp_2
-hash_to_curve_opt_impl (msg,dst) = map_to_g2_impl u where
+hash_to_curve_E2_opt_impl (msg,dst) = map_to_g2_impl u where
     u = hash_to_field`{count=2} msg dst
 
 isogeny_map_to_E2_impl: ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2

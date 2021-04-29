@@ -5,24 +5,26 @@
 
 // Imports
 
-include "helpers.saw";
-include "list_utils.saw";
-include "types.saw";
+// include "helpers.saw";
+// include "list_utils.saw";
+// include "types.saw";
 
-m <- llvm_load_module "../build/llvm/libblst.a.bc";
+// m <- llvm_load_module "../build/llvm/libblst.a.bc";
 
-enable_experimental;
+// enable_experimental;
 
-let do_prove = false;
+// let do_prove = false;
 
-include "proof-helpers.saw";
-include "hash_to_field.saw";
-include "fp_overrides.saw";
-include "vect.saw";
-include "curve_operations.saw";
-include "ec_mult.saw";
-include "exp.saw";
-include "sgn0.saw";
+// include "proof-helpers.saw";
+// include "hash_to_field.saw";
+// include "fp_overrides.saw";
+// include "vect.saw";
+// include "curve_operations.saw";
+// include "ec_mult.saw";
+// include "exp.saw";
+// include "sgn0.saw";
+
+// let do_prove = true;
 
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
@@ -551,47 +553,3 @@ add_double_lemma <- really_custom_prove_cryptol {{ \p -> affinify E (point_add F
     simplify (addsimp add_zero_lemma empty_ss);
     w4_unint_z3 ["add_E","is_point_O_E","E","affinify_E"];
   };
-
-mult_by_doubling_thm <- custom_prove_cryptol {{ \p -> affinify E (clear_cofactor_impl p) == HE1::clear_cofactor (affinify E p) }}
-  (do {
-    unfolding ["clear_cofactor_impl","HE1::clear_cofactor","HashToCurveE1::module parameter _HE1::clear_cofactor","HashToCurveE1::_HE1::clear_cofactor","HashToCurveE1::module parameter _C","HashToCurveE1::_C"];
-    simplify (addsimps (concat_all [e1_curve_op_thms, e1_scalar_mult_alg_thms, dbl_lemmas, [scalar_mult_lemma, add_double_lemma]]) (cryptol_ss ()));
-    w4_unint_z3 ["E","e1_scalar_mult"];
-  });
-
-// Finally, we put all the pieces together to prove that the C code is equivalent to the high-level spec
-
-final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> affinify E (hash_to_curve_opt_impl (aug#msg,dst)) == HE1::hash_to_curve_opt (aug#msg, dst) }}
-  do {
-    unfolding ["hash_to_curve_opt_impl","map_to_g1_impl"];
-    simplify (addsimps [mult_by_doubling_thm, isogeny_map_to_E1_impl_thm_z] (cryptol_ss ()));
-    unfolding ["apply"];
-    simplify (addsimps [isogeny_map_to_E1_impl_thm_nz,map_to_curve_simple_swu_impl_on_curve,point_dadd_on_curve] (cryptol_ss ()));
-    simplify (addsimps [dadd_thm,map_to_isogenous_E1_thm] (cryptol_ss ()));
-    w4_unint_z3 (concat fp_unints ["HE1::iso_map","HE1::map_to_curve_simple_swu","HE1::clear_cofactor","HashToCurveE1::hash_to_field"]);
-  };
-
-// And we're ready for the final override:
-
-hash_to_g1_ov_2 <- really_custom_verify
-  "blst_hash_to_g1"
-  (concat [map_to_g1_nonnull_ov] hash_to_field_ovs)
-  (blst_hash_to_g1_spec msg_len DST_len aug_len)
-  (do {
-    // TODO: introduce hash_to_curve_opt_impl
-    let rw_to_impl = run (
-      really_custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> HE1::hash_to_curve_opt (aug#msg, dst) == affinify E (hash_to_curve_opt_impl (aug#msg,dst)) }}
-      do {
-        simplify (addsimp final_thm empty_ss);
-        w4_unint_z3 ["HE1::hash_to_curve_opt"];
-      }
-    );
-    simplify (addsimp rw_to_impl empty_ss);
-    unfolding ["hash_to_curve_opt_impl","map"];
-    simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
-    simplify (addsimps [map_size_2_thm] empty_ss); // get rid of map
-    unfolding ["POINTonE1_abs","POINTonE1_rep"]; // TODO: use POINTonE1_thms?
-    simplify (addsimps fp_rep_thms empty_ss);// simplify (abs . rep)
-    simplify remove_higher_order_function_simpset;
-    w4_unint_z3 ["map_to_g1_impl","HashToCurveE1::hash_to_field","affinify_E"];
-  });

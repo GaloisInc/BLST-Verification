@@ -5,32 +5,35 @@
 
 // Imports
 
-include "helpers.saw";
-include "list_utils.saw";
-include "types.saw";
+// include "helpers.saw";
+// include "list_utils.saw";
+// include "types.saw";
 
-m <- llvm_load_module "../build/llvm/libblst.a.bc";
+// m <- llvm_load_module "../build/llvm/libblst.a.bc";
 
-enable_experimental;
+// enable_experimental;
 
-let do_prove = false;
+// let do_prove = false;
 
-include "proof-helpers.saw";
-include "fp_overrides.saw";
-include "fp2_overrides.saw";
-include "vect.saw";
-include "curve_operations.saw";
-include "curve_operations_e2.saw";
-include "exp.saw";
-include "exp2.saw";
-include "sgn0.saw";
-include "algebraic-laws.saw";
+// include "proof-helpers.saw";
+// include "hash_to_field.saw";
+// include "fp_overrides.saw";
+// include "vect.saw";
+// include "curve_operations.saw";
+// include "ec_mult.saw";
+// include "exp.saw";
+// include "sgn0.saw";
 
-let do_prove = true;
+// include "fp2_overrides.saw";
+// include "curve_operations_e2.saw";
+// include "exp2.saw";
+// // include "sgn0.saw";
+
+// let do_prove = true;
 
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/HashToCurveE2.cry" (Z A' B' map_to_curve_simple_swu hash_to_field Isogenous_Curve clear_cofactor k1s k2s k3s k4s iso_map hash_to_curve_opt);
+HE2 <- cryptol_load "../spec/HashToCurveE2.cry";
 import "../spec/BLSFieldExtras.cry";
 import "../spec/implementation/CurveOperation.cry";
 Aux <- cryptol_load "../spec/HashToCurveE2Aux.cry";
@@ -45,7 +48,7 @@ let blst_hash_to_g2_spec msg_len DST_len aug_len = do {
   llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
   new_p <- llvm_fresh_var "new_blst_hash_to_g2_p" POINTonE2_type;
   llvm_points_to p_ptr (llvm_term new_p);
-  llvm_postcond {{ affinify E (POINTonE2_abs new_p) == hash_to_curve_opt (aug#msg, DST) }};
+  llvm_postcond {{ affinify E (POINTonE2_abs new_p) == HE2::hash_to_curve_opt (aug#msg, DST) }};
 };
 
 let blst_hash_to_g2_impl_spec msg_len DST_len aug_len = do {
@@ -54,7 +57,7 @@ let blst_hash_to_g2_impl_spec msg_len DST_len aug_len = do {
   (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
   (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
   llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
-  llvm_points_to p_ptr (llvm_term {{ (POINTonE2_rep (hash_to_curve_opt_impl (aug#msg, DST))) }});
+  llvm_points_to p_ptr (llvm_term {{ (POINTonE2_rep (hash_to_curve_E2_opt_impl (aug#msg, DST))) }});
 };
 
 let map_to_g2_nonnull_spec = do {
@@ -125,26 +128,26 @@ sqrt_align_fp2_unint_ov <-admit "sqrt_align_fp2" sqrt_align_fp2_unint_spec;
 // TODO: move somewhere else
 let simp_then_admit r = admit_cryptol (rewrite (cryptol_ss ()) r);
 
-// The optimized version of clear_cofactor given in the IETF spec is correct:
-clear_cofactor_with_psi_thm <- custom_prove_cryptol {{ \p -> Aux::clear_cofactor_E2_with_psi p == clear_cofactor p }};
+// The optimized version of HE2::clear_cofactor given in the IETF spec is correct:
+clear_cofactor_with_psi_thm <- custom_prove_cryptol {{ \p -> Aux::clear_cofactor_E2_with_psi p == HE2::clear_cofactor p }};
 
 // The SWU map maps to the isogenous curve:
-swu_on_curve <- simp_then_admit {{ \u -> is_point_affine Isogenous_Curve (map_to_curve_simple_swu u) == True }};
+swu_on_curve <- simp_then_admit {{ \u -> is_point_affine HE2::Isogenous_Curve (HE2::map_to_curve_simple_swu u) == True }};
 
 // point_dadd implements add:
-dadd_thm <- simp_then_admit {{ \ p1 p2 -> affinify Isogenous_Curve (point_dadd Fp_2 p1 p2 A' False) == add Isogenous_Curve (affinify Isogenous_Curve p1) (affinify Isogenous_Curve p2) }};
+dadd_thm <- simp_then_admit {{ \ p1 p2 -> affinify HE2::Isogenous_Curve (point_dadd Fp_2 p1 p2 HE2::A' False) == add HE2::Isogenous_Curve (affinify HE2::Isogenous_Curve p1) (affinify HE2::Isogenous_Curve p2) }};
 
 // the addition of two points on the curve is on the curve:
-point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective Isogenous_Curve (point_dadd Fp_2 p q A' False) == if is_point_projective Isogenous_Curve p /\ is_point_projective Isogenous_Curve q then True else apply is_point_projective Isogenous_Curve (point_dadd Fp_2 p q A' False) }};
+point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective HE2::Isogenous_Curve (point_dadd Fp_2 p q HE2::A' False) == if is_point_projective HE2::Isogenous_Curve p /\ is_point_projective HE2::Isogenous_Curve q then True else apply is_point_projective HE2::Isogenous_Curve (point_dadd Fp_2 p q HE2::A' False) }};
 
 // If p is a projective point on the isogenous and `affinify p` is point_O, then p's Z coordinate is 0:
-on_curve_is_point_O_lemma <- simp_then_admit {{ \p -> is_point_O Isogenous_Curve (affinify Isogenous_Curve p) == if (is_point_projective Isogenous_Curve p /\ ~is_zero Fp_2 p.2) then False else apply is_point_O Isogenous_Curve (affinify Isogenous_Curve p) }};
+on_curve_is_point_O_lemma <- simp_then_admit {{ \p -> is_point_O HE2::Isogenous_Curve (affinify HE2::Isogenous_Curve p) == if (is_point_projective HE2::Isogenous_Curve p /\ ~is_zero Fp_2 p.2) then False else apply is_point_O HE2::Isogenous_Curve (affinify HE2::Isogenous_Curve p) }};
 
 // The implementation of map_to_curve never returns something of the form (0,0,_) or (_,_,0)
 swu_impl_xy_nz <- simp_then_admit {{ \u -> (~((x,y) == (Fp_2.field_zero,Fp_2.field_zero) \/ z == Fp_2.field_zero) where (x,y,z) = map_to_curve_E2_prime_impl u) == True }};
 
 // a relation between is_point_projective and is_point_affine:
-is_point_projective_lemma <- simp_then_admit {{ \p -> is_point_projective Isogenous_Curve p == if is_point_affine Isogenous_Curve (affinify Isogenous_Curve p) /\ ~((p.0, p.1) == (Fp_2.field_zero,Fp_2.field_zero) \/ p.2 == Fp_2.field_zero) then True else apply is_point_projective Isogenous_Curve p }};
+is_point_projective_lemma <- simp_then_admit {{ \p -> is_point_projective HE2::Isogenous_Curve p == if is_point_affine HE2::Isogenous_Curve (affinify HE2::Isogenous_Curve p) /\ ~((p.0, p.1) == (Fp_2.field_zero,Fp_2.field_zero) \/ p.2 == Fp_2.field_zero) then True else apply is_point_projective HE2::Isogenous_Curve p }};
 
 // Proofs
 
@@ -176,9 +179,9 @@ let print_readably =  do {
 };
 
 // aux_rewrites <- for [
-    // {{ Aux::A' == A' }}
+    // {{ Aux::HE2::A' == HE2::A' }}
   // , {{ Aux::Z == Z }}
-  // , {{ Aux::B' == B' }}
+  // , {{ Aux::HE2::B' == HE2::B' }}
   // , {{ \x -> Aux::sgn0 x == sgn0 x}}
 // ] (\ eq -> prove_cryptol eq []);
 
@@ -220,18 +223,18 @@ isogeny_map_to_E2_impl_alias_ov <- custom_verify
 //map_to_isogenous
 
 map_to_iso_constants <- for [
-    {{ fp2_abs [[zero, zero, zero, zero, zero, zero], [ 0xd4c4fffffcec5869, 0x1da3f3eed25bfd79, 0x7fa833c5136fff67, 0x59261433cd540cbd, 0x48450f5f2b84682c, 0x07e05d00bf959233 ]] == Fp_2.neg A' }} // first is 15331660506401101929
-  , {{ fp2_abs [[ 0x87ebfffffff9555c, 0x656fffe5da8ffffa, 0x0fd0749345d33ad2, 0xd951e663066576f4, 0xde291a3d41e980d3, 0x0815664c7dfe040d], [ 0x43f5fffffffcaaae, 0x32b7fff2ed47fffd, 0x07e83a49a2e99d69, 0xeca8f3318332bb7a, 0xef148d1ea0f4c069, 0x040ab3263eff0206]] == Z }}
+    {{ fp2_abs [[zero, zero, zero, zero, zero, zero], [ 0xd4c4fffffcec5869, 0x1da3f3eed25bfd79, 0x7fa833c5136fff67, 0x59261433cd540cbd, 0x48450f5f2b84682c, 0x07e05d00bf959233 ]] == Fp_2.neg HE2::A' }} // first is 15331660506401101929
+  , {{ fp2_abs [[ 0x87ebfffffff9555c, 0x656fffe5da8ffffa, 0x0fd0749345d33ad2, 0xd951e663066576f4, 0xde291a3d41e980d3, 0x0815664c7dfe040d], [ 0x43f5fffffffcaaae, 0x32b7fff2ed47fffd, 0x07e83a49a2e99d69, 0xeca8f3318332bb7a, 0xef148d1ea0f4c069, 0x040ab3263eff0206]] == HE2::Z }}
   , {{ fp2_abs [[ 0x019af5f980a3680c, 0x4ed7da0e66063afa, 0x600354723b5d9972, 0x8b2f958b20d09d72, 0x0474938f02d461db, 0x0dcf8b9e0684ab1c], [ 0x486f252db11dd19c, 0x791ffda2c3d18950, 0x5af6c27debf95eb4, 0x73b1fd8f2a929cde, 0xfc59602a1a90b871, 0x08d7daafa8baddb3]] == sqrt_fp2 ZZZ }}
   , {{ fp2_abs [[ 0x65018f5c28f598eb, 0xe6020417f022d916, 0xd6327313288369c7, 0x622ded8eb447156f, 0xe52a2aee72c2a01f, 0x089812fb8481ffe4], [ 0x2574eb851eb8619f, 0xdba2e97912925604, 0x67e495a909e7a18e, 0xdf2da23b8145b8f7, 0xcf5d3728310ebf6d, 0x11be446236f4c116]] == Fp_2.div (Fp_2.field_unit, ZZZ) }}
-  // ZxA':
-  , {{ fp2_abs [[ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467], [ 0xa989fffff9d8b0d2, 0x3b47e7dda4b7faf3, 0xff50678a26dffece, 0xb24c28679aa8197a, 0x908a1ebe5708d058, 0x0fc0ba017f2b2466]] == Fp_2.mul(Z, A') }}
-  // ZxA' again:
-  , {{ [[ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467], [ 0xa989fffff9d8b0d2, 0x3b47e7dda4b7faf3, 0xff50678a26dffece, 0xb24c28679aa8197a, 0x908a1ebe5708d058, 0x0fc0ba017f2b2466]] == fp2_rep (Fp_2.mul (Z, A')) }}
-  // B':
-  , {{ fp2_abs [[ 0x22ea00000cf89db2, 0x6ec832df71380aa4, 0x6e1b94403db5a66e, 0x75bf3c53a79473ba, 0x3dd3a569412c0a34, 0x125cdb5e74dc4fd1], [ 0x22ea00000cf89db2, 0x6ec832df71380aa4, 0x6e1b94403db5a66e, 0x75bf3c53a79473ba, 0x3dd3a569412c0a34, 0x125cdb5e74dc4fd1]] == B' }}
-  // A':
-  , {{ fp2_abs [[zero, zero, zero, zero, zero, zero], [ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467]] == A' }}
+  // ZxHE2::A':
+  , {{ fp2_abs [[ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467], [ 0xa989fffff9d8b0d2, 0x3b47e7dda4b7faf3, 0xff50678a26dffece, 0xb24c28679aa8197a, 0x908a1ebe5708d058, 0x0fc0ba017f2b2466]] == Fp_2.mul(HE2::Z, HE2::A') }}
+  // ZxHE2::A' again:
+  , {{ [[ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467], [ 0xa989fffff9d8b0d2, 0x3b47e7dda4b7faf3, 0xff50678a26dffece, 0xb24c28679aa8197a, 0x908a1ebe5708d058, 0x0fc0ba017f2b2466]] == fp2_rep (Fp_2.mul (HE2::Z, HE2::A')) }}
+  // HE2::B':
+  , {{ fp2_abs [[ 0x22ea00000cf89db2, 0x6ec832df71380aa4, 0x6e1b94403db5a66e, 0x75bf3c53a79473ba, 0x3dd3a569412c0a34, 0x125cdb5e74dc4fd1], [ 0x22ea00000cf89db2, 0x6ec832df71380aa4, 0x6e1b94403db5a66e, 0x75bf3c53a79473ba, 0x3dd3a569412c0a34, 0x125cdb5e74dc4fd1]] == HE2::B' }}
+  // HE2::A':
+  , {{ fp2_abs [[zero, zero, zero, zero, zero, zero], [ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467]] == HE2::A' }}
   // Fp_2.field_unit (BLS12_381_Rx.p2):
   , {{ fp2_abs [
             [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
@@ -243,11 +246,11 @@ map_to_iso_constants <- for [
   , {{ fp2_invariant [[ 0x87ebfffffff9555c, 0x656fffe5da8ffffa, 0x0fd0749345d33ad2, 0xd951e663066576f4, 0xde291a3d41e980d3, 0x0815664c7dfe040d], [ 0x43f5fffffffcaaae, 0x32b7fff2ed47fffd, 0x07e83a49a2e99d69, 0xeca8f3318332bb7a, 0xef148d1ea0f4c069, 0x040ab3263eff0206]] == True}}
   , {{ fp2_invariant [[ 0x019af5f980a3680c, 0x4ed7da0e66063afa, 0x600354723b5d9972, 0x8b2f958b20d09d72, 0x0474938f02d461db, 0x0dcf8b9e0684ab1c], [ 0x486f252db11dd19c, 0x791ffda2c3d18950, 0x5af6c27debf95eb4, 0x73b1fd8f2a929cde, 0xfc59602a1a90b871, 0x08d7daafa8baddb3]]  == True}}
   , {{ fp2_invariant [[ 0x65018f5c28f598eb, 0xe6020417f022d916, 0xd6327313288369c7, 0x622ded8eb447156f, 0xe52a2aee72c2a01f, 0x089812fb8481ffe4], [ 0x2574eb851eb8619f, 0xdba2e97912925604, 0x67e495a909e7a18e, 0xdf2da23b8145b8f7, 0xcf5d3728310ebf6d, 0x11be446236f4c116]]  == True}}
-  // ZxA':
+  // ZxHE2::A':
   , {{ fp2_invariant [[ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467], [ 0xa989fffff9d8b0d2, 0x3b47e7dda4b7faf3, 0xff50678a26dffece, 0xb24c28679aa8197a, 0x908a1ebe5708d058, 0x0fc0ba017f2b2466]] == True}}
-  // B':
+  // HE2::B':
   , {{ fp2_invariant [[ 0x22ea00000cf89db2, 0x6ec832df71380aa4, 0x6e1b94403db5a66e, 0x75bf3c53a79473ba, 0x3dd3a569412c0a34, 0x125cdb5e74dc4fd1], [ 0x22ea00000cf89db2, 0x6ec832df71380aa4, 0x6e1b94403db5a66e, 0x75bf3c53a79473ba, 0x3dd3a569412c0a34, 0x125cdb5e74dc4fd1]] == True}}
-  // A':
+  // HE2::A':
   , {{ fp2_invariant [[zero, zero, zero, zero, zero, zero], [ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467]] == True}}
   // Fp_2.field_unit (BLS12_381_Rx.p2):
   , {{ fp2_invariant [
@@ -311,7 +314,7 @@ map_to_isogenous_E2_impl_ov <- custom_verify
         // Finally:
           let F_expt_rewrite = run (admit_cryptol {{ \x -> F_expt`{n=758} Fp_2 x `((p^^2-9)/16) == fp2_exp x `((p^^2-9)/16) }} );
           simplify (addsimp F_expt_rewrite empty_ss);
-          w4_unint_z3 ["fp_rep", "fp_abs","sqrt_align","Fp_2","sqrt_fp2","is_square_fp2","fp2_exp","HashToCurveE2::sgn0","fp2_invariant","A'","B'","Z","ZZZ"];
+          w4_unint_z3 ["fp_rep", "fp_abs","sqrt_align","Fp_2","sqrt_fp2","is_square_fp2","fp2_exp","HashToCurveE2::sgn0","fp2_invariant","HE2::A'","HE2::B'","HE2::Z","ZZZ"];
       })
       (do {
         unfolding ["select"];
@@ -321,20 +324,20 @@ map_to_isogenous_E2_impl_ov <- custom_verify
       }));
   });
 
-// TODO: clear_cofactor
+// TODO: HE2::clear_cofactor
 
 // Next we prove that the implementation-level spec is equivalent to the abstract spec
 
 // Temporary assumptions:
 
-clear_cofactor_correct <- admit_cryptol {{ \p -> affinify E' (clear_cofactor_E2_impl p) == clear_cofactor (affinify E' p) }};
+clear_cofactor_correct <- admit_cryptol {{ \p -> affinify E' (clear_cofactor_E2_impl p) == HE2::clear_cofactor (affinify E' p) }};
 
-map_to_E2_prime_correct <- admit_cryptol {{ \u -> affinify Isogenous_Curve (map_to_curve_E2_prime_impl u) == map_to_curve_simple_swu u }};
+map_to_E2_prime_correct <- admit_cryptol {{ \u -> affinify HE2::Isogenous_Curve (map_to_curve_E2_prime_impl u) == HE2::map_to_curve_simple_swu u }};
 
-isogeny_map_to_E2_correct <- admit_cryptol {{ \p -> affinify E' (isogeny_map_to_E2_impl p) == if is_point_projective Isogenous_Curve p then iso_map (affinify Isogenous_Curve p) else affinify E' (apply isogeny_map_to_E2_impl p) }};
+isogeny_map_to_E2_correct <- admit_cryptol {{ \p -> affinify E' (isogeny_map_to_E2_impl p) == if is_point_projective HE2::Isogenous_Curve p then HE2::iso_map (affinify HE2::Isogenous_Curve p) else affinify E' (apply isogeny_map_to_E2_impl p) }};
 
-// We need to establish that we get a point on the Isogenous_Curve:
-map_to_curve_E2_prime_on_curve <- custom_prove_cryptol {{ \u -> is_point_projective Isogenous_Curve (map_to_curve_E2_prime_impl u) == True }}
+// We need to establish that we get a point on the HE2::Isogenous_Curve:
+map_to_curve_E2_prime_on_curve <- custom_prove_cryptol {{ \u -> is_point_projective HE2::Isogenous_Curve (map_to_curve_E2_prime_impl u) == True }}
 do {
   simplify (addsimps [is_point_projective_lemma,swu_impl_xy_nz,map_to_E2_prime_correct,swu_on_curve] empty_ss);
   w4_unint_z3 (concat fp_unints ["map_to_curve_E2_prime_impl"]);
@@ -344,13 +347,13 @@ let aug_len = 48; // aug_len should be 96 or 48
 let msg_len = 32;
 let DST_len= 8;
 
-final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> affinify E' (hash_to_curve_opt_impl (aug#msg,dst)) == hash_to_curve_opt (aug#msg, dst) }}
+final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> affinify E' (hash_to_curve_E2_opt_impl (aug#msg,dst)) == HE2::hash_to_curve_opt (aug#msg, dst) }}
   do {
-    unfolding ["hash_to_curve_opt_impl","map_to_g2_impl"];
+    unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl"];
     simplify (addsimps [clear_cofactor_correct, isogeny_map_to_E2_correct,point_dadd_on_curve,map_to_curve_E2_prime_on_curve,dadd_thm,map_to_E2_prime_correct] (cryptol_ss ()));
     unfolding ["/\\"];
     simplify cleanup_simpset;
-    w4_unint_z3 (concat fp_unints ["iso_map","map_to_curve_simple_swu","clear_cofactor","HashToCurveE2::hash_to_field"]);
+    w4_unint_z3 (concat fp_unints ["HE2::iso_map","HE2::map_to_curve_simple_swu","HE2::clear_cofactor","HE2::hash_to_field"]);
   };
 
 // experimentation:

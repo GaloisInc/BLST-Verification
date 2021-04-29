@@ -4,7 +4,7 @@
 */
 
 // For standalone:
-// import "../spec/Parameters.cry";
+import "../spec/Parameters.cry";
 // include "helpers.saw";
 // m <- llvm_load_module "../build/llvm/libblst.a.bc";
 // let do_prove = false;

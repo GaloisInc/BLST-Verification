@@ -42,7 +42,7 @@ _is_square x =  _F.is_equal (y, _F.field_zero) \/ _F.is_equal (y, _F.field_unit)
 
 // sqrt from Appendix G.3 (q = 9 mod 8)
 _sqrt x = z where
-    tv1 = F_expt`{n=(width _q) - 3} _F x `((_q+7)/16)
+    tv1 = F_expt`{n=width ((_q+7)/16)} _F x `((_q+7)/16)
     tv2 = _F.mul (c1, tv1)
     tv3 = _F.mul (c2, tv1)
     tv4 = _F.mul (c3, tv1)
@@ -74,7 +74,7 @@ _sgn0 [x_1, x_0] =  sign_0 || (zero_0 && sign_1) where
     zero_0 = x_0' == 0 // represent the Boolean as 0 or 1
     sign_1 = x_1'!0
 
-_inv0 x = F_expt`{n=width _q} _F x `(_q-2) // but could be F.div (_F.field_unit, x)
+_inv0 x = F_expt`{n=width (_q-2)} _F x `(_q-2) // but could be F.div (_F.field_unit, x)
 
 // Constants from Section 8.8.2
 _Z = _F.neg [1, 2] // -(2+I)
