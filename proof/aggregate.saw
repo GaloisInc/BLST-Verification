@@ -296,7 +296,7 @@ let POINTonE2_in_G2_spec_ = do {
 };
 POINTonE2_in_G2_ov_ <- verify "POINTonE2_in_G2" (concat ec_ops_overrides assembly_overrides) POINTonE2_in_G2_spec_;
 
-let overrides = foldr concat [hash_to_field_ovs, ec_ops_overrides, assembly_overrides, fp12_tower_ovs, miller_loop_n_ovs] [final_exp_alias_ov, final_exp_ov, map_to_g2_ov, map_to_g2_v_null_ov, POINTonE2_in_G2_ov, POINTonE1_in_G1_ov];
+let overrides = foldr concat [hash_to_field_fp_ovs, ec_ops_overrides, assembly_overrides, fp12_tower_ovs, miller_loop_n_ovs] [final_exp_alias_ov, final_exp_ov, map_to_g2_ov, map_to_g2_v_null_ov, POINTonE2_in_G2_ov, POINTonE1_in_G1_ov];
 
 pairing_init_ov <- verify "blst_pairing_init" [] (blst_pairing_init_spec 8);
 

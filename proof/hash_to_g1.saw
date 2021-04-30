@@ -298,24 +298,21 @@ map_to_g1_nonnull_ov <- custom_verify "map_to_g1" overrides map_to_g1_nonnull_sp
 let aug_len = 48; // aug_len should be 96 or 48
 let msg_len = 32;
 let DST_len= 8;
-let hash_to_field_nelems = [2]; // the values of nelems for which we prove hash_to_field
-hash_to_field_ovs <- for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
 
-// let's get rid of map:
-let map_size_2_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y : Vec 2 Integer) -> map Integer (Vec 6 (Vec 64 Bool)) f 2 y";
-let map_size_2_eq_term = beta_reduce_term {{ \x -> map_size_2_term (\(y : Integer) -> fp_rep y) x == [fp_rep (x@0), fp_rep (x@1)]}};
-map_size_2_thm <- prove_cryptol map_size_2_eq_term [];
 
 // Finally, the proof that the C code is equivalent to the implementation-level spec:
 
 // : useful to keep?
 hash_to_g1_ov <- custom_verify
   "blst_hash_to_g1"
-  (concat [map_to_g1_nonnull_ov] hash_to_field_ovs)
+  (concat [map_to_g1_nonnull_ov] hash_to_field_fp_ovs)
   (blst_hash_to_g1_impl_spec msg_len DST_len aug_len)
   (do {
     unfolding ["hash_to_curve_opt_impl","map"];
     simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
+    let map_size_2_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y : Vec 2 Integer) -> map Integer (Vec 6 (Vec 64 Bool)) f 2 y";
+    let map_size_2_eq_term = beta_reduce_term {{ \x -> map_size_2_term (\(y : Integer) -> fp_rep y) x == [fp_rep (x@0), fp_rep (x@1)]}};
+    let map_size_2_thm = run (prove_cryptol map_size_2_eq_term []);
     simplify (addsimps [map_size_2_thm] empty_ss); // get rid of map
     simplify (addsimps fp_rep_thms empty_ss);// simplify (abs . rep)
     w4_unint_z3 ["map_to_g1_impl","HashToCurveE1::hash_to_field"];
@@ -515,7 +512,7 @@ do {
   w4_unint_z3 ["Fp"];
 };
 
-// HE1::clear_cofactor
+// clear_cofactor
 
 // Here we unfold the recursion in dbl_n_add by hand; maybe we could have used `goal_eval` to do it for us.
 dbl_n_add_unfold_thms <- for [
@@ -553,3 +550,47 @@ add_double_lemma <- really_custom_prove_cryptol {{ \p -> affinify E (point_add F
     simplify (addsimp add_zero_lemma empty_ss);
     w4_unint_z3 ["add_E","is_point_O_E","E","affinify_E"];
   };
+
+mult_by_doubling_thm <- custom_prove_cryptol {{ \p -> affinify E (clear_cofactor_impl p) == HE1::clear_cofactor (affinify E p) }}
+  (do {
+    unfolding ["clear_cofactor_impl","HE1::clear_cofactor","HashToCurveE1::module parameter _clear_cofactor","HashToCurveE1::_clear_cofactor","HashToCurveE1::module parameter _C","HashToCurveE1::_C"];
+    simplify (addsimps (concat_all [e1_curve_op_thms, e1_scalar_mult_alg_thms, dbl_lemmas, [scalar_mult_lemma, add_double_lemma]]) (cryptol_ss ()));
+    w4_unint_z3 ["E","e1_scalar_mult"];
+  });
+
+// Finally, we put all the pieces together to prove that the C code is equivalent to the high-level spec
+
+final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> affinify E (hash_to_curve_opt_impl (aug#msg,dst)) == HE1::hash_to_curve_opt (aug#msg, dst) }}
+  do {
+    unfolding ["hash_to_curve_opt_impl","map_to_g1_impl"];
+    simplify (addsimps [mult_by_doubling_thm, isogeny_map_to_E1_impl_thm_z] (cryptol_ss ()));
+    unfolding ["apply"];
+    simplify (addsimps [isogeny_map_to_E1_impl_thm_nz,map_to_curve_simple_swu_impl_on_curve,point_dadd_on_curve] (cryptol_ss ()));
+    simplify (addsimps [dadd_thm,map_to_isogenous_E1_thm] (cryptol_ss ()));
+    w4_unint_z3 (concat fp_unints ["HE1::iso_map","HE1::map_to_curve_simple_swu","HE1::clear_cofactor","HashToCurveE1::hash_to_field"]);
+  };
+
+// And we're ready for the final override:
+
+hash_to_g1_ov_2 <- really_custom_verify
+  "blst_hash_to_g1"
+  (concat [map_to_g1_nonnull_ov] hash_to_field_fp_ovs)
+  (blst_hash_to_g1_spec msg_len DST_len aug_len)
+  (do {
+    // TODO: introduce hash_to_curve_opt_impl
+    let rw_to_impl = run (
+      really_custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> HE1::hash_to_curve_opt (aug#msg, dst) == affinify E (hash_to_curve_opt_impl (aug#msg,dst)) }}
+      do {
+        simplify (addsimp final_thm empty_ss);
+        w4_unint_z3 ["HE1::hash_to_curve_opt"];
+      }
+    );
+    simplify (addsimp rw_to_impl empty_ss);
+    unfolding ["hash_to_curve_opt_impl","map"];
+    simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
+    simplify (addsimps [map_size_2_thm] empty_ss); // get rid of map
+    unfolding ["POINTonE1_abs","POINTonE1_rep"]; // TODO: use POINTonE1_thms?
+    simplify (addsimps fp_rep_thms empty_ss);// simplify (abs . rep)
+    simplify remove_higher_order_function_simpset;
+    w4_unint_z3 ["map_to_g1_impl","HashToCurveE1::hash_to_field","affinify_E"];
+  });
