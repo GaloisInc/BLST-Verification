@@ -49,7 +49,7 @@ let blst_hash_to_g2_spec msg_len DST_len aug_len = do {
   llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
   new_p <- llvm_fresh_var "new_blst_hash_to_g2_p" POINTonE2_type;
   llvm_points_to p_ptr (llvm_term new_p);
-  llvm_postcond {{ affinify E (POINTonE2_abs new_p) == HE2::hash_to_curve_opt (aug#msg, DST) }};
+  llvm_postcond {{ affinify E' (POINTonE2_abs new_p) == HE2::hash_to_curve_opt (aug#msg, DST) }};
 };
 
 let blst_hash_to_g2_impl_spec msg_len DST_len aug_len = do {
@@ -216,7 +216,7 @@ isogeny_map_to_E2_impl_alias_ov <- custom_verify
 
 //map_to_isogenous
 
-map_to_iso_constants <- for [
+map_to_iso_constants_rewrites <- for [
     {{ fp2_abs [[zero, zero, zero, zero, zero, zero], [ 0xd4c4fffffcec5869, 0x1da3f3eed25bfd79, 0x7fa833c5136fff67, 0x59261433cd540cbd, 0x48450f5f2b84682c, 0x07e05d00bf959233 ]] == Fp_2.neg HE2::A' }} // first is 15331660506401101929
   , {{ fp2_abs [[ 0x87ebfffffff9555c, 0x656fffe5da8ffffa, 0x0fd0749345d33ad2, 0xd951e663066576f4, 0xde291a3d41e980d3, 0x0815664c7dfe040d], [ 0x43f5fffffffcaaae, 0x32b7fff2ed47fffd, 0x07e83a49a2e99d69, 0xeca8f3318332bb7a, 0xef148d1ea0f4c069, 0x040ab3263eff0206]] == HE2::Z }}
   , {{ fp2_abs [[ 0x019af5f980a3680c, 0x4ed7da0e66063afa, 0x600354723b5d9972, 0x8b2f958b20d09d72, 0x0474938f02d461db, 0x0dcf8b9e0684ab1c], [ 0x486f252db11dd19c, 0x791ffda2c3d18950, 0x5af6c27debf95eb4, 0x73b1fd8f2a929cde, 0xfc59602a1a90b871, 0x08d7daafa8baddb3]] == sqrt_fp2 ZZZ }}
@@ -282,7 +282,7 @@ map_to_isogenous_E2_impl_ov <- custom_verify
         // First we deal with the term extracted from the C code:
           unfolding ["select"];
           // deal with constants and SAW mangling
-            simplify (addsimps (concat map_to_iso_constants [fix_vec_12_2, fix_vec_12]) fp2_simpset);
+            simplify (addsimps (concat map_to_iso_constants_rewrites [fix_vec_12_2, fix_vec_12]) fp2_simpset);
           // We get rid of bitvector ops:
             let bvEq_term = parse_core "\\ (x:Vec 64 Bool) (y:Vec 64 Bool) -> bvEq 64 x y";
             let rewrite_xor = run ( custom_prove_cryptol (rewrite (cryptol_ss ()) (beta_reduce_term {{ \a b c d -> bvEq_term (((1:[64]) && (zext [a,b])) ^ ((1:[64]) && (zext [c,d]))) (0:[64]) == (b == d) }})) w4);
@@ -318,40 +318,6 @@ map_to_isogenous_E2_impl_ov <- custom_verify
       }));
   });
 
-      x@20 = join 2 2 x@15
-               (Prelude.map x@13 x@16 (\(x : x@13) -> fp2_rep x) 2 x@19)
-
-      let map_size_2_term = parse_core "\\(f : Vec 2 Integer -> Vec 2 (Vec 6 (Vec 64 Bool))) -> \\(y : Vec 2 (Vec 2 Integer)) -> map (Vec 2 Integer) (Vec 2 (Vec 6 (Vec 64 Bool))) f 2 y";
-      let map_size_2_eq_term = beta_reduce_term {{ \x -> map_size_2_term (\(y : [2]Integer) -> fp2_rep y) x == [fp2_rep (x@0), fp2_rep (x@1)]}};
-      let map_size_2_thm = run (prove_cryptol map_size_2_eq_term []);
-
-hash_to_g2_impl_ov_2 <- really_custom_verify
-  "blst_hash_to_g2"
-  (concat_all [curve_operations_e2_ovs,[clear_cofactor_ov,map_to_isogenous_E2_impl_ov,isogeny_map_to_E2_impl_alias_ov],hash_to_field_fp2_ovs])
-  (blst_hash_to_g2_impl_spec msg_len DST_len aug_len)
-  do {
-    let join_map_term = parse_core "\\(f : Vec 2 Integer -> Vec 2 (Vec 6 (Vec 64 Bool))) -> \\(y : Vec 2 (Vec 2 Integer)) -> join 2 2 (Vec 6 (Vec 64 Bool)) (map (Vec 2 Integer) (Vec 2 (Vec 6 (Vec 64 Bool))) f 2 y)";
-    let join_map_eq_1 = beta_reduce_term {{ \x -> ([z1,z2] == fp2_rep (x@0) where [z1,z2,_,_] = join_map_size_2_term (\(y : [2]Integer) -> fp2_rep y) x) }};
-    let join_map_eq_2 = beta_reduce_term {{ \x -> ([z1,z2] == fp2_rep (x@1) where [_,_,z1,z2] = join_map_size_2_term (\(y : [2]Integer) -> fp2_rep y) x) }};
-    let join_map_thm_1 = run (prove_cryptol (rewrite (cryptol_ss ()) join_map_eq_1) []);
-    let join_map_thm_2 = run (prove_cryptol (rewrite (cryptol_ss ()) join_map_eq_2) []);
-    (goal_num_ite 5
-      do {
-        unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl","map","join"];
-        simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
-        simplify (addsimps [join_map_thm_1,join_map_thm_2] (cryptol_ss ())); // get rid of join and map terms
-        simplify (addsimps (concat fp2_rep_thms POINTonE2_thms) empty_ss);// simplify (abs rep)
-        w4_unint_z3 ["fp2_invariant","clear_cofactor_E2_impl","map_to_curve_E2_prime_impl","isogeny_map_to_E2_impl","HashToCurveE2::hash_to_field"];
-      }
-      do {
-        unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl","map","join"];
-        simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
-        simplify (addsimps [join_map_thm_1,join_map_thm_2] (cryptol_ss ())); // get rid of join and map terms
-        simplify (addsimps (concat fp2_rep_thms POINTonE2_thms) empty_ss);
-        w4;
-      });
-    };
-
 // Next we prove that the implementation-level spec is equivalent to the abstract spec
 
 // Temporary assumptions:
@@ -374,7 +340,7 @@ let DST_len= 8;
 final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> affinify E' (hash_to_curve_E2_opt_impl (aug#msg,dst)) == HE2::hash_to_curve_opt (aug#msg, dst) }}
   do {
     unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl"];
-    let clear_cofactor_correct = run (really_custom_prove_cryptol {{ \P -> affinify E' (clear_cofactor_E2_impl P) == clear_cofactor_bls12381_g2 (affinify E' P) }}
+    let clear_cofactor_correct = run (custom_prove_cryptol {{ \P -> affinify E' (clear_cofactor_E2_impl P) == clear_cofactor_bls12381_g2 (affinify E' P) }}
       do {
         simplify (addsimp clear_cofactor_E2_equiv_thm empty_ss);
         simplify remove_higher_order_function_simpset;
@@ -388,7 +354,79 @@ final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst
     w4_unint_z3 (concat fp_unints ["HE2::iso_map","HE2::map_to_curve_simple_swu","HE2::clear_cofactor","HE2::hash_to_field"]);
   };
 
-// final override:
+// And we're ready for the final overrides:
+
+// TODO: factor out common pieces below
+
+// abstract version:
+hash_to_g2_impl_ov_2 <- custom_verify
+  "blst_hash_to_g2"
+  (concat_all [curve_operations_e2_ovs,[clear_cofactor_ov,map_to_isogenous_E2_impl_ov,isogeny_map_to_E2_impl_alias_ov],hash_to_field_fp2_ovs])
+  (blst_hash_to_g2_spec msg_len DST_len aug_len)
+  do {
+    let join_map_term = parse_core "\\(f : Vec 2 Integer -> Vec 2 (Vec 6 (Vec 64 Bool))) -> \\(y : Vec 2 (Vec 2 Integer)) -> join 2 2 (Vec 6 (Vec 64 Bool)) (map (Vec 2 Integer) (Vec 2 (Vec 6 (Vec 64 Bool))) f 2 y)";
+    let join_map_eq_1 = beta_reduce_term {{ \x -> ([z1,z2] == fp2_rep (x@0) where [z1,z2,_,_] = join_map_term (\(y : [2]Integer) -> fp2_rep y) x) }};
+    let join_map_eq_2 = beta_reduce_term {{ \x -> ([z1,z2] == fp2_rep (x@1) where [_,_,z1,z2] = join_map_term (\(y : [2]Integer) -> fp2_rep y) x) }};
+    let join_map_thm_1 = run (prove_cryptol (rewrite (cryptol_ss ()) join_map_eq_1) []);
+    let join_map_thm_2 = run (prove_cryptol (rewrite (cryptol_ss ()) join_map_eq_2) []);
+    (goal_num_ite 5
+      do {
+        let to_impl = run (
+          custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> HE2::hash_to_curve_opt (aug#msg, dst) == affinify E' (hash_to_curve_E2_opt_impl (aug#msg,dst)) }}
+          do {
+            simplify (addsimp final_thm empty_ss);
+            w4_unint_z3 ["HE2::hash_to_curve_opt"];
+          }
+        );
+        simplify (addsimp to_impl empty_ss);
+        simplify (addsimps (concat fp2_rep_thms POINTonE2_thms) empty_ss);// simplify (abs rep)
+        unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl","map","join"];
+        simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
+        simplify (addsimps [join_map_thm_1,join_map_thm_2] (cryptol_ss ())); // get rid of join and map terms
+        simplify (addsimps (concat fp2_rep_thms POINTonE2_thms) empty_ss);// simplify (abs rep)
+        simplify (addsimps map_to_iso_constants_rewrites empty_ss);
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 ["affinify_E'","fp2_invariant","clear_cofactor_E2_impl","map_to_curve_E2_prime_impl","isogeny_map_to_E2_impl","HashToCurveE2::hash_to_field"];
+      }
+      do {
+        unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl","map","join"];
+        simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
+        simplify (addsimps [join_map_thm_1,join_map_thm_2] (cryptol_ss ())); // get rid of join and map terms
+        simplify (addsimps (concat fp2_rep_thms POINTonE2_thms) empty_ss);
+        w4;
+      });
+    };
+
+// concrete version:
+hash_to_g2_impl_ov_2 <- custom_verify
+  "blst_hash_to_g2"
+  (concat_all [curve_operations_e2_ovs,[clear_cofactor_ov,map_to_isogenous_E2_impl_ov,isogeny_map_to_E2_impl_alias_ov],hash_to_field_fp2_ovs])
+  (blst_hash_to_g2_impl_spec msg_len DST_len aug_len)
+  do {
+    let join_map_term = parse_core "\\(f : Vec 2 Integer -> Vec 2 (Vec 6 (Vec 64 Bool))) -> \\(y : Vec 2 (Vec 2 Integer)) -> join 2 2 (Vec 6 (Vec 64 Bool)) (map (Vec 2 Integer) (Vec 2 (Vec 6 (Vec 64 Bool))) f 2 y)";
+    let join_map_eq_1 = beta_reduce_term {{ \x -> ([z1,z2] == fp2_rep (x@0) where [z1,z2,_,_] = join_map_term (\(y : [2]Integer) -> fp2_rep y) x) }};
+    let join_map_eq_2 = beta_reduce_term {{ \x -> ([z1,z2] == fp2_rep (x@1) where [_,_,z1,z2] = join_map_term (\(y : [2]Integer) -> fp2_rep y) x) }};
+    let join_map_thm_1 = run (prove_cryptol (rewrite (cryptol_ss ()) join_map_eq_1) []);
+    let join_map_thm_2 = run (prove_cryptol (rewrite (cryptol_ss ()) join_map_eq_2) []);
+    (goal_num_ite 5
+      do {
+        unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl","map","join"];
+        simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
+        simplify (addsimps [join_map_thm_1,join_map_thm_2] (cryptol_ss ())); // get rid of join and map terms
+        simplify (addsimps (concat fp2_rep_thms POINTonE2_thms) empty_ss);// simplify (abs rep)
+        simplify (addsimps map_to_iso_constants_rewrites empty_ss);
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 ["affinify_E'","fp2_invariant","clear_cofactor_E2_impl","map_to_curve_E2_prime_impl","isogeny_map_to_E2_impl","HashToCurveE2::hash_to_field"];
+      }
+      do {
+        unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl","map","join"];
+        simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
+        simplify (addsimps [join_map_thm_1,join_map_thm_2] (cryptol_ss ())); // get rid of join and map terms
+        simplify (addsimps (concat fp2_rep_thms POINTonE2_thms) empty_ss);
+        w4;
+      });
+    };
+
 
 // experimentation:
 
