@@ -85,7 +85,7 @@ let isogeny_map_to_E2_impl_alias_spec = do {
   llvm_points_to out_ptr (llvm_term {{ POINTonE2_rep (isogeny_map_to_E2_impl (POINTonE2_abs out)) }} );
 };
 
-let clear_cofactor_E2_impl_spec = do {
+let clear_cofactor_E2_impl_spec_old = do {
   (out, out_ptr) <- ptr_to_fresh "out" POINTonE2_type;
   llvm_precond {{ POINTonE2_invariant out }};
   llvm_execute_func [out_ptr, out_ptr];
@@ -128,8 +128,8 @@ sqrt_align_fp2_unint_ov <-admit "sqrt_align_fp2" sqrt_align_fp2_unint_spec;
 // TODO: move somewhere else
 let simp_then_admit r = admit_cryptol (rewrite (cryptol_ss ()) r);
 
-// The optimized version of HE2::clear_cofactor given in the IETF spec is correct:
-clear_cofactor_with_psi_thm <- custom_prove_cryptol {{ \p -> Aux::clear_cofactor_E2_with_psi p == HE2::clear_cofactor p }};
+// The optimized version of clear_cofactor given in the IETF spec is correct:
+clear_cofactor_bls12381_correct <- admit_cryptol {{ \p -> Aux::clear_cofactor_bls12381_g2 p == HE2::clear_cofactor p }};
 
 // The SWU map maps to the isogenous curve:
 swu_on_curve <- simp_then_admit {{ \u -> is_point_affine HE2::Isogenous_Curve (HE2::map_to_curve_simple_swu u) == True }};
@@ -330,13 +330,13 @@ map_to_isogenous_E2_impl_ov <- custom_verify
 
 // Temporary assumptions:
 
-clear_cofactor_correct <- admit_cryptol {{ \p -> affinify E' (clear_cofactor_E2_impl p) == HE2::clear_cofactor (affinify E' p) }};
+clear_cofactor_correct_old <- admit_cryptol {{ \p -> affinify E' (clear_cofactor_E2_impl p) == HE2::clear_cofactor (affinify E' p) }};
 
 map_to_E2_prime_correct <- admit_cryptol {{ \u -> affinify HE2::Isogenous_Curve (map_to_curve_E2_prime_impl u) == HE2::map_to_curve_simple_swu u }};
 
 isogeny_map_to_E2_correct <- admit_cryptol {{ \p -> affinify E' (isogeny_map_to_E2_impl p) == if is_point_projective HE2::Isogenous_Curve p then HE2::iso_map (affinify HE2::Isogenous_Curve p) else affinify E' (apply isogeny_map_to_E2_impl p) }};
 
-// We need to establish that we get a point on the HE2::Isogenous_Curve:
+// We need to establish that we get a point on the isogenous curve
 map_to_curve_E2_prime_on_curve <- custom_prove_cryptol {{ \u -> is_point_projective HE2::Isogenous_Curve (map_to_curve_E2_prime_impl u) == True }}
 do {
   simplify (addsimps [is_point_projective_lemma,swu_impl_xy_nz,map_to_E2_prime_correct,swu_on_curve] empty_ss);
@@ -350,9 +350,17 @@ let DST_len= 8;
 final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> affinify E' (hash_to_curve_E2_opt_impl (aug#msg,dst)) == HE2::hash_to_curve_opt (aug#msg, dst) }}
   do {
     unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl"];
-    simplify (addsimps [clear_cofactor_correct, isogeny_map_to_E2_correct,point_dadd_on_curve,map_to_curve_E2_prime_on_curve,dadd_thm,map_to_E2_prime_correct] (cryptol_ss ()));
-    unfolding ["/\\"];
+    let clear_cofactor_correct = run (really_custom_prove_cryptol {{ \P -> affinify E' (clear_cofactor_E2_impl P) == clear_cofactor_bls12381_g2 (affinify E' P) }}
+      do {
+        simplify (addsimp clear_cofactor_E2_equiv_thm empty_ss);
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 ["clear_cofactor_E2_impl","clear_cofactor_bls12381_g2","affinify_E'"];
+      }
+    );
+    simplify (addsimps [clear_cofactor_bls12381_correct, clear_cofactor_correct, isogeny_map_to_E2_correct,point_dadd_on_curve,map_to_curve_E2_prime_on_curve,dadd_thm,map_to_E2_prime_correct] (cryptol_ss ()));
+    unfolding ["/\\","HE2::hash_to_curve_opt"];
     simplify cleanup_simpset;
+    print_readably;
     w4_unint_z3 (concat fp_unints ["HE2::iso_map","HE2::map_to_curve_simple_swu","HE2::clear_cofactor","HE2::hash_to_field"]);
   };
 

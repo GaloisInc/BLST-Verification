@@ -9,9 +9,6 @@ import Parameters (t_Fp_2, to_Fp, E')
 import ShortWeierstrassCurve (AffinePoint, double, sub, neg, scalar_mult, add)
 import G2SubGroupCheck
 
-clear_cofactor_E2_with_psi: AffinePoint t_Fp_2 -> AffinePoint t_Fp_2
-clear_cofactor_E2_with_psi = undefined
-
 // NOTE: we write an fp2 element a+b*I in big-endian, i.e. as [b,a]
 to_Fp2: ([384], [384]) -> t_Fp_2
 to_Fp2 (a,b) = [to_Fp b, to_Fp a] // a+b*I

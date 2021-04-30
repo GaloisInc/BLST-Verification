@@ -137,7 +137,7 @@ POINTonE2_times_minus_z_ov <- custom_verify "POINTonE2_times_minus_z"
     w4_unint_z3 fp2_unints;
   };
 
-let clear_cofactor_spec = do {
+let clear_cofactor_impl_spec = do {
   out_ptr <- crucible_alloc POINTonE2_type;
   (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE2_type;
   crucible_precond {{ POINTonE2_invariant inp }};
@@ -179,7 +179,7 @@ clear_cofactor_ov <- custom_verify "clear_cofactor"
    POINTonE2_cneg_nonzero_ov,
    POINTonE2_double_ov,
    POINTonE2_dadd_null_alias_1_2_ov]
-  clear_cofactor_spec
+  clear_cofactor_impl_spec
   do {
     unfolding ["clear_cofactor_E2_impl",
                "POINTonE2_abs",
