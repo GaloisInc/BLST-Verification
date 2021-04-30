@@ -295,29 +295,6 @@ map_to_g1_nonnull_ov <- custom_verify "map_to_g1" overrides map_to_g1_nonnull_sp
       };
     });
 
-let aug_len = 48; // aug_len should be 96 or 48
-let msg_len = 32;
-let DST_len= 8;
-
-
-// Finally, the proof that the C code is equivalent to the implementation-level spec:
-
-// : useful to keep?
-hash_to_g1_ov <- custom_verify
-  "blst_hash_to_g1"
-  (concat [map_to_g1_nonnull_ov] hash_to_field_fp_ovs)
-  (blst_hash_to_g1_impl_spec msg_len DST_len aug_len)
-  (do {
-    unfolding ["hash_to_curve_opt_impl","map"];
-    simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
-    let map_size_2_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y : Vec 2 Integer) -> map Integer (Vec 6 (Vec 64 Bool)) f 2 y";
-    let map_size_2_eq_term = beta_reduce_term {{ \x -> map_size_2_term (\(y : Integer) -> fp_rep y) x == [fp_rep (x@0), fp_rep (x@1)]}};
-    let map_size_2_thm = run (prove_cryptol map_size_2_eq_term []);
-    simplify (addsimps [map_size_2_thm] empty_ss); // get rid of map
-    simplify (addsimps fp_rep_thms empty_ss);// simplify (abs . rep)
-    w4_unint_z3 ["map_to_g1_impl","HashToCurveE1::hash_to_field"];
-  });
-
 // Now we go all the way to the abstract spec
 
 // First, the SWU map: `affinify HE1::Isogenous_Curve (map_to_curve_simple_swu_impl u) == HE1::map_to_curve_simple_swu u`
@@ -560,6 +537,11 @@ mult_by_doubling_thm <- custom_prove_cryptol {{ \p -> affinify E (clear_cofactor
 
 // Finally, we put all the pieces together to prove that the C code is equivalent to the high-level spec
 
+let aug_len = 48; // aug_len should be 96 or 48
+let msg_len = 32;
+let DST_len= 8;
+
+
 final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> affinify E (hash_to_curve_opt_impl (aug#msg,dst)) == HE1::hash_to_curve_opt (aug#msg, dst) }}
   do {
     unfolding ["hash_to_curve_opt_impl","map_to_g1_impl"];
@@ -570,9 +552,10 @@ final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst
     w4_unint_z3 (concat fp_unints ["HE1::iso_map","HE1::map_to_curve_simple_swu","HE1::clear_cofactor","HashToCurveE1::hash_to_field"]);
   };
 
-// And we're ready for the final override:
+// And we're ready for the final overrides:
 
-hash_to_g1_ov_2 <- really_custom_verify
+// abstract version:
+hash_to_g1_ov <- really_custom_verify
   "blst_hash_to_g1"
   (concat [map_to_g1_nonnull_ov] hash_to_field_fp_ovs)
   (blst_hash_to_g1_spec msg_len DST_len aug_len)
@@ -594,3 +577,20 @@ hash_to_g1_ov_2 <- really_custom_verify
     simplify remove_higher_order_function_simpset;
     w4_unint_z3 ["map_to_g1_impl","HashToCurveE1::hash_to_field","affinify_E"];
   });
+
+// concrete version:
+hash_to_g1_impl_ov <- custom_verify
+  "blst_hash_to_g1"
+  (concat [map_to_g1_nonnull_ov] hash_to_field_fp_ovs)
+  (blst_hash_to_g1_impl_spec msg_len DST_len aug_len)
+  (do {
+    unfolding ["hash_to_curve_opt_impl","map"];
+    simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
+    let map_size_2_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y : Vec 2 Integer) -> map Integer (Vec 6 (Vec 64 Bool)) f 2 y";
+    let map_size_2_eq_term = beta_reduce_term {{ \x -> map_size_2_term (\(y : Integer) -> fp_rep y) x == [fp_rep (x@0), fp_rep (x@1)]}};
+    let map_size_2_thm = run (prove_cryptol map_size_2_eq_term []);
+    simplify (addsimps [map_size_2_thm] empty_ss); // get rid of map
+    simplify (addsimps fp_rep_thms empty_ss);// simplify (abs . rep)
+    w4_unint_z3 ["map_to_g1_impl","HashToCurveE1::hash_to_field"];
+  });
+
