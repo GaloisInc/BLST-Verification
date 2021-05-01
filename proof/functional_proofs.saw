@@ -11,7 +11,9 @@ m <- llvm_load_module "../build/llvm/libblst.a.bc";
 let do_prove = true;
 
 include "proof-helpers.saw";
+let do_prove = false;
 include "algebraic-laws.saw";
+let do_prove = true;
 
 include "hash_to_field.saw";
 include "fp_overrides.saw";
