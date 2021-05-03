@@ -339,13 +339,13 @@ let {{
 div_0 <- prove_cryptol {{ \x -> Fp.div(x, Fp.field_zero) == Fp.field_zero }} [];
 
 // This holds because Fp.div(x,0) == 0
-affinify_lemma <- really_custom_prove_cryptol {{ \p -> affinify E p == affinify_nz p }}
+affinify_lemma <- custom_prove_cryptol {{ \p -> affinify E p == affinify_nz p }}
 do {
   let rule_1 = run (
-    really_custom_prove_cryptol {{ \p -> affinify_nz p == if Fp.is_equal (p.2, Fp.field_zero) then apply affinify_nz (p.0, p.1, Fp.field_zero) else apply affinify_nz p }} (w4_unint_z3 ["affinify_nz"])
+    custom_prove_cryptol {{ \p -> affinify_nz p == if Fp.is_equal (p.2, Fp.field_zero) then apply affinify_nz (p.0, p.1, Fp.field_zero) else apply affinify_nz p }} (w4_unint_z3 ["affinify_nz"])
   );
   let rule_2 = run (
-    really_custom_prove_cryptol {{ \(p:(Integer,Integer,Integer)) -> affinify_nz (p.0, p.1, Fp.field_zero) ==  (Fp.field_zero, Fp.field_zero) }}
+    custom_prove_cryptol {{ \(p:(Integer,Integer,Integer)) -> affinify_nz (p.0, p.1, Fp.field_zero) ==  (Fp.field_zero, Fp.field_zero) }}
       do {
         unfolding ["affinify_nz"];
         simplify (addsimps (concat [me_1, me_2, me_3, me_4, me_5, me_6, me_7, div_0] fp_alg_thms) empty_ss);
@@ -358,10 +358,10 @@ do {
   w4_unint_z3 ["Fp"];
 };
 
-affinify_lemma' <- really_custom_prove_cryptol {{ \p -> affinify HE1::Isogenous_Curve p == affinify_nz p }}
+affinify_lemma' <- custom_prove_cryptol {{ \p -> affinify HE1::Isogenous_Curve p == affinify_nz p }}
 do {
   let rule_1 = run (
-    really_custom_prove_cryptol {{ \p -> affinify HE1::Isogenous_Curve p == affinify E p}} do {unfolding ["affinify","HE1::Isogenous_Curve"]; w4_unint_z3 ["Fp"];}
+    custom_prove_cryptol {{ \p -> affinify HE1::Isogenous_Curve p == affinify E p}} do {unfolding ["affinify","HE1::Isogenous_Curve"]; w4_unint_z3 ["Fp"];}
   );
   simplify (addsimps [rule_1,affinify_lemma] empty_ss);
   w4_unint_z3 ["Fp"];
@@ -468,7 +468,7 @@ let {{ // this is the "else" term in the definition of HE1::iso_map
 
 // TODO
 iso_map_main_lemma <- simp_then_admit {{ \p -> iso_map_nz (affinify_nz p) == if ~Fp.is_equal(p.2, Fp.field_zero) then affinify_nz (isogeny_map_to_E1_impl p) else apply iso_map_nz (affinify_nz p) }};
-//_ <- really_custom_prove_cryptol {{ \(x:[2]) (y:[2]) (z:[2])-> (iso_map_nz (affinify_nz p) == if ~Fp.is_equal(p.2, Fp.field_zero) then affinify_nz (isogeny_map_to_E1_impl p) else apply iso_map_nz (affinify_nz p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
+//_ <- custom_prove_cryptol {{ \(x:[2]) (y:[2]) (z:[2])-> (iso_map_nz (affinify_nz p) == if ~Fp.is_equal(p.2, Fp.field_zero) then affinify_nz (isogeny_map_to_E1_impl p) else apply iso_map_nz (affinify_nz p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
 
 isogeny_map_to_E1_impl_thm_nz <- custom_prove_cryptol {{ \p -> affinify E (isogeny_map_to_E1_impl p) == if (is_point_projective HE1::Isogenous_Curve p /\ ~is_zero Fp p.2) then HE1::iso_map (affinify HE1::Isogenous_Curve p) else apply affinify E (isogeny_map_to_E1_impl p) }}
 do {
@@ -498,7 +498,7 @@ dbl_n_add_unfold_thms <- for [
     , {{ \p q -> dbl_n_add p 9 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p))))))))) q Fp.field_zero True }}
     , {{ \p q -> dbl_n_add p 32 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))))))))))))))))))) q Fp.field_zero True }}
     , {{ \p q -> dbl_n_add p 16 q == point_dadd Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp (point_double Fp p)))))))))))))))) q Fp.field_zero True }}
-  ] (\ eq -> really_custom_prove_cryptol (rewrite (cryptol_ss ()) eq) do {
+  ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) do {
       unfolding ["dbl_n_add"];
       simplify remove_higher_order_function_simpset;
       goal_eval_unint ["point_double_fp", "point_dadd_fp"];
@@ -518,7 +518,7 @@ scalar_mult_lemma <-admit_cryptol (rewrite (cryptol_ss ()) {{ \p -> mult E Aux::
 
 // now let's prove the multiplication-by-doubling code is correct
 
-add_double_lemma <- really_custom_prove_cryptol {{ \p -> affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) }}
+add_double_lemma <- custom_prove_cryptol {{ \p -> affinify E (point_add Fp (point_double Fp p) p) == add E (affinify E (point_double Fp p)) (affinify E p) }}
   do {
     simplify (addsimps e1_curve_op_thms empty_ss);
     unfolding ["add'"];
@@ -557,14 +557,13 @@ final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst
 // TODO: factor out common pieces below
 
 // abstract version:
-hash_to_g1_ov <- really_custom_verify
+hash_to_g1_ov <- custom_verify
   "blst_hash_to_g1"
   (concat [map_to_g1_nonnull_ov] hash_to_field_fp_ovs)
   (blst_hash_to_g1_spec msg_len DST_len aug_len)
   (do {
-    let _ = run test;
     let to_impl = run (
-      really_custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> HE1::hash_to_curve_opt (aug#msg, dst) == affinify E (hash_to_curve_opt_impl (aug#msg,dst)) }}
+      custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> HE1::hash_to_curve_opt (aug#msg, dst) == affinify E (hash_to_curve_opt_impl (aug#msg,dst)) }}
       do {
         simplify (addsimp final_thm empty_ss);
         w4_unint_z3 ["HE1::hash_to_curve_opt"];
