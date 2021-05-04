@@ -56,24 +56,49 @@ pull_mult_neg_p2_thm <- admit_cryptol
 push_neg_add_p2_thm <- admit_cryptol
   {{ \x y -> neg E' (add E' x y) == add E' (neg E' x) (neg E' y) }};
 
-add_normalize_p2_thm <- admit_cryptol
-  {{ \P1 P2 -> add_E' (P1.0, Fp_2.normalize P1.1) P2 == add_E' P1 P2 }};
-
 let add_sort_p2_laws = [
     {{ \ x y   -> add_E' x y == add_E' y x }} // add commutes
   , {{ \ x y z -> add_E' (add_E' x y) z == add_E' x (add_E' y z) }} // add associates
   , {{ \ x y z -> add_E' x (add_E' y z) == add_E' y (add_E' x z) }} // add commutes, again
+  , {{ \ b x1 x2 y -> add_E' (if b then x1 else x2) y ==
+                      if b then add_E' x1 y else add_E' x2 y }}
 ];
 
 add_sort_p2_thms <- for add_sort_p2_laws (\t -> admit_cryptol t);
 
 e2_scalar_mult_thm <- admit_cryptol {{  \x y -> scalar_mult E' x y == e2_scalar_mult x y }};
 
+let {{
+  AffinePoint_Fp_2_invariant: AffinePoint t_Fp_2 -> Bool
+  AffinePoint_Fp_2_invariant P = undefined
+
+  ProjectivePoint_Fp_2_invariant: ProjectivePoint t_Fp_2 -> Bool
+  ProjectivePoint_Fp_2_invariant P = undefined
+  }};
+
+Fp_2_normalize_second_thm <- admit_cryptol
+  {{ \P -> (P.0, Fp_2.normalize P.1) ==
+           if AffinePoint_Fp_2_invariant P
+           then P
+           else (P.0, apply Fp_2.normalize P.1) }};
+
+e2_scalar_mult_inv_thm <- admit_cryptol
+  {{ \P -> AffinePoint_Fp_2_invariant (e2_scalar_mult pos_c1 P) ==
+           if AffinePoint_Fp_2_invariant P
+           then True
+           else apply AffinePoint_Fp_2_invariant (e2_scalar_mult pos_c1 P) }};
+
+affinify_E'_inv_thm <- admit_cryptol
+  {{ \P -> AffinePoint_Fp_2_invariant (affinify_E' P) ==
+           ProjectivePoint_Fp_2_invariant P }};
 
 // Prove clear_cofactor_bls12381_g2 (RFC spec) is equivalent to
 // clear_cofactor_E2_impl (spec based on C clear_cofactor_E2 function).
 clear_cofactor_E2_equiv_thm <- custom_prove_cryptol
-  {{ \P -> clear_cofactor_bls12381_g2 (affinify E' P) == affinify E' (clear_cofactor_E2_impl P) }}
+  {{ \P -> if ProjectivePoint_Fp_2_invariant P
+           then clear_cofactor_bls12381_g2 (affinify E' P) ==
+                affinify E' (clear_cofactor_E2_impl P)
+           else True }}
   do {
     unfolding ["clear_cofactor_bls12381_g2", "clear_cofactor_E2_impl"];
     // Affinify goal
@@ -85,10 +110,13 @@ clear_cofactor_E2_equiv_thm <- custom_prove_cryptol
     // Algebraic goal manipulation
     simplify (addsimps [sub_to_add_neg_p2_thm, psi_neg_thm, neg_neg_p2_thm, mult_commutes_p2_thm, pull_mult_neg_p2_thm, push_neg_add_p2_thm] empty_ss);
 
-    // Sort adds
-    simplify (addsimps (concat [add_E'_thm, add_normalize_p2_thm] add_sort_p2_thms) empty_ss);
+    // Eliminate normalization in goal
+    simplify (addsimps [Fp_2_normalize_second_thm, e2_scalar_mult_inv_thm, affinify_E'_inv_thm] empty_ss);
 
-    w4_unint_z3 ["affinify_E'", "E'", "e2_scalar_mult"];
+    // Sort adds
+    simplify (addsimps (concat [add_E'_thm] add_sort_p2_thms) empty_ss);
+
+    w4_unint_z3 ["affinify_E'", "E'", "e2_scalar_mult", "ProjectivePoint_Fp_2_invariant", "AffinePoint_Fp_2_invariant"];
   };
 
 
