@@ -39,8 +39,8 @@ times_minus_z_thm <- custom_prove_cryptol
   };
 
 // Algebraic theorems
-sub_to_add_neg_p2_thm <- admit_cryptol
-  {{ \p1 p2 -> sub E' p1 p2 == add E' p1 (neg E' p2) }};
+sub_to_add_neg_p2_thm <- prove_cryptol
+  {{ \p1 p2 -> sub E' p1 p2 == add E' p1 (neg E' p2) }} ["E'"];
 
 psi_neg_thm <- prove_cryptol {{ \P -> psi (neg E' P) == neg E' (psi P) }} [];
 
@@ -70,17 +70,14 @@ e2_scalar_mult_thm <- admit_cryptol {{  \x y -> scalar_mult E' x y == e2_scalar_
 
 let {{
   AffinePoint_Fp_2_invariant: AffinePoint t_Fp_2 -> Bool
-  AffinePoint_Fp_2_invariant P = undefined
-
-  ProjectivePoint_Fp_2_invariant: ProjectivePoint t_Fp_2 -> Bool
-  ProjectivePoint_Fp_2_invariant P = undefined
+  AffinePoint_Fp_2_invariant (x, y) = Fp_2.is_val x /\ Fp_2.is_val y
   }};
 
-Fp_2_normalize_second_thm <- admit_cryptol
+Fp_2_normalize_second_thm <- prove_cryptol
   {{ \P -> (P.0, Fp_2.normalize P.1) ==
            if AffinePoint_Fp_2_invariant P
            then P
-           else (P.0, apply Fp_2.normalize P.1) }};
+           else (P.0, apply Fp_2.normalize P.1) }} [];
 
 e2_scalar_mult_inv_thm <- admit_cryptol
   {{ \P -> AffinePoint_Fp_2_invariant (e2_scalar_mult pos_c1 P) ==
@@ -88,14 +85,10 @@ e2_scalar_mult_inv_thm <- admit_cryptol
            then True
            else apply AffinePoint_Fp_2_invariant (e2_scalar_mult pos_c1 P) }};
 
-affinify_E'_inv_thm <- admit_cryptol
-  {{ \P -> AffinePoint_Fp_2_invariant (affinify_E' P) ==
-           ProjectivePoint_Fp_2_invariant P }};
-
 // Prove clear_cofactor_bls12381_g2 (RFC spec) is equivalent to
 // clear_cofactor_E2_impl (spec based on C clear_cofactor_E2 function).
 clear_cofactor_E2_equiv_thm <- custom_prove_cryptol
-  {{ \P -> if ProjectivePoint_Fp_2_invariant P
+  {{ \P -> if AffinePoint_Fp_2_invariant (affinify E' P)
            then clear_cofactor_bls12381_g2 (affinify E' P) ==
                 affinify E' (clear_cofactor_E2_impl P)
            else True }}
@@ -111,14 +104,13 @@ clear_cofactor_E2_equiv_thm <- custom_prove_cryptol
     simplify (addsimps [sub_to_add_neg_p2_thm, psi_neg_thm, neg_neg_p2_thm, mult_commutes_p2_thm, pull_mult_neg_p2_thm, push_neg_add_p2_thm] empty_ss);
 
     // Eliminate normalization in goal
-    simplify (addsimps [Fp_2_normalize_second_thm, e2_scalar_mult_inv_thm, affinify_E'_inv_thm] empty_ss);
+    simplify (addsimps [Fp_2_normalize_second_thm, e2_scalar_mult_inv_thm] empty_ss);
 
     // Sort adds
     simplify (addsimps (concat [add_E'_thm] add_sort_p2_thms) empty_ss);
 
-    w4_unint_z3 ["affinify_E'", "E'", "e2_scalar_mult", "ProjectivePoint_Fp_2_invariant", "AffinePoint_Fp_2_invariant"];
+    w4_unint_z3 ["affinify_E'", "E'", "e2_scalar_mult", "AffinePoint_Fp_2_invariant"];
   };
-
 
 // Prove POINTonE2_add_n_dbl is equivalent to add_n_dbl.  Need to prove each
 // `n` separately because `n` is a type parameter on the add_n_dbl Cryptol
@@ -126,15 +118,15 @@ clear_cofactor_E2_equiv_thm <- custom_prove_cryptol
 let POINTonE2_add_n_dbl_spec n = do {
   (out, out_ptr) <- ptr_to_fresh "out" POINTonE2_type;
   (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE2_type;
-  crucible_precond {{ POINTonE2_invariant out }};
-  crucible_precond {{ POINTonE2_invariant p }};
-  crucible_execute_func [ out_ptr, p_ptr, (crucible_term {{ `n : [64] }}) ];
+  llvm_precond {{ POINTonE2_invariant out }};
+  llvm_precond {{ POINTonE2_invariant p }};
+  llvm_execute_func [ out_ptr, p_ptr, (llvm_term {{ `n : [64] }}) ];
 
   let out' = {{ POINTonE2_rep (add_n_dbl`{n} (POINTonE2_abs out) (POINTonE2_abs p)) }};
 
-  crucible_postcond {{ POINTonE2_invariant out' }};
+  llvm_postcond {{ POINTonE2_invariant out' }};
 
-  crucible_points_to out_ptr (crucible_term out');
+  llvm_points_to out_ptr (llvm_term out');
 };
 POINTonE2_add_n_dbl_ovs <- for [2, 3, 9, 32, 16]
   (\x -> custom_verify "POINTonE2_add_n_dbl"
@@ -148,13 +140,13 @@ POINTonE2_add_n_dbl_ovs <- for [2, 3, 9, 32, 16]
 
 // Prove POINTonE2_times_minus_z matches the times_minus_z spec
 let POINTonE2_times_minus_z_spec = do {
-  out_ptr <- crucible_alloc POINTonE2_type;
+  out_ptr <- llvm_alloc POINTonE2_type;
   (in_, in_ptr) <- ptr_to_fresh_readonly "in" POINTonE2_type;
-  crucible_precond {{ POINTonE2_invariant in_ }};
-  crucible_execute_func [out_ptr, in_ptr];
+  llvm_precond {{ POINTonE2_invariant in_ }};
+  llvm_execute_func [out_ptr, in_ptr];
   let out = {{ POINTonE2_rep (times_minus_z (POINTonE2_abs in_)) }};
-  crucible_postcond {{ POINTonE2_invariant out }};
-  crucible_points_to out_ptr (crucible_term out);
+  llvm_postcond {{ POINTonE2_invariant out }};
+  llvm_points_to out_ptr (llvm_term out);
 };
 POINTonE2_times_minus_z_ov <- custom_verify "POINTonE2_times_minus_z"
   (concat [POINTonE2_double_ov] POINTonE2_add_n_dbl_ovs)
@@ -166,13 +158,13 @@ POINTonE2_times_minus_z_ov <- custom_verify "POINTonE2_times_minus_z"
   };
 
 let clear_cofactor_impl_spec = do {
-  out_ptr <- crucible_alloc POINTonE2_type;
+  out_ptr <- llvm_alloc POINTonE2_type;
   (inp, inp_ptr) <- ptr_to_fresh_readonly "in" POINTonE2_type;
-  crucible_precond {{ POINTonE2_invariant inp }};
+  llvm_precond {{ POINTonE2_invariant inp }};
 
-  crucible_execute_func [out_ptr, inp_ptr];
+  llvm_execute_func [out_ptr, inp_ptr];
 
-  crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (clear_cofactor_E2_impl (POINTonE2_abs inp)) }});
+  llvm_points_to out_ptr (llvm_term {{ POINTonE2_rep (clear_cofactor_E2_impl (POINTonE2_abs inp)) }});
 };
 
 vec_copy_POINTonE2_ov <- verify "vec_copy" [] (vec_copy_spec 288 POINTonE2_type);
@@ -181,11 +173,11 @@ vec_copy_POINTonE2_ov <- verify "vec_copy" [] (vec_copy_spec 288 POINTonE2_type)
 // causes the psi overrides to fail to match.
 let POINTonE2_cneg_nonzero_spec = do {
   (p, p_ptr) <- ptr_to_fresh "p" POINTonE2_type;
-  cbit <- crucible_fresh_var "cbit" limb_type;
-  crucible_precond {{ POINTonE2_invariant p }};
-  crucible_precond {{ cbit != 0 }};
-  crucible_execute_func [p_ptr, crucible_term cbit];
-  crucible_points_to p_ptr (crucible_term {{ POINTonE2_rep (point_neg Fp_2 (POINTonE2_abs p)) }} );
+  cbit <- llvm_fresh_var "cbit" limb_type;
+  llvm_precond {{ POINTonE2_invariant p }};
+  llvm_precond {{ cbit != 0 }};
+  llvm_execute_func [p_ptr, llvm_term cbit];
+  llvm_points_to p_ptr (llvm_term {{ POINTonE2_rep (point_neg Fp_2 (POINTonE2_abs p)) }} );
 };
 POINTonE2_cneg_nonzero_ov <- custom_verify "POINTonE2_cneg"
                       (concat vec_fp2_overrides fp2_overrides)
