@@ -239,35 +239,35 @@
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/clear_cofactor_p2.saw:139:28",
+    "loc": "/workdir/proof/clear_cofactor_p2.saw:131:28",
     "method": "POINTonE2_add_n_dbl",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/clear_cofactor_p2.saw:159:31",
+    "loc": "/workdir/proof/clear_cofactor_p2.saw:151:31",
     "method": "POINTonE2_times_minus_z",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/clear_cofactor_p2.saw:178:26",
+    "loc": "/workdir/proof/clear_cofactor_p2.saw:170:26",
     "method": "vec_copy",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/clear_cofactor_p2.saw:190:30",
+    "loc": "/workdir/proof/clear_cofactor_p2.saw:182:30",
     "method": "POINTonE2_cneg",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/clear_cofactor_p2.saw:202:22",
+    "loc": "/workdir/proof/clear_cofactor_p2.saw:194:22",
     "method": "clear_cofactor",
     "type": "method",
     "specification": "unknown"
@@ -3909,12 +3909,6 @@
   {
     "status": "assumed",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = cryptol:/Parameters/E'\n      x@4 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (p1 : x@2)\n-> (p2 : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqPair x@1 x@1 x@4 x@4)\n        (cryptol:/ShortWeierstrassCurve/sub x@1 x@3 p1 p2)\n        (cryptol:/ShortWeierstrassCurve/add x@1 x@3 p1\n           (cryptol:/ShortWeierstrassCurve/neg x@1 x@3 p2)))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
     "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = cryptol:/Parameters/E'\n      x@4 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (x : Prelude.Integer)\n-> (y : x@2)\n-> (z : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqPair x@1 x@1 x@4 x@4)\n        (cryptol:e2_scalar_mult#6884 x\n           (cryptol:/ShortWeierstrassCurve/add x@1 x@3 y z))\n        (cryptol:/ShortWeierstrassCurve/add x@1 x@3\n           (cryptol:e2_scalar_mult#6884 x y)\n           (cryptol:e2_scalar_mult#6884 x z)))",
     "type": "property"
   },
@@ -3951,12 +3945,6 @@
   {
     "status": "assumed",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = cryptol:/Parameters/Fp_2.2.2.2.2.2.2.2.2.2\n      x@4 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (P : x@2)\n-> let { x@5 = P.1\n         x@6 = P.2\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@2 (Cryptol.PEqPair x@1 x@1 x@4 x@4) (x@5,x@3.1 x@6)\n         (Prelude.ite x@2 (cryptol:AffinePoint_Fp_2_invariant#7200 P) P\n            (x@5,\n             cryptol:/implementation/CryptolHelpers/apply x@1 x@1 x@3.1 x@6)))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
     "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = x@2\n      -> x@1\n      x@4 = x@1\n      -> x@1\n      x@5 = cryptol:/Parameters/E'\n      x@6 = x@1 * x@2\n    }\n in (P : x@6)\n-> (Q : x@2)\n-> let { x@7 = cryptol:/implementation/CurveOperation/point_dadd_affine x@1\n                 cryptol:/Parameters/Fp_2\n                 P\n                 Q\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n         (cryptol:/ShortWeierstrassCurve/is_point_projective x@1 x@5 x@7)\n         (Prelude.ite Prelude.Bool\n            (cryptol:/Cryptol/%2f%5c\n               (cryptol:/ShortWeierstrassCurve/is_point_projective x@1 x@5 P)\n               (cryptol:/ShortWeierstrassCurve/is_point_affine x@1 x@5 Q))\n            Prelude.True\n            (cryptol:/implementation/CryptolHelpers/apply\n               (x@1 * x@1 * x@3 * x@3 * x@1 * x@1 * x@4 * (x@2\n                                                           -> Prelude.Bool) * (x@1\n                                                                               -> Prelude.Bool) * x@3 * x@4 * x@4 * x@4 * x@3)\n               (x@6\n                -> Prelude.Bool)\n               (cryptol:/ShortWeierstrassCurve/is_point_projective x@1)\n               x@5\n               x@7)))",
     "type": "property"
   },
@@ -3981,13 +3969,7 @@
   {
     "status": "assumed",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n    }\n in (P : x@2)\n-> let { x@3 = cryptol:e2_scalar_mult#6884 cryptol:/HashToCurveE2Aux/pos_c1 P\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n         (cryptol:AffinePoint_Fp_2_invariant#7200 x@3)\n         (Prelude.ite Prelude.Bool (cryptol:AffinePoint_Fp_2_invariant#7200 P)\n            Prelude.True\n            (cryptol:/implementation/CryptolHelpers/apply x@2 Prelude.Bool\n               cryptol:AffinePoint_Fp_2_invariant#7200\n               x@3)))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n    }\n in (P : (x@1 * x@1 * x@1))\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:AffinePoint_Fp_2_invariant#7200 (cryptol:affinify_E'#6889 P))\n        (cryptol:ProjectivePoint_Fp_2_invariant#7199 P))",
+    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n    }\n in (P : x@2)\n-> let { x@3 = cryptol:e2_scalar_mult#6884 cryptol:/HashToCurveE2Aux/pos_c1 P\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n         (cryptol:AffinePoint_Fp_2_invariant#7199 x@3)\n         (Prelude.ite Prelude.Bool (cryptol:AffinePoint_Fp_2_invariant#7199 P)\n            Prelude.True\n            (cryptol:/implementation/CryptolHelpers/apply x@2 Prelude.Bool\n               cryptol:AffinePoint_Fp_2_invariant#7199\n               x@3)))",
     "type": "property"
   },
   {
@@ -7611,7 +7593,7 @@
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = cryptol:/Parameters/E'\n      x@4 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (P : (x@1 * x@2))\n-> Prelude.EqTrue\n     (Prelude.ite Prelude.Bool (cryptol:ProjectivePoint_Fp_2_invariant#7199 P)\n        (Cryptol.ecEq x@2 (Cryptol.PEqPair x@1 x@1 x@4 x@4)\n           (cryptol:/HashToCurveE2Aux/clear_cofactor_bls12381_g2\n              (cryptol:/ShortWeierstrassCurve/affinify x@1 x@3 P))\n           (cryptol:/ShortWeierstrassCurve/affinify x@1 x@3\n              (cryptol:/implementation/HashToG2/clear_cofactor_E2_impl P)))\n        Prelude.True)",
+    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = cryptol:/Parameters/E'\n      x@4 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (P : (x@1 * x@2))\n-> let { x@5 = cryptol:/ShortWeierstrassCurve/affinify x@1 x@3 P\n    }\n in Prelude.EqTrue\n      (Prelude.ite Prelude.Bool (cryptol:AffinePoint_Fp_2_invariant#7199 x@5)\n         (Cryptol.ecEq x@2 (Cryptol.PEqPair x@1 x@1 x@4 x@4)\n            (cryptol:/HashToCurveE2Aux/clear_cofactor_bls12381_g2 x@5)\n            (cryptol:/ShortWeierstrassCurve/affinify x@1 x@3\n               (cryptol:/implementation/HashToG2/clear_cofactor_E2_impl P)))\n         Prelude.True)",
     "type": "property"
   },
   {
@@ -7629,7 +7611,19 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = cryptol:/Parameters/E'\n      x@4 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (p1 : x@2)\n-> (p2 : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqPair x@1 x@1 x@4 x@4)\n        (cryptol:/ShortWeierstrassCurve/sub x@1 x@3 p1 p2)\n        (cryptol:/ShortWeierstrassCurve/add x@1 x@3 p1\n           (cryptol:/ShortWeierstrassCurve/neg x@1 x@3 p2)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = cryptol:/Parameters/E'\n      x@4 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (p1 : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqPair x@1 x@1 x@4 x@4)\n        (cryptol:e2_scalar_mult#6884\n           (Cryptol.ecNumber (Cryptol.TCNum 1) Prelude.Integer\n              Cryptol.PLiteralInteger)\n           p1)\n        (cryptol:/ShortWeierstrassCurve/add x@1 x@3 p1\n           (cryptol:/ShortWeierstrassCurve/point_O x@1 x@3)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = cryptol:/Parameters/Fp_2.2.2.2.2.2.2.2.2.2\n      x@4 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (P : x@2)\n-> let { x@5 = P.1\n         x@6 = P.2\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@2 (Cryptol.PEqPair x@1 x@1 x@4 x@4) (x@5,x@3.1 x@6)\n         (Prelude.ite x@2 (cryptol:AffinePoint_Fp_2_invariant#7199 P) P\n            (x@5,\n             cryptol:/implementation/CryptolHelpers/apply x@1 x@1 x@3.1 x@6)))",
     "type": "property"
   },
   {
