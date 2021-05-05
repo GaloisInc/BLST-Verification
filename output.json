@@ -7593,7 +7593,7 @@
   {
     "status": "verified",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = cryptol:/Parameters/E'\n      x@4 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (P : (x@1 * x@2))\n-> let { x@5 = cryptol:/ShortWeierstrassCurve/affinify x@1 x@3 P\n    }\n in Prelude.EqTrue\n      (Prelude.ite Prelude.Bool (cryptol:AffinePoint_Fp_2_invariant#7199 x@5)\n         (Cryptol.ecEq x@2 (Cryptol.PEqPair x@1 x@1 x@4 x@4)\n            (cryptol:/HashToCurveE2Aux/clear_cofactor_bls12381_g2 x@5)\n            (cryptol:/ShortWeierstrassCurve/affinify x@1 x@3\n               (cryptol:/implementation/HashToG2/clear_cofactor_E2_impl P)))\n         Prelude.True)",
+    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = cryptol:/Parameters/E'\n      x@4 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (P : (x@1 * x@2))\n-> let { x@5 = cryptol:/ShortWeierstrassCurve/affinify x@1 x@3 P\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@2 (Cryptol.PEqPair x@1 x@1 x@4 x@4)\n         (cryptol:/HashToCurveE2Aux/clear_cofactor_bls12381_g2 x@5)\n         (Prelude.ite x@2 (cryptol:AffinePoint_Fp_2_invariant#7199 x@5)\n            (cryptol:/ShortWeierstrassCurve/affinify x@1 x@3\n               (cryptol:/implementation/HashToG2/clear_cofactor_E2_impl P))\n            (cryptol:/implementation/CryptolHelpers/apply x@2 x@2\n               cryptol:/HashToCurveE2Aux/clear_cofactor_bls12381_g2\n               x@5)))",
     "type": "property"
   },
   {
