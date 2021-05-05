@@ -87,28 +87,24 @@ e2_scalar_mult_inv_thm <- admit_cryptol
 
 // Prove clear_cofactor_bls12381_g2 (RFC spec) is equivalent to
 // clear_cofactor_E2_impl (spec based on C clear_cofactor_E2 function).
+
 clear_cofactor_E2_equiv_thm <- custom_prove_cryptol
-  {{ \P -> if AffinePoint_Fp_2_invariant (affinify E' P)
-           then clear_cofactor_bls12381_g2 (affinify E' P) ==
-                affinify E' (clear_cofactor_E2_impl P)
-           else True }}
+  {{ \P -> clear_cofactor_bls12381_g2 (affinify E' P) ==
+      if AffinePoint_Fp_2_invariant (affinify E' P)
+      then affinify E' (clear_cofactor_E2_impl P)
+      else apply clear_cofactor_bls12381_g2 (affinify E' P) }}
   do {
     unfolding ["clear_cofactor_bls12381_g2", "clear_cofactor_E2_impl"];
     // Affinify goal
     simplify (addsimps (concat [psi_psi_double_equiv_thm, times_minus_z_thm, psi_equiv_thm'] e2_curve_op_thms) (cryptol_ss()));
-
     // Selectively remove polymorphic curve parameters from goal
     simplify (addsimps [affinify_E'_thm, e2_scalar_mult_thm] empty_ss);
-
     // Algebraic goal manipulation
     simplify (addsimps [sub_to_add_neg_p2_thm, psi_neg_thm, neg_neg_p2_thm, mult_commutes_p2_thm, pull_mult_neg_p2_thm, push_neg_add_p2_thm] empty_ss);
-
     // Eliminate normalization in goal
     simplify (addsimps [Fp_2_normalize_second_thm, e2_scalar_mult_inv_thm] empty_ss);
-
     // Sort adds
     simplify (addsimps (concat [add_E'_thm] add_sort_p2_thms) empty_ss);
-
     w4_unint_z3 ["affinify_E'", "E'", "e2_scalar_mult", "AffinePoint_Fp_2_invariant"];
   };
 
