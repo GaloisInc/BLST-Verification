@@ -88,12 +88,12 @@ e2_scalar_mult_inv_thm <- admit_cryptol
 // Prove clear_cofactor_bls12381_g2 (RFC spec) is equivalent to
 // clear_cofactor_E2_impl (spec based on C clear_cofactor_E2 function).
 clear_cofactor_E2_equiv_thm <- custom_prove_cryptol
-  {{ \P -> if AffinePoint_Fp_2_invariant (affinify E' P)
-           then clear_cofactor_bls12381_g2 (affinify E' P) ==
-                affinify E' (clear_cofactor_E2_impl P)
-           else True }}
+  {{ \P -> clear_cofactor_bls12381_g2 (affinify E' P) ==
+           if AffinePoint_Fp_2_invariant (affinify E' P)
+           then affinify E' (clear_cofactor_E2_impl P)
+           else apply clear_cofactor_bls12381_g2 (affinify E' P) }}
   do {
-    unfolding ["clear_cofactor_bls12381_g2", "clear_cofactor_E2_impl"];
+    unfolding ["clear_cofactor_bls12381_g2", "clear_cofactor_E2_impl", "apply"];
     // Affinify goal
     simplify (addsimps (concat [psi_psi_double_equiv_thm, times_minus_z_thm, psi_equiv_thm'] e2_curve_op_thms) (cryptol_ss()));
 
@@ -109,7 +109,7 @@ clear_cofactor_E2_equiv_thm <- custom_prove_cryptol
     // Sort adds
     simplify (addsimps (concat [add_E'_thm] add_sort_p2_thms) empty_ss);
 
-    w4_unint_z3 ["affinify_E'", "E'", "e2_scalar_mult", "AffinePoint_Fp_2_invariant"];
+    w4_unint_z3 ["affinify_E'", "E'", "e2_scalar_mult", "AffinePoint_Fp_2_invariant", "add_E'"];
   };
 
 // Prove POINTonE2_add_n_dbl is equivalent to add_n_dbl.  Need to prove each
