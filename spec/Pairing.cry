@@ -130,6 +130,12 @@ type r = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 type final_exponent = (P::p^^12 - 1) / r
 type small_final_e =  (P::p^^4 - P::p^^2 +1)/r
 
+// Use the Frobenius mapping to compute x^(p^6-1)*(p^2+1)
+final_exp_frobenius_map : t12 -> t12
+final_exp_frobenius_map x = x2 where
+  x1 = f12.div (fp12_conjugate x, x) // = x^(p^6 - 1)
+  x2 = f12.mul (fp12_frobenius (fp12_frobenius x1), x1) // x1^(p^2+1)
+
 final_exponentiation: t12 -> t12
 /* We could most simply define
 
@@ -155,6 +161,4 @@ final_exponentiation: t12 -> t12
   [2] Scott et al. "On the final exponentiation for calculating pairings on
       ordinary elliptic curves." eprint.iacr.org/2008/490
  */
-final_exponentiation x = k_expt`{5} f12 x2 (`small_final_e:[1268+2]) where
-  x1 = f12.div (fp12_conjugate x, x) // = x^(p^6 - 1)
-  x2 = f12.mul (fp12_frobenius (fp12_frobenius x1), x1) // x1^(p^2+1)
+final_exponentiation x = k_expt`{5} f12 (final_exp_frobenius_map x) (`small_final_e:[1268+2])
