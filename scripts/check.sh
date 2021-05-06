@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Copyright (c) 2020 Galois, Inc.
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+ 
 # There are two sorts of validation checks in the tests directory: property checks
 # and test vectors from the specifications.
 #
@@ -14,22 +17,4 @@
 
 # Some long-running or memory-intensive checks are in a separate file.
 
-cryptol << EOF
-:set tests=100
-:l tests/PolynomialTest.cry
-:check
-:l tests/ParameterTests.cry
-:check
-:l tests/ShortWeierstrassCurveTests.cry
-:check
-:l tests/ParameterTests.cry
-:check
-:l tests/HashToCurveE1Tests.cry
-:check
-:l tests/HashToCurveE2Tests.cry
-:check
-:l tests/SerializationTests.cry
-:check
-:l tests/G2SubGroupCheckTests.cry
-:check
-EOF
+cryptol --stop-on-error -b scripts/check.cryptol

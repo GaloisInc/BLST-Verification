@@ -48,7 +48,7 @@ dst = "QUUX-V01-CS02-with-BLS12381G1_XMD:SHA-256_SSWU_RO_"
 
 ex1_msg = ""
 
-ex1_us = hash_to_field`{count=2} (ex1_msg, dst)
+ex1_us = hash_to_field`{count=2} ex1_msg dst
 
 ex1_expected_us =
    [ to_Fp 0x0ba14bd907ad64a016293ee7c2d276b8eae71f25a4b941eece7b0d89f17f75cb3ae5438a614fb61d6835ad59f29c564f
@@ -96,7 +96,7 @@ property hash_to_curve_test_1 =
 // Example 2
 
 ex2_msg = "abc"
-ex2_us = hash_to_field`{count=2} (ex2_msg, dst)
+ex2_us = hash_to_field`{count=2} ex2_msg dst
 
 ex2_expected_us =
  [ to_Fp 0x0d921c33f2bad966478a03ca35d05719bdf92d347557ea166e5bba579eea9b83e9afa5c088573c2281410369fbd32951
