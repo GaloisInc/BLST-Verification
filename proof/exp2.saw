@@ -335,6 +335,21 @@ let sqrt_align_fp2_alias_2_3_spec = do { // for the call in sqrt_fp2
                         == fp2_abs inp) }});
   };
 
+let sqrt_align_fp2_alias_1_4_and_2_3_spec = do { // for the call in sqrt_fp2 with aliasing
+  (ret, ret_ptr) <- ptr_to_fresh_readonly "ret" vec384x_type;
+  (inp, inp_ptr) <- ptr_to_fresh "inp" vec384x_type;
+  crucible_precond {{ fp2_invariant inp }};
+  crucible_precond {{ fp2_invariant ret }};
+  crucible_execute_func [inp_ptr, ret_ptr, ret_ptr, inp_ptr];
+  crucible_points_to inp_ptr (crucible_term
+      {{ fp2_rep (Fp_2.mul( sqrt_align_fp2_coeff (fp2_abs ret) (fp2_abs inp)
+                          , fp2_abs ret)) }});
+  crucible_return (crucible_term
+      {{ bool_to_limb (Fp_2.sq (Fp_2.mul( sqrt_align_fp2_coeff (fp2_abs ret) (fp2_abs inp)
+                                        , fp2_abs ret))
+                        == fp2_abs inp) }});
+  };
+
 // need to lift ite out of FP_2.mul:
 hoist_fp2_mul_right_thm <- prove_cryptol
   (rewrite (cryptol_ss ())
@@ -427,6 +442,7 @@ let verify_sqrt_align_fp2 spec = custom_verify "sqrt_align_fp2"
 
 sqrt_align_fp2_ov <- verify_sqrt_align_fp2  sqrt_align_fp2_spec;
 sqrt_align_fp2_alias_2_3_ov <- verify_sqrt_align_fp2  sqrt_align_fp2_alias_2_3_spec;
+sqrt_align_fp2_alias_1_4_and_2_3_ov <- verify_sqrt_align_fp2  sqrt_align_fp2_alias_1_4_and_2_3_spec;
 
 // ... recip_sqrt_fp2
 
@@ -578,38 +594,23 @@ is_square_fp2_thm <- admit_cryptol
 // test_cryptol {{ \ y -> (is_square_fp2 x == (Fp_2.sq (sqrt_fp2 x) ==  x) where x = Fp_2.normalize y )}};
 
 
-
 let verify_sqrt_fp2 spec = custom_verify "sqrt_fp2"
-  (concat [recip_sqrt_fp2_9mod16_ov, sqrt_align_fp2_alias_2_3_ov] fp2_overrides)
-  sqrt_fp2_spec
+  (concat [recip_sqrt_fp2_9mod16_ov, sqrt_align_fp2_alias_1_4_and_2_3_ov, sqrt_align_fp2_alias_2_3_ov]
+          fp2_overrides)
+  spec
   do {
   // absorb the multiplication into the exponentiation:
   simplify fp2_exp_simps;
-  // open up a bit, and replace `F_expt` with `fp2_exp`, hoist ifs through Fp_2.mul, and expand `u`
   (goal_num_ite 3
     do { // the return specification
-     unfolding ["bool_to_limb"]; // unfolding ["sqrt_fp2", "bool_to_limb", "sqrt_align_fp2_coeff"]; //
-     simplify (addsimps [sqrt_fp_power_lemma, hoist_fp2_mul_left_thm, u_expander_thm] (cryptol_ss()));
-     // eliminate Fp_2.is_equal, and use the trick for order of comparisons
-     // and turn mul(field_unit, x) into x
-      simplify (addsimps [fp2_is_equal_thm, fp2_mul_unit_exp_thm, sqrt_candidate_comparison_thm']
-                         empty_ss);
-
      rw_with (concat [sqrt_fp2_to_align_thm, is_square_fp2_thm, fp2_abstract_invariant_thm] fp2_alg_thms);
      w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
     (goal_num_ite 4
-       do { // point_to post 
-     unfolding ["sqrt_fp2", "bool_to_limb", "sqrt_align_fp2_coeff"]; //
-     simplify (addsimps [sqrt_fp_power_lemma, hoist_fp2_mul_left_thm, u_expander_thm] (cryptol_ss()));
-     // eliminate Fp_2.is_equal, and use the trick for order of comparisons
-     // and turn mul(field_unit, x) into x
-      simplify (addsimps [fp2_is_equal_thm, fp2_mul_unit_exp_thm, sqrt_candidate_comparison_thm']
-                         empty_ss);
-
+       do { // points_to postcondition 
+            rw_with_1 sqrt_fp2_to_align_thm ;
             w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
        (w4_unint_z3 (concat ["fp2_exp"] fp2_unints)))); // the rest
   };
-
 
 sqrt_fp2_ov <- verify_sqrt_fp2 sqrt_fp2_spec;
 sqrt_fp2_alias_ov <- verify_sqrt_fp2 sqrt_fp2_alias_spec;
@@ -652,29 +653,15 @@ recip_sqrt_fp2_ov <- custom_verify "recip_sqrt_fp2"
   do {
   // absorb the multiplication into the exponentiation:
   simplify fp2_exp_simps;
-  // open up a bit, and replace `F_expt` with `fp2_exp`, hoist ifs through Fp_2.mul, and expand `u`
   (goal_num_ite 3
     do { // for the return value.  Same script as for sqrt_fp2
-     unfolding ["bool_to_limb"];
-     simplify (addsimps [sqrt_fp_power_lemma, hoist_fp2_mul_left_thm, u_expander_thm] (cryptol_ss()));
-     // eliminate Fp_2.is_equal, and use the trick for order of comparisons
-     // and turn mul(field_unit, x) into x
-      simplify (addsimps [fp2_is_equal_thm, fp2_mul_unit_exp_thm, sqrt_candidate_comparison_thm']
-                         empty_ss);
-
-     rw_with (concat [sqrt_fp2_to_align_thm, is_square_fp2_thm, fp2_abstract_invariant_thm] fp2_alg_thms);
-     w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
+        rw_with (concat [sqrt_fp2_to_align_thm, is_square_fp2_thm, fp2_abstract_invariant_thm] fp2_alg_thms);
+        w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
     (goal_num_ite 4
-       do { // points_to postcondition
-     unfolding ["bool_to_limb"]; //
-     rw_with_1 sqrt_fp2_to_align_thm ;
-     simplify (addsimps [sqrt_fp_power_lemma, hoist_fp2_mul_left_thm, u_expander_thm] (cryptol_ss()));
-     // eliminate Fp_2.is_equal, and use the trick for order of comparisons
-     // and turn mul(field_unit, x) into x
-      simplify (addsimps [ fp2_is_equal_thm, fp2_mul_unit_exp_thm, sqrt_candidate_comparison_thm'
-                         , hoist_fp2_div_left_thm, recip_sqrt_fp_div_lemma, recip_sqrt_fp_div_lemma']
-                         empty_ss);
-      rw_with_1 fp2_mul_commutes_thm;
-      w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
-    (w4_unint_z3 (concat ["fp2_exp"] fp2_unints)))); // the rest, WORKS
+       do { // for the points_to postcondition
+            rw_with_1 sqrt_fp2_to_align_thm ;
+            rw_with [hoist_fp2_div_left_thm, recip_sqrt_fp_div_lemma, recip_sqrt_fp_div_lemma'];
+            rw_with_1 fp2_mul_commutes_thm;
+            w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
+    (w4_unint_z3 (concat ["fp2_exp"] fp2_unints)))); // for the rest, preconditions of called routines
   };
