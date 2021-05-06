@@ -542,14 +542,6 @@ sqrt_fp_power_lemma <- admit_cryptol
 u_expander_thm <- prove_cryptol {{ u == [1, 0] }} [];
 
 // .. and the rule for dealing with the ordering difference:
-/*
-sqrt_candidate_comparison_thm <- admit_cryptol
-  (rewrite (cryptol_ss ()) {{ \ x y -> (Fp_2.sq (Fp_2.mul (sqrt_fp2_c2, x)) == y) ==
-                              ( (apply Fp_2.sq (Fp_2.mul (sqrt_fp2_c2, x)) == y)
-                                /\ ((Fp_2.sq (Fp_2.mul (sqrt_fp2_c3, x)) == y)
-                                    ==> (Fp_2.mul (sqrt_fp2_c2, x) == Fp_2.mul (sqrt_fp2_c3, x)))) }});
-*/
-// ... this version is more direct and works better:
 sqrt_candidate_comparison_thm' <- admit_cryptol
   (rewrite (cryptol_ss ())
     {{ \ x y C -> (((if Fp_2.sq A == y then A else if Fp_2.sq B == y then B else C) ==
@@ -558,48 +550,125 @@ sqrt_candidate_comparison_thm' <- admit_cryptol
                           B = Fp_2.mul (sqrt_fp2_c2, x) ) }} );
 
 
+
 // TODO: We also need to know Fp_2.sq ((sqrt_fp2 x)) == x iff is_square_fp2 x
 // which will be another algebraic assumption
 
+/* We already show, in the proof of the points-to condition, that for y = x^((p+7/16)
+   (sqrt_align_fp2 y x)*y == sqrt_fp2 x.
+*/
 /*
-sqrt_fp_ov <- custom_verify "sqrt_fp2"
+sqrt_fp2_to_align_thm <- custom_prove_cryptol
+  {{ \x -> (Fp_2.mul (sqrt_align_fp2_coeff y x, y) == sqrt_fp2 x where y =fp2_exp x `((q+7)/16)) }}
+  //{{ \x -> (Fp_2.mul (sqrt_align_fp2_coeff y x, y) == sqrt_fp2 x where
+  //         y = F_expt`{n=(width q) - 3} Fp_2 x `((q+7)/16) ) }}
+  do {
+  // open up a bit, and replace `F_expt` with `fp2_exp`, hoist ifs through Fp_2.mul, and expand `u`
+  unfolding ["sqrt_fp2", "sqrt_align_fp2_coeff"]; //
+  simplify (addsimps [sqrt_fp_power_lemma, hoist_fp2_mul_left_thm, u_expander_thm] (cryptol_ss()));
+  // eliminate Fp_2.is_equal, and use the trick for order of comparisons
+  // and turn mul(field_unit, x) into x
+  simplify (addsimps [fp2_is_equal_thm, fp2_mul_unit_exp_thm, sqrt_candidate_comparison_thm']
+                     empty_ss);
+  w4_unint_z3 (concat ["fp2_exp"] fp2_unints); };
+*/
+
+sqrt_fp2_to_align_thm <- custom_prove_cryptol
+  {{ \x -> (sqrt_fp2 x == Fp_2.mul (sqrt_align_fp2_coeff y x, y) where y =fp2_exp x `((q+7)/16)) }}
+  do {
+  // open up a bit, and replace `F_expt` with `fp2_exp`, hoist ifs through Fp_2.mul, and expand `u`
+  unfolding ["sqrt_fp2", "sqrt_align_fp2_coeff"]; //
+  simplify (addsimps [sqrt_fp_power_lemma, hoist_fp2_mul_left_thm, u_expander_thm] (cryptol_ss()));
+  // eliminate Fp_2.is_equal, and use the trick for order of comparisons
+  // and turn mul(field_unit, x) into x
+  simplify (addsimps [fp2_is_equal_thm, fp2_mul_unit_exp_thm, sqrt_candidate_comparison_thm']
+                     empty_ss);
+  w4_unint_z3 (concat ["fp2_exp"] fp2_unints); };
+
+// would like  {{ is_square_fp x <=> (sq (sqrt_pf2 x) == x) }}
+// but this needs a normalization hypothesis for x. So:
+is_square_fp2_thm <- admit_cryptol
+  {{ \x -> is_square_fp2 x == if Fp_2.is_val x
+                              then Fp_2.sq (sqrt_fp2 x) ==  x
+                              else apply is_square_fp2 x}};
+
+// For testing, it is better to have an unconditional property:
+test_cryptol
+  {{ \ y -> (is_square_fp2 x == (Fp_2.sq (sqrt_fp2 x) ==  x) where x = Fp_2.normalize y )}};
+
+
+
+/*
+
+
+
+custom_verify "sqrt_fp2"
   (concat [recip_sqrt_fp2_9mod16_ov, sqrt_align_fp2_alias_2_3_ov] fp2_overrides)
   sqrt_fp2_spec
   do {
   // absorb the multiplication into the exponentiation:
   simplify fp2_exp_simps;
   // open up a bit, and replace `F_expt` with `fp2_exp`, hoist ifs through Fp_2.mul, and expand `u`
-  unfolding ["sqrt_fp2", "sqrt_align_fp2_coeff"]; //
-  simplify (addsimps [sqrt_fp_power_lemma, hoist_fp2_mul_left_thm, u_expander_thm] (cryptol_ss()));
-  // eliminate Fp_2.is_equal, and use the trick for order of comparisons
-  // and turn mul(field_unit, x) into x
-  simplify (addsimps [fp2_is_equal_thm, fp2_mul_unit_exp_thm, sqrt_candidate_comparison_thm']
-                     empty_ss);
-  w4_unint_z3 (concat ["fp2_exp"] fp2_unints);
+  (goal_num_ite 3
+    do { print_goal_nicely; 
+     unfolding ["bool_to_limb"]; // unfolding ["sqrt_fp2", "bool_to_limb", "sqrt_align_fp2_coeff"]; //
+     simplify (addsimps [sqrt_fp_power_lemma, hoist_fp2_mul_left_thm, u_expander_thm] (cryptol_ss()));
+     // eliminate Fp_2.is_equal, and use the trick for order of comparisons
+     // and turn mul(field_unit, x) into x
+      simplify (addsimps [fp2_is_equal_thm, fp2_mul_unit_exp_thm, sqrt_candidate_comparison_thm']
+                         empty_ss);
+
+     rw_with (concat [sqrt_fp2_to_align_thm, is_square_fp2_thm, fp2_abstract_invariant_thm] fp2_alg_thms);
+     // goal_eval_unint (concat ["fp2_exp"] fp2_unints);
+     print_goal_nicely;
+     w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
+    (goal_num_ite 4
+       do { // print_goal_nicely; // point_to post WORKS!
+     unfolding ["sqrt_fp2", "bool_to_limb", "sqrt_align_fp2_coeff"]; //
+     simplify (addsimps [sqrt_fp_power_lemma, hoist_fp2_mul_left_thm, u_expander_thm] (cryptol_ss()));
+     // eliminate Fp_2.is_equal, and use the trick for order of comparisons
+     // and turn mul(field_unit, x) into x
+      simplify (addsimps [fp2_is_equal_thm, fp2_mul_unit_exp_thm, sqrt_candidate_comparison_thm']
+                         empty_ss);
+
+            w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
+       (w4_unint_z3 (concat ["fp2_exp"] fp2_unints)))); // the rest, WORKS
   };
 */
 
 let verify_sqrt_fp2 spec = custom_verify "sqrt_fp2"
   (concat [recip_sqrt_fp2_9mod16_ov, sqrt_align_fp2_alias_2_3_ov] fp2_overrides)
-  spec
+  sqrt_fp2_spec
   do {
   // absorb the multiplication into the exponentiation:
   simplify fp2_exp_simps;
   // open up a bit, and replace `F_expt` with `fp2_exp`, hoist ifs through Fp_2.mul, and expand `u`
-  unfolding ["sqrt_fp2", "sqrt_align_fp2_coeff"]; //
-  simplify (addsimps [sqrt_fp_power_lemma, hoist_fp2_mul_left_thm, u_expander_thm] (cryptol_ss()));
-  // eliminate Fp_2.is_equal, and use the trick for order of comparisons
-  // and turn mul(field_unit, x) into x
-  simplify (addsimps [fp2_is_equal_thm, fp2_mul_unit_exp_thm, sqrt_candidate_comparison_thm']
-                     empty_ss);
-  print_goal_nicely;
-  w4_unint_z3 (concat ["fp2_exp"] fp2_unints);
+  (goal_num_ite 3
+    do { // the return specification
+     unfolding ["bool_to_limb"]; // unfolding ["sqrt_fp2", "bool_to_limb", "sqrt_align_fp2_coeff"]; //
+     simplify (addsimps [sqrt_fp_power_lemma, hoist_fp2_mul_left_thm, u_expander_thm] (cryptol_ss()));
+     // eliminate Fp_2.is_equal, and use the trick for order of comparisons
+     // and turn mul(field_unit, x) into x
+      simplify (addsimps [fp2_is_equal_thm, fp2_mul_unit_exp_thm, sqrt_candidate_comparison_thm']
+                         empty_ss);
+
+     rw_with (concat [sqrt_fp2_to_align_thm, is_square_fp2_thm, fp2_abstract_invariant_thm] fp2_alg_thms);
+     w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
+    (goal_num_ite 4
+       do { // point_to post 
+     unfolding ["sqrt_fp2", "bool_to_limb", "sqrt_align_fp2_coeff"]; //
+     simplify (addsimps [sqrt_fp_power_lemma, hoist_fp2_mul_left_thm, u_expander_thm] (cryptol_ss()));
+     // eliminate Fp_2.is_equal, and use the trick for order of comparisons
+     // and turn mul(field_unit, x) into x
+      simplify (addsimps [fp2_is_equal_thm, fp2_mul_unit_exp_thm, sqrt_candidate_comparison_thm']
+                         empty_ss);
+
+            w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
+       (w4_unint_z3 (concat ["fp2_exp"] fp2_unints)))); // the rest
   };
 
-//sqrt_fp2_ov <- verify_sqrt_fp2 sqrt_fp2_spec;
-//sqrt_fp2_alias_ov <- verify_sqrt_fp2 sqrt_fp2_alias_spec;
-sqrt_fp2_ov <- admit "sqrt_fp2" sqrt_fp2_spec;
-sqrt_fp2_alias_ov <- admit "sqrt_fp2" sqrt_fp2_alias_spec;
+
+sqrt_fp2_ov <- verify_sqrt_fp2 sqrt_fp2_spec;
+sqrt_fp2_alias_ov <- verify_sqrt_fp2 sqrt_fp2_alias_spec;
 
 let sqrt_fp2_ovs = [sqrt_fp2_ov, sqrt_fp2_alias_ov];
-
