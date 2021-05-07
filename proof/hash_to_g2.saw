@@ -16,6 +16,8 @@
 // let do_prove = false;
 
 // include "proof-helpers.saw";
+// include "algebraic-laws.saw";
+
 // include "hash_to_field.saw";
 // include "fp_overrides.saw";
 // include "vect.saw";
@@ -27,7 +29,10 @@
 // include "fp2_overrides.saw";
 // include "curve_operations_e2.saw";
 // include "exp2.saw";
-// // include "sgn0.saw";
+// include "ec_mult2.saw";
+// include "psi.saw";
+// include "map_to_g2.saw";
+// include "clear_cofactor_p2.saw";
 
 // let do_prove = true;
 
@@ -76,7 +81,7 @@ let map_to_isogenous_E2_impl_spec = do {
   (u, u_ptr) <- ptr_to_fresh_readonly "u" vec384x_type;
   llvm_precond {{ fp2_invariant u }};
   llvm_execute_func [out_ptr, u_ptr];
-  llvm_points_to out_ptr (llvm_term {{ POINTonE2_rep (map_to_curve_E2_prime_impl (fp2_abs u)) }});
+  llvm_points_to out_ptr (llvm_term {{ POINTonE2_rep (map_to_isogenous_E2_impl (fp2_abs u)) }});
 };
 
 let isogeny_map_to_E2_impl_alias_spec = do {
@@ -94,11 +99,11 @@ let recip_sqrt_fp2_spec = do {
   crucible_precond {{ fp2_invariant inp }};
   crucible_execute_func [out_ptr, inp_ptr];
   crucible_points_to out_ptr (crucible_term
-      {{ if is_square_fp2 (fp2_abs inp)
-          then fp2_rep (Fp_2.div(sqrt_fp2 (fp2_abs inp), fp2_abs inp))
+      {{ if HE2::is_square (fp2_abs inp)
+          then fp2_rep (Fp_2.div(HE2::sqrt (fp2_abs inp), fp2_abs inp))
           else fp2_rep (F_expt`{n=758} Fp_2 (fp2_abs inp) `((p^^2-9)/16))
       }});
-  crucible_return (crucible_term {{ bool_to_limb (is_square_fp2 (fp2_abs inp)) }});
+  crucible_return (crucible_term {{ bool_to_limb (HE2::is_square (fp2_abs inp)) }});
   };
 
 recip_sqrt_fp2_ov <- admit "recip_sqrt_fp2" recip_sqrt_fp2_spec;
@@ -138,7 +143,7 @@ point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective HE2::Isoge
 on_curve_is_point_O_lemma <- simp_then_admit {{ \p -> is_point_O HE2::Isogenous_Curve (affinify HE2::Isogenous_Curve p) == if (is_point_projective HE2::Isogenous_Curve p /\ ~is_zero Fp_2 p.2) then False else apply is_point_O HE2::Isogenous_Curve (affinify HE2::Isogenous_Curve p) }};
 
 // The implementation of map_to_curve never returns something of the form (0,0,_) or (_,_,0)
-swu_impl_xy_nz <- simp_then_admit {{ \u -> (~((x,y) == (Fp_2.field_zero,Fp_2.field_zero) \/ z == Fp_2.field_zero) where (x,y,z) = map_to_curve_E2_prime_impl u) == True }};
+swu_impl_xy_nz <- simp_then_admit {{ \u -> (~((x,y) == (Fp_2.field_zero,Fp_2.field_zero) \/ z == Fp_2.field_zero) where (x,y,z) = map_to_isogenous_E2_impl u) == True }};
 
 // a relation between is_point_projective and is_point_affine:
 is_point_projective_lemma <- simp_then_admit {{ \p -> is_point_projective HE2::Isogenous_Curve p == if is_point_affine HE2::Isogenous_Curve (affinify HE2::Isogenous_Curve p) /\ ~((p.0, p.1) == (Fp_2.field_zero,Fp_2.field_zero) \/ p.2 == Fp_2.field_zero) then True else apply is_point_projective HE2::Isogenous_Curve p }};
@@ -258,7 +263,7 @@ map_to_isogenous_E2_impl_ov <- custom_verify
   (concat_all [vec_fp2_overrides, fp2_overrides, [recip_sqrt_fp2_ov, sgn0x_pty_mont_384x_ov, sqrt_align_fp2_unint_ov]])
   map_to_isogenous_E2_impl_spec
   (do {
-    // Below are two rules to "fix" the extract C term:
+    // Below are two rules to "fix" the term extracted from C:
     let fix_vec_12 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{
       \(x:t_Fp_2) y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 c -> (
          [[z1, z2, z3, z4, z5, z6], [z7, z8, z9, z10, z11, z12]] == (if c then [[y1, y2, y3, y4, y5, y6], [y7, y8, y9, y10, y11, y12]] else (fp2_rep x)) where
@@ -291,7 +296,7 @@ map_to_isogenous_E2_impl_ov <- custom_verify
             let rewrite_2 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x -> bvEq_term (if (Fp_2.is_equal (x, Fp_2.field_zero)) then (1:[64]) else (0:[64])) zero == ~(Fp_2.is_equal (x, Fp_2.field_zero)) }}) w4);
             simplify (addsimps [rewrite_xor, rewrite_1, rewrite_2] empty_ss);
         // Now we deal with the term extracted from the Cryptol code:
-          unfolding ["map_to_curve_E2_prime_impl","recip_ZZZ","F_is_zero","POINTonE2_rep"];
+          unfolding ["map_to_isogenous_E2_impl","recip_ZZZ","F_is_zero","POINTonE2_rep"];
           let hoist_ifs = run (for [
               {{ \ c (x1:t_Fp_2) (x2:t_Fp_2) y1 y2 -> (if c then (x1,x2) else (y1,y2)).0 == if c then x1 else y1 }}
             , {{ \ c (x1:t_Fp_2) (x2:t_Fp_2) y1 y2 -> (if c then (x1,x2) else (y1,y2)).1 == if c then x2 else y2 }}
@@ -303,7 +308,7 @@ map_to_isogenous_E2_impl_ov <- custom_verify
             , {{ \(x:[3]t_Fp_2) -> (F_sum Fp_2 x == Fp_2.add(a, Fp_2.add(b, c)) where [a,b,c] = x)}}
             ] (\ e -> custom_prove_cryptol e w4));
           simplify (addsimps F_rewrites (cryptol_ss ())); // get rid of F_prod and F_sum
-          simplify (addsimps fp2_laws empty_ss); // try to normalize field expression
+          simplify (addsimps fp2_laws empty_ss); // try to normalize field expressions
           simplify (add_cryptol_defs ["ecEq","PEqBit"] empty_ss); // transform those to boolEq?
         // Finally:
           let F_expt_rewrite = run (admit_cryptol {{ \x -> F_expt`{n=758} Fp_2 x `((p^^2-9)/16) == fp2_exp x `((p^^2-9)/16) }} );
@@ -322,15 +327,21 @@ map_to_isogenous_E2_impl_ov <- custom_verify
 
 // Temporary assumptions:
 
-map_to_E2_prime_correct <- admit_cryptol {{ \u -> affinify HE2::Isogenous_Curve (map_to_curve_E2_prime_impl u) == HE2::map_to_curve_simple_swu u }};
+map_to_isogenous_E2_correct <- admit_cryptol {{ \u -> affinify HE2::Isogenous_Curve (map_to_isogenous_E2_impl u) == HE2::map_to_curve_simple_swu u }};
+
+// TODO
+map_to_isogenous_E2_thm <- really_custom_prove_cryptol {{ \u -> map_to_isogenous_E2_impl u == map_to_isogenous_E2_impl_2 u }}
+do {
+  assume_unsat;
+};
 
 isogeny_map_to_E2_correct <- admit_cryptol {{ \p -> affinify E' (isogeny_map_to_E2_impl p) == if is_point_projective HE2::Isogenous_Curve p then HE2::iso_map (affinify HE2::Isogenous_Curve p) else affinify E' (apply isogeny_map_to_E2_impl p) }};
 
 // We need to establish that we get a point on the isogenous curve
-map_to_curve_E2_prime_on_curve <- custom_prove_cryptol {{ \u -> is_point_projective HE2::Isogenous_Curve (map_to_curve_E2_prime_impl u) == True }}
+map_to_isogenous_E2_on_curve <- custom_prove_cryptol {{ \u -> is_point_projective HE2::Isogenous_Curve (map_to_isogenous_E2_impl u) == True }}
 do {
-  simplify (addsimps [is_point_projective_lemma,swu_impl_xy_nz,map_to_E2_prime_correct,swu_on_curve] empty_ss);
-  w4_unint_z3 (concat fp_unints ["map_to_curve_E2_prime_impl"]);
+  simplify (addsimps [is_point_projective_lemma,swu_impl_xy_nz,map_to_isogenous_E2_correct,swu_on_curve] empty_ss);
+  w4_unint_z3 (concat fp_unints ["map_to_isogenous_E2_impl"]);
 };
 
 let aug_len = 48; // aug_len should be 96 or 48
@@ -361,7 +372,7 @@ final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst
     );
     simplify (addsimps [clear_cofactor_bls12381_correct, clear_cofactor_correct] (cryptol_ss ()));
     simplify (addsimps [affinify_invariant] (cryptol_ss ()));
-    simplify (addsimps [isogeny_map_to_E2_correct,point_dadd_on_curve,map_to_curve_E2_prime_on_curve,dadd_thm,map_to_E2_prime_correct] (cryptol_ss ()));
+    simplify (addsimps [isogeny_map_to_E2_correct,point_dadd_on_curve,map_to_isogenous_E2_on_curve,dadd_thm,map_to_isogenous_E2_correct] (cryptol_ss ()));
     unfolding ["/\\","HE2::hash_to_curve_opt"];
     simplify cleanup_simpset;
     w4_unint_z3 (concat fp_unints ["HE2::iso_map","HE2::map_to_curve_simple_swu","HE2::clear_cofactor","HE2::hash_to_field"]);
@@ -399,7 +410,7 @@ hash_to_g2_impl_ov_2 <- custom_verify
         simplify (addsimps (concat fp2_rep_thms POINTonE2_thms) empty_ss);// simplify (abs rep)
         simplify (addsimps map_to_iso_constants_rewrites empty_ss);
         simplify remove_higher_order_function_simpset;
-        w4_unint_z3 ["affinify_E'","fp2_invariant","clear_cofactor_E2_impl","map_to_curve_E2_prime_impl","isogeny_map_to_E2_impl","HashToCurveE2::hash_to_field"];
+        w4_unint_z3 ["affinify_E'","fp2_invariant","clear_cofactor_E2_impl","map_to_isogenous_E2_impl","isogeny_map_to_E2_impl","HashToCurveE2::hash_to_field"];
       }
       do {
         unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl","map","join"];
@@ -429,7 +440,7 @@ hash_to_g2_impl_ov_2 <- custom_verify
         simplify (addsimps (concat fp2_rep_thms POINTonE2_thms) empty_ss);// simplify (abs rep)
         simplify (addsimps map_to_iso_constants_rewrites empty_ss);
         simplify remove_higher_order_function_simpset;
-        w4_unint_z3 ["affinify_E'","fp2_invariant","clear_cofactor_E2_impl","map_to_curve_E2_prime_impl","isogeny_map_to_E2_impl","HashToCurveE2::hash_to_field"];
+        w4_unint_z3 ["affinify_E'","fp2_invariant","clear_cofactor_E2_impl","map_to_isogenous_E2_impl","isogeny_map_to_E2_impl","HashToCurveE2::hash_to_field"];
       }
       do {
         unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl","map","join"];

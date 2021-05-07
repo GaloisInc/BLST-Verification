@@ -53,9 +53,6 @@ let blst_hash_to_g1_impl_spec msg_len DST_len aug_len = do {
   (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
   llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
   llvm_points_to p_ptr (llvm_term {{ (POINTonE1_rep (hash_to_curve_opt_impl (aug#msg, DST))) }});
-  // new_p <- llvm_fresh_var "new_blst_hash_to_g1_p" POINTonE1_type;
-  // llvm_points_to p_ptr (llvm_term new_p) );
-  // llvm_postcon {{ affinify E (POINTonE1_abs new_p) == HE1::hash_to_curve_opt (aug#msg, DST)) }};
 };
 
 let isogeny_map_to_E1_impl_alias_spec = do {
@@ -63,9 +60,6 @@ let isogeny_map_to_E1_impl_alias_spec = do {
   llvm_precond {{ POINTonE1_invariant out }};
   llvm_execute_func [out_ptr, out_ptr];
   llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (isogeny_map_to_E1_impl (POINTonE1_abs out)) }} );
-  // new_out <- llvm_fresh_var "new_isogeny_map_to_E1_out" POINTonE1_type;
-  // llvm_points_to out_ptr (llvm_term new_out) );
-  // llvm_postcon {{ (is_point_projective HE1::Isogenous_Curve p /\ ~is_zero Fp p.2) ==> (POINTonE1_abs new_out) == HE1::iso_map (affinify HE1::Isogenous_Curve p) where p = (POINTonE1_abs out) }} );
 };
 
 let map_to_isogenous_E1_impl_spec = do {

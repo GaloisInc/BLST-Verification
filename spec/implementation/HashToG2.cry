@@ -9,17 +9,15 @@ import FieldExtras (F_is_zero, F_sum, F_prod, F_expt)
 import BLSFieldExtras (sqrt_fp2, is_square_fp2, fp2_exp, sqrt_fp2_c2, sqrt_fp2_c3)
 import Parameters (Fp_2, t_Fp_2, u)
 import ShortWeierstrassCurve (ProjectivePoint, point_O, projectify)
-/* import BLSFieldExtras (sqrt_fp, fp_exp) */
 import ExpandMessage (Expandable)
-import implementation::CurveOperation (point_dadd, point_add, point_double)
+import implementation::CurveOperation (point_dadd, point_add, point_double, point_neg)
 import HashToCurveE2
 import HashToCurveE2Aux as Aux
-import implementation::CurveOperation
 import implementation::Psi
 
-
-map_to_curve_E2_prime_impl : t_Fp_2 -> ProjectivePoint t_Fp_2
-map_to_curve_E2_prime_impl u = res where
+// This follows the code very closely:
+map_to_isogenous_E2_impl : t_Fp_2 -> ProjectivePoint t_Fp_2
+map_to_isogenous_E2_impl u = res where
   // x1n, x2n, and xd:
   Zuu = Fp_2.mul (Z, Fp_2.sq u)
   tv2 = Fp_2.add (Fp_2.sq Zuu, Zuu)
@@ -32,18 +30,64 @@ map_to_curve_E2_prime_impl u = res where
   gx1 = F_sum Fp_2 [Fp_2.mul(x1n, Fp_2.sq x1n), F_prod Fp_2 [A', x1n, Fp_2.sq xd], Fp_2.mul(B', gxd)]
   tv4 = F_prod Fp_2 [gx1, gxd, Fp_2.sq gxd] // gx1 gxd^3
   e2 = is_square_fp2 tv4
-  y1' = if e2 then Fp_2.div (sqrt_fp2 tv4, tv4) else (F_expt`{n=758} Fp_2 tv4 `((p^^2-9)/16))
+  y1' = if e2 then Fp_2.div (sqrt tv4, tv4) else (F_expt`{n=758} Fp_2 tv4 `((p^^2-9)/16))
   y1 = F_prod Fp_2 [gx1, gxd, y1']
-  // y2 (TODO: I'm still not sure why this computes the right thing):
+  // y2:
   tv4_recip_ZZZ = (Fp_2.mul (tv4, recip_ZZZ))
   y1'_sqrt_ZZZ = Fp_2.mul (y1', sqrt_fp2 ZZZ)
-  y2' = sqrt_align y1'_sqrt_ZZZ (Fp_2.mul(y1'_sqrt_ZZZ, tv4_recip_ZZZ)) tv4_recip_ZZZ // TODO: we'll need an assumption about what sqrt_align does
+  y2' = sqrt_align y1'_sqrt_ZZZ (Fp_2.mul(y1'_sqrt_ZZZ, tv4_recip_ZZZ)) tv4_recip_ZZZ
   y2 = F_prod Fp_2 [y2', gx1, gxd, Fp_2.sq u, u]
   // xn and y:
   (xn,y') = if e2 then (x1n,y1) else (x2n,y2)
   y = if sgn0(u) == sgn0(y') then y' else Fp_2.neg y'
   // convert to Jacobian coordinates
   res = (Fp_2.mul (xn, xd), Fp_2.mul (y, gxd), xd)
+
+// A slightly more abstract version:
+map_to_isogenous_E2_impl_2 : t_Fp_2 -> ProjectivePoint t_Fp_2
+map_to_isogenous_E2_impl_2 u = res where
+  // x1n, x2n, and xd:
+  Zuu = Fp_2.mul (Z, Fp_2.sq u)
+  tv2 = Fp_2.add (Fp_2.sq Zuu, Zuu)
+  x1n = Fp_2.mul (Fp_2.add (tv2, Fp_2.field_unit), B')
+  x2n = Fp_2.mul (Zuu, x1n)
+  xd' = Fp_2.mul (Fp_2.neg A', tv2)
+  xd = if F_is_zero Fp_2 xd' then Fp_2.mul(Z,A') else xd'
+  // y1:
+  gxd = Fp_2.mul(xd, Fp_2.sq xd) // xd^3
+  gx1 = F_sum Fp_2 [Fp_2.mul(x1n, Fp_2.sq x1n), F_prod Fp_2 [A', x1n, Fp_2.sq xd], Fp_2.mul(B', gxd)]
+  tv4 = F_prod Fp_2 [gx1, gxd, Fp_2.sq gxd] // gx1 gxd^3
+  e2 = is_square_fp2 tv4
+  xn = if e2 then x1n else x2n
+  y' = if e2
+        then F_prod Fp_2 [gx1, gxd, Fp_2.div (sqrt tv4, tv4)]
+        else F_prod Fp_2 [sqrt (Fp_2.div(ZZZ, tv4)), gx1, gxd, Fp_2.sq u, u]
+  y = if sgn0(u) == sgn0(y') then y' else Fp_2.neg y'
+  // convert to Jacobian coordinates
+  res = (Fp_2.mul (xn, xd), Fp_2.mul (y, gxd), xd)
+
+prop_2 u = Fp_2.is_val u /\ ~(is_square_fp2 x) ==> is_square_fp2 b where
+  b = Fp_2.mul (x, recip_ZZZ)
+  x = F_prod Fp_2 [gx1, gxd, Fp_2.sq gxd]
+  gxd = Fp_2.mul(xd, Fp_2.sq xd) // xd^3
+  gx1 = F_sum Fp_2 [Fp_2.mul(x1n, Fp_2.sq x1n), F_prod Fp_2 [A', x1n, Fp_2.sq xd], Fp_2.mul(B', gxd)]
+  Zuu = Fp_2.mul (Z, Fp_2.sq u)
+  tv2 = Fp_2.add (Fp_2.sq Zuu, Zuu)
+  x1n = Fp_2.mul (Fp_2.add (tv2, Fp_2.field_unit), B')
+  xd' = Fp_2.mul (Fp_2.neg A', tv2)
+  xd = if F_is_zero Fp_2 xd' then Fp_2.mul(Z,A') else xd'
+
+sqrt_align_prop x' = Fp_2.is_val x /\ is_square b ==>
+  Fp_2.sq (sqrt_align a ab b) == Fp_2.sq (Fp_2.div (sqrt b, b)) where
+    a = Fp_2.mul (F_expt`{n=758} Fp_2 x `((p^^2-9)/16), sqrt ZZZ)
+    b = Fp_2.mul (x, recip_ZZZ)
+    ab = Fp_2.mul (a,b)
+    sqrt_align x y z = Fp_2.mul (x, sqrt_align_fp2_coeff y z)
+    recip_ZZZ = Fp_2.div (Fp_2.field_unit, ZZZ)
+    x = Fp_2.normalize x'
+
+square_same_sign_prop x y u = Fp_2.sq x == Fp_2.sq y ==>
+  (if sgn0(x) == sgn0(u) then x else Fp_2.neg x) == (if sgn0(y) == sgn0(u) then y else Fp_2.neg y)
 
 sqrt_align : t_Fp_2 -> t_Fp_2 -> t_Fp_2 -> t_Fp_2
 sqrt_align x y z = Fp_2.mul (x, sqrt_align_fp2_coeff y z)
@@ -61,8 +105,8 @@ ZZZ = Fp_2.mul(Z, Fp_2.sq Z)
 
 map_to_g2_impl: [2]t_Fp_2 -> ProjectivePoint t_Fp_2
 map_to_g2_impl uv = P where
-    Q0 = map_to_curve_E2_prime_impl (uv@0)
-    Q2 = map_to_curve_E2_prime_impl (uv@1)
+    Q0 = map_to_isogenous_E2_impl (uv@0)
+    Q2 = map_to_isogenous_E2_impl (uv@1)
     R = point_dadd Fp_2 Q0 Q2 A' False // This is addition on the isogenous curve E'
     S = isogeny_map_to_E2_impl R
     P = clear_cofactor_E2_impl S

@@ -11,9 +11,7 @@ m <- llvm_load_module "../build/llvm/libblst.a.bc";
 let do_prove = true;
 
 include "proof-helpers.saw";
-let do_prove = false;
 include "algebraic-laws.saw";
-let do_prove = true;
 
 include "hash_to_field.saw";
 include "fp_overrides.saw";
@@ -21,7 +19,7 @@ include "vect.saw";
 include "exp.saw";
 include "curve_operations.saw";
 include "ec_mult.saw";
-include "map_to_g1.saw";
+include "subgroup_check_g1.saw";
 include "sgn0.saw";
 include "hash_to_g1.saw";
 include "compress-p1.saw";
@@ -32,7 +30,7 @@ include "exp2.saw";
 include "curve_operations_e2.saw";
 include "ec_mult2.saw";
 include "psi.saw";
-include "map_to_g2.saw";
+include "subgroup_check_g2.saw";
 include "compress-p2.saw";
 include "deserialize-p2.saw";
 include "clear_cofactor_p2.saw";
@@ -42,4 +40,3 @@ include "api-extra-for-release-2.saw";
 include "integer-and-bv.saw";
 include "384x384_ops.saw";
 include "fp12.saw";
-
