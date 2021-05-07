@@ -31,7 +31,7 @@
 // include "exp2.saw";
 // include "ec_mult2.saw";
 // include "psi.saw";
-// include "map_to_g2.saw";
+// include "subgroup_check_g2.saw";
 // include "clear_cofactor_p2.saw";
 
 // let do_prove = true;
