@@ -1,0 +1,410 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+/*
+  The naive but mathematically correct definition of pairing in the Pairing module has
+  opportunities for substantial optimization.  Most of these are described, somewhat abstractly,
+  in Costello, Lange, and Naehrig "Faster Pairing Computations on Curves with High-Degree Twists"
+  (https://eprint.iacr.org/2009/615)
+
+  The reasoning behind these optimizations is too sophisticated for proof in SAW, and we will
+  instead summarize the mathematical argument here, define the resulting high-level algorithm
+  in Cryptol code, and (in a related SAW file), just assert that these two algorithms give the
+  same result.
+
+  There are several parts to the optimization:
+
+  (1) Costello, Lange, and Naehrig show in their Theorem 1 that the ate
+      pairing computation can be done by mapping to the twist E'/Fp_12 rather
+      than to the main curve E/Fp_12.
+
+  (2) We do not need to use a generic point_add routine because we can tell
+      exactly when we will be doubling and when we are adding to points with
+      distinct x coordinates.  That is, in the Miller loop, the values of T are
+      always smallish nonzero multiples of Q, which has order r.  So none of
+      these values are O, or Q, or -Q,
+
+  (3) Costello, Lange, and Naehrig also show that the line computation may be
+      done in Fp_2 rather than in Fp_12, as the factors of w that are
+      introduced get wiped out by the final exponentiation.
+
+  (4) We can eliminate division in computing the line function, even while using
+      projective coordinates for T.  Costello, Lange, and Naehrig explain how
+      (but in their paper using a different system of projective
+      coordinates).  Here, in the Jacobian system, we can retrace the
+      derivation; see below.  Again the key is that we can introduce factors that get
+      wiped out (mapped to 1) in the final exponentiation.
+
+  (5) A final trick used in the C code is to avoid negating Q, computing with Q itself and then
+      conjugating the final result.  This is OK, because in
+      Fp_12, conjugation is inversion, and the bilinearity if pairing shows
+
+           [-Q,P] = [Q,P]^{-1}
+
+      So computing with Q and conjugating at the end gives the correct result.
+*/
+
+module implementation::Pairing where
+
+import Parameters (t_Fp, t_Fp_2, t_Fp_6, t_Fp_12, Fp, Fp_2, Fp_12, Fp_to_Fp_2, E, E')
+import Parameters as P
+import ShortWeierstrassCurve as EC
+import Common::Field (FieldRep)
+import FieldExtras
+import Frobenius (fp12_conjugate)
+// import Pairing
+import implementation::Types (Size_t)
+import implementation::Fp12 (fp6_to_fp12_xy00z0)
+import implementation::CurveOperation (point_double, point_add_affine)
+
+// Step (1)
+
+// Note: the layout of Fp_12 over Fp_2 is
+// [[a,c,e],[b,d,f]] represents a*w^5 + b*w^4 + c*w^3 + d*w^2 + e*w + f 
+
+/**
+ * Take a point on E/F_p to a point on E'/F_p^12
+ * This applies the sextic twist to the coordinates:
+ * (x, y) :-> (w^2 x, w^3 y)
+ */
+phi_3: EC::AffinePoint t_Fp -> EC::AffinePoint t_Fp_12
+phi_3 (x,y) = ([[z,z,z],[z,x',z]], [[z,y',z],[z,z,z]]) where
+   z = P::Fp_2.field_zero
+   x' = P::Fp_to_Fp_2 x // == [0,x]
+   y' = P::Fp_to_Fp_2 y // == [0,y]
+
+
+/**
+ * Take a point on E'/F_p^2 to a point on E'/F_p^12
+ * This just injects the coordinates into the larger field
+ */
+phi_4: EC::AffinePoint t_Fp_2 -> EC::AffinePoint t_Fp_12
+phi_4 (x,y) = (x',y') where
+    x' = P::Fp_2_to_Fp_12 x
+    y' = P::Fp_2_to_Fp_12 y
+
+/*  For reference, computing the ate_pairing (leaving out the final exponentiation)
+    on the twist would look like this:
+
+     Here we also do the point arithmetic on E', rather than mapping up to the twist on Fp_12.
+     That's legitimate because the phi mappings are all homomorphisms.
+
+miller_loop_twist: EC::AffinePoint t_Fp -> EC::AffinePoint t_Fp_2 -> t_Fp_12
+miller_loop_twist P Q =  last_f where
+   negQ = EC::neg P::E' Q
+   (last_f, _) = f_Ts ! 0
+   f_Ts = [(P::Fp_12.field_unit, negQ)] #
+          [ miller_step_twist P negQ fT ci | fT <- f_Ts | ci <- tail negative_t]
+
+miller_step_twist:  EC::AffinePoint t_Fp -> EC::AffinePoint t_Fp_2
+                    -> (t_Fp_12, EC::AffinePoint t_Fp_2)
+                    -> Bit -> (t_Fp_12, EC::AffinePoint t_Fp_2)
+miller_step_twist P negQ (f, T) ci = (f', T') where
+    f0 = f12.mul (f12.sq f, line_function (phi_4 T) (phi_4 T) (phi_3 P))
+    T0 = EC::double P::E' T
+    (f', T') = if ci
+               then (P::Fp_12.mul (f0, line_function (phi_4 T0) (phi_4 negQ) (phi_3 P)),
+                     EC::add P::E' T0 negQ)
+               else (f0, T0)
+
+*/
+
+// Steps (3) and(4)
+
+/* Note first that the generic line_function(A,B,P) tests whether A=B or A=-B.
+   We know when calling it when A=B occurs (in the doubling steps), and argued above that
+   A=-B never happens in the cases we care about.  So we can separate out two functions
+   `line_function_add` and `line_function_double`
+
+   line_function_add (A,B,P) = (B2-A2)/(B1-A1)*(P1-A1) + A2 - P2
+   line_function_double (A,B,P) = (3 A1^2) / (2 A2) * (P1-A1) + A2 - P2
+
+   where A = (A1,A2), B=(B1,B2), and P=(P1, P2), in affine coordinates, and all on the twist
+*/
+
+/*
+  For the question of how to eliminate division, even when using projective
+  coordinates for A, Costello, Lange, and Naehrig explain how (but in their
+  paper using a different system of projective coordinates).  Here, in the
+  Jacobian system, we can retrace the derivation.
+
+  For the addition step, point A is the projective, non-point-at-infinity, T =
+  (xT:yT:zT), so A1 = xT/zT^2 and A2 = yT/zT^3.  B is point Q, already in
+  affine coordinates (xQ, yQ), so B1 = xQ, B2 = yQ, and P = (xP, yP) is in
+  affine coordinate on curve E and is mapped via phi_3 to curve E'.  Thus P1 =
+  w^2 xP, P2 = w^3 yP.  So we can compute the line_function output:
+
+    line_function_add(T, Q, P))
+  = (as defined above)
+    (B2-A2)/(B1-A1)*(P1-A1) + A2 - P2
+  = (substituting these variables)
+    (yQ - yT/zT^3)/(xQ-xT/zT^2) * (w^2 xP - xT/zT^2) + yT/zT^3 - w^3 yP
+  = (simplifying the fraction)
+    (yQ zT^3 - yT)/(xQ zT^3 -xT zT) * (w^2 xP - xT/zT^2) + yT/zT^3 - w^3 yP
+
+  Now we can multiply this by any value in a proper subfield of Fp_12 without
+  affecting the result of the final exponentiation, which sends all such
+  values to 1.  So we can use a factor of k = (xQ zT^3 - xT zT) (which lies in
+  Fp_2) to eliminate most of the division:
+
+    k * line_function_add(T, Q, P)
+  = (algebra)
+    (yQ zT^3 - yT) (w^2 xP - xT/zT^2) +  (xQ zT^3 - xT zT)(yT/zT^3 - w^3 yP)
+  = (expand out, collect terms)
+     w^2 xP (yQ zT^3 - yT)
+     - w^3 yP (xQ zT^3 - xT zT)
+     - yQ xT zT + yT xT / zT^2 + xQ yT - xT yT / zT^2
+  = (cancel matching terms)
+     w^2 xP (yQ zT^3 - yT)
+     - w^3 yP (xQ zT^3 - xT zT)
+     - yQ xT zT + xQ yT
+
+  The C code produces -4 times these values, but as -4 in is a proper subfield
+  this does not affect the result of the final exponentiation.
+*/
+
+// line_add_opt: (t_Fp_2,t_Fp_2,t_Fp_2) -> (t_Fp_2, t_Fp_2) -> (t_Fp,t_Fp) -> t_Fp_12
+line_add_opt: EC::ProjectivePoint t_Fp_2 -> EC::AffinePoint t_Fp_2 -> EC::AffinePoint t_Fp -> t_Fp_12
+line_add_opt (xT, yT, zT) (xQ, yQ) (xP, yP) = ret where
+    xP' = Fp_to_Fp_2 xP
+    yP' = Fp_to_Fp_2 yP
+    l0 = Fp_2.sub (Fp_2.mul (yQ, Fp_2.mul (xT, zT)), Fp_2.mul (xQ, yT)) // yQ xT zT - xQ yT
+    l1 = Fp_2.mul (Fp_2.sub (yT, Fp_2.mul (yQ, zT3)), xP') // xP (yT - yQ zT^3)
+    l2 = Fp_2.mul (Fp_2.sub (Fp_2.mul (xQ, zT3), Fp_2.mul (xT, zT)), yP') // yP (xQ zT^3 - xT zT)
+    zT3 = Fp_2.mul (zT, Fp_2.sq zT) // zT^3
+    ret = fp6_to_fp12_xy00z0 [ mul_by_4 Fp_2 l2  // factor of w^3
+                             , mul_by_4 Fp_2 l1  // factor of w^2
+                             , mul_by_4 Fp_2 l0 // the rest
+                             ]
+
+/*
+  Similarly, for the doubling step, we have
+
+    line_function_dbl(T, Q, P)
+  = (definition)
+    (3 A1^2) / (2 A2) * (P1-A1) + A2 - P2
+  = (substitute the variables)
+    (3 xT^2 / zT^4) / (2 yT/zT^3) * (w^2 xP - xT/zT^2) + yT/zT^3 - w^3 yP
+  = (simplify the fraction)
+    (3 xT^2) / (2 yT zT) * (w^2 xP - xT/zT^2) + yT/zT^3 - w^3 yP
+
+  This time we can use a factor of k' = (2 yT zT^3), also in Fp_2
+
+    k' * line_function_dbl(T, Q, P)
+  = (algebra)
+    (3 xT^2 zT^2) (w^2 xP - xT/zT^2) + (2 yT zT^3) (yT/zT^3 - w^3 yP)
+  = (expand out, collect terms)
+    3 w^2 xP xT^2 zT^2
+    - 2 w^3 yP yT zT^3
+   -  3 xT^3 + 2 yT^2
+
+  In this cases, the C code computes -2 times these values; again this does not
+  affect the result of the final exponentiation.
+*/
+
+// line_double_opt: (t_Fp_2,t_Fp_2,t_Fp_2) -> (t_Fp,t_Fp) -> t_Fp_12
+line_double_opt: EC::ProjectivePoint t_Fp_2 -> EC::AffinePoint t_Fp -> t_Fp_12
+line_double_opt (xT,yT,zT) (xP, yP) = ret where
+    xP' = P::Fp_to_Fp_2 xP
+    yP' = P::Fp_to_Fp_2 yP
+    l0 = Fp_2.sub (mul_by_3 Fp_2 (cubed xT), mul_by_2 Fp_2 (Fp_2.sq yT)) // 3xT^3 - 2yT^2
+    l1 = Fp_2.neg (mul_by_3 Fp_2 (Fp_2.mul (Fp_2.sq xT, Fp_2.mul (Fp_2.sq zT, xP')))) // -3 xP xT^2 zT^2
+    l2 = Fp_2.mul (mul_by_2 Fp_2 (Fp_2.mul (yT, cubed zT)), yP') // 2 yP yT zT^3 
+
+    ret = fp6_to_fp12_xy00z0 [ mul_by_2 Fp_2 l2 // factor of w^3
+                             , mul_by_2 Fp_2 l1 // factor of w^2
+                             , mul_by_2 Fp_2 l0 // the rest
+                             ]
+    cubed x = Fp_2.mul (x, Fp_2.sq x)
+
+
+// Step (5)
+
+/* Putting all that together, with the conjugation trick of step 5, gives this function,
+   which we will use as a high-level specification for the C code. */
+   
+// TODO?  This function could take the projective add and double functions as parameters,
+// since it does not matter what they are so long a they get projectively correct answers.
+
+miller_step_opt:  EC::AffinePoint t_Fp -> EC::AffinePoint t_Fp_2
+                    -> (t_Fp_12, EC::ProjectivePoint t_Fp_2)
+                    -> Bit
+                    -> (t_Fp_12, EC::ProjectivePoint t_Fp_2)
+miller_step_opt P Q (f, T) ci = (f', T') where
+    f0 = Fp_12.mul (Fp_12.sq f, line_double_opt T P)
+    T0 = point_double Fp_2 T
+    (f', T') = if ci
+               then (Fp_12.mul (f0, line_add_opt T0 Q P),
+                     point_add_affine_alt Fp_2 T0 Q) // _alt, we know T and Q are not at infinity
+               else (f0, T0)
+
+miller_loop_opt: EC::AffinePoint t_Fp -> EC::AffinePoint t_Fp_2 -> t_Fp_12
+miller_loop_opt P Q =  fp12_conjugate last_f where
+   (last_f, _) = f_Ts ! 0
+   f_Ts = [(Fp_12.field_unit, EC::projectify P::E' Q)] #
+          [ miller_step_opt P Q fT ci | fT <- f_Ts | ci <- tail negative_t]
+   // t = -2^63 - 2^62 - 2^60 - 2^57 - 2^48 - 2^16
+   negative_t:[64]
+   negative_t = <| x^^63 + x^^62 + x^^60 + x^^57 + x^^48 + x^^16 |>
+
+
+miller_loop_opt_checked:  EC::AffinePoint t_Fp -> EC::AffinePoint t_Fp_2 -> t_Fp_12
+miller_loop_opt_checked P Q =
+    if EC::is_point_O E' Q  \/ EC::is_point_O E P
+    then Fp_12.field_unit
+    else miller_loop_opt P Q
+
+////////////////////////////////////////////////////////////////
+//
+// The as-implemented functions
+//
+
+// This version avoids the extra check for z1 == 0, relative to point_add_affine
+
+point_add_affine_alt: {t} FieldRep t -> EC::ProjectivePoint t -> EC::AffinePoint t -> EC::ProjectivePoint t
+point_add_affine_alt F (x1,y1,z1) (x2,y2) = p3 where
+    z1z1 = F.sq z1
+    h = F.mul(x2,z1z1)
+    r = F.mul(F.mul(y2,z1), z1z1)
+
+    h_1 = F.sub(h, x1)
+    hh = F.sq h_1
+    i = (F.add (hh,hh))
+    i_1 = F.add (i,i)
+
+    j = F.mul (h_1, i_1)
+
+    r_1 = F.sub(r, y1)
+    r_2 = F.add(r_1, r_1)
+
+    v = F.mul(x1, i_1)
+
+    x3 = F.sub(F.sub(F.sub(F.sq r_2, j), v), v)
+
+    j_1 = F.mul(j, y1)
+    y3 = F.sub(v, x3)
+    y3_1 = F.mul(y3, r_2)
+    y3_2 = F.sub(F.sub(y3_1, j_1), j_1)
+
+    z3 = F.add(z1,h_1)
+    z3_1 = F.sq z3
+    z3_2 = F.sub (z3_1, z1z1)
+    z3_3 = F.sub (z3_2, hh)
+
+    p3 = (x3, y3_2, z3_3)
+
+lshift_fp: t_Fp -> Size_t -> t_Fp
+lshift_fp a c = shifts @ c where shifts = [a] # [Fp.add (a',a') | a' <- shifts ]
+
+lshift_fp2: t_Fp_2 -> Size_t -> t_Fp_2
+lshift_fp2 [a1,a0] c = [lshift_fp a1 c, lshift_fp a0 c]
+
+line_by_Px2: t_Fp_6 -> (t_Fp, t_Fp) -> t_Fp_6
+line_by_Px2 [[l2_1, l2_0], [l1_1, l1_0], l0]  (Px, Py) = [l2', l1', l0] where
+    l1' = [Fp.mul (l1_1, Px), Fp.mul (l1_0, Px)]
+    l2' = [Fp.mul (l2_1, Py), Fp.mul (l2_0, Py)]
+
+line_double_imp: (t_Fp_2, t_Fp_2, t_Fp_2) -> t_Fp_6
+line_double_imp (X1, Y1, Z1) = [l2, l1, l0] where
+    A = Fp_2.sq X1
+    E = mul_by_3 Fp_2 A
+    F = Fp_2.sq E
+    B = Fp_2.sq Y1
+    l0_a = Fp_2.add (E, X1)
+    l0_b = Fp_2.sub (Fp_2.sq l0_a, A)
+    l0_c = Fp_2.sub (l0_b, F)
+    l0 = Fp_2.sub (l0_c, lshift_fp2 B 2)
+    l1 = Fp_2.mul (mul_by_3 Fp_2 (Fp_2.sq X1), Fp_2.sq Z1)
+    l2 = Fp_2.mul (Fp_2.mul (Fp_2.add (Z1, Z1), Y1), Fp_2.sq Z1)
+
+line_add_imp (x1,y1,z1) (x2,y2) = [l2, l1, l0] where
+    F = Fp_2
+    z1z1 = F.sq z1
+    h = F.mul(x2,z1z1)
+    r = F.mul(F.mul(y2,z1), z1z1)
+
+    h_1 = F.sub(h, x1)
+    hh = F.sq h_1
+    i = (F.add (hh,hh))
+    i_1 = F.add (i,i)
+
+    r_1 = F.sub(r, y1)
+    r_2 = F.add(r_1, r_1)
+
+    z3 = F.add(z1,h_1)
+    z3_1 = F.sq z3
+    z3_2 = F.sub (z3_1, z1z1)
+    z3_3 = F.sub (z3_2, hh)
+
+    l0 = mul_by_2 F (F.sub (F.mul (r_2, x2), F.mul (y2, z3_3)))
+    l1 = r_2
+    l2 = z3_3
+
+start_dbl_n_imp: {n} (fin n, n >= 1) => [n](t_Fp_2, t_Fp_2, t_Fp_2) -> [n](t_Fp, t_Fp) -> t_Fp_12
+start_dbl_n_imp Ts Px2s = rets!0 where
+    line_a = line_double_imp (Ts@0)
+    line_b = line_by_Px2 line_a (Px2s@0)
+    ret_a = fp6_to_fp12_xy00z0 line_b
+    // standard loop-to-comprehension transcription of the C code
+    rets = [ret_a] # [Fp_12.mul (ret,  fp6_to_fp12_xy00z0 line) | ret <- rets | line <- lines]
+    lines = [line_by_Px2 (line_double_imp T) P | T <- tail Ts | P <- tail Px2s]
+
+// effect of one point.
+start_dbl_1: (t_Fp_2, t_Fp_2, t_Fp_2) -> (t_Fp, t_Fp) -> t_Fp_12
+start_dbl_1 T Px2 = ret where
+    line_a = line_double_imp T
+    line_b = line_by_Px2 line_a Px2
+    ret = fp6_to_fp12_xy00z0 line_b
+
+// effect on point T -- each of the T_i, Q_i affected independently in the same way
+add_n_dbl: {k} (fin k) => EC::ProjectivePoint t_Fp_2 ->  EC::AffinePoint t_Fp_2 -> EC::ProjectivePoint t_Fp_2
+add_n_dbl T Q = doubles@`k where
+    doubles = [point_add_affine_alt Fp_2 T Q] # [ point_double Fp_2 D | D <- doubles]
+
+// effect on ret - n=1 case
+add_n_dbl_ret: {k} (fin k) =>
+      t_Fp_12 -> EC::ProjectivePoint t_Fp_2 -> EC::AffinePoint t_Fp_2 -> EC::AffinePoint t_Fp -> t_Fp_12
+add_n_dbl_ret r T Q Px2 = rets@`k where
+    ret_a = Fp_12.mul (r, fp6_to_fp12_xy00z0 (line_by_Px2 (line_add_imp T Q) Px2))
+    T_a = point_add_affine_alt Fp_2 T Q
+    // standard loop-to-comprehension transcription of the C code, for the loop on `k`
+    Ts = [T_a] # [point_double Fp_2 Ti | Ti <- Ts]
+    lines = [line_by_Px2 (line_double_imp Ti) Px2 | Ti <- Ts ]
+    rets = [ret_a] # [Fp_12.mul (Fp_12.sq ret, fp6_to_fp12_xy00z0 line) | ret <- rets | line <- lines]
+
+// and for n >= 1
+add_n_dbl_n_ret: {n, k} (fin n, n >= 1, fin k) =>
+     t_Fp_12 ->[n](EC::ProjectivePoint t_Fp_2) -> [n](EC::AffinePoint t_Fp_2) -> [n](EC::AffinePoint t_Fp)
+     -> t_Fp_12
+add_n_dbl_n_ret r Ts Qs Px2s = F_prod Fp_12 rets where
+    rets = [add_n_dbl_ret`{k} r (Ts@0) (Qs@0) (Px2s@0)] #
+           [add_n_dbl_ret`{k} Fp_12.field_unit T Q Px2 | T <- tail Ts | Q <- tail Qs | Px2 <- tail Px2s]
+
+//// miller_loop_n
+
+miller_loop_imp: EC::AffinePoint t_Fp_2 -> EC::AffinePoint t_Fp -> t_Fp_12
+miller_loop_imp Q P = fp12_conjugate ret_f where
+    (xP, yP) = P
+    Px2 = (Fp.neg (Fp.add (xP, xP)), Fp.add (yP, yP))
+    (xQ, yQ) = Q
+    T = (xQ, yQ, Fp_2.field_unit)
+    ret_a = start_dbl_n_imp [T] [Px2]
+    T_a = point_double Fp_2 T
+    ret_b = add_n_dbl_ret`{2} ret_a T_a Q Px2
+    T_b = add_n_dbl`{2} T_a Q
+    ret_c = add_n_dbl_ret`{3} ret_b T_b Q Px2
+    T_c = add_n_dbl`{3} T_b Q
+    ret_d = add_n_dbl_ret`{9} ret_c T_c Q Px2
+    T_d = add_n_dbl`{9} T_c Q
+    ret_e = add_n_dbl_ret`{32} ret_d T_d Q Px2
+    T_e = add_n_dbl`{32} T_d Q
+    ret_f = add_n_dbl_ret`{16} ret_e T_e Q Px2
+
+miller_loop_n_1_imp:  EC::AffinePoint t_Fp_2 -> EC::AffinePoint t_Fp -> t_Fp_12
+miller_loop_n_1_imp Q P = (if Q == (z2,z2) \/ P == (z1,z1)
+                           then Fp_12.field_unit
+                           else miller_loop_imp Q P) where
+    z1 = Fp.field_zero
+    z2 = Fp_2.field_zero

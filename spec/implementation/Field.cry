@@ -13,15 +13,6 @@ import Common::Field
 import implementation::Types
 import Parameters ( p, Fp, t_Fp, to_Fp, from_Fp, t_Fp_2, Fp_2, t_Fp_6, Fp_6, t_Fp_12, Fp_12)
 
-mul_by_3: {t} FieldRep t -> t -> t
-mul_by_3 F x = F.add (x, F.add (x, x))
-
-mul_by_8: {t} FieldRep t -> t -> t
-mul_by_8 F x = x8 where
-  x2 = F.add (x, x)
-  x4 = F.add (x2, x2)
-  x8 = F.add (x4, x4)
-  
 ////////////////////////////////////////////////////////////////
 //
 // Fp

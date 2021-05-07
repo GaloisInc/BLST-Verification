@@ -1,0 +1,109 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+import implementation::Pairing
+import Parameters as P
+import ShortWeierstrassCurve as EC
+import Pairing (final_exponentiation)
+
+to_Fp = P::to_Fp // shorter expression for the injection
+
+// These tests consist of some sanity checks on some of the functions used in the
+// pairing calculation, followed by a check of the test vectors given in Appendix B
+// of the Draft.
+
+/**
+ * The curve E': y^2 = x^3 + 4(u+1), over F_p^12
+ */
+c12': EC::EllipticCurve P::t_Fp_12
+c12' = { base_field = P::Fp_12, a = P::Fp_12.field_zero, b = P::Fp_2_to_Fp_12 P::b' }
+
+
+// multiples of the basepoint on E are mapped to the big curve c12'
+property phi_3_is_OK (m:[8]) =
+  EC::is_point_affine c12' (phi_3 (EC::mult P::E m P::BP))
+
+// multiples of the basepoint on E' are mapped to the big curve c12'
+property phi_4_is_OK (m:[8]) =
+  EC::is_point_affine c12' (phi_4 (EC::mult P::E' m P::BP'))
+
+
+// Test case from draft-irtf-cfrg-pairing-friendly-curves-07
+
+// .. first point
+
+x = to_Fp 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb
+y = to_Fp 0x08b3f481e3aaa0f1a09e30ed741d8ae4fcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1
+
+// .. second point
+
+x'_0 = to_Fp 0x024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8
+x'_1 = to_Fp 0x13e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e
+
+x': P::t_Fp_2
+x' = [x'_1, x'_0]
+
+y'_0 = to_Fp 0x0ce5d527727d6e118cc9cdc6da2e351aadfd9baa8cbdd3a76d429a695160d12c923ac9cc3baca289e193548608b82801
+y'_1 = to_Fp 0x0606c4a02ea734cc32acd2b02bc28b99cb3e287e85a763af267492ab572e99ab3f370d275cec1da1aaa9075ff05f79be
+
+y': P::t_Fp_2
+y' = [y'_1, y'_0]
+
+
+// expected results, 12 coefficients fom e_0 to e_11:
+expected_pairing = map to_Fp
+    [ // e0 .. e3:
+      0x11619b45f61edfe3b47a15fac19442526ff489dcda25e59121d9931438907dfd448299a87dde3a649bdba96e84d54558
+    , 0x153ce14a76a53e205ba8f275ef1137c56a566f638b52d34ba3bf3bf22f277d70f76316218c0dfd583a394b8448d2be7f
+    , 0x095668fb4a02fe930ed44767834c915b283b1c6ca98c047bd4c272e9ac3f3ba6ff0b05a93e59c71fba77bce995f04692
+    , 0x16deedaa683124fe7260085184d88f7d036b86f53bb5b7f1fc5e248814782065413e7d958d17960109ea006b2afdeb5f
+    // e4 .. e7:
+    , 0x09c92cf02f3cd3d2f9d34bc44eee0dd50314ed44ca5d30ce6a9ec0539be7a86b121edc61839ccc908c4bdde256cd6048
+    , 0x111061f398efc2a97ff825b04d21089e24fd8b93a47e41e60eae7e9b2a38d54fa4dedced0811c34ce528781ab9e929c7
+    , 0x01ecfcf31c86257ab00b4709c33f1c9c4e007659dd5ffc4a735192167ce197058cfb4c94225e7f1b6c26ad9ba68f63bc
+    , 0x08890726743a1f94a8193a166800b7787744a8ad8e2f9365db76863e894b7a11d83f90d873567e9d645ccf725b32d26f
+    // e8 .. e11:
+    , 0x0e61c752414ca5dfd258e9606bac08daec29b3e2c57062669556954fb227d3f1260eedf25446a086b0844bcd43646c10
+    , 0x0fe63f185f56dd29150fc498bbeea78969e7e783043620db33f75a05a0a2ce5c442beaff9da195ff15164c00ab66bdde
+    , 0x10900338a92ed0b47af211636f7cfdec717b7ee43900eee9b5fc24f0000c5874d4801372db478987691c566a8c474978
+    , 0x1454814f3085f0e6602247671bc408bbce2007201536818c901dbd4d2095dd86c1ec8b888e59611f60a301af7776be3d
+    ]
+
+
+out1: P::t_Fp_12
+out1 = map (map (map to_Fp))
+    [[[0x1562633d4f2387ff79a0f625a6989072296a946ca6bbfa3fef879defde15ed96d205b2eebb454f48fb76fa8a845bcba7,
+       0x1868172fbbeb861d69c6c10f315c273d08312812c643dbf60588d0de3d2c4b3e9b21acd402f7ddee53f1c4797646ba96],
+      [0x07508024863ec263bded120e45deb29c1f1303a056b279e116cb5fdb03013db19f81e78fa2b2b409cb2ce8e3ba96f4e6,
+       0x1431225e128c5e2bfafb9eba23746150907688583f52e07fcde4cc93452b0c2bcd0f0893b48a696c403c6980d0940741],
+      [0x159bfbbdc31bb5cb0082c59e5f744773335ef1fdddb8ed86a1c23f61f18800b647ff7dae335fb9ab5fcf2188cb64d72d,
+       0x05d928cb508feeb3329e51aa0bec4f33ba865a22da5a4e97eb31b78c0150c0c6134f0f94bd0154b28430ee4c6052e82b]],
+     [[0x087d1320fe5bad5c2d8e12c49e6aff41a0b80e1497bbe85682e22ed853f256041bdf97ef02bdb5d80a5f9bc31d85f25e,
+       0x159ef660e2d84185f55c0ccae1dd7f8f71b12c0beb7a431fede9e62794d9154e9a0ce4715f64b032492459076224c99b],
+      [0x0cbc592a19a3f60c9938676b257b9c01ed9d708f9428b29e272a811d13d734485970d9d3f1c097b12bfa3d1678096b1d,
+       0x0751a051e0beb4a0e2351a7527d813b371e189056307d718a446e4016a3df787568a842f3401768dc03b966bd1db90ac],
+      [0x0e760e96f911ae38a6042da82d7b0e30787864e725e9d5462d224c91c4497104d838d566d894564bc19e09d8af706c3f,
+       0x05194f5785436c8debf0eb2bab4c6ef3de7dc0633c85769173777b782bf897fa45025fd03e7be941123c4ee19910e62e]]]
+// Note that this is not the same output as for the ate_pairing' version of the Miller loop.
+// But, as shown below, the final exponentiation gives the correct result.
+
+property miller_loop_opt_OK =
+    miller_loop_opt (x,y) (x',y') == out1
+
+// The "splits" here account for the way the elements of F_p12 are represented as a sequence of
+// 12 elements of F_p.
+//
+// Section 2.5 of the Draft claims that the representation convention of Appendix J.4 of
+// [I-D.ietf-lwig-curve-representations] is used, and explains how an element of a extension field
+// can be represented by an "octet stream".  Then it goes on to represent these elements as a collection
+// of 12 octet streams, without carefully explaining the order.
+
+property final_exponentiation_OK =
+  final_exponentiation out1 == split`{parts=2} (split`{parts=6} (reverse expected_pairing))
+
+// Note: This uses a lot of memory:
+
+//property ate_pairing_opt_OK =
+//   final_exponentiation (miller_loop_opt (x,y) (x',y'))
+//     == split`{parts=2} (split`{parts=6} (reverse expected_pairing))
