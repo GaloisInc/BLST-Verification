@@ -23,15 +23,6 @@ hoist_if_proj_int_0 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoi
 hoist_if_proj_int_1 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_proj_1"] {{ hoist_if_proj_1`{[2]Integer} }})) [];
 hoist_if_proj_int_2 <- prove_cryptol (rewrite (cryptol_ss ()) (unfold_term ["hoist_if_proj_2"] {{ hoist_if_proj_2`{[2]Integer} }})) [];
 
-// TODO: not needed
-//seq_ite_thm_2 <-
-  //prove_cryptol
-  //(rewrite (cryptol_ss ()) {{ \x (y0:[6][64]) y1 z0 z1 ->
-                                  //[ if x then y0 else z0
-                                  //, if x then y1 else z1]
-                            //== if x then [y0,y1] else [z0,z1] }})
-   //[];
-
 core_rewrites <- for
   [ "EqTrue (equalNat (intToNat (natToInt 0)) 0)"
   , "EqTrue (equalNat (intToNat (natToInt 1)) 1)"
@@ -60,9 +51,6 @@ normalize_affine_point_fp_abs_thm <- prove_cryptol
   [];
 
 let simpset =
-// addsimps (concat core_rewrites [hoist_if_proj_int_0, hoist_if_proj_int_1, hoist_if_proj_int_2, hoist_if_proj_0, hoist_if_proj_1, hoist_if_proj_2]) fp2_simpset;
-
-// let extended_simpset =
   addsimps (concat core_rewrites [hoist_if_proj_int_0, hoist_if_proj_int_1, hoist_if_proj_int_2, hoist_if_proj_0, hoist_if_proj_1, hoist_if_proj_2, normalize_point_fp2_abs_thm, normalize_affine_point_fp2_abs_thm, normalize_point_3fp_abs_thm, normalize_affine_point_fp_abs_thm]) extended_fp2_simpset;
 
 let POINTonE2_add_spec = do {
@@ -428,11 +416,13 @@ POINTonE2_base_thms <- for
  , {{ \ c (x1: [2]Vec384) (x2: [2]Vec384) (x3: [2]Vec384) y1 y2 y3 ->
         (if c then x1 else y1, if c then x2 else y2, if c then x3 else y3) ==
         if c then (x1,x2,x3) else (y1,y2,y3) }}
+ , {{ \p -> POINTonE2_affine_abs (POINTonE2_affine_rep p) == p }}
+ , {{ \p2 -> POINTonE2_affine_invariant (POINTonE2_affine_rep p2) == True }}
  ]
  (\t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
-    do { unfolding ["POINTonE2_abs", "POINTonE2_rep", "POINTonE2_invariant", "POINTonE2_normalize"];
-         simplify simpset; // fp2_simpset;
-         simplify (addsimp fp2_normalize_thm empty_ss); // for the rep_abs rule
+    do { unfolding ["POINTonE2_abs", "POINTonE2_rep", "POINTonE2_affine_abs", "POINTonE2_affine_rep", "POINTonE2_invariant", "POINTonE2_affine_invariant", "POINTonE2_normalize"];
+         simplify simpset;
+         simplify (addsimp fp2_normalize_thm empty_ss); // TODO: needed?
          w4_unint_z3 fp2_unints; }) ;
 
 POINTonE2_selection_ite_thms <- for

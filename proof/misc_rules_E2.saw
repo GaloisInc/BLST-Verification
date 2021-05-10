@@ -1,0 +1,20 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+import "../spec/Parameters.cry";
+import "../spec/implementation/Field.cry";
+import "../spec/ShortWeierstrassCurve.cry";
+
+misc_rules_E2 <- for [
+  {{ \c (x:[6][64]) y a -> [if c then x else y, a] == if c then [x,a] else [y,a] }}
+, {{ \c (x:[6][64]) y a -> [a, if c then x else y] == if c then [a,x] else [a,y] }}
+, {{ \c (x1:[2][6][64]) (x2:[2][6][64]) (x3:[2][6][64]) y1 y2 y3 -> (if c then x1 else y1, if c then x2 else y2, if c then x3 else y3) == if c then (x1,x2,x3) else (y1,y2,y3) }}
+, {{ \c x y -> POINTonE2_abs (if c then x else y) == if c then POINTonE2_abs x else POINTonE2_abs y }}
+, {{ \c x y -> affinify E' (if c then x else y) == if c then affinify E' x else affinify E' y }}
+] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq)
+  do {
+    simplify remove_higher_order_function_simpset;
+    w4_unint_z3 ["POINTonE2_abs","affinify_E'"];
+  });
