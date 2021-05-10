@@ -350,6 +350,23 @@ let sqrt_align_fp2_alias_1_4_and_2_3_spec = do { // for the call in sqrt_fp2 wit
                         == fp2_abs inp) }});
   };
 
+// aliasing used by caller in map_to_isogenous_E2 from map_to_g1.c 
+let sqrt_align_fp2_alias_1_2_spec = do {
+  (out, out_ptr) <- ptr_to_fresh "out" vec384x_type;
+  (sqrt, sqrt_ptr) <- ptr_to_fresh_readonly "sqrt" vec384x_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
+  crucible_precond {{ fp2_invariant inp }};
+  crucible_precond {{ fp2_invariant sqrt }};
+  crucible_precond {{ fp2_invariant out }};
+  crucible_execute_func [out_ptr, out_ptr, sqrt_ptr, inp_ptr];
+  crucible_points_to out_ptr (crucible_term
+      {{ fp2_rep (Fp_2.mul(fp2_abs out, sqrt_align_fp2_coeff (fp2_abs sqrt) (fp2_abs inp))) }});
+  crucible_return (crucible_term
+      {{ bool_to_limb (Fp_2.sq (Fp_2.mul(fp2_abs sqrt, sqrt_align_fp2_coeff (fp2_abs sqrt) (fp2_abs inp)))
+                        == fp2_abs inp) }});
+  };
+
+
 // need to lift ite out of FP_2.mul:
 hoist_fp2_mul_right_thm <- prove_cryptol
   (rewrite (cryptol_ss ())
@@ -405,8 +422,12 @@ drop_unit_mul_thm <- prove_cryptol
 // we also have some instances of Fp_2.is_equal that need to be replaced with actual equality,
 fp2_is_equal_thm <- prove_cryptol {{ \x y -> Fp_2.is_equal (x,y) == (x==y) }} [];
 
+// also appears in compress-p2.saw:
+mul_commutes_once_fp2_thm <- prove_cryptol {{ \x y  -> Fp_2.mul (x, y) == apply Fp_2.mul (y,x) }} [];
 
-let verify_sqrt_align_fp2 spec = custom_verify "sqrt_align_fp2"
+// The spec used for one of the overrides has a multiplication swapped (for historical reasons)
+// the `do_commute` flag lets us flip that when needed.
+let verify_sqrt_align_fp2 spec do_commute = custom_verify "sqrt_align_fp2"
   (foldr concat [fp2_overrides, fp_overrides]
          [vec_is_zero_fp2_ov, vec_select_fp2_ov, vec_select_fp2_alias_1_3_ov, vec_copy_fp2_ov])
    spec
@@ -420,7 +441,8 @@ let verify_sqrt_align_fp2 spec = custom_verify "sqrt_align_fp2"
           z3; }
   (goal_num_ite 12
     // for the return value:
-    do { unfolding ["sqrt_align_fp2_coeff", "/\\", "select", "bool_to_limb"];
+    do { rw_with (if do_commute then [mul_commutes_once_fp2_thm] else []);
+         unfolding ["sqrt_align_fp2_coeff", "/\\", "select", "bool_to_limb", "apply"];
 
          simplify (addsimps (concat_all [[fp2_invariant_alt_thm, hoist_fp2_mul_right_thm, fp2_abs_fp_rep_thm]
                                         , [hoist_fp2_mul_left_thm, fp2_is_equal_thm, hoist_fp2_sq_thm
@@ -440,9 +462,10 @@ let verify_sqrt_align_fp2 spec = custom_verify "sqrt_align_fp2"
         }));
 
 
-sqrt_align_fp2_ov <- verify_sqrt_align_fp2  sqrt_align_fp2_spec;
-sqrt_align_fp2_alias_2_3_ov <- verify_sqrt_align_fp2  sqrt_align_fp2_alias_2_3_spec;
-sqrt_align_fp2_alias_1_4_and_2_3_ov <- verify_sqrt_align_fp2  sqrt_align_fp2_alias_1_4_and_2_3_spec;
+sqrt_align_fp2_ov <- verify_sqrt_align_fp2  sqrt_align_fp2_spec false;
+sqrt_align_fp2_alias_2_3_ov <- verify_sqrt_align_fp2  sqrt_align_fp2_alias_2_3_spec false;
+sqrt_align_fp2_alias_1_4_and_2_3_ov <- verify_sqrt_align_fp2  sqrt_align_fp2_alias_1_4_and_2_3_spec false;
+sqrt_align_fp2_alias_1_2_ov <- verify_sqrt_align_fp2  sqrt_align_fp2_alias_1_2_spec true;
 
 // ... recip_sqrt_fp2
 
@@ -453,6 +476,20 @@ let recip_sqrt_fp2_spec = do {
   crucible_execute_func [out_ptr, inp_ptr];
   crucible_points_to out_ptr (crucible_term
       {{  fp2_rep (Fp_2.div(sqrt_fp2 (fp2_abs inp), fp2_abs inp)) }});
+  crucible_return (crucible_term {{ bool_to_limb (is_square_fp2 (fp2_abs inp)) }});
+  };
+
+// ... and this version for the proofs for in map_to_g2.saw:
+let recip_sqrt_fp2_nonsquare_spec = do {
+  out_ptr <- llvm_alloc vec384x_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
+  crucible_precond {{ fp2_invariant inp }};
+  crucible_execute_func [out_ptr, inp_ptr];
+  crucible_points_to out_ptr (crucible_term
+        {{ if is_square_fp2 (fp2_abs inp)
+           then fp2_rep (Fp_2.div(sqrt_fp2 (fp2_abs inp), fp2_abs inp))
+           else fp2_rep (F_expt`{n=758} Fp_2 (fp2_abs inp) `((p^^2-9)/16))
+        }});
   crucible_return (crucible_term {{ bool_to_limb (is_square_fp2 (fp2_abs inp)) }});
   };
 
@@ -629,7 +666,7 @@ let sqrt_fp2_ovs = [sqrt_fp2_ov, sqrt_fp2_alias_ov];
 
    ... but that proof plan does not work well.  Instead we use this fact:
    (3) Fp_2.div (Fp_2.mul (x, fp2_exp y e), y) == Fp_2.mul (x, fp2_exp y (e - 1))
-   along with a special case for x=field_unit:
+   along with a special case for x==field_unit:
    (4)  Fp_2.div (fp2_exp y e, y) == fp2_exp y (e - 1)
 */
 
@@ -661,6 +698,60 @@ recip_sqrt_fp2_ov <- custom_verify "recip_sqrt_fp2"
        do { // for the points_to postcondition
             rw_with_1 sqrt_fp2_to_align_thm ;
             rw_with [hoist_fp2_div_left_thm, recip_sqrt_fp_div_lemma, recip_sqrt_fp_div_lemma'];
+            rw_with_1 fp2_mul_commutes_thm;
+            w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
+    (w4_unint_z3 (concat ["fp2_exp"] fp2_unints)))); // for the rest, preconditions of called routines
+  };
+
+// .. recip_sqrt_fp2_nonsquare
+
+// In the proofs for map_to_g2.c, we need to know:
+sqrt_fp_power_lemma' <- admit_cryptol
+  (rewrite (cryptol_ss()) {{ \ x -> F_expt`{n=758} Fp_2 x `((q+7)/16) == fp2_exp x `((q+7)/16) }});
+
+// compare recip_sqrt_fp_div_lemma' which is the same fact in terms of fp2_exp
+recip_sqrt_fp_div_lemma'' <- admit_cryptol
+  (rewrite (cryptol_ss ()) {{ \ i ->  F_expt`{n=758} Fp_2 i `((p^^2-7)/16) == Fp_2.div(F_expt`{n=758} Fp_2 i `((p^^2+9)/16), i) }}) ;
+
+rearrange_recip_sqrt_lemma <- prove_cryptol
+  (rewrite (cryptol_ss ()) {{ \ P (x:t_Fp_2) y -> ((if P then x else y) == x) == (P \/ x == y)}}) [];
+
+recip_sqrt_nonsquare_postcondition_thm <- custom_prove_cryptol
+  (rewrite (cryptol_ss ())
+  {{ \inp -> (if is_square_fp2 (fp2_abs inp)
+              then fp2_rep (Fp_2.div(sqrt_fp2 (fp2_abs inp), fp2_abs inp))
+              else fp2_rep (F_expt`{n=758} Fp_2 (fp2_abs inp) `((p^^2-9)/16)))
+             == fp2_rep (Fp_2.div(sqrt_fp2 (fp2_abs inp), fp2_abs inp)) }})
+  do { rw_with_1 rearrange_recip_sqrt_lemma;
+       // now: is_square_fp2 (fp2_abs inp) \/ Fp_2.div(sqrt_fp2 (fp2_abs inp), fp2_abs inp) == F_expt ...
+       rw_with_1 recip_sqrt_fp_div_lemma'';
+       //  now: is_square_fp2 (fp2_abs inp) \/ Fp_2.div(sqrt_fp2 (fp2_abs inp), fp2_abs inp) ==
+       //                                       Fp_2.div(F_expt ..., fp2_abs inp) 
+       // so same script as above gets it.
+       rw_with_1 is_square_fp2_thm;
+       rw_with [sqrt_fp2_to_align_thm, sqrt_fp_power_lemma'];
+       unfolding ["sqrt_align_fp2_coeff"];
+       // now need hoisting, simplification
+       simplify (addsimps [hoist_fp2_mul_left_thm, fp2_mul_unit_exp_thm, fp2_abstract_invariant_thm] fp2_simpset);
+       // simplify (addsimps [hoist_fp2_mul_left_thm, fp2_mul_unit_exp_thm] fp2_simpset);
+       (w4_unint_z3 (concat ["fp2_exp"] fp2_unints));
+       };
+
+recip_sqrt_fp2_nonsquare_ov <- custom_verify "recip_sqrt_fp2"
+  (concat [recip_sqrt_fp2_9mod16_ov, sqrt_align_fp2_ov] fp2_overrides)
+  recip_sqrt_fp2_nonsquare_spec
+  do { rw_with_1 recip_sqrt_nonsquare_postcondition_thm; // convert to the same post as the other override
+  // absorb the multiplication into the exponentiation:
+  simplify fp2_exp_simps;
+  (goal_num_ite 3
+    do { // for the return value.  Same script as for sqrt_fp2
+        rw_with (concat [sqrt_fp2_to_align_thm, is_square_fp2_thm, fp2_abstract_invariant_thm] fp2_alg_thms);
+        w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
+    (goal_num_ite 4
+       do { // for the points_to postcondition
+            rw_with_1 sqrt_fp2_to_align_thm ;
+            rw_with [hoist_fp2_div_left_thm, recip_sqrt_fp_div_lemma, recip_sqrt_fp_div_lemma'];
+            rw_with (concat [sqrt_fp2_to_align_thm, is_square_fp2_thm, fp2_abstract_invariant_thm] fp2_alg_thms);
             rw_with_1 fp2_mul_commutes_thm;
             w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
     (w4_unint_z3 (concat ["fp2_exp"] fp2_unints)))); // for the rest, preconditions of called routines
