@@ -329,9 +329,40 @@ map_to_isogenous_E2_impl_ov <- custom_verify
 
 map_to_isogenous_E2_correct <- admit_cryptol {{ \u -> affinify HE2::Isogenous_Curve (map_to_isogenous_E2_impl u) == HE2::map_to_curve_simple_swu u }};
 
+sqrt_align_thm <- admit_cryptol {{
+\x -> (Fp_2.is_val x /\ HE2::is_square b ==> Fp_2.sq (sqrt_align a ab b) == Fp_2.sq (Fp_2.div (HE2::sqrt b, b)) where
+    a = Fp_2.mul (F_expt`{n=758} Fp_2 x `((p^^2-9)/16), HE2::sqrt ZZZ)
+    b = Fp_2.mul (x, recip_ZZZ)
+    ab = Fp_2.mul (a,b)
+    sqrt_align x y z = Fp_2.mul (x, sqrt_align_fp2_coeff y z)
+    recip_ZZZ = Fp_2.div (Fp_2.field_unit, ZZZ))
+}};
+
+is_square_thm <- admit_cryptol {{
+\u -> (Fp_2.is_val u /\ ~(is_square_fp2 x) ==> is_square_fp2 b where
+  b = Fp_2.mul (x, recip_ZZZ)
+  x = F_prod Fp_2 [gx1, gxd, Fp_2.sq gxd]
+  gxd = Fp_2.mul(xd, Fp_2.sq xd) // xd^3
+  gx1 = F_sum Fp_2 [Fp_2.mul(x1n, Fp_2.sq x1n), F_prod Fp_2 [HE2::A', x1n, Fp_2.sq xd], Fp_2.mul(HE2::B', gxd)]
+  Zuu = Fp_2.mul (HE2::Z, Fp_2.sq u)
+  tv2 = Fp_2.add (Fp_2.sq Zuu, Zuu)
+  x1n = Fp_2.mul (Fp_2.add (tv2, Fp_2.field_unit), HE2::B')
+  xd' = Fp_2.mul (Fp_2.neg HE2::A', tv2)
+  xd = if F_is_zero Fp_2 xd' then Fp_2.mul(HE2::Z,HE2::A') else xd')
+}};
+
+// TODO: would Z3 be able to use this?
+square_same_sign_thm <- admit_cryptol {{
+\x y u -> Fp_2.sq x == Fp_2.sq y ==>
+  (if HE2::sgn0(x) == HE2::sgn0(u) then x else Fp_2.neg x) == (if HE2::sgn0(y) == HE2::sgn0(u) then y else Fp_2.neg y)
+}};
+
 // TODO
 map_to_isogenous_E2_thm <- really_custom_prove_cryptol {{ \u -> map_to_isogenous_E2_impl u == map_to_isogenous_E2_impl_2 u }}
 do {
+  unfolding ["map_to_isogenous_E2_impl"];
+  simplify (addsimps [square_same_sign_thm] empty_ss);
+  print_readably;
   assume_unsat;
 };
 
