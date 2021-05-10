@@ -13,7 +13,8 @@ build () {
             patch -f -p1 -t < ../../patches/sgn0_pty_mod_384x.patch
         fi
 
-        export CFLAGS="-g -fPIC -Wall -Wextra -Werror $3"
+        export CFLAGS="-g -fPIC $3"
+        # export CFLAGS="-g -fPIC -Wall -Wextra -Werror $3"
         export CC=clang
         sed -i'' 's/^trap/# trap/' build.sh
         sed -i'' 's/^CFLAGS=/# CFLAGS=/' build.sh

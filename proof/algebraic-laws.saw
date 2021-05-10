@@ -193,6 +193,8 @@ fp12_laws <- for (alg_laws_for_field {{Fp_12}}) (\ t -> prove_cryptol t []);
 fp12_ring_laws <- for (base_alg_laws_for_ring {{Fp_12}})
   (\ t -> custom_prove_cryptol t do { rw_with fp12_laws; w4_unint_z3 ["Fp_12"]; });
 
+let big_simpset = concat_all [big_simpset, fp_laws, fp2_laws, fp6_laws, fp12_laws];
+
 // When F_to_G: t_F -> t_G is a homomorphism for fields F and G
 let homomorphism_laws F_to_G F G =
   [ {{ F_to_G F.field_zero == G.field_zero }}

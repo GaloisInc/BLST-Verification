@@ -47,3 +47,6 @@ import "../spec/implementation/Fp12.cry";
 import "../spec/Pairing.cry";
 import "../spec/implementation/PairingImpl.cry";
 import "../spec/implementation/FinalExp.cry";
+
+import "../spec/implementation/CoreVerifyPKInG1.cry";
+import "../spec/implementation/CoreVerifyPKInG2.cry";
