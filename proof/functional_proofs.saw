@@ -16,6 +16,7 @@ include "proof-helpers.saw";
 
 include "cryptol_imports.saw";
 
+// include "misc_rules.saw";
 include "algebraic-laws.saw";
 
 include "hash_to_field.saw";

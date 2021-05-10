@@ -102,7 +102,7 @@ recip_sqrt_fp_3mod4_ov <- custom_verify "recip_sqrt_fp_3mod4"
                       w4_unint_z3 (concat ["fp_exp"] fp_unints);
                       };
 
-// rewrite rules to get rid of the HE1Aux version of some definitions
+// rewrite rules to get rid of the Aux version of some definitions
 
 aux_rewrites <- for [
     {{ HE1Aux::A' == HE1::A' }}
@@ -545,7 +545,7 @@ let prove_hash_to_curve_E1_opt_impl_equiv_thm msg_len DST_len = custom_prove_cry
     w4_unint_z3 (concat fp_unints ["HE1::iso_map","HE1::map_to_curve_simple_swu","HE1::clear_cofactor","HashToCurveE1::hash_to_field"]);
   };
 
-// The final overrides:
+// Code override:
 
 let prove_Hash_to_G1_impl_ov msg_len DST_len aug_len = do {
   hash_to_field_fp_ov <- verify_hash_to_field_for aug_len msg_len DST_len 2; // we need two fp elements
@@ -578,8 +578,6 @@ let prove_hash_to_g1_impl_ov msg_len DST_len aug_len = do {
     (blst_hash_to_g1_impl_spec msg_len DST_len aug_len)
     (w4_unint_z3 ["hash_to_curve_opt_impl"]);
 };
-
-// TODO below
 
 let prove_hash_to_g1_ov msg_len DST_len aug_len = do {
   Hash_to_G1_ov <- prove_Hash_to_G1_impl_ov msg_len DST_len aug_len;

@@ -422,8 +422,9 @@ POINTonE2_base_thms <- for
  ]
  (\t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
     do { unfolding ["POINTonE2_abs", "POINTonE2_rep", "POINTonE2_affine_abs", "POINTonE2_affine_rep", "POINTonE2_invariant", "POINTonE2_affine_invariant", "POINTonE2_normalize"];
-         simplify simpset;
-         simplify (addsimp fp2_normalize_thm empty_ss); // TODO: needed?
+         // simplify simpset;
+         simplify fp2_simpset;
+         simplify (addsimp fp2_normalize_thm empty_ss); // for the rep_abs rule
          w4_unint_z3 fp2_unints; }) ;
 
 POINTonE2_selection_ite_thms <- for
