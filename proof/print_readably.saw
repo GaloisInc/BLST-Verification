@@ -16,6 +16,7 @@ let {{
   fp12_unit = Fp_12.field_unit
   fp12_is_equal = Fp_12.is_equal
   fp12_neg = Fp_12.neg
+  fp12_normalize = Fp_12.normalize
   fp2_mul = Fp_2.mul
   fp2_sq = Fp_2.sq
   fp2_add = Fp_2.add
@@ -24,6 +25,7 @@ let {{
   fp2_unit = Fp_2.field_unit
   fp2_is_equal = Fp_2.is_equal
   fp2_neg = Fp_2.neg
+  fp2_normalize = Fp_2.normalize
   fp_mul = Fp.mul
   fp_sq = Fp.sq
   fp_add = Fp.add
@@ -63,6 +65,7 @@ readability_rewrites <- for [
 , {{ \x y -> Fp_12.is_equal (x,y) == fp12_is_equal (x,y) }}
 , {{ \p -> Fp.normalize p == fp_normalize p }}
 , {{ \p -> Fp_2.normalize p == fp2_normalize p }}
+, {{ \p -> Fp_12.normalize p == fp12_normalize p }}
   ] (\e -> custom_prove_cryptol (rewrite (cryptol_ss ()) e) (w4_unint_z3 ["Fp","Fp_2","Fp_12"]));
 
 let print_readably =  do { // NOTE this modifies the goal

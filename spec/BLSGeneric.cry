@@ -9,7 +9,7 @@
 // definitions, and later defines ciphersuites that instantiate those parameters.
 //
 // This module defines the specification in terms of the parameters, using a Cryptol
-// parameterized module.  The instantiations are done in separate Cyytpol files,
+// parameterized module.  The instantiations are done in separate Crytpol files,
 // as required by the language.
 
 module BLSGeneric where

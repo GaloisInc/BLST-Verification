@@ -37,9 +37,10 @@
       derivation; see below.  Again the key is that we can introduce factors that get
       wiped out (mapped to 1) in the final exponentiation.
 
-  (5) A final trick used in the C code is to avoid negating Q, computing with Q itself and then
-      conjugating the final result.  This is OK, because in
-      Fp_12, conjugation is inversion, and the bilinearity if pairing shows
+  (5) A final trick used in the C code is to avoid negating Q, computing with
+      Q itself and then conjugating the final result.  This is OK, because for
+      points in Fp_12 that are in the cyclotomic subgroup, conjugation is
+      inversion, and the bilinearity of pairing shows
 
            [-Q,P] = [Q,P]^{-1}
 
@@ -62,7 +63,7 @@ import implementation::CurveOperation (point_double, point_add_affine, normalize
 // Step (1)
 
 // Note: the layout of Fp_12 over Fp_2 is
-// [[a,c,e],[b,d,f]] represents a*w^5 + b*w^4 + c*w^3 + d*w^2 + e*w + f 
+// [[a,c,e],[b,d,f]] represents a*w^5 + b*w^4 + c*w^3 + d*w^2 + e*w + f
 
 /**
  * Take a point on E/F_p to a point on E'/F_p^12
@@ -211,7 +212,7 @@ line_double_opt (xT,yT,zT) (xP, yP) = ret where
     yP' = P::Fp_to_Fp_2 yP
     l0 = Fp_2.sub (mul_by_3 Fp_2 (cubed xT), mul_by_2 Fp_2 (Fp_2.sq yT)) // 3xT^3 - 2yT^2
     l1 = Fp_2.neg (mul_by_3 Fp_2 (Fp_2.mul (Fp_2.sq xT, Fp_2.mul (Fp_2.sq zT, xP')))) // -3 xP xT^2 zT^2
-    l2 = Fp_2.mul (mul_by_2 Fp_2 (Fp_2.mul (yT, cubed zT)), yP') // 2 yP yT zT^3 
+    l2 = Fp_2.mul (mul_by_2 Fp_2 (Fp_2.mul (yT, cubed zT)), yP') // 2 yP yT zT^3
 
     ret = fp6_to_fp12_xy00z0 [ mul_by_2 Fp_2 l2 // factor of w^3
                              , mul_by_2 Fp_2 l1 // factor of w^2
@@ -224,7 +225,7 @@ line_double_opt (xT,yT,zT) (xP, yP) = ret where
 
 /* Putting all that together, with the conjugation trick of step 5, gives this function,
    which we will use as a high-level specification for the C code. */
-   
+
 // TODO?  This function could take the projective add and double functions as parameters,
 // since it does not matter what they are so long a they get projectively correct answers.
 

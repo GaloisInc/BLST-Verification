@@ -15,7 +15,8 @@ build () {
             done
         fi
 
-        export CFLAGS="-g -fPIC -Wall -Wextra -Werror $3"
+        # export CFLAGS="-g -fPIC -Wall -Wextra -Werror $3"
+        export CFLAGS="-g -fPIC $3"
         export CC=wllvm
         export LLVM_COMPILER=clang
         sed -i'' 's/^CFLAGS=/# CFLAGS=/' build.sh
