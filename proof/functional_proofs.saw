@@ -31,6 +31,7 @@ include "ec_mult.saw";
 include "subgroup_check_g1.saw";
 include "sgn0.saw";
 include "hash_to_g1.saw";
+
 include "compress-p1.saw";
 include "deserialize-p1.saw";
 include "aggregate_in_g1.saw";
@@ -53,3 +54,6 @@ include "384x384_ops.saw";
 include "fp12.saw";
 include "pairing.saw";
 include "final_exp.saw";
+
+include "core_verify_pk_in_g1.saw";
+include "core_verify_pk_in_g2.saw";
