@@ -65,6 +65,8 @@ psi (x, y) = (qxn, qyn) where
 
 // The subgroup check for G2, from Bowe "Faster Subgroup Checks for BLS12-381"
 
+// TODO: what is all this below? The saw proofs seem to be using inline Cryptol to specify those operations
+
 // TODO: e2_scalar_mult is already defined in ec_mult2.saw
 
 //e2_scalar_mult: Integer -> AffinePoint t_Fp_2 -> AffinePoint t_Fp_2
