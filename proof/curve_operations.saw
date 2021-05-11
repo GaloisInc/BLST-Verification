@@ -628,9 +628,12 @@ let curve_operations_e1_ovs = [POINTonE1_add_alias_1_2_ov, POINTonE1_add_ov, POI
 //
 
 // ... abs_rep rules for points, and some structure rules
+
 POINTonE1_thms <- for
  [ {{ \p1 -> POINTonE1_abs (POINTonE1_rep p1) == p1 }}
+ , {{ \p1 -> POINTonE1_affine_abs (POINTonE1_affine_rep p1) == p1 }}
  , {{ \p1 -> POINTonE1_invariant (POINTonE1_rep p1) == True }}
+ , {{ \p1 -> POINTonE1_affine_invariant (POINTonE1_affine_rep p1) == True }}
  , {{ \p1 -> POINTonE1_rep (POINTonE1_abs p1) ==
              if POINTonE1_invariant p1
              then p1
@@ -641,10 +644,10 @@ POINTonE1_thms <- for
          if c then POINTonE1_rep p1 else POINTonE1_rep p2 }}
  , {{ \c p1 p2 -> POINTonE1_abs (if c then p1 else p2) ==
          if c then POINTonE1_abs p1 else POINTonE1_abs p2 }}
-
+//
  , {{ \c p1 p2 -> point_neg Fp (if c then p1 else p2) ==
                   if c then point_neg Fp p1 else point_neg Fp p2 }}
-
+//
  , {{ \(x:POINTonE1_t) -> (x.0, x.1, x.2) == x }}
  , {{ \(x:POINTonE1_affine_t) -> (x.0, x.1) == x }}
  , {{ \ c (x1: Vec384) (x2: Vec384) (x3: Vec384) y1 y2 y3 ->
@@ -652,7 +655,7 @@ POINTonE1_thms <- for
         if c then (x1,x2,x3) else (y1,y2,y3) }}
  ]
  (\t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
-    do { unfolding ["POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant", "POINTonE1_normalize"];
+    do { unfolding ["POINTonE1_abs", "POINTonE1_affine_abs", "POINTonE1_rep", "POINTonE1_affine_rep", "POINTonE1_invariant", "POINTonE1_affine_invariant", "POINTonE1_normalize"];
          apply_fp_rewrites;
          // unfolding ["fp_invariant"]; // for the (zero,zero,zero) thm
          simplify (addsimp fp_normalize_thm empty_ss); // for the rep_abs rule
