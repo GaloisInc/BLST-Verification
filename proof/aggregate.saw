@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
+include "blst_error.saw";
+
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
@@ -27,12 +29,6 @@ let AGGR_SIGN_SET = {{ 16:[32] }};
 let AGGR_GT_SET = {{ 32:[32] }};
 let AGGR_HASH_OR_ENCODE = {{ 64:[32] }};
 let MIN_SIG_OR_PK = {{ AGGR_MIN_SIG || AGGR_MIN_PK }};
-
-// BLST_ERROR enum:
-let BLST_SUCCESS = 0;
-let BLST_AGGR_TYPE_MISMATCH = 4;
-let BLST_PK_IS_INFINITY = 6;
-let BLST_POINT_NOT_IN_GROUP = 3;
 
 let N_MAX = 8; // NOTE: must match N_MAX defined in C code
 
