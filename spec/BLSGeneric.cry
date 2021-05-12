@@ -8,7 +8,7 @@
 // That specification describes a number of "parameters" that are used in its
 // definitions, and later defines ciphersuites that instantiate those parameters.
 //
-// This module defines the specification in terms ofthe parameters, usig a Cryptol
+// This module defines the specification in terms of the parameters, usig a Cryptol
 // parameterized module.  The instantiations are done in separate Cyytpol files,
 // as required by the language.
 
@@ -42,14 +42,14 @@ parameter
 
     // H, a hash function, is always HKDF, so not listed here
 
-    // hash_to_point 
+    // hash_to_point
     type DST_len: #
 
     hash_to_point: {msg_len} (Hashable msg_len) =>
                [msg_len][8] -> EC::AffinePoint t_F
 
     // other primitives "determined by the above parameters"
-    
+
     P: EC::AffinePoint t_F' // base point
     // r -- is fixed in both BLS variants  Should we use it here as a parameter anyway??
 
@@ -69,7 +69,7 @@ type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + 
 // 2.3 KeyGen
 
 // ... KeyGen has been moved to its own module, called KeyGen, as it does not depend
-//     on the parameters. 
+//     on the parameters.
 
 
 // 2.4 SkToPk
@@ -91,15 +91,15 @@ KeyValidate pk = ret where
 
 // 2.6 CoreSign
 
-CoreSign: {msg_len} (Hashable msg_len) => ([256], [msg_len][8]) -> [signature_len]
-CoreSign (sk, message) = signature where
+CoreSign: {msg_len} (Hashable msg_len) => [256] -> [msg_len][8] -> [signature_len]
+CoreSign sk message = signature where
     Q = hash_to_point message
     R = EC::mult main_curve sk Q
     signature = point_to_signature R
 
 // 2.7 CoreVerify
 
-CoreVerify: {msg_len} (Hashable msg_len) => ([pubkey_len], [msg_len][8], [signature_len]) -> Bool
+CoreVerify: {msg_len} (Hashable msg_len) => [pubkey_len] -> [msg_len][8] -> [signature_len] -> Bool
 /* possible alternate definition
 CoreVerify(PK, message, signature) = maybe False step3 (signature_to_point signature) where // lines 1, 2
     step3 R = if signature_subgroup_check R == False then False // line 3
@@ -110,7 +110,7 @@ CoreVerify(PK, message, signature) = maybe False step3 (signature_to_point signa
          C1 = pairing (Q, xP) // line 7
          C2 = pairing (R, P) // line 8
 */
-CoreVerify(PK, message, signature) =
+CoreVerify PK message signature =
     maybe_cases (signature_to_point signature)
         False // lines 1,2
         (\ R -> if signature_subgroup_check R == False then False  // line 3
@@ -121,3 +121,6 @@ CoreVerify(PK, message, signature) =
                               Q = hash_to_point message // line
                               C1 = pairing (Q, xP) // line 7
                               C2 = pairing (R, P)))) // line 8
+
+// TODO?
+CoreAggregateVerify: {n, msg_len} (fin n, Hashable msg_len) => [n][pubkey_len] -> [signature_len] -> [n][msg_len] -> Bool
