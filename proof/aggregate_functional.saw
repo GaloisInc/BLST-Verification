@@ -47,14 +47,18 @@ let blst_aggregate_in_g1_spec = do {
   (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
   llvm_precond {{ ~(zwire@0)@1 }}; // infinity bit not set
   llvm_precond {{ (zwire@0)@0 }}; // compressed
-  llvm_precond {{ uncompress_E1_imp zwire != nothing }}; // decompression succeeds
-  // llvm_precond {{ maybe_cases (uncompress_E1_imp zwire) False (\p -> is_in_g1_impl p) }}; // subgroup check succeeds
+  llvm_precond {{ uncompress_E1_imp zwire != nothing }}; // decompression succeeds (this does not check for zero)
+  llvm_precond {{ uncompress_E1_x_fp zwire != Fp.field_zero }}; // decompressed value is not zero
+  llvm_precond {{ POINTonE1_invariant inp }};
+  llvm_precond {{ is_in_g1_impl (uncompress_E1_OK zwire)  }}; // subgroup check succeeds
   //
   llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
   //
-  llvm_points_to out_ptr (llvm_term {{ POINTonE1_dadd in (uncompress_E1_OK inp) }});
+  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
+  llvm_points_to out_ptr (llvm_term new_out);
+  llvm_postcond {{ (POINTonE1_abs new_out) == point_dadd_affine Fp (POINTonE1_abs inp) (uncompress_E1_OK zwire) }};
   //
-  llvm_return (llvm_term {{ BLST_SUCCESS }});
+  llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
 };
 
 let blst_aggregate_in_g1_extract_spec = do {
@@ -78,7 +82,6 @@ let blst_aggregate_in_g1_extract_spec = do {
   llvm_return (llvm_term ret);
 };
 
-// let overrides = foldr concat [vec_overrides,curve_operations_e1_ovs] [POINTonE1_Uncompress_OK_ov,POINTonE1_Uncompress_BAD_ov,POINTonE1_Uncompress_BAD1_ov,POINTonE1_Uncompress_inf_BAD_ov,POINTonE1_Uncompress_inf_OK_ov,POINTonE1_in_G1_ov];
 let overrides = foldr concat [vec_overrides,curve_operations_e1_ovs] [POINTonE1_Uncompress_OK_ov,POINTonE1_in_G1_ov];
 
 llvm_compositional_extract m
@@ -104,6 +107,45 @@ llvm_compositional_extract m
         simplify remove_higher_order_function_simpset;
         w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","uncompress_E1_imp","is_point_affine_E","Fp","E"];
       }
-      do {
+      do { // preconditions of Uncompress
         w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp"];
       }));
+
+blst_aggregate_in_g1_ov <- custom_verify
+  "blst_aggregate_in_g1"
+  overrides
+  blst_aggregate_in_g1_spec
+  (goal_num_ite 1 // preconditions of the subgroup check
+    do {
+      let not_point_O = run (
+        admit_cryptol {{ \x -> (is_point_O E (uncompress_E1_OK x)) == if uncompress_E1_x_fp x != Fp.field_zero then False else apply is_point_O E (uncompress_E1_OK x) }}
+      );
+      let on_curve = run (
+        admit_cryptol {{ \x -> (is_point_affine E (uncompress_E1_OK x)) == True }}
+      );
+      simplify (addsimps (concat POINTonE1_thms [not_point_O, on_curve]) empty_ss);
+      w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl"];
+    }
+    (goal_num_ite 2
+      do { // preconditions of dadd
+        simplify (addsimps POINTonE1_thms empty_ss);
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","uncompress_E1_imp","is_point_affine_E","Fp","E"];
+      }
+      (goal_num_ite 5
+        do { // return value is BLST_SUCCESS?
+          simplify (addsimps POINTonE1_thms empty_ss);
+          simplify remove_higher_order_function_simpset;
+          w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","uncompress_E1_imp","is_point_affine_E","Fp","E"];
+        }
+        (goal_num_ite 6
+          do {
+            assume_unsat; // TODO: main postcond
+          }
+          (goal_num_ite 7
+            do {
+              assume_unsat; // TODO
+            }
+            do { // preconditions of Uncompress?
+              w4_unint_z3 ["is_in_g1_impl","sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","uncompress_E1_OK"];
+                })))));
