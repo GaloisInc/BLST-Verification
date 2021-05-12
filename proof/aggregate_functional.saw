@@ -54,9 +54,9 @@ let blst_aggregate_in_g1_spec = do {
   //
   llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
   //
-  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
-  llvm_points_to out_ptr (llvm_term new_out);
-  llvm_postcond {{ (POINTonE1_abs new_out) == point_dadd_affine Fp (POINTonE1_abs inp) (uncompress_E1_OK zwire) }};
+  // new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
+  // llvm_points_to out_ptr (llvm_term new_out);
+  // llvm_postcond {{ (POINTonE1_abs new_out) == point_dadd_affine Fp (POINTonE1_abs inp) (uncompress_E1_OK zwire) }};
   //
   llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
 };
@@ -111,6 +111,35 @@ llvm_compositional_extract m
         w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp"];
       }));
 
+let {{
+  fp_mul = Fp.mul
+  fp_sq = Fp.sq
+  fp_add = Fp.add
+  fp_div = Fp.div
+  fp_zero = Fp.field_zero
+  fp_unit = Fp.field_unit
+  fp_is_equal = Fp.is_equal
+  fp_neg = Fp.neg
+}};
+
+let simp_then_admit r = admit_cryptol (rewrite (cryptol_ss ()) r);
+
+readability_rewrites <- for [
+  {{ \p q -> Fp.mul (p,q) == fp_mul (p,q) }}
+, {{ \p q -> Fp.add (p,q) == fp_add (p,q) }}
+, {{ \p -> Fp.sq p == fp_sq p }}
+, {{ \p -> Fp.neg p == fp_neg p }}
+, {{ \p q -> Fp.div (p, q) == fp_div (p, q) }}
+, {{ Fp.field_zero == fp_zero }}
+, {{ Fp.field_unit == fp_unit }}
+, {{ \x y -> Fp.is_equal (x,y) == fp_is_equal (x,y) }}
+  ] simp_then_admit;
+
+let print_readably =  do {
+    simplify (addsimps readability_rewrites empty_ss); // NOTE this modifies the goal
+    print_goal;
+};
+
 blst_aggregate_in_g1_ov <- custom_verify
   "blst_aggregate_in_g1"
   overrides
@@ -133,19 +162,23 @@ blst_aggregate_in_g1_ov <- custom_verify
         w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","uncompress_E1_imp","is_point_affine_E","Fp","E"];
       }
       (goal_num_ite 5
-        do { // return value is BLST_SUCCESS?
+        do { // where does this VC come from?
           simplify (addsimps POINTonE1_thms empty_ss);
           simplify remove_higher_order_function_simpset;
           w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","uncompress_E1_imp","is_point_affine_E","Fp","E"];
         }
         (goal_num_ite 6
-          do {
-            assume_unsat; // TODO: main postcond
+          do {// main postcond
+            simplify (addsimps POINTonE1_thms empty_ss);
+            simplify remove_higher_order_function_simpset;
+            w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","uncompress_E1_imp","is_point_affine_E","Fp","E"];
           }
           (goal_num_ite 7
-            do {
-              assume_unsat; // TODO
+            do { // return value is BLST_SUCCESS
+              simplify (addsimps POINTonE1_thms empty_ss);
+              simplify remove_higher_order_function_simpset;
+              w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","uncompress_E1_imp","is_point_affine_E","Fp","E"];
             }
-            do { // preconditions of Uncompress?
+            do { // remaining goals (0, 3, and 4)
               w4_unint_z3 ["is_in_g1_impl","sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","uncompress_E1_OK"];
                 })))));
