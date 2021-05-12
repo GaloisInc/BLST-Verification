@@ -378,7 +378,7 @@ let prove_final_thm aug_len msg_len DST_len =
 // And we're ready for the final overrides:
 
 // abstract version:
-let prove_blst_hash_to_g2_abstract_postcond aug_len msg_len DST_len = custom_verify
+let prove_blst_hash_to_g2_abstract_postcond aug_len msg_len DST_len hash_to_field_fp2_ovs = custom_verify
   "blst_hash_to_g2"
   (concat_all [curve_operations_e2_ovs,[clear_cofactor_ov,map_to_isogenous_E2_impl_ov,isogeny_map_to_E2_impl_alias_ov],hash_to_field_fp2_ovs])
   (blst_hash_to_g2_spec msg_len DST_len aug_len)
@@ -418,7 +418,7 @@ let prove_blst_hash_to_g2_abstract_postcond aug_len msg_len DST_len = custom_ver
     };
 
 // concrete version:
-let prove_blst_hash_to_g2_concrete aug_len msg_len DST_len = custom_verify
+let prove_blst_hash_to_g2_concrete aug_len msg_len DST_len hash_to_field_fp2_ovs = custom_verify
   "blst_hash_to_g2"
   (concat_all [curve_operations_e2_ovs,[clear_cofactor_ov,map_to_isogenous_E2_impl_ov,isogeny_map_to_E2_impl_alias_ov],hash_to_field_fp2_ovs])
   (blst_hash_to_g2_impl_spec msg_len DST_len aug_len)
@@ -451,13 +451,14 @@ let aug_len = 48; // aug_len should be 96 or 48
 let msg_len = 32;
 let DST_len= 8;
 
-prove_blst_hash_to_g2_abstract_postcond aug_len msg_len DST_len;
-prove_blst_hash_to_g2_concrete aug_len msg_len DST_len;
+hash_to_field_fp2_ovs <- for hash_to_field_nelems (verify_hash_to_field_fp2_for aug_len msg_len DST_len);
+prove_blst_hash_to_g2_abstract_postcond aug_len msg_len DST_len hash_to_field_fp2_ovs;
+prove_blst_hash_to_g2_concrete aug_len msg_len DST_len hash_to_field_fp2_ovs;
 
 let aug_len = 96; // aug_len should be 96 or 48
 let msg_len = 69;
 let DST_len= 32;
 
-prove_blst_hash_to_g2_abstract_postcond aug_len msg_len DST_len;
-prove_blst_hash_to_g2_concrete aug_len msg_len DST_len;
-
+hash_to_field_fp2_ovs <- for hash_to_field_nelems (verify_hash_to_field_fp2_for aug_len msg_len DST_len);
+prove_blst_hash_to_g2_abstract_postcond aug_len msg_len DST_len hash_to_field_fp2_ovs;
+prove_blst_hash_to_g2_concrete aug_len msg_len DST_len hash_to_field_fp2_ovs;
