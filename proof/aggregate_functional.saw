@@ -54,9 +54,9 @@ let blst_aggregate_in_g1_spec = do {
   //
   llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
   //
-  // new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
-  // llvm_points_to out_ptr (llvm_term new_out);
-  // llvm_postcond {{ (POINTonE1_abs new_out) == point_dadd_affine Fp (POINTonE1_abs inp) (uncompress_E1_OK zwire) }};
+  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
+  llvm_points_to out_ptr (llvm_term new_out);
+  llvm_postcond {{ (POINTonE1_abs new_out) == point_dadd_affine Fp (POINTonE1_abs inp) (uncompress_E1_OK zwire) }};
   //
   llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
 };
@@ -155,30 +155,8 @@ blst_aggregate_in_g1_ov <- custom_verify
       simplify (addsimps (concat POINTonE1_thms [not_point_O, on_curve]) empty_ss);
       w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl"];
     }
-    (goal_num_ite 2
-      do { // preconditions of dadd
-        simplify (addsimps POINTonE1_thms empty_ss);
-        simplify remove_higher_order_function_simpset;
-        w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","uncompress_E1_imp","is_point_affine_E","Fp","E"];
-      }
-      (goal_num_ite 5
-        do { // where does this VC come from?
-          simplify (addsimps POINTonE1_thms empty_ss);
-          simplify remove_higher_order_function_simpset;
-          w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","uncompress_E1_imp","is_point_affine_E","Fp","E"];
-        }
-        (goal_num_ite 6
-          do {// main postcond
-            simplify (addsimps POINTonE1_thms empty_ss);
-            simplify remove_higher_order_function_simpset;
-            w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","uncompress_E1_imp","is_point_affine_E","Fp","E"];
-          }
-          (goal_num_ite 7
-            do { // return value is BLST_SUCCESS
-              simplify (addsimps POINTonE1_thms empty_ss);
-              simplify remove_higher_order_function_simpset;
-              w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","uncompress_E1_imp","is_point_affine_E","Fp","E"];
-            }
-            do { // remaining goals (0, 3, and 4)
-              w4_unint_z3 ["is_in_g1_impl","sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","uncompress_E1_OK"];
-                })))));
+    do {
+      simplify (addsimps POINTonE1_thms empty_ss);
+      simplify remove_higher_order_function_simpset;
+      w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
+    });
