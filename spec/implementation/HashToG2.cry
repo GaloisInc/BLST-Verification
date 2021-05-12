@@ -6,7 +6,7 @@
 module implementation::HashToG2 where
 
 import FieldExtras (F_is_zero, F_sum, F_prod, F_expt)
-import BLSFieldExtras (sqrt_fp2, is_square_fp2, fp2_exp, sqrt_fp2_c2, sqrt_fp2_c3)
+import BLSFieldExtras (fp2_exp, sqrt_fp2_c2, sqrt_fp2_c3)
 import Parameters (Fp_2, t_Fp_2, u)
 import ShortWeierstrassCurve (ProjectivePoint, point_O, projectify)
 import ExpandMessage (Expandable)
@@ -29,12 +29,12 @@ map_to_isogenous_E2_impl u = res where
   gxd = Fp_2.mul(xd, Fp_2.sq xd) // xd^3
   gx1 = F_sum Fp_2 [Fp_2.mul(x1n, Fp_2.sq x1n), F_prod Fp_2 [A', x1n, Fp_2.sq xd], Fp_2.mul(B', gxd)]
   tv4 = F_prod Fp_2 [gx1, gxd, Fp_2.sq gxd] // gx1 gxd^3
-  e2 = is_square_fp2 tv4
+  e2 = is_square tv4
   y1' = if e2 then Fp_2.div (sqrt tv4, tv4) else (F_expt`{n=758} Fp_2 tv4 `((p^^2-9)/16))
   y1 = F_prod Fp_2 [gx1, gxd, y1']
   // y2:
   tv4_recip_ZZZ = (Fp_2.mul (tv4, recip_ZZZ))
-  y1'_sqrt_ZZZ = Fp_2.mul (y1', sqrt_fp2 ZZZ)
+  y1'_sqrt_ZZZ = Fp_2.mul (y1', sqrt ZZZ)
   y2' = sqrt_align y1'_sqrt_ZZZ (Fp_2.mul(y1'_sqrt_ZZZ, tv4_recip_ZZZ)) tv4_recip_ZZZ
   y2 = F_prod Fp_2 [y2', gx1, gxd, Fp_2.sq u, u]
   // xn and y:
@@ -57,7 +57,7 @@ map_to_isogenous_E2_impl_2 u = res where
   gxd = Fp_2.mul(xd, Fp_2.sq xd) // xd^3
   gx1 = F_sum Fp_2 [Fp_2.mul(x1n, Fp_2.sq x1n), F_prod Fp_2 [A', x1n, Fp_2.sq xd], Fp_2.mul(B', gxd)]
   tv4 = F_prod Fp_2 [gx1, gxd, Fp_2.sq gxd] // gx1 gxd^3
-  e2 = is_square_fp2 tv4
+  e2 = is_square tv4
   xn = if e2 then x1n else x2n
   y' = if e2
         then F_prod Fp_2 [gx1, gxd, Fp_2.div (sqrt tv4, tv4)]
@@ -66,7 +66,7 @@ map_to_isogenous_E2_impl_2 u = res where
   // convert to Jacobian coordinates
   res = (Fp_2.mul (xn, xd), Fp_2.mul (y, gxd), xd)
 
-prop_2 u = Fp_2.is_val u /\ ~(is_square_fp2 x) ==> is_square_fp2 b where
+prop_2 u = Fp_2.is_val u /\ ~(is_square x) ==> is_square b where
   b = Fp_2.mul (x, recip_ZZZ)
   x = F_prod Fp_2 [gx1, gxd, Fp_2.sq gxd]
   gxd = Fp_2.mul(xd, Fp_2.sq xd) // xd^3
