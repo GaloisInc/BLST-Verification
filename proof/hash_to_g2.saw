@@ -238,7 +238,7 @@ isogeny_map_to_E2_impl_alias_ov <- custom_verify
 map_to_iso_constants_rewrites <- for [
     {{ fp2_abs [[zero, zero, zero, zero, zero, zero], [ 0xd4c4fffffcec5869, 0x1da3f3eed25bfd79, 0x7fa833c5136fff67, 0x59261433cd540cbd, 0x48450f5f2b84682c, 0x07e05d00bf959233 ]] == Fp_2.neg HE2::A' }} // first is 15331660506401101929
   , {{ fp2_abs [[ 0x87ebfffffff9555c, 0x656fffe5da8ffffa, 0x0fd0749345d33ad2, 0xd951e663066576f4, 0xde291a3d41e980d3, 0x0815664c7dfe040d], [ 0x43f5fffffffcaaae, 0x32b7fff2ed47fffd, 0x07e83a49a2e99d69, 0xeca8f3318332bb7a, 0xef148d1ea0f4c069, 0x040ab3263eff0206]] == HE2::Z }}
-  , {{ fp2_abs [[ 0x019af5f980a3680c, 0x4ed7da0e66063afa, 0x600354723b5d9972, 0x8b2f958b20d09d72, 0x0474938f02d461db, 0x0dcf8b9e0684ab1c], [ 0x486f252db11dd19c, 0x791ffda2c3d18950, 0x5af6c27debf95eb4, 0x73b1fd8f2a929cde, 0xfc59602a1a90b871, 0x08d7daafa8baddb3]] == HE2::sqrt ZZZ }}
+  , {{ fp2_abs [[ 0x019af5f980a3680c, 0x4ed7da0e66063afa, 0x600354723b5d9972, 0x8b2f958b20d09d72, 0x0474938f02d461db, 0x0dcf8b9e0684ab1c], [ 0x486f252db11dd19c, 0x791ffda2c3d18950, 0x5af6c27debf95eb4, 0x73b1fd8f2a929cde, 0xfc59602a1a90b871, 0x08d7daafa8baddb3]] == F_expt`{n=758} Fp_2 ZZZ `((p^^2+7)/16) }}
   , {{ fp2_abs [[ 0x65018f5c28f598eb, 0xe6020417f022d916, 0xd6327313288369c7, 0x622ded8eb447156f, 0xe52a2aee72c2a01f, 0x089812fb8481ffe4], [ 0x2574eb851eb8619f, 0xdba2e97912925604, 0x67e495a909e7a18e, 0xdf2da23b8145b8f7, 0xcf5d3728310ebf6d, 0x11be446236f4c116]] == Fp_2.div (Fp_2.field_unit, ZZZ) }}
   // ZxHE2::A':
   , {{ fp2_abs [[ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467], [ 0xa989fffff9d8b0d2, 0x3b47e7dda4b7faf3, 0xff50678a26dffece, 0xb24c28679aa8197a, 0x908a1ebe5708d058, 0x0fc0ba017f2b2466]] == Fp_2.mul(HE2::Z, HE2::A') }}
@@ -326,7 +326,7 @@ map_to_isogenous_E2_impl_ov <- custom_verify
           simplify (add_cryptol_defs ["ecEq","PEqBit"] empty_ss); // transform those to boolEq?
         // Finally:
           let F_expt_rewrite = run (admit_cryptol {{ \x -> F_expt`{n=758} Fp_2 x `((p^^2-9)/16) == fp2_exp x `((p^^2-9)/16) }} );
-          simplify (addsimp F_expt_rewrite empty_ss);
+          simplify (addsimp F_expt_rewrite empty_ss); //TODO: needed?
           w4_unint_z3 ["fp2_rep", "fp2_abs","sqrt_align","Fp_2","HE2::sqrt","HE2::sgn0","fp2_invariant","HE2::A'","HE2::B'","HE2::Z","ZZZ"];
       })
       (do {
@@ -336,44 +336,6 @@ map_to_isogenous_E2_impl_ov <- custom_verify
         w4_unint_z3 ["Fp_2","Fp","sqrt_align"];
       }));
   });
-
-// Next we prove that the implementation-level spec is equivalent to the abstract spec
-
-sqrt_align_thm <- admit_cryptol {{ // UNUSED
-\x -> (Fp_2.is_val x /\ HE2::is_square b ==> Fp_2.sq (sqrt_align a ab b) == Fp_2.sq (Fp_2.div (HE2::sqrt b, b)) where
-    a = Fp_2.mul (F_expt`{n=758} Fp_2 x `((p^^2-9)/16), HE2::sqrt ZZZ)
-    b = Fp_2.mul (x, recip_ZZZ)
-    ab = Fp_2.mul (a,b)
-    sqrt_align x y z = Fp_2.mul (x, sqrt_align_fp2_coeff y z)
-    recip_ZZZ = Fp_2.div (Fp_2.field_unit, ZZZ))
-}};
-
-is_square_thm <- admit_cryptol {{ // UNUSED
-\u -> (Fp_2.is_val u /\ ~(is_square_fp2 x) ==> is_square_fp2 b where
-  b = Fp_2.mul (x, recip_ZZZ)
-  x = F_prod Fp_2 [gx1, gxd, Fp_2.sq gxd]
-  gxd = Fp_2.mul(xd, Fp_2.sq xd) // xd^3
-  gx1 = F_sum Fp_2 [Fp_2.mul(x1n, Fp_2.sq x1n), F_prod Fp_2 [HE2::A', x1n, Fp_2.sq xd], Fp_2.mul(HE2::B', gxd)]
-  Zuu = Fp_2.mul (HE2::Z, Fp_2.sq u)
-  tv2 = Fp_2.add (Fp_2.sq Zuu, Zuu)
-  x1n = Fp_2.mul (Fp_2.add (tv2, Fp_2.field_unit), HE2::B')
-  xd' = Fp_2.mul (Fp_2.neg HE2::A', tv2)
-  xd = if F_is_zero Fp_2 xd' then Fp_2.mul(HE2::Z,HE2::A') else xd')
-}};
-
-// TODO: would Z3 be able to use this?
-square_same_sign_thm <- admit_cryptol {{ // UNUSED
-\x y u -> Fp_2.sq x == Fp_2.sq y ==>
-  (if HE2::sgn0(x) == HE2::sgn0(u) then x else Fp_2.neg x) == (if HE2::sgn0(y) == HE2::sgn0(u) then y else Fp_2.neg y)
-}};
-
-map_to_isogenous_E2_thm <- really_custom_prove_cryptol {{ \u -> map_to_isogenous_E2_impl u == map_to_isogenous_E2_impl_2 u }}
-do {
-  // unfolding ["map_to_isogenous_E2_impl"];
-  // simplify (addsimps [square_same_sign_thm] empty_ss);
-  // print_readably;
-  assume_unsat;
-};
 
 // We need to establish that we get a point on the isogenous curve
 map_to_isogenous_E2_on_curve <- custom_prove_cryptol {{ \u -> is_point_projective HE2::Isogenous_Curve (map_to_isogenous_E2_impl u) == True }}
