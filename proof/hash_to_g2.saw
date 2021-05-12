@@ -124,14 +124,14 @@ let sqrt_align_fp2_unint_spec = do {
 
 sqrt_align_fp2_unint_ov <-admit "sqrt_align_fp2" sqrt_align_fp2_unint_spec;
 
-// TODO: move somewhere else
-let simp_then_admit r = admit_cryptol (rewrite (cryptol_ss ()) r);
-
 // The optimized version of clear_cofactor given in the IETF spec is correct:
 clear_cofactor_bls12381_correct <- admit_cryptol {{ \p -> Aux::clear_cofactor_bls12381_g2 p == HE2::clear_cofactor p }};
 
 // The SWU map maps to the isogenous curve:
 swu_on_curve <- simp_then_admit {{ \u -> is_point_affine HE2::Isogenous_Curve (HE2::map_to_curve_simple_swu u) == True }};
+
+// The implementation of the isogeny map is correct
+isogeny_map_to_E2_correct <- admit_cryptol {{ \p -> affinify E' (isogeny_map_to_E2_impl p) == if is_point_projective HE2::Isogenous_Curve p then HE2::iso_map (affinify HE2::Isogenous_Curve p) else affinify E' (apply isogeny_map_to_E2_impl p) }};
 
 // point_dadd implements add:
 dadd_thm <- simp_then_admit {{ \ p1 p2 -> affinify HE2::Isogenous_Curve (point_dadd Fp_2 p1 p2 HE2::A' False) == add HE2::Isogenous_Curve (affinify HE2::Isogenous_Curve p1) (affinify HE2::Isogenous_Curve p2) }};
@@ -139,13 +139,24 @@ dadd_thm <- simp_then_admit {{ \ p1 p2 -> affinify HE2::Isogenous_Curve (point_d
 // the addition of two points on the curve is on the curve:
 point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective HE2::Isogenous_Curve (point_dadd Fp_2 p q HE2::A' False) == if is_point_projective HE2::Isogenous_Curve p /\ is_point_projective HE2::Isogenous_Curve q then True else apply is_point_projective HE2::Isogenous_Curve (point_dadd Fp_2 p q HE2::A' False) }};
 
-// If p is a projective point on the isogenous and `affinify p` is point_O, then p's Z coordinate is 0:
-on_curve_is_point_O_lemma <- simp_then_admit {{ \p -> is_point_O HE2::Isogenous_Curve (affinify HE2::Isogenous_Curve p) == if (is_point_projective HE2::Isogenous_Curve p /\ ~is_zero Fp_2 p.2) then False else apply is_point_O HE2::Isogenous_Curve (affinify HE2::Isogenous_Curve p) }};
-
-// The implementation of map_to_curve never returns something of the form (0,0,_) or (_,_,0)
+// The implementation of the map to the isogenous curve never returns anything of the form (0,0,_) or (_,_,0)
 swu_impl_xy_nz <- simp_then_admit {{ \u -> (~((x,y) == (Fp_2.field_zero,Fp_2.field_zero) \/ z == Fp_2.field_zero) where (x,y,z) = map_to_isogenous_E2_impl u) == True }};
 
-// a relation between is_point_projective and is_point_affine:
+/*
+ * If p is a projective point and `is_point_affine (affinify p)` is true, then
+ * `is_point_projective p` is not necessarily true. For example, with `p =
+ * (1,1,0)`, `is_point_projective p` is false while `affinify p == point_O` and
+ * `is_point_affine point_O` is true. This happens when `affinify p` is
+ * `point_O` but `p != (0,0,0)`, hence the following property:
+ *
+ * If p is a projective point such that p is not of the form (0,0,_) or (_,_,0)
+ * and `is_point_affine (affinify p)` holds, then `is_point_projective p`
+ * holds.
+ *
+ * We use this together with `swu_on_curve` and `swu_impl_xy_nz` to establish
+ * that the implementation of the map to the isogenous curve (the SWU map)
+ * produces a projective point p such that `is_point_projective p` is true.
+ */
 is_point_projective_lemma <- simp_then_admit {{ \p -> is_point_projective HE2::Isogenous_Curve p == if is_point_affine HE2::Isogenous_Curve (affinify HE2::Isogenous_Curve p) /\ ~((p.0, p.1) == (Fp_2.field_zero,Fp_2.field_zero) \/ p.2 == Fp_2.field_zero) then True else apply is_point_projective HE2::Isogenous_Curve p }};
 
 // Proofs
@@ -329,7 +340,7 @@ map_to_isogenous_E2_impl_ov <- custom_verify
 
 map_to_isogenous_E2_correct <- admit_cryptol {{ \u -> affinify HE2::Isogenous_Curve (map_to_isogenous_E2_impl u) == HE2::map_to_curve_simple_swu u }};
 
-sqrt_align_thm <- admit_cryptol {{
+sqrt_align_thm <- admit_cryptol {{ // UNUSED
 \x -> (Fp_2.is_val x /\ HE2::is_square b ==> Fp_2.sq (sqrt_align a ab b) == Fp_2.sq (Fp_2.div (HE2::sqrt b, b)) where
     a = Fp_2.mul (F_expt`{n=758} Fp_2 x `((p^^2-9)/16), HE2::sqrt ZZZ)
     b = Fp_2.mul (x, recip_ZZZ)
@@ -338,7 +349,7 @@ sqrt_align_thm <- admit_cryptol {{
     recip_ZZZ = Fp_2.div (Fp_2.field_unit, ZZZ))
 }};
 
-is_square_thm <- admit_cryptol {{
+is_square_thm <- admit_cryptol {{ // UNUSED
 \u -> (Fp_2.is_val u /\ ~(is_square_fp2 x) ==> is_square_fp2 b where
   b = Fp_2.mul (x, recip_ZZZ)
   x = F_prod Fp_2 [gx1, gxd, Fp_2.sq gxd]
@@ -352,12 +363,13 @@ is_square_thm <- admit_cryptol {{
 }};
 
 // TODO: would Z3 be able to use this?
-square_same_sign_thm <- admit_cryptol {{
+square_same_sign_thm <- admit_cryptol {{ // UNUSED
 \x y u -> Fp_2.sq x == Fp_2.sq y ==>
   (if HE2::sgn0(x) == HE2::sgn0(u) then x else Fp_2.neg x) == (if HE2::sgn0(y) == HE2::sgn0(u) then y else Fp_2.neg y)
 }};
 
 // TODO
+// UNUSED
 map_to_isogenous_E2_thm <- really_custom_prove_cryptol {{ \u -> map_to_isogenous_E2_impl u == map_to_isogenous_E2_impl_2 u }}
 do {
   unfolding ["map_to_isogenous_E2_impl"];
@@ -365,8 +377,6 @@ do {
   print_readably;
   assume_unsat;
 };
-
-isogeny_map_to_E2_correct <- admit_cryptol {{ \p -> affinify E' (isogeny_map_to_E2_impl p) == if is_point_projective HE2::Isogenous_Curve p then HE2::iso_map (affinify HE2::Isogenous_Curve p) else affinify E' (apply isogeny_map_to_E2_impl p) }};
 
 // We need to establish that we get a point on the isogenous curve
 map_to_isogenous_E2_on_curve <- custom_prove_cryptol {{ \u -> is_point_projective HE2::Isogenous_Curve (map_to_isogenous_E2_impl u) == True }}
