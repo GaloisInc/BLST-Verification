@@ -2108,14 +2108,14 @@
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g2.saw:424:25",
+    "loc": "/workdir/proof/hash_to_g2.saw:386:25",
     "method": "blst_hash_to_g2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_g2.saw:463:25",
+    "loc": "/workdir/proof/hash_to_g2.saw:425:25",
     "method": "blst_hash_to_g2",
     "type": "method",
     "specification": "unknown"
@@ -3285,12 +3285,6 @@
   {
     "status": "assumed",
     "loc": "unknown",
-    "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Cryptol.PEqBit\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n      x@5 = cryptol:/Parameters/Fp_2.2.2.2.2.2.2.2.2\n      x@6 = x@5.2.2\n    }\n in (x : x@3)\n-> (y : x@3)\n-> (u : x@3)\n-> let { x@7 = cryptol:/HashToCurveE2/sgn0 u\n    }\n in Prelude.EqTrue\n      (cryptol:/Cryptol/==%3e (Cryptol.ecEq x@3 x@4 (x@6.1 x) (x@6.1 y))\n         (Cryptol.ecEq x@3 x@4\n            (Prelude.ite x@3\n               (Cryptol.ecEq Prelude.Bool x@2 (cryptol:/HashToCurveE2/sgn0 x)\n                  x@7)\n               x\n               (x@5.1 x))\n            (Prelude.ite x@3\n               (Cryptol.ecEq Prelude.Bool x@2 (cryptol:/HashToCurveE2/sgn0 y)\n                  x@7)\n               y\n               (x@5.1 y))))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
     "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = cryptol:/Parameters/Fp_2.2.2.2.2.2.2.2\n      x@4 = x@3.2.2.2\n      x@5 = Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger\n    }\n in (x : x@2)\n-> (y : x@2)\n-> (C : x@2)\n-> let { x@6 = x@3.1 (cryptol:/BLSFieldExtras/sqrt_fp2_c3,x)\n         x@7 = x@3.1 (cryptol:/BLSFieldExtras/sqrt_fp2_c2,x)\n         x@8 = Cryptol.ecEq x@2 x@5 (x@4.1 x@6) y\n         x@9 = Cryptol.ecEq x@2 x@5 (x@4.1 x@7) y\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@2 x@5\n         (Prelude.ite x@2 x@8 x@6 (Prelude.ite x@2 x@9 x@7 C))\n         (Prelude.ite x@2 x@9 x@7 (Prelude.ite x@2 x@8 x@6 C)))",
     "type": "property"
   },
@@ -3538,12 +3532,6 @@
     "status": "assumed",
     "loc": "unknown",
     "term": "let { x@1 = Cryptol.TCNum 2\n      x@2 = cryptol:/Parameters/Fp\n      x@3 = x@2.2\n      x@4 = x@3.2.2.2.2.2.2.2\n      x@5 = Prelude.Vec 2 Prelude.Integer\n      x@6 = cryptol:/Parameters/Fp_2.2\n      x@7 = x@4.2.2\n    }\n in (x : x@5)\n-> let { x@8 = Cryptol.eListSel Prelude.Integer x@1 x 1\n         x@9 = Cryptol.eListSel Prelude.Integer x@1 x 0\n         x@10 = x@2.1 (x@7.1 x@8,x@7.1 x@9)\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@5 (Cryptol.PEqSeq x@1 Prelude.Integer Cryptol.PEqInteger)\n         (x@6.1 (x@6.2.1,x))\n         [x@4.1 (x@3.1 (x@9,x@10)), x@3.1 (x@8,x@10)])",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = Cryptol.TCNum 3\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = cryptol:/Parameters/Fp_2\n      x@4 = x@3.2.2\n      x@5 = x@4.2.2.2.2\n      x@6 = x@5.2\n      x@7 = x@6.2\n      x@8 = x@7.2.2\n      x@9 = cryptol:/HashToCurveE2/Z\n      x@10 = cryptol:/HashToCurveE2/A'\n      x@11 = cryptol:/HashToCurveE2/B'\n    }\n in (u : x@2)\n-> let { x@12 = x@6.1 (x@9,x@8.1 u)\n         x@13 = x@3.1 (x@8.1 x@12,x@12)\n         x@14 = x@6.1 (x@3.1 (x@13,x@4.1),x@11)\n         x@15 = x@6.1 (x@7.1 x@10,x@13)\n         x@16 = Prelude.ite x@2 (cryptol:/FieldExtras/F_is_zero x@2 x@3 x@15)\n                  (x@6.1 (x@9,x@10))\n                  x@15\n         x@17 = x@8.1 x@16\n         x@18 = x@6.1 (x@16,x@17)\n         x@19 = cryptol:/FieldExtras/F_prod x@2 x@1 x@3\n                  [ cryptol:/FieldExtras/F_sum x@2 x@1 x@3\n                      [ x@6.1 (x@14,x@8.1 x@14)\n                      , cryptol:/FieldExtras/F_prod x@2 x@1 x@3\n                          [x@10, x@14, x@17]\n                      , x@6.1 (x@11,x@18) ]\n                  , x@18\n                  , x@8.1 x@18 ]\n    }\n in Prelude.EqTrue\n      (cryptol:/Cryptol/==%3e\n         (cryptol:/Cryptol/%2f%5c (x@5.1 u)\n            (Cryptol.ecCompl Prelude.Bool Cryptol.PLogicBit\n               (cryptol:/BLSFieldExtras/is_square_fp2 x@19)))\n         (cryptol:/BLSFieldExtras/is_square_fp2\n            (x@6.1 (x@19,cryptol:/implementation/HashToG2/recip_ZZZ))))",
     "type": "property"
   },
   {
@@ -3801,12 +3789,6 @@
   {
     "status": "assumed",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = cryptol:/Parameters/Fp_2\n      x@3 = x@2.2\n      x@4 = x@3.2\n      x@5 = x@4.2.2.2.2\n      x@6 = x@5.2\n      x@7 = x@6.2.2.2\n      x@8 = cryptol:/implementation/HashToG2/ZZZ\n    }\n in (x : x@1)\n-> let { x@9 = x@6.1\n                 (cryptol:/FieldExtras/F_expt x@1 (Cryptol.TCNum 758) x@2 x\n                    (Cryptol.ecNumber\n                       (Cryptol.TCNum\n                          1001205140483106588246484290269935788605945006208159541241399033561623546780709821462541004956387089373434649096260670658193992783731681621012512651314777238193313314641988297376025498093520728838658813979860931248214124593092835)\n                       Prelude.Integer\n                       Cryptol.PLiteralInteger),\n                  cryptol:/HashToCurveE2/sqrt x@8)\n         x@10 = x@6.1 (x,x@3.1 (x@4.1,x@8))\n    }\n in Prelude.EqTrue\n      (cryptol:/Cryptol/==%3e\n         (cryptol:/Cryptol/%2f%5c (x@5.1 x)\n            (cryptol:/HashToCurveE2/is_square x@10))\n         (Cryptol.ecEq x@1\n            (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer\n               Cryptol.PEqInteger)\n            (x@7.1\n               ((\\(x' : x@1) ->\n                   \\(y : x@1) ->\n                     \\(z : x@1) ->\n                       x@6.1 (x',cryptol:sqrt_align_fp2_coeff#7365 y z))\n                  x@9\n                  (x@6.1 (x@9,x@10))\n                  x@10))\n            (x@7.1 (x@3.1 (cryptol:/HashToCurveE2/sqrt x@10,x@10)))))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
     "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = cryptol:/Parameters/Fp_2.2\n      x@3 = x@2.2.2.2.2.2.2\n    }\n in (x : x@1)\n-> (y : x@1)\n-> (z : x@1)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@1\n        (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger)\n        (x@3.1 (x,x@2.1 (y,z)))\n        (x@2.1 (x@3.1 (x,y),z)))",
     "type": "property"
   },
@@ -3856,12 +3838,6 @@
     "status": "assumed",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (p1 : (x@1 * x@2))\n-> (i : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqPair x@1 x@1 x@3 x@3)\n        (cryptol:affinify_E'#7406 (cryptol:small_mult#7421 i p1))\n        (cryptol:e2_scalar_mult#7401 i (cryptol:affinify_E'#7406 p1)))",
-    "type": "property"
-  },
-  {
-    "status": "assumed",
-    "loc": "unknown",
-    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (u : x@1)\n-> Prelude.EqTrue\n     (Cryptol.ecEq (x@1 * x@2)\n        (Cryptol.PEqPair x@1 x@2 x@3 (Cryptol.PEqPair x@1 x@1 x@3 x@3))\n        (cryptol:/implementation/HashToG2/map_to_isogenous_E2_impl u)\n        (cryptol:/implementation/HashToG2/map_to_isogenous_E2_impl_2 u))",
     "type": "property"
   },
   {
@@ -5865,6 +5841,12 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = (n : Prelude.Nat)\n      -> Prelude.Nat\n      -> Prelude.Vec n Prelude.Bool\n      x@3 = Prelude.Vec 64 Prelude.Bool\n      x@4 = Prelude.Vec 2 Prelude.Integer\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@4 (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n         (cryptol:/implementation/Field/fp2_abs\n            [ [ Prelude.bvNat 64 115675192405223436\n            , Prelude.bvNat 64 5681249210327251706\n            , Prelude.bvNat 64 6918466302170208626\n            , Prelude.bvNat 64 10029399319960919410\n            , Prelude.bvNat 64 321043715887227355\n            , Prelude.bvNat 64 995167553502620444 ]\n            , [ Prelude.bvNat 64 5219431371320971676\n            , Prelude.bvNat 64 8727973478379129168\n            , Prelude.bvNat 64 6554640153770024628\n            , Prelude.bvNat 64 8336723176575900894\n            , Prelude.bvNat 64 18183670704435673201\n            , Prelude.bvNat 64 637218320281165235 ] ])\n         (cryptol:/FieldExtras/F_expt x@4 (Cryptol.TCNum 758)\n            cryptol:/Parameters/Fp_2\n            cryptol:/implementation/HashToG2/ZZZ\n            (Prelude.natToInt\n               1001205140483106588246484290269935788605945006208159541241399033561623546780709821462541004956387089373434649096260670658193992783731681621012512651314777238193313314641988297376025498093520728838658813979860931248214124593092836)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = (n : Prelude.Nat)\n      -> Prelude.Nat\n      -> Prelude.Vec n Prelude.Bool\n      x@3 = Prelude.Vec 64 Prelude.Bool\n      x@4 = Prelude.Vec 6 x@3\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 2 x@4)\n         (Cryptol.PEqVec 2 x@4 (Cryptol.PEqVec 6 x@3 (Cryptol.PEqWord 64)))\n         [ [ Prelude.bvNat 64 16517514583386313282\n         , Prelude.bvNat 64 74322656156451461\n         , Prelude.bvNat 64 16683759486841714365\n         , Prelude.bvNat 64 815493829203396097\n         , Prelude.bvNat 64 204518332920448171\n         , Prelude.bvNat 64 1306242806803223655 ]\n         , [ Prelude.bvNat 64 12216576939092652242\n         , Prelude.bvNat 64 4271637710721514227\n         , Prelude.bvNat 64 18397318320863837902\n         , Prelude.bvNat 64 12847688262422632826\n         , Prelude.bvNat 64 10415170891100508248\n         , Prelude.bvNat 64 1135111621688632422 ] ]\n         (cryptol:/implementation/Field/fp2_rep\n            (cryptol:/Parameters/Fp_2.2.2.2.2.2.2.2.1\n               (cryptol:/HashToCurveE2/Z,cryptol:/HashToCurveE2/A'))))",
     "type": "property"
   },
@@ -6052,12 +6034,6 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = (n : Prelude.Nat)\n      -> Prelude.Nat\n      -> Prelude.Vec n Prelude.Bool\n      x@3 = Prelude.Vec 64 Prelude.Bool\n      x@4 = cryptol:/Parameters/Fp_2.2\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 2 Prelude.Integer)\n         (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n         (cryptol:/implementation/Field/fp2_abs\n            [ [ Prelude.bvNat 64 7278256098794379499\n            , Prelude.bvNat 64 16573814079536421142\n            , Prelude.bvNat 64 15434525399073384903\n            , Prelude.bvNat 64 7074571786834613615\n            , Prelude.bvNat 64 16513058187323285535\n            , Prelude.bvNat 64 619265820232646628 ]\n            , [ Prelude.bvNat 64 2699041033680347551\n            , Prelude.bvNat 64 15826468746745239044\n            , Prelude.bvNat 64 7486273033844793742\n            , Prelude.bvNat 64 16081688220865509623\n            , Prelude.bvNat 64 14942159784446443373\n            , Prelude.bvNat 64 1278534532839293206 ] ])\n         (x@4.1 (x@4.2.1,cryptol:/implementation/HashToG2/ZZZ)))",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
-    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = (n : Prelude.Nat)\n      -> Prelude.Nat\n      -> Prelude.Vec n Prelude.Bool\n      x@3 = Prelude.Vec 64 Prelude.Bool\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 2 Prelude.Integer)\n         (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n         (cryptol:/implementation/Field/fp2_abs\n            [ [ Prelude.bvNat 64 115675192405223436\n            , Prelude.bvNat 64 5681249210327251706\n            , Prelude.bvNat 64 6918466302170208626\n            , Prelude.bvNat 64 10029399319960919410\n            , Prelude.bvNat 64 321043715887227355\n            , Prelude.bvNat 64 995167553502620444 ]\n            , [ Prelude.bvNat 64 5219431371320971676\n            , Prelude.bvNat 64 8727973478379129168\n            , Prelude.bvNat 64 6554640153770024628\n            , Prelude.bvNat 64 8336723176575900894\n            , Prelude.bvNat 64 18183670704435673201\n            , Prelude.bvNat 64 637218320281165235 ] ])\n         (cryptol:/HashToCurveE2/sqrt cryptol:/implementation/HashToG2/ZZZ))",
     "type": "property"
   },
   {
