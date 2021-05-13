@@ -63,8 +63,7 @@ let blst_aggregate_in_g1_spec = do {
 
 let blst_aggregate_in_g1_extract_spec = do {
   //
-  // out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
-  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1"); // temporary measure
+  out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
   (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1"); // implies in != null
   //
   (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
@@ -84,6 +83,7 @@ let blst_aggregate_in_g1_extract_spec = do {
 
 let overrides = foldr concat [vec_overrides,curve_operations_e1_ovs] [POINTonE1_Uncompress_OK_ov,POINTonE1_in_G1_ov];
 
+/* For some reason this does not work if out is not declared initialized
 llvm_compositional_extract m
   "blst_aggregate_in_g1"
   "blst_aggregate_in_g1_term"
@@ -110,6 +110,7 @@ llvm_compositional_extract m
       do { // preconditions of Uncompress
         w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp"];
       }));
+*/
 
 let {{
   fp_mul = Fp.mul
