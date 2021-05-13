@@ -77,15 +77,17 @@ is_square_fp2 [x_2, x_1] = (tv1' != Fp_2.neg Fp_2.field_unit) where
     tv2 = Fp_2.sq [x_2, Fp.field_zero] // = Fp2_sq (Fp_2.mul (u, const_poly x_2))
     tv1' = F_expt`{n=381} Fp_2 (Fp_2.sub ([Fp.field_zero, tv1], tv2)) ((`p-1)/2)
 
-// fp_exp is for positive exponents only, avoiding the need for rewriting x*1 to x
-fp_exp: t_Fp -> Integer -> t_Fp
-fp_exp x e = if e == 1 then x else Fp.mul (x, fp_exp x (e-1))
+F_exp: {t} FieldRep t -> t -> Integer
 
-// TODO: Define generically?
+fp_exp: t_Fp -> Integer -> t_Fp
+fp_exp x e = if e < 0 then Fp.div (Fp.field_unit, fp2_exp x (-e))
+              | e == 0 /\ x == Fp.field_zero then Fp.field_zero // needed for the alg. rules
+              | e == 0 then Fp.field_unit
+              else Fp.mul (x, fp2_exp x (e-1))
+
+// TODO: generic definition to avoid duplicating the above
 fp2_exp: t_Fp_2 -> Integer -> t_Fp_2
 fp2_exp x e = if e < 0 then Fp_2.div (Fp_2.field_unit, fp2_exp x (-e))
               | e == 0 /\ x == Fp_2.field_zero then Fp_2.field_zero // needed for the alg. rules
               | e == 0 then Fp_2.field_unit
               else Fp_2.mul (x, fp2_exp x (e-1))
-
-
