@@ -38,8 +38,7 @@ let do_prove = true;
 
 // let N_MAX = 8; // NOTE: must match N_MAX defined in C code
 
-// blst_aggregate_in_g1
-let blst_aggregate_in_g1_spec = do {
+let blst_aggregate_in_g1_okay_spec = do {
   //
   out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
   (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1"); // implies in != null
@@ -59,6 +58,34 @@ let blst_aggregate_in_g1_spec = do {
   llvm_postcond {{ (POINTonE1_abs new_out) == point_dadd_affine Fp (POINTonE1_abs inp) (uncompress_E1_OK zwire) }};
   //
   llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
+};
+
+let blst_aggregate_in_g1_infinity_bit_spec = do {
+  //
+  out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1"); // implies in != null
+  //
+  (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
+  llvm_precond {{ (zwire@0)@1 }}; // infinity bit set
+  //
+  llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
+  //
+  llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
+  // TODO: out remains unallocated; is this okay?
+};
+
+let blst_aggregate_in_g1_infinity_bit_null_spec = do {
+  //
+  out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
+  let inp_ptr = llvm_null;
+  //
+  (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
+  llvm_precond {{ (zwire@0)@1 }}; // infinity bit set
+  //
+  llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
+  //
+  llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
+  // TODO: out is now zero
 };
 
 let blst_aggregate_in_g1_extract_spec = do {
@@ -144,7 +171,7 @@ let print_readably =  do {
 blst_aggregate_in_g1_ov <- custom_verify
   "blst_aggregate_in_g1"
   overrides
-  blst_aggregate_in_g1_spec
+  blst_aggregate_in_g1_okay_spec
   (goal_num_ite 1 // preconditions of the subgroup check
     do {
       let not_point_O = run (
@@ -161,3 +188,23 @@ blst_aggregate_in_g1_ov <- custom_verify
       simplify remove_higher_order_function_simpset;
       w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
     });
+
+blst_aggregate_in_g1_infinity_bit_ov <- custom_verify
+  "blst_aggregate_in_g1"
+  []
+  blst_aggregate_in_g1_infinity_bit_spec
+  do {
+    simplify (addsimps POINTonE1_thms empty_ss);
+    simplify remove_higher_order_function_simpset;
+    w4;
+  };
+
+blst_aggregate_in_g1_infinity_bit_null_ov <- custom_verify
+  "blst_aggregate_in_g1"
+  []
+  blst_aggregate_in_g1_infinity_bit_null_spec
+  do {
+    simplify (addsimps POINTonE1_thms empty_ss);
+    simplify remove_higher_order_function_simpset;
+    w4;
+  };
