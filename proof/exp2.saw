@@ -200,15 +200,17 @@ sqrt_align_fp2_thms' <- for
 // These machinations are done in function `sqrt_align_fp2`, called from two places, so we will give it its own
 // specification and override.
 
-// TODO: do the comments still make sense if we remove the following?
-// let {{
-  // sqrt_align_fp2_coeff: t_Fp_2 -> t_Fp_2 -> t_Fp_2
-  // sqrt_align_fp2_coeff s inp =
-    // if Fp_2.sq (Fp_2.mul(sqrt_fp2_c3, s)) == inp then sqrt_fp2_c3
-     // | Fp_2.sq (Fp_2.mul(sqrt_fp2_c2, s)) == inp then sqrt_fp2_c2
-     // | Fp_2.sq (Fp_2.mul(          u, s)) == inp then u
-    // else Fp_2.field_unit
-    // }};
+/*
+ * We define the following in BLSFieldExtras.cry:
+ * let {{
+ *   sqrt_align_fp2_coeff: t_Fp_2 -> t_Fp_2 -> t_Fp_2
+ *   sqrt_align_fp2_coeff s inp =
+ *     if Fp_2.sq (Fp_2.mul(sqrt_fp2_c3, s)) == inp then sqrt_fp2_c3
+ *      | Fp_2.sq (Fp_2.mul(sqrt_fp2_c2, s)) == inp then sqrt_fp2_c2
+ *      | Fp_2.sq (Fp_2.mul(          u, s)) == inp then u
+ *     else Fp_2.field_unit
+ *     }};
+ */
 
 // ... but the tests is the code are not like that!
 
