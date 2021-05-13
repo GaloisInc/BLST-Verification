@@ -77,8 +77,6 @@ is_square_fp2 [x_2, x_1] = (tv1' != Fp_2.neg Fp_2.field_unit) where
     tv2 = Fp_2.sq [x_2, Fp.field_zero] // = Fp2_sq (Fp_2.mul (u, const_poly x_2))
     tv1' = F_expt`{n=381} Fp_2 (Fp_2.sub ([Fp.field_zero, tv1], tv2)) ((`p-1)/2)
 
-F_exp: {t} FieldRep t -> t -> Integer
-
 fp_exp: t_Fp -> Integer -> t_Fp
 fp_exp x e = if e < 0 then Fp.div (Fp.field_unit, fp2_exp x (-e))
               | e == 0 /\ x == Fp.field_zero then Fp.field_zero // needed for the alg. rules
