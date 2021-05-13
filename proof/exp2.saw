@@ -123,8 +123,8 @@ let fp2_unop_spec name op = unop_spec name vec384x_type {{fp2_invariant}} {{fp2_
 // TODO: Define generically in FieldExtras?
 let {{ fp2_exp: t_Fp_2 -> Integer -> t_Fp_2
        fp2_exp x e = if e < 0 then Fp_2.div (Fp_2.field_unit, fp2_exp x (-e))
+                      | e == 0 /\ x == Fp_2.field_zero then Fp_2.field_zero // needed for the alg. rules
                       | e == 0 then Fp_2.field_unit
-                      | e == 1 then x
                       else Fp_2.mul (x, fp2_exp x (e-1))
        }};
 
