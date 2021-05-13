@@ -41,7 +41,7 @@ let do_prove = true;
 let blst_aggregate_in_g1_okay_spec = do {
   //
   out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
-  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1"); // implies in != null
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1"); // implies in_ptr != null
   //
   (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
   llvm_precond {{ ~(zwire@0)@1 }}; // infinity bit not set
@@ -63,7 +63,7 @@ let blst_aggregate_in_g1_okay_spec = do {
 let blst_aggregate_in_g1_infinity_bit_spec = do {
   //
   out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
-  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1"); // implies in != null
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1"); // implies in_ptr != null
   //
   (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
   llvm_precond {{ (zwire@0)@1 }}; // infinity bit set
@@ -84,14 +84,15 @@ let blst_aggregate_in_g1_infinity_bit_null_spec = do {
   //
   llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
   //
+  llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep zero }});
+  //
   llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
-  // TODO: out is now zero
 };
 
 let blst_aggregate_in_g1_extract_spec = do {
   //
-  out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
-  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1"); // implies in != null
+  (out, out_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_out" (llvm_struct "struct.POINTonE1");
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1"); // implies in_ptr != null
   //
   (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
   llvm_precond {{ ~(zwire@0)@1 }}; // infinity bit not set
@@ -110,7 +111,7 @@ let blst_aggregate_in_g1_extract_spec = do {
 
 let overrides = foldr concat [vec_overrides,curve_operations_e1_ovs] [POINTonE1_Uncompress_OK_ov,POINTonE1_in_G1_ov];
 
-/* For some reason this does not work if out is not declared initialized
+// For some reason this does not work if out is not declared initialized
 llvm_compositional_extract m
   "blst_aggregate_in_g1"
   "blst_aggregate_in_g1_term"
@@ -137,7 +138,6 @@ llvm_compositional_extract m
       do { // preconditions of Uncompress
         w4_unint_z3 ["sqrt_fp","Fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp"];
       }));
-*/
 
 let {{
   fp_mul = Fp.mul
