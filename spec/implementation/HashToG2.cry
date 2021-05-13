@@ -6,7 +6,7 @@
 module implementation::HashToG2 where
 
 import FieldExtras (F_is_zero, F_sum, F_prod, F_expt)
-import BLSFieldExtras (sqrt_fp2_c2, sqrt_fp2_c3)
+import BLSFieldExtras (sqrt_align_fp2_coeff)
 import Parameters (Fp_2, t_Fp_2, u)
 import ShortWeierstrassCurve (ProjectivePoint, point_O, projectify)
 import ExpandMessage (Expandable)
@@ -35,24 +35,13 @@ map_to_isogenous_E2_impl u = res where
   // y2:
   tv4_recip_ZZZ = (Fp_2.mul (tv4, recip_ZZZ))
   y1'_sqrt_ZZZ = Fp_2.mul (y1', F_expt`{n=758} Fp_2 ZZZ `((p^^2+7)/16))
-  y2' = sqrt_align y1'_sqrt_ZZZ (Fp_2.mul(y1'_sqrt_ZZZ, tv4_recip_ZZZ)) tv4_recip_ZZZ
+  y2' = Fp_2.mul (y1'_sqrt_ZZZ, sqrt_align_fp2_coeff (Fp_2.mul (y1'_sqrt_ZZZ, tv4_recip_ZZZ)) tv4_recip_ZZZ)
   y2 = F_prod Fp_2 [y2', gx1, gxd, Fp_2.sq u, u]
   // xn and y:
   (xn,y') = if e2 then (x1n,y1) else (x2n,y2)
   y = if sgn0(u) == sgn0(y') then y' else Fp_2.neg y'
   // convert to Jacobian coordinates
   res = (Fp_2.mul (xn, xd), Fp_2.mul (y, gxd), xd)
-
-sqrt_align : t_Fp_2 -> t_Fp_2 -> t_Fp_2 -> t_Fp_2
-sqrt_align x y z = Fp_2.mul (x, sqrt_align_fp2_coeff y z)
-
-// TODO: factor with exp2.saw
-sqrt_align_fp2_coeff: t_Fp_2 -> t_Fp_2 -> t_Fp_2
-sqrt_align_fp2_coeff s inp =
-  if Fp_2.sq (Fp_2.mul(sqrt_fp2_c3, s)) == inp then sqrt_fp2_c3
-   | Fp_2.sq (Fp_2.mul(sqrt_fp2_c2, s)) == inp then sqrt_fp2_c2
-   | Fp_2.sq (Fp_2.mul(          u, s)) == inp then u
-  else Fp_2.field_unit
 
 recip_ZZZ = Fp_2.div(Fp_2.field_unit, ZZZ)
 ZZZ = Fp_2.mul(Z, Fp_2.sq Z)

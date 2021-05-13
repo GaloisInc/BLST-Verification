@@ -93,37 +93,6 @@ let isogeny_map_to_E2_impl_alias_spec = do {
 
 // Assumptions
 
-let recip_sqrt_fp2_spec = do {
-  out_ptr <- llvm_alloc vec384x_type;
-  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
-  crucible_precond {{ fp2_invariant inp }};
-  crucible_execute_func [out_ptr, inp_ptr];
-  crucible_points_to out_ptr (crucible_term
-      {{ if HE2::is_square (fp2_abs inp)
-          then fp2_rep (Fp_2.div(HE2::sqrt (fp2_abs inp), fp2_abs inp))
-          else fp2_rep (F_expt`{n=758} Fp_2 (fp2_abs inp) `((p^^2-9)/16))
-      }});
-  crucible_return (crucible_term {{ bool_to_limb (HE2::is_square (fp2_abs inp)) }});
-  };
-
-recip_sqrt_fp2_ov <- admit "recip_sqrt_fp2" recip_sqrt_fp2_spec;
-
-let sqrt_align_fp2_unint_spec = do {
-  (ret, ret_ptr) <- ptr_to_fresh "ret" vec384x_type;
-  (sqrt, sqrt_ptr) <- ptr_to_fresh_readonly "sqrt" vec384x_type;
-  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
-  crucible_precond {{ fp2_invariant inp }};
-  crucible_precond {{ fp2_invariant sqrt }};
-  crucible_precond {{ fp2_invariant ret }};
-  crucible_execute_func [ret_ptr, ret_ptr, sqrt_ptr, inp_ptr];
-  crucible_points_to ret_ptr (crucible_term
-      {{ fp2_rep (sqrt_align (fp2_abs ret) (fp2_abs sqrt) (fp2_abs inp)) }});
-  is_sqrt <- llvm_fresh_var "is_sqrt" limb_type;
-  crucible_return (crucible_term {{ is_sqrt }}); // NOTE: return value not used here
-  };
-
-sqrt_align_fp2_unint_ov <-admit "sqrt_align_fp2" sqrt_align_fp2_unint_spec;
-
 // The optimized version of clear_cofactor given in the IETF spec is correct:
 clear_cofactor_bls12381_correct <- admit_cryptol {{ \p -> Aux::clear_cofactor_bls12381_g2 p == HE2::clear_cofactor p }};
 
@@ -274,7 +243,7 @@ map_to_iso_constants_rewrites <- for [
 
 map_to_isogenous_E2_impl_ov <- custom_verify
   "map_to_isogenous_E2"
-  (concat_all [vec_fp2_overrides, fp2_overrides, [recip_sqrt_fp2_ov, sgn0x_pty_mont_384x_ov, sqrt_align_fp2_unint_ov]])
+  (concat_all [vec_fp2_overrides, fp2_overrides, [recip_sqrt_fp2_nonsquare_ov, sgn0x_pty_mont_384x_ov, sqrt_align_fp2_alias_1_2_ov]])
   map_to_isogenous_E2_impl_spec
   (do {
     // Below are two rules to "fix" the term extracted from C:
@@ -324,16 +293,17 @@ map_to_isogenous_E2_impl_ov <- custom_verify
           simplify (addsimps F_rewrites (cryptol_ss ())); // get rid of F_prod and F_sum
           simplify (addsimps fp2_laws empty_ss); // try to normalize field expressions
           simplify (add_cryptol_defs ["ecEq","PEqBit"] empty_ss); // transform those to boolEq?
+          let elim_sqrt_fp2 = run (admit_cryptol {{ \x -> sqrt_fp2 x == HE2::sqrt x }});
+          let elim_is_square_fp2 = run (admit_cryptol {{ \x -> is_square_fp2 x == HE2::is_square x }});
+          simplify (addsimps [elim_sqrt_fp2,elim_is_square_fp2] empty_ss);
         // Finally:
-          let F_expt_rewrite = run (admit_cryptol {{ \x -> F_expt`{n=758} Fp_2 x `((p^^2-9)/16) == fp2_exp x `((p^^2-9)/16) }} );
-          simplify (addsimp F_expt_rewrite empty_ss); //TODO: needed?
-          w4_unint_z3 ["fp2_rep", "fp2_abs","sqrt_align","Fp_2","HE2::sqrt","HE2::sgn0","fp2_invariant","HE2::A'","HE2::B'","HE2::Z","ZZZ"];
+          w4_unint_z3 ["sqrt_align_fp2_coeff","fp2_rep", "fp2_abs","Fp_2","HE2::sqrt","HE2::sgn0","fp2_invariant","HE2::A'","HE2::B'","HE2::Z","ZZZ"];
       })
       (do {
         unfolding ["select"];
         simplify (addsimps [fix_vec_12_2, fix_vec_12] fp2_simpset);
         simplify basic_ss; // NOTE: does not work without this...
-        w4_unint_z3 ["Fp_2","Fp","sqrt_align"];
+        w4_unint_z3 ["Fp_2","Fp","sqrt_align_fp2_coeff"];
       }));
   });
 

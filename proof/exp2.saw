@@ -120,14 +120,6 @@ let fp2_unop_spec name op = unop_spec name vec384x_type {{fp2_invariant}} {{fp2_
 // We can use algebraic rules relating multiplication to exponentiation to show that these chains
 // computes the correct values.
 
-// TODO: Define generically in FieldExtras?
-let {{ fp2_exp: t_Fp_2 -> Integer -> t_Fp_2
-       fp2_exp x e = if e < 0 then Fp_2.div (Fp_2.field_unit, fp2_exp x (-e))
-                      | e == 0 /\ x == Fp_2.field_zero then Fp_2.field_zero // needed for the alg. rules
-                      | e == 0 then Fp_2.field_unit
-                      else Fp_2.mul (x, fp2_exp x (e-1))
-       }};
-
 // Algebraic rules
 fp2_mult_exp_thm_1 <- prove_cryptol {{\x -> Fp_2.mul (x, x) == fp2_exp x 2 }} [] ;
 fp2_mult_exp_thm_2 <- admit_cryptol {{ \x k -> Fp_2.mul (x, fp2_exp x k) == fp2_exp x (k+1) }};
@@ -208,14 +200,15 @@ sqrt_align_fp2_thms' <- for
 // These machinations are done in function `sqrt_align_fp2`, called from two places, so we will give it its own
 // specification and override.
 
-let {{
-  sqrt_align_fp2_coeff: t_Fp_2 -> t_Fp_2 -> t_Fp_2
-  sqrt_align_fp2_coeff s inp =
-    if Fp_2.sq (Fp_2.mul(sqrt_fp2_c3, s)) == inp then sqrt_fp2_c3
-     | Fp_2.sq (Fp_2.mul(sqrt_fp2_c2, s)) == inp then sqrt_fp2_c2
-     | Fp_2.sq (Fp_2.mul(          u, s)) == inp then u
-    else Fp_2.field_unit
-    }};
+// TODO: do the comments still make sense if we remove the following?
+// let {{
+  // sqrt_align_fp2_coeff: t_Fp_2 -> t_Fp_2 -> t_Fp_2
+  // sqrt_align_fp2_coeff s inp =
+    // if Fp_2.sq (Fp_2.mul(sqrt_fp2_c3, s)) == inp then sqrt_fp2_c3
+     // | Fp_2.sq (Fp_2.mul(sqrt_fp2_c2, s)) == inp then sqrt_fp2_c2
+     // | Fp_2.sq (Fp_2.mul(          u, s)) == inp then u
+    // else Fp_2.field_unit
+    // }};
 
 // ... but the tests is the code are not like that!
 
@@ -262,14 +255,14 @@ sqrt_align_test_c3_lemma <- custom_prove_cryptol (rewrite (cryptol_ss ())
              [x,y] = Fp_2.sq s; [inp0, inp1] = inp; inp = fp2_abs i)  }}) z3;
 
 sqrt_align_test_c2_lemma_lemma <- prove_cryptol (rewrite (cryptol_ss ())
-             {{ \ x y inp -> 
+             {{ \ x y inp ->
                  (([Fp.add(x, inp1), Fp.sub(y, inp0)] == Fp_2.field_zero) ==
                   if Fp_2.is_val [x,y] /\ Fp_2.is_val inp
                   then ([Fp.normalize y, Fp.neg x] == inp)
                   else apply (==) ([Fp.add(x, inp1), Fp.sub(y, inp0)]) Fp_2.field_zero
                   where [inp0, inp1] = inp) }}) [];
 
-sqrt_align_test_c2_lemma <- custom_prove_cryptol (rewrite (cryptol_ss ()) 
+sqrt_align_test_c2_lemma <- custom_prove_cryptol (rewrite (cryptol_ss ())
   {{ \ s i -> ( (Fp_2.sq (Fp_2.mul(sqrt_fp2_c2, s)) == inp) ==
                ([Fp.add(x, inp1), Fp.sub(y, inp0)] == Fp_2.field_zero) where
                 [x,y] = Fp_2.sq s; [inp0, inp1] = inp; inp = fp2_abs i)  }})
@@ -278,7 +271,7 @@ sqrt_align_test_c2_lemma <- custom_prove_cryptol (rewrite (cryptol_ss ())
                           (cryptol_ss()));
        z3;
        };
-  
+
 sqrt_align_test_u_lemma_lemma <- prove_cryptol (rewrite (cryptol_ss ())
   {{ \t0 inp -> (Fp_2.add (t0, inp) == Fp_2.field_zero) ==
                 if Fp_2.is_val t0 /\ Fp_2.is_val inp
@@ -350,7 +343,7 @@ let sqrt_align_fp2_alias_1_4_and_2_3_spec = do { // for the call in sqrt_fp2 wit
                         == fp2_abs inp) }});
   };
 
-// aliasing used by caller in map_to_isogenous_E2 from map_to_g1.c 
+// aliasing used by caller in map_to_isogenous_E2 from map_to_g1.c
 let sqrt_align_fp2_alias_1_2_spec = do {
   (out, out_ptr) <- ptr_to_fresh "out" vec384x_type;
   (sqrt, sqrt_ptr) <- ptr_to_fresh_readonly "sqrt" vec384x_type;
@@ -401,12 +394,12 @@ vec_select_fp2_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_spec 96 
 vec_select_fp2_alias_1_3_ov <- verify "vec_select" vec_select_asm_ovs (vec_select_alias_1_3_spec 96 vec384x_type);
 
 hoist_fp2_sq_thm <- hoist {{ Fp_2.sq }} ["Fp_2"];
-hoist_fp2_equal_left_thm <- prove_cryptol (rewrite (cryptol_ss ()) 
+hoist_fp2_equal_left_thm <- prove_cryptol (rewrite (cryptol_ss ())
   {{ \ c (x:t_Fp_2) y z -> ((if c then x else y) == z) == if c then x==z else y==z }}) [];
 
 let t1 = (rewrite (add_cryptol_defs ["ecEq"] (cryptol_ss ()))
   {{ \ c (x:t_Fp_2) y z -> ((if c then x else y) == z) }});
-hoist_fp2_equal_left_thm' <- prove_cryptol (rewrite (cryptol_ss ()) 
+hoist_fp2_equal_left_thm' <- prove_cryptol (rewrite (cryptol_ss ())
   {{ \ c (x:t_Fp_2) y z -> t1 c x y z == if c then x==z else y==z }}) [];
 
 // need to lift ite out of FP_2.mul:
@@ -643,7 +636,7 @@ let verify_sqrt_fp2 spec = custom_verify "sqrt_fp2"
      rw_with (concat [sqrt_fp2_to_align_thm, is_square_fp2_thm, fp2_abstract_invariant_thm] fp2_alg_thms);
      w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
     (goal_num_ite 4
-       do { // points_to postcondition 
+       do { // points_to postcondition
             rw_with_1 sqrt_fp2_to_align_thm ;
             w4_unint_z3 (concat ["fp2_exp"] fp2_unints); }
        (w4_unint_z3 (concat ["fp2_exp"] fp2_unints)))); // the rest
@@ -677,10 +670,10 @@ hoist_fp2_div_left_thm <- prove_cryptol
     ["Fp_2"];
 
 recip_sqrt_fp_div_lemma <- admit_cryptol
-  {{ \ x y e -> Fp_2.div (Fp_2.mul (x, fp2_exp y e), y) == Fp_2.mul (x, fp2_exp y (e - 1)) }}; 
+  {{ \ x y e -> Fp_2.div (Fp_2.mul (x, fp2_exp y e), y) == Fp_2.mul (x, fp2_exp y (e - 1)) }};
 
 recip_sqrt_fp_div_lemma' <- admit_cryptol
-  {{ \ y e -> Fp_2.div (fp2_exp y e, y) == fp2_exp y (e - 1) }}; 
+  {{ \ y e -> Fp_2.div (fp2_exp y e, y) == fp2_exp y (e - 1) }};
 
 fp2_mul_commutes_thm <- prove_cryptol {{ \x y -> Fp_2.mul (x, y) == Fp_2.mul (y,x) }} [];
 
@@ -726,7 +719,7 @@ recip_sqrt_nonsquare_postcondition_thm <- custom_prove_cryptol
        // now: is_square_fp2 (fp2_abs inp) \/ Fp_2.div(sqrt_fp2 (fp2_abs inp), fp2_abs inp) == F_expt ...
        rw_with_1 recip_sqrt_fp_div_lemma'';
        //  now: is_square_fp2 (fp2_abs inp) \/ Fp_2.div(sqrt_fp2 (fp2_abs inp), fp2_abs inp) ==
-       //                                       Fp_2.div(F_expt ..., fp2_abs inp) 
+       //                                       Fp_2.div(F_expt ..., fp2_abs inp)
        // so same script as above gets it.
        rw_with_1 is_square_fp2_thm;
        rw_with [sqrt_fp2_to_align_thm, sqrt_fp_power_lemma'];
