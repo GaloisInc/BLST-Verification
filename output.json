@@ -1289,42 +1289,28 @@
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/exp2.saw:392:20",
+    "loc": "/workdir/proof/exp2.saw:394:20",
     "method": "vec_copy",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/exp2.saw:393:22",
+    "loc": "/workdir/proof/exp2.saw:395:22",
     "method": "vec_select",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/exp2.saw:394:32",
+    "loc": "/workdir/proof/exp2.saw:396:32",
     "method": "vec_select",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/exp2.saw:458:22",
-    "method": "sqrt_align_fp2",
-    "type": "method",
-    "specification": "unknown"
-  },
-  {
-    "status": "verified",
-    "loc": "/workdir/proof/exp2.saw:459:32",
-    "method": "sqrt_align_fp2",
-    "type": "method",
-    "specification": "unknown"
-  },
-  {
-    "status": "verified",
-    "loc": "/workdir/proof/exp2.saw:460:40",
+    "loc": "/workdir/proof/exp2.saw:460:22",
     "method": "sqrt_align_fp2",
     "type": "method",
     "specification": "unknown"
@@ -1338,56 +1324,70 @@
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/exp2.saw:523:22",
+    "loc": "/workdir/proof/exp2.saw:462:40",
+    "method": "sqrt_align_fp2",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/exp2.saw:463:32",
+    "method": "sqrt_align_fp2",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/exp2.saw:525:22",
     "method": "reciprocal_fp2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/exp2.saw:535:21",
+    "loc": "/workdir/proof/exp2.saw:537:21",
     "method": "sqr_n_mul_fp2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/exp2.saw:536:31",
+    "loc": "/workdir/proof/exp2.saw:538:31",
     "method": "sqr_n_mul_fp2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/exp2.saw:538:29",
+    "loc": "/workdir/proof/exp2.saw:540:29",
     "method": "recip_sqrt_fp2_9mod16",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/exp2.saw:645:16",
+    "loc": "/workdir/proof/exp2.saw:647:16",
     "method": "sqrt_fp2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/exp2.saw:646:22",
+    "loc": "/workdir/proof/exp2.saw:648:22",
     "method": "sqrt_fp2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/exp2.saw:680:22",
+    "loc": "/workdir/proof/exp2.saw:682:22",
     "method": "recip_sqrt_fp2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/exp2.saw:733:32",
+    "loc": "/workdir/proof/exp2.saw:735:32",
     "method": "recip_sqrt_fp2",
     "type": "method",
     "specification": "unknown"
