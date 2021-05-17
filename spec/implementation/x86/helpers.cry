@@ -1,0 +1,2638 @@
+module implementation::x86::helpers where
+
+import implementation::Types
+
+// Instruction definitions
+mulx : [64] -> [64] -> ([64], [64])
+mulx x y = splitAt (zext x * zext y)
+
+imul : [64] -> [64] -> [64]
+imul x y = drop`{64} (sext x * sext y)
+
+adcx : [64] -> [64] -> Bit -> (Bit, [64])
+adcx x y c = (overflows, x + (y + if c then 1 else 0))
+  where
+    total : [65]
+    total = zext x + zext y + if c then 1 else 0
+    overflows = total <$ 0
+
+adox : [64] -> [64] -> Bit -> (Bit, [64])
+adox = adcx
+
+adc : [64] -> [64] -> Bit -> (Bit, [64])
+adc = adcx
+
+add : [64] -> [64] -> (Bit, [64])
+add x y = adc x y False
+
+sbb : [64] -> [64] -> Bit -> (Bit, [64])
+sbb x y c = (overflows, x - (y + if c then 1 else 0))
+  where
+    // total : [65]
+    // total = (zext x - zext y) - if c then 1 else 0
+    // overflows = total <$ 0
+    overflows = x < (y + if c then 1 else 0)
+
+sub : [64] -> [64] -> (Bit, [64])
+sub x y = (overflows, x - y)
+  where
+    overflows = x < y
+
+cmovae : [64] -> [64] -> Bit -> [64]
+cmovae old new c = if c then old else new
+
+cmovb : [64] -> [64] -> Bit -> [64]
+cmovb old new c = if c then new else old
+
+// Helper routines
+mulx_384
+ : Vec384 // a; pointer stored in rsi
+ -> Vec384 // b; pointer stored in rbx
+ -> [2]Vec384 // result; stored in rdi?
+mulx_384 a b = [[result0, result1, result2, result3, result4, result5], resulthigh]
+  where
+
+// 0x000000000001b244 <+4>:	mov    rdx,QWORD PTR [rbx]
+// 0x000000000001b247 <+7>:	mov    r14,QWORD PTR [rsi]
+// 0x000000000001b24a <+10>:	mov    r15,QWORD PTR [rsi+0x8]
+// 0x000000000001b24e <+14>:	mov    r10,QWORD PTR [rsi+0x10]
+// 0x000000000001b252 <+18>:	mov    r11,QWORD PTR [rsi+0x18]
+// 0x000000000001b256 <+22>:	mov    r12,QWORD PTR [rsi+0x20]
+// 0x000000000001b25a <+26>:	mov    r13,QWORD PTR [rsi+0x28]
+    // 0: Load a[0-5] and b[0] from memory to registers
+    rdx_0 = b @ 0
+    r14_0 = a @ 0
+    r15_0 = a @ 1
+    r10_0 = a @ 2
+    r11_0 = a @ 3
+    r12_0 = a @ 4
+    r13_0 = a @ 5
+
+// 0x000000000001b25e <+30>:	lea    rsi,[rsi-0x80]
+    // 1: Subtract 128 from rsi (argument pointer to a)
+
+// 0x000000000001b262 <+34>:	mulx   rcx,r9,r14
+    // 2: Multiply r14 and rdx (implicit), storing the high bits in rcx and low bits in r9
+    (rcx_2, r9_2) = mulx r14_0 rdx_0
+    
+// 0x000000000001b267 <+39>:	xor    rbp,rbp
+    // 3: Zero rbp, of, and cf
+    rbp_3 = 0
+    of_3 = False
+    cf_3 = False
+
+// 0x000000000001b26a <+42>:	mulx   rax,r8,r15
+    // 4: Multiply r15 and rdx (implicit), storing the high bits in rax and low bits in r8
+    (rax_4, r8_4) = mulx r15_0 rdx_0
+
+// 0x000000000001b26f <+47>:	adcx   r8,rcx
+    // 5: Add r8, rcx, and cf and store the result in r8 and cf
+    (cf_5, r8_5) = adcx r8_4 rcx_2 cf_3
+
+// 0x000000000001b275 <+53>:	mov    QWORD PTR [rdi],r9
+    // 6: Store r9 in result[0]?
+    result0 = r9_2
+
+// 0x000000000001b278 <+56>:	mulx   rcx,r9,r10
+    // 7: Multiply r10 and rdx (implicit), storing the high bits in rcx and low bits in r9
+    (rcx_7, r9_7) = mulx r10_0 rdx_0
+
+// 0x000000000001b27d <+61>:	adcx   r9,rax
+    // 8: Add r9, rax, and cf and store the result in r9
+    (cf_8, r9_8) = adcx r9_7 rax_4 cf_5
+
+// 0x000000000001b283 <+67>:	mulx   rax,r10,r11
+    // 9: Multiply r11 and rdx (implicit) and store the high bits in rax and low bits in r10
+    (rax_9, r10_9) = mulx r11_0 rdx_0
+
+// 0x000000000001b288 <+72>:	adcx   r10,rcx
+    // 10: Add r10, rcx, and cf and store the result in r10
+    (cf_10, r10_10) = adcx r10_9 rcx_7 cf_8
+
+// 0x000000000001b28e <+78>:	mulx   rcx,r11,r12
+    // 11: Multiply r12 and rdx (implicit) and store the high bits in rcx and low bits in r11
+    (rcx_11, r11_11) = mulx r12_0 rdx_0
+
+// 0x000000000001b293 <+83>:	adcx   r11,rax
+    // 12: Add r11, rax, and cf and store the result in r11
+    (cf_12, r11_12) = adcx r11_11 rax_9 cf_10
+
+// 0x000000000001b299 <+89>:	mulx   r13,r12,r13
+    // 13: Multiply r13 and rdx (implicit) and store the high bits in r13 and low bits in r12
+    (r13_13, r12_13) = mulx r13_0 rdx_0
+
+// 0x000000000001b29e <+94>:	mov    rdx,QWORD PTR [rbx+0x8]
+    // 14: Load b[1] into rdx
+    rdx_14 = b @ 1
+
+// 0x000000000001b2a2 <+98>:	adcx   r12,rcx
+    // 15: Add r12, rcx, and cf and store the result in r12
+    (cf_15, r12_15) = adcx r12_13 rcx_11 cf_12
+
+// 0x000000000001b2a8 <+104>:	adcx   r13,rbp
+    // 16: Add r13, rbp, and cf and store the result in r13
+    (cf_16, r13_16) = adcx r13_13 rbp_3 cf_15
+
+// 0x000000000001b2ae <+110>:	mulx   rcx,rax,r14
+    // 17: Multiply r14 and rdx (implicit) and store the high bits in rcx and low bits in rax
+    (rcx_17, rax_17) = mulx r14_0 rdx_14
+
+// 0x000000000001b2b3 <+115>:	adcx   rax,r8
+    // 18: Add rax, r8, and cf and store the result in rax
+    (cf_18, rax_18) = adcx rax_17 r8_5 cf_16
+
+// 0x000000000001b2b9 <+121>:	adox   r9,rcx
+    // 19: Add r9, rcx, and of and store the result in r9
+    (of_19, r9_19) = adox r9_8 rcx_17 of_3
+
+// 0x000000000001b2bf <+127>:	mov    QWORD PTR [rdi+0x8],rax
+    // 20: Store rax in result[1]
+    result1 = rax_18
+
+// 0x000000000001b2c3 <+131>:	mulx   rcx,r8,r15
+    // 21: Multiply r15 and rdx (implicit) and store the high bits in rcx and low bits in r8
+    (rcx_21, r8_21) = mulx r15_0 rdx_14
+
+// 0x000000000001b2c8 <+136>:	adcx   r8,r9
+    // 22: Add r8, r9, and cf and store the result in r8
+    (cf_22, r8_22) = adcx r8_21 r9_19 cf_18
+
+// 0x000000000001b2ce <+142>:	adox   r10,rcx
+    // 23: Add r10, rcx, and of and store the result in r10
+    (of_23, r10_23) = adox r10_10 rcx_21 of_19
+
+// 0x000000000001b2d4 <+148>:	mulx   rax,r9,QWORD PTR [rsi+0x90]
+    // 24: Multiply a[2] and rdx (implicit) and store the high bits in rax and low bits in r9
+    (rax_24, r9_24) = mulx (a @ 2) rdx_14
+
+// 0x000000000001b2dd <+157>:	adcx   r9,r10
+    // 25: Add r9, r10, and cf and store the result in r9
+    (cf_25, r9_25) = adcx r9_24 r10_23 cf_22
+
+// 0x000000000001b2e3 <+163>:	adox   r11,rax
+    // 26: Add r11, rax, and of and store the result in r11
+    (of_26, r11_26) = adox r11_12 rax_24 of_23
+
+// 0x000000000001b2e9 <+169>:	mulx   rcx,r10,QWORD PTR [rsi+0x98]
+    // 27: Multiply a[3] and rdx (implicit) and store the high bits in rcx and low bits in r10
+    (rcx_27, r10_27) = mulx (a @ 3) rdx_14
+
+// 0x000000000001b2f2 <+178>:	adcx   r10,r11
+    // 28: Add r10, r11, and cf and store the result in r10
+    (cf_28, r10_28) = adcx r10_27 r11_26 cf_25
+
+// 0x000000000001b2f8 <+184>:	adox   r12,rcx
+    // 29: Add r12, rcx, and of and store the result in r12
+    (of_29, r12_29) = adox r12_15 rcx_27 of_26
+
+// 0x000000000001b2fe <+190>:	mulx   rax,r11,QWORD PTR [rsi+0xa0]
+    // 30: Multiply a[4] and rdx (implicit) and store the high bits in rax and low bits in r11
+    (rax_30, r11_30) = mulx (a @ 4) rdx_14
+
+// 0x000000000001b307 <+199>:	adcx   r11,r12
+    // 31: Add r11, r12, and cf and store the result in r11
+    (cf_31, r11_31) = adcx r11_30 r12_29 cf_28
+
+// 0x000000000001b30d <+205>:	adox   rax,r13
+    // 32: Add rax, r13, and of and store the result in rax
+    (of_32, rax_32) = adox rax_30 r13_16 of_29
+
+// 0x000000000001b313 <+211>:	mulx   r13,r12,QWORD PTR [rsi+0xa8]
+    // 33: Multiply a[5] and rdx (implicit) and store the high bits in r13 and low bits in r12
+    (r13_33, r12_33) = mulx (a @ 5) rdx_14
+
+// 0x000000000001b31c <+220>:	mov    rdx,QWORD PTR [rbx+0x10]
+    // 34: Load b[2] into rdx
+    rdx_34 = b @ 2
+
+// 0x000000000001b320 <+224>:	adcx   r12,rax
+    // 35: Add r12, rax, and cf and store the result in r12
+    (cf_35, r12_35) = adcx r12_33 rax_32 cf_31
+
+// 0x000000000001b326 <+230>:	adox   r13,rbp
+    // 36: Add r13, rbp, and of and store the result in r13
+    (of_36, r13_36) = adox r13_33 rbp_3 of_32
+
+// 0x000000000001b32c <+236>:	adcx   r13,rbp
+    // 37: Add r13, rbp, and cf and store the result in r13
+    (cf_37, r13_37) = adcx r13_36 rbp_3 cf_35
+
+// 0x000000000001b332 <+242>:	mulx   rcx,rax,r14
+    // 38: Multiply r14 and rdx (implicit) and store the high bits in rcx and low bits in rax
+    (rcx_38, rax_38) = mulx r14_0 rdx_34
+
+// 0x000000000001b337 <+247>:	adcx   rax,r8
+    // 39: Add rax, r8, and cf and store the result in rax
+    (cf_39, rax_39) = adcx rax_38 r8_22 cf_37
+
+// 0x000000000001b33d <+253>:	adox   r9,rcx
+    // 40: Add r9, rcx, and of and store the result in r9
+    (of_40, r9_40) = adox r9_25 rcx_38 of_36
+
+// 0x000000000001b343 <+259>:	mov    QWORD PTR [rdi+0x10],rax
+    // 41: Store rax in result[2]
+    result2 = rax_39
+
+// 0x000000000001b347 <+263>:	mulx   rcx,r8,r15
+    // 42: Multiply r15 and rdx (implicit) and store the high bits in rcx and low bits in r8
+    (rcx_42, r8_42) = mulx r15_0 rdx_34
+
+// 0x000000000001b34c <+268>:	adcx   r8,r9
+    // 43: Add r8, r9, and cf and store the result in r8
+    (cf_43, r8_43) = adcx r8_42 r9_40 cf_39
+
+// 0x000000000001b352 <+274>:	adox   r10,rcx
+    // 44: Add r10, rcx, and of and store the result in r10
+    (of_44, r10_44) = adox r10_28 rcx_42 of_40
+
+// 0x000000000001b358 <+280>:	mulx   rax,r9,QWORD PTR [rsi+0x90]
+    // 45: Multiply a[2] and rdx (implicit) and store the high bits in rax and low bits in r9
+    (rax_45, r9_45) = mulx (a @ 2) rdx_34
+
+// 0x000000000001b361 <+289>:	adcx   r9,r10
+    // 46: Add r9, r10, and cf and store the result in r9
+    (cf_46, r9_46) = adcx r9_45 r10_44 cf_43
+
+// 0x000000000001b367 <+295>:	adox   r11,rax
+    // 47: Add r11, rax, and of and store the result in r11
+    (of_47, r11_47) = adox r11_31 rax_45 of_44
+
+// 0x000000000001b36d <+301>:	mulx   rcx,r10,QWORD PTR [rsi+0x98]
+    // 48: Multiply a[3] and rdx (implicit) and store the high bits in rcx and low bits in r10
+    (rcx_48, r10_48) = mulx (a @ 3) rdx_34
+
+// 0x000000000001b376 <+310>:	adcx   r10,r11
+    // 49: Add r10, r11, and cf and store the result in r10
+    (cf_49, r10_49) = adcx r10_48 r11_47 cf_46
+
+// 0x000000000001b37c <+316>:	adox   r12,rcx
+    // 50: Add r12, rcx, and of and store the result in r12
+    (of_50, r12_50) = adox r12_35 rcx_48 of_47
+
+// 0x000000000001b382 <+322>:	mulx   rax,r11,QWORD PTR [rsi+0xa0]
+    // 51: Multiply a[4] and rdx (implicit) and store the high bits in rax and low bits in r11
+    (rax_51, r11_51) = mulx (a @ 4) rdx_34
+
+// 0x000000000001b38b <+331>:	adcx   r11,r12
+    // 52: Add r11, r12, and cf and store the result in r11
+    (cf_52, r11_52) = adcx r11_51 r12_50 cf_49
+
+// 0x000000000001b391 <+337>:	adox   rax,r13
+    // 53: Add rax, r13, and of and store the result in rax
+    (of_53, rax_53) = adox rax_51 r13_37 of_50
+
+// 0x000000000001b397 <+343>:	mulx   r13,r12,QWORD PTR [rsi+0xa8]
+    // 54: Multiply a[5] and rdx (implicit) and store the high bits in r13 and low bits in r12
+    (r13_54, r12_54) = mulx (a @ 5) rdx_34
+
+// 0x000000000001b3a0 <+352>:	mov    rdx,QWORD PTR [rbx+0x18]
+    // 55: Load b[3] into rdx
+    rdx_55 = b @ 3
+
+// 0x000000000001b3a4 <+356>:	adcx   r12,rax
+    // 56: Add r12, rax, and cf and store the result in r12
+    (cf_56, r12_56) = adcx r12_54 rax_53 cf_52
+
+// 0x000000000001b3aa <+362>:	adox   r13,rbp
+    // 57: Add r13, rbp, and of and store the result in r13
+    (of_57, r13_57) = adox r13_54 rbp_3 of_53
+
+// 0x000000000001b3b0 <+368>:	adcx   r13,rbp
+    // 58: Add r13, rbp, and cf and store the result in r13
+    (cf_58, r13_58) = adcx r13_57 rbp_3 cf_56
+
+// 0x000000000001b3b6 <+374>:	mulx   rcx,rax,r14
+    // 59: Multiply r14 and rdx (implicit) and store the high bits in rcx and low bits in rax
+    (rcx_59, rax_59) = mulx r14_0 rdx_55
+
+// 0x000000000001b3bb <+379>:	adcx   rax,r8
+    // 60: Add rax, r8, and cf and store the result in rax
+    (cf_60, rax_60) = adcx rax_59 r8_43 cf_58
+
+// 0x000000000001b3c1 <+385>:	adox   r9,rcx
+    // 61: Add r9, rcx, and of and store the result in r9
+    (of_61, r9_61) = adox r9_46 rcx_59 of_57
+
+// 0x000000000001b3c7 <+391>:	mov    QWORD PTR [rdi+0x18],rax
+    // 62: Store rax in result[3]
+    result3 = rax_60
+
+// 0x000000000001b3cb <+395>:	mulx   rcx,r8,r15
+    // 63: Multiply r15 and rdx (implicit) and store the high bits in rcx and low bits in r8
+    (rcx_63, r8_63) = mulx r15_0 rdx_55
+
+// 0x000000000001b3d0 <+400>:	adcx   r8,r9
+    // 64: Add r8, r9, and cf and store the result in r8
+    (cf_64, r8_64) = adcx r8_63 r9_61 cf_60
+
+// 0x000000000001b3d6 <+406>:	adox   r10,rcx
+    // 65: Add r10, rcx, and of and store the result in r10
+    (of_65, r10_65) = adox r10_49 rcx_63 of_61
+
+// 0x000000000001b3dc <+412>:	mulx   rax,r9,QWORD PTR [rsi+0x90]
+    // 66: Multiply a[2] and rdx (implicit) and store the high bits in rax and low bits in r9
+    (rax_66, r9_66) = mulx (a @ 2) rdx_55
+
+// 0x000000000001b3e5 <+421>:	adcx   r9,r10
+    // 67: Add r9, r10, and cf and store the result in r9
+    (cf_67, r9_67) = adcx r9_66 r10_65 cf_64
+
+// 0x000000000001b3eb <+427>:	adox   r11,rax
+    // 68: Add r11, rax, and of and store the result in r11
+    (of_68, r11_68) = adox r11_52 rax_66 of_65
+
+// 0x000000000001b3f1 <+433>:	mulx   rcx,r10,QWORD PTR [rsi+0x98]
+    // 69: Multiply a[3] and rdx (implicit) and store the high bits in rcx and low bits in r10
+    (rcx_69, r10_69) = mulx (a @ 3) rdx_55
+
+// 0x000000000001b3fa <+442>:	adcx   r10,r11
+    // 70: Add r10, r11, and cf and store the result in r10
+    (cf_70, r10_70) = adcx r10_69 r11_68 cf_67
+
+// 0x000000000001b400 <+448>:	adox   r12,rcx
+    // 71: Add r12, rcx, and of and store the result in r12
+    (of_71, r12_71) = adox r12_56 rcx_69 of_68
+
+// 0x000000000001b406 <+454>:	mulx   rax,r11,QWORD PTR [rsi+0xa0]
+    // 72: Multiply a[4] and rdx (implicit) and store the high bits in rax and low bits in r11
+    (rax_72, r11_72) = mulx (a @ 4) rdx_55
+
+// 0x000000000001b40f <+463>:	adcx   r11,r12
+    // 73: Add r11, r12, and cf and store the result in r11
+    (cf_73, r11_73) = adcx r11_72 r12_71 cf_70
+
+// 0x000000000001b415 <+469>:	adox   rax,r13
+    // 74: Add rax, r13, and of and store the result in rax
+    (of_74, rax_74) = adox rax_72 r13_58 of_71
+
+// 0x000000000001b41b <+475>:	mulx   r13,r12,QWORD PTR [rsi+0xa8]
+    // 75: Multiply a[5] and rdx (implicit) and store the high bits in r13 and low bits in r12
+    (r13_75, r12_75) = mulx (a @ 5) rdx_55
+
+// 0x000000000001b424 <+484>:	mov    rdx,QWORD PTR [rbx+0x20]
+    // 76: Load b[4] into rdx
+    rdx_76 = b @ 4
+
+// 0x000000000001b428 <+488>:	adcx   r12,rax
+    // 77: Add r12, rax, and cf and store the result in r12
+    (cf_77, r12_77) = adcx r12_75 rax_74 cf_73
+
+// 0x000000000001b42e <+494>:	adox   r13,rbp
+    // 78: Add r13, rbp, and of and store the result in r13
+    (of_78, r13_78) = adox r13_75 rbp_3 of_74
+
+// 0x000000000001b434 <+500>:	adcx   r13,rbp
+    // 79: Add r13, rbp, and cf and store the result in r13
+    (cf_79, r13_79) = adcx r13_78 rbp_3 cf_77
+
+// 0x000000000001b43a <+506>:	mulx   rcx,rax,r14
+    // 80: Multiply r14 and rdx (implicit) and store the high bits in rcx and low bits in rax
+    (rcx_80, rax_80) = mulx r14_0 rdx_76
+
+// 0x000000000001b43f <+511>:	adcx   rax,r8
+    // 81: Add rax, r8, and cf and store the result in rax
+    (cf_81, rax_81) = adcx rax_80 r8_64 cf_79
+
+// 0x000000000001b445 <+517>:	adox   r9,rcx
+    // 82: Add r9, rcx, and of and store the result in r9
+    (of_82, r9_82) = adox r9_67 rcx_80 of_78
+
+// 0x000000000001b44b <+523>:	mov    QWORD PTR [rdi+0x20],rax
+    // 83: Store rax in result[4]
+    result4 = rax_81
+
+// 0x000000000001b44f <+527>:	mulx   rcx,r8,r15
+    // 84: Multiply r15 and rdx (implicit) and store the high bits in rcx and low bits in r8
+    (rcx_84, r8_84) = mulx r15_0 rdx_76
+
+// 0x000000000001b454 <+532>:	adcx   r8,r9
+    // 85: Add r8, r9, and cf and store the result in r8
+    (cf_85, r8_85) = adcx r8_84 r9_82 cf_81
+
+// 0x000000000001b45a <+538>:	adox   r10,rcx
+    // 86: Add r10, rcx, and of and store the result in r10
+    (of_86, r10_86) = adox r10_70 rcx_84 of_82
+
+// 0x000000000001b460 <+544>:	mulx   rax,r9,QWORD PTR [rsi+0x90]
+    // 87: Multiply a[2] and rdx (implicit) and store the high bits in rax and low bits in r9
+    (rax_87, r9_87) = mulx (a @ 2) rdx_76
+
+// 0x000000000001b469 <+553>:	adcx   r9,r10
+    // 88: Add r9, r10, and cf and store the result in r9
+    (cf_88, r9_88) = adcx r9_87 r10_86 cf_85
+
+// 0x000000000001b46f <+559>:	adox   r11,rax
+    // 89: Add r11, rax, and of and store the result in r11
+    (of_89, r11_89) = adox r11_73 rax_87 of_86
+
+// 0x000000000001b475 <+565>:	mulx   rcx,r10,QWORD PTR [rsi+0x98]
+    // 90: Multiply a[3] and rdx (implicit) and store the high bits in rcx and low bits in r10
+    (rcx_90, r10_90) = mulx (a @ 3) rdx_76
+
+// 0x000000000001b47e <+574>:	adcx   r10,r11
+    // 91: Add r10, r11, and cf and store the result in r10
+    (cf_91, r10_91) = adcx r10_90 r11_89 cf_88
+
+// 0x000000000001b484 <+580>:	adox   r12,rcx
+    // 92: Add r12, rcx, and of and store the result in r12
+    (of_92, r12_92) = adox r12_77 rcx_90 of_89
+
+// 0x000000000001b48a <+586>:	mulx   rax,r11,QWORD PTR [rsi+0xa0]
+    // 93: Multiply a[4] and rdx (implicit) and store the high bits in rax and low bits in r11
+    (rax_93, r11_93) = mulx (a @ 4) rdx_76
+
+// 0x000000000001b493 <+595>:	adcx   r11,r12
+    // 94: Add r11, r12, and cf and store the result in r11
+    (cf_94, r11_94) = adcx r11_93 r12_92 cf_91
+
+// 0x000000000001b499 <+601>:	adox   rax,r13
+    // 95: Add rax, r13, and of and store the result in rax
+    (of_95, rax_95) = adox rax_93 r13_79 of_92
+
+// 0x000000000001b49f <+607>:	mulx   r13,r12,QWORD PTR [rsi+0xa8]
+    // 96: Multiply a[5] and rdx (implicit) and store the high bits in r13 and low bits in r12
+    (r13_96, r12_96) = mulx (a @ 5) rdx_76
+
+// 0x000000000001b4a8 <+616>:	mov    rdx,QWORD PTR [rbx+0x28]
+    // 97: Load b[5] into rdx
+    rdx_97 = b @ 5
+
+// 0x000000000001b4ac <+620>:	adcx   r12,rax
+    // 98: Add r12, rax, and cf and store the result in r12
+    (cf_98, r12_98) = adcx r12_96 rax_95 cf_94
+
+// 0x000000000001b4b2 <+626>:	adox   r13,rbp
+    // 99: Add r13, rbp, and of and store the result in r13
+    (of_99, r13_99) = adox r13_96 rbp_3 of_95
+
+// 0x000000000001b4b8 <+632>:	adcx   r13,rbp
+    // 100: Add r13, rbp, and cf and store the result in r13
+    (cf_100, r13_100) = adcx r13_99 rbp_3 cf_98
+
+// 0x000000000001b4be <+638>:	mulx   rcx,rax,r14
+    // 101: Multiply r14 and rdx (implicit) and store the high bits in rcx and low bits in rax
+    (rcx_101, rax_101) = mulx r14_0 rdx_97
+
+// 0x000000000001b4c3 <+643>:	adcx   rax,r8
+    // 102: Add rax, r8, and cf and store the result in rax
+    (cf_102, rax_102) = adcx rax_101 r8_85 cf_100
+
+// 0x000000000001b4c9 <+649>:	adox   r9,rcx
+    // 103: Add r9, rcx, and of and store the result in r9
+    (of_103, r9_103) = adox r9_88 rcx_101 of_99
+
+// 0x000000000001b4cf <+655>:	mov    QWORD PTR [rdi+0x28],rax
+    // 104: Store rax in result[5]
+    result5 = rax_102
+
+// 0x000000000001b4d3 <+659>:	mulx   rcx,r8,r15
+    // 105: Multiply r15 and rdx (implicit) and store the high bits in rcx and low bits in r8
+    (rcx_105, r8_105) = mulx r15_0 rdx_97
+
+// 0x000000000001b4d8 <+664>:	adcx   r8,r9
+    // 106: Add r8, r9, and cf and store the result in r8
+    (cf_106, r8_106) = adcx r8_105 r9_103 cf_102
+
+// 0x000000000001b4de <+670>:	adox   r10,rcx
+    // 107: Add r10, rcx, and of and store the result in r10
+    (of_107, r10_107) = adox r10_91 rcx_105 of_103
+
+// 0x000000000001b4e4 <+676>:	mulx   rax,r9,QWORD PTR [rsi+0x90]
+    // 108: Multiply a[2] and rdx (implicit) and store the high bits in rax and low bits in r9
+    (rax_108, r9_108) = mulx (a @ 2) rdx_97
+
+// 0x000000000001b4ed <+685>:	adcx   r9,r10
+    // 109: Add r9, r10, and cf and store the result in r9
+    (cf_109, r9_109) = adcx r9_108 r10_107 cf_106
+
+// 0x000000000001b4f3 <+691>:	adox   r11,rax
+    // 110: Add r11, rax, and of and store the result in r11
+    (of_110, r11_110) = adox r11_94 rax_108 of_107
+
+// 0x000000000001b4f9 <+697>:	mulx   rcx,r10,QWORD PTR [rsi+0x98]
+    // 111: Multiply a[3] and rdx (implicit) and store the high bits in rcx and low bits in r10
+    (rcx_111, r10_111) = mulx (a @ 3) rdx_97
+
+// 0x000000000001b502 <+706>:	adcx   r10,r11
+    // 112: Add r10, r11, and cf and store the result in r10
+    (cf_112, r10_112) = adcx r10_111 r11_110 cf_109
+
+// 0x000000000001b508 <+712>:	adox   r12,rcx
+    // 113: Add r12, rcx, and of and store the result in r12
+    (of_113, r12_113) = adox r12_98 rcx_111 of_110
+
+// 0x000000000001b50e <+718>:	mulx   rax,r11,QWORD PTR [rsi+0xa0]
+    // 114: Multiply a[4] and rdx (implicit) and store the high bits in rax and low bits in r11
+    (rax_114, r11_114) = mulx (a @ 4) rdx_97
+
+// 0x000000000001b517 <+727>:	adcx   r11,r12
+    // 115: Add r11, r12, and cf and store the result in r11
+    (cf_115, r11_115) = adcx r11_114 r12_113 cf_112
+
+// 0x000000000001b51d <+733>:	adox   rax,r13
+    // 116: Add rax, r13, and of and store the result in rax
+    (of_116, rax_116) = adox rax_114 r13_100 of_113
+
+// 0x000000000001b523 <+739>:	mulx   r13,r12,QWORD PTR [rsi+0xa8]
+    // 117: Multiply a[5] and rdx (implicit) and store the high bits in r13 and low bits in r12
+    (r13_117, r12_117) = mulx (a @ 5) rdx_97
+
+// 0x000000000001b52c <+748>:	mov    rdx,rax
+    // 118: Move rax to rdx
+    rdx_118 = rax_116
+
+// 0x000000000001b52f <+751>:	adcx   r12,rax
+    // 119: Add r12, rax, and cf and store the result in r12
+    (cf_119, r12_119) = adcx r12_117 rax_116 cf_115
+
+// 0x000000000001b535 <+757>:	adox   r13,rbp
+    // 120: Add r13, rbp, and of and store the result in r13
+    (of_120, r13_120) = adox r13_117 rbp_3 of_116
+
+// 0x000000000001b53b <+763>:	adcx   r13,rbp
+    // 121: Add r13, rbp, and cf and store the result in r13
+    (cf_121, r13_121) = adcx r13_120 rbp_3 cf_119
+
+// 0x000000000001b541 <+769>:	mov    QWORD PTR [rdi+0x30],r8
+// 0x000000000001b545 <+773>:	mov    QWORD PTR [rdi+0x38],r9
+// 0x000000000001b549 <+777>:	mov    QWORD PTR [rdi+0x40],r10
+// 0x000000000001b54d <+781>:	mov    QWORD PTR [rdi+0x48],r11
+// 0x000000000001b551 <+785>:	mov    QWORD PTR [rdi+0x50],r12
+// 0x000000000001b555 <+789>:	mov    QWORD PTR [rdi+0x58],r13
+    // 122: Store registers to high bits of result
+    resulthigh = [r8_106, r9_109, r10_112, r11_115, r12_119, r13_121]
+
+mulx_by_1_mont_384
+  : Vec384 // a; pointer stored in rsi
+  -> Vec384 // b; pointer stored in rbx
+  -> [64] // n0; stored in rcx
+  -> [8][64] // result
+mulx_by_1_mont_384 a b n0 = result
+  where
+// 0x000000000001ada4 <+4>:	4c 8b 06	mov    r8,QWORD PTR [rsi]
+// 0x000000000001ada7 <+7>:	48 89 ca	mov    rdx,rcx
+// 0x000000000001adaa <+10>:	4c 8b 4e 08	mov    r9,QWORD PTR [rsi+0x8]
+// 0x000000000001adae <+14>:	4c 8b 56 10	mov    r10,QWORD PTR [rsi+0x10]
+// 0x000000000001adb2 <+18>:	4c 8b 5e 18	mov    r11,QWORD PTR [rsi+0x18]
+// 0x000000000001adb6 <+22>:	4c 8b 66 20	mov    r12,QWORD PTR [rsi+0x20]
+// 0x000000000001adba <+26>:	4c 8b 6e 28	mov    r13,QWORD PTR [rsi+0x28]
+    // 0: Load a[0-5] into registers, move n0 to rdx
+    rdx_0 = n0
+    r8_0 = a @ 0
+    r9_0 = a @ 1
+    r10_0 = a @ 2
+    r11_0 = a @ 3
+    r12_0 = a @ 4
+    r13_0 = a @ 5
+
+// 0x000000000001adbe <+30>:	49 0f af d0	imul   rdx,r8
+    // 1: Multiply rdx and r8 and store the low bits in rdx
+    rdx_1 = imul rdx_0 r8_0
+
+// 0x000000000001adc2 <+34>:	4d 31 f6	xor    r14,r14
+    // 2: Zero r14, of, and cf
+    r14_2 = 0
+    of_2 = False
+    cf_2 = False
+
+// 0x000000000001adc5 <+37>:	c4 e2 fb f6 2b	mulx   rbp,rax,QWORD PTR [rbx]
+    // 3: Multiply b[0] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_3, rax_3) = mulx (b @ 0) rdx_1
+
+// 0x000000000001adca <+42>:	66 4c 0f 38 f6 c0	adcx   r8,rax
+    // 4: Add r8, rax, and cf and store the result in r8
+    (cf_4, r8_4) = adcx r8_0 rax_3 cf_2
+
+// 0x000000000001add0 <+48>:	f3 4c 0f 38 f6 cd	adox   r9,rbp
+    // 5: Add r9, rbp, and of and store the result in r9
+    (of_5, r9_5) = adox r9_0 rbp_3 of_2
+
+// 0x000000000001add6 <+54>:	c4 e2 fb f6 6b 08	mulx   rbp,rax,QWORD PTR [rbx+0x8]
+    // 6: Multiply b[1] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_6, rax_6) = mulx (b @ 1) rdx_1
+
+// 0x000000000001addc <+60>:	66 4c 0f 38 f6 c8	adcx   r9,rax
+    // 7: Add r9, rax, and cf and store the result in r9
+    (cf_7, r9_7) = adcx r9_5 rax_6 cf_4
+
+// 0x000000000001ade2 <+66>:	f3 4c 0f 38 f6 d5	adox   r10,rbp
+    // 8: Add r10, rbp, and of and store the result in r10
+    (of_8, r10_8) = adox r10_0 rbp_6 of_5
+
+// 0x000000000001ade8 <+72>:	c4 e2 fb f6 6b 10	mulx   rbp,rax,QWORD PTR [rbx+0x10]
+    // 9: Multiply b[2] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_9, rax_9) = mulx (b @ 2) rdx_1
+
+// 0x000000000001adee <+78>:	66 4c 0f 38 f6 d0	adcx   r10,rax
+    // 10: Add r10, rax, and cf and store the result in r10
+    (cf_10, r10_10) = adcx r10_8 rax_9 cf_7
+
+// 0x000000000001adf4 <+84>:	f3 4c 0f 38 f6 dd	adox   r11,rbp
+    // 11: Add r11, rbp, and of and store the result in r11
+    (of_11, r11_11) = adox r11_0 rbp_9 of_8
+
+// 0x000000000001adfa <+90>:	c4 e2 fb f6 6b 18	mulx   rbp,rax,QWORD PTR [rbx+0x18]
+    // 12: Multiply b[3] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_12, rax_12) = mulx (b @ 3) rdx_1
+
+// 0x000000000001ae00 <+96>:	66 4c 0f 38 f6 d8	adcx   r11,rax
+    // 13: Add r11, rax, and cf and store the result in r11
+    (cf_13, r11_13) = adcx r11_11 rax_12 cf_10
+
+// 0x000000000001ae06 <+102>:	f3 4c 0f 38 f6 e5	adox   r12,rbp
+    // 14: Add r12, rbp, and of and store the result in r12
+    (of_14, r12_14) = adox r12_0 rbp_12 of_11
+
+// 0x000000000001ae0c <+108>:	c4 e2 fb f6 6b 20	mulx   rbp,rax,QWORD PTR [rbx+0x20]
+    // 15: Multiply b[4] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_15, rax_15) = mulx (b @ 4) rdx_1
+
+// 0x000000000001ae12 <+114>:	66 4c 0f 38 f6 e0	adcx   r12,rax
+    // 16: Add r12, rax, and cf and store the result in r12
+    (cf_16, r12_16) = adcx r12_14 rax_15 cf_13
+
+// 0x000000000001ae18 <+120>:	f3 4c 0f 38 f6 ed	adox   r13,rbp
+    // 17: Add r13, rbp, and of and store the result in r13
+    (of_17, r13_17) = adox r13_0 rbp_15 of_14
+
+// 0x000000000001ae1e <+126>:	c4 e2 fb f6 6b 28	mulx   rbp,rax,QWORD PTR [rbx+0x28]
+    // 18: Multiply b[5] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_18, rax_18) = mulx (b @ 5) rdx_1
+
+// 0x000000000001ae24 <+132>:	48 89 ca	mov    rdx,rcx
+    // 19: Move rcx to rdx
+    rdx_19 = n0
+
+// 0x000000000001ae27 <+135>:	66 4c 0f 38 f6 e8	adcx   r13,rax
+    // 20: Add r13, rax, and cf and store the result in r13
+    (cf_20, r13_20) = adcx r13_17 rax_18 cf_16
+
+// 0x000000000001ae2d <+141>:	f3 49 0f 38 f6 ee	adox   rbp,r14
+    // 21: Add rbp, r14, and of and store the result in rbp
+    (of_21, rbp_21) = adox rbp_18 r14_2 of_17
+
+// 0x000000000001ae33 <+147>:	66 4c 0f 38 f6 f5	adcx   r14,rbp
+    // 22: Add r14, rbp, and cf and store the result in r14
+    (cf_22, r14_22) = adcx r14_2 rbp_21 cf_20
+
+// 0x000000000001ae39 <+153>:	49 0f af d1	imul   rdx,r9
+    // 23: Multiply rdx and r9 and store the low bits in rdx
+    rdx_23 = imul rdx_19 r9_7
+
+// 0x000000000001ae3d <+157>:	4d 31 ff	xor    r15,r15
+    // 24: Zero r15, of, and cf
+    r15_24 = 0
+    of_24 = False
+    cf_24 = False
+
+// 0x000000000001ae40 <+160>:	c4 e2 fb f6 2b	mulx   rbp,rax,QWORD PTR [rbx]
+    // 25: Multiply b[0] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_25, rax_25) = mulx (b @ 0) rdx_23
+
+// 0x000000000001ae45 <+165>:	66 4c 0f 38 f6 c8	adcx   r9,rax
+    // 26: Add r9, rax, and cf and store the result in r9
+    (cf_26, r9_26) = adcx r9_7 rax_25 cf_24
+
+// 0x000000000001ae4b <+171>:	f3 4c 0f 38 f6 d5	adox   r10,rbp
+    // 27: Add r10, rbp, and of and store the result in r10
+    (of_27, r10_27) = adox r10_10 rbp_25 of_24
+
+// 0x000000000001ae51 <+177>:	c4 e2 fb f6 6b 08	mulx   rbp,rax,QWORD PTR [rbx+0x8]
+    // 28: Multiply b[1] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_28, rax_28) = mulx (b @ 1) rdx_23
+
+// 0x000000000001ae57 <+183>:	66 4c 0f 38 f6 d0	adcx   r10,rax
+    // 29: Add r10, rax, and cf and store the result in r10
+    (cf_29, r10_29) = adcx r10_27 rax_28 cf_26
+
+// 0x000000000001ae5d <+189>:	f3 4c 0f 38 f6 dd	adox   r11,rbp
+    // 30: Add r11, rbp, and of and store the result in r11
+    (of_30, r11_30) = adox r11_13 rbp_28 of_27
+
+// 0x000000000001ae63 <+195>:	c4 e2 fb f6 6b 10	mulx   rbp,rax,QWORD PTR [rbx+0x10]
+    // 31: Multiply b[2] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_31, rax_31) = mulx (b @ 2) rdx_23
+
+// 0x000000000001ae69 <+201>:	66 4c 0f 38 f6 d8	adcx   r11,rax
+    // 32: Add r11, rax, and cf and store the result in r11
+    (cf_32, r11_32) = adcx r11_30 rax_31 cf_29
+
+// 0x000000000001ae6f <+207>:	f3 4c 0f 38 f6 e5	adox   r12,rbp
+    // 33: Add r12, rbp, and of and store the result in r12
+    (of_33, r12_33) = adox r12_16 rbp_31 of_30
+
+// 0x000000000001ae75 <+213>:	c4 e2 fb f6 6b 18	mulx   rbp,rax,QWORD PTR [rbx+0x18]
+    // 34: Multiply b[3] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_34, rax_34) = mulx (b @ 3) rdx_23
+
+// 0x000000000001ae7b <+219>:	66 4c 0f 38 f6 e0	adcx   r12,rax
+    // 35: Add r12, rax, and cf and store the result in r12
+    (cf_35, r12_35) = adcx r12_33 rax_34 cf_32
+
+// 0x000000000001ae81 <+225>:	f3 4c 0f 38 f6 ed	adox   r13,rbp
+    // 36: Add r13, rbp, and of and store the result in r13
+    (of_36, r13_36) = adox r13_20 rbp_34 of_33
+
+// 0x000000000001ae87 <+231>:	c4 e2 fb f6 6b 20	mulx   rbp,rax,QWORD PTR [rbx+0x20]
+    // 37: Multiply b[4] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_37, rax_37) = mulx (b @ 4) rdx_23
+
+// 0x000000000001ae8d <+237>:	66 4c 0f 38 f6 e8	adcx   r13,rax
+    // 38: Add r13, rax, and cf and store the result in r13
+    (cf_38, r13_38) = adcx r13_36 rax_37 cf_35
+
+// 0x000000000001ae93 <+243>:	f3 4c 0f 38 f6 f5	adox   r14,rbp
+    // 39: Add r14, rbp, and of and store the result in r14
+    (of_39, r14_39) = adox r14_22 rbp_37 of_36
+
+// 0x000000000001ae99 <+249>:	c4 e2 fb f6 6b 28	mulx   rbp,rax,QWORD PTR [rbx+0x28]
+    // 40: Multiply b[5] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_40, rax_40) = mulx (b @ 5) rdx_23
+
+// 0x000000000001ae9f <+255>:	48 89 ca	mov    rdx,rcx
+    // 41: Move rcx to rdx
+    rdx_41 = n0
+
+// 0x000000000001aea2 <+258>:	66 4c 0f 38 f6 f0	adcx   r14,rax
+    // 42: Add r14, rax, and cf and store the result in r14
+    (cf_42, r14_42) = adcx r14_39 rax_40 cf_38
+
+// 0x000000000001aea8 <+264>:	f3 49 0f 38 f6 ef	adox   rbp,r15
+    // 43: Add rbp, r15, and of and store the result in rbp
+    (of_43, rbp_43) = adox rbp_40 r15_24 of_39
+
+// 0x000000000001aeae <+270>:	66 4c 0f 38 f6 fd	adcx   r15,rbp
+    // 44: Add r15, rbp, and cf and store the result in r15
+    (cf_44, r15_44) = adcx r15_24 rbp_43 cf_42
+
+// 0x000000000001aeb4 <+276>:	49 0f af d2	imul   rdx,r10
+    // 45: Multiply rdx and r10 and store the low bits in rdx
+    rdx_45 = imul rdx_41 r10_29
+
+// 0x000000000001aeb8 <+280>:	4d 31 c0	xor    r8,r8
+    // 46: Zero r8, of, and cf
+    r8_46 = 0
+    of_46 = False
+    cf_46 = False
+
+// 0x000000000001aebb <+283>:	c4 e2 fb f6 2b	mulx   rbp,rax,QWORD PTR [rbx]
+    // 47: Multiply b[0] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_47, rax_47) = mulx (b @ 0) rdx_45
+
+// 0x000000000001aec0 <+288>:	66 4c 0f 38 f6 d0	adcx   r10,rax
+    // 48: Add r10, rax, and cf and store the result in r10
+    (cf_48, r10_48) = adcx r10_29 rax_47 cf_46
+
+// 0x000000000001aec6 <+294>:	f3 4c 0f 38 f6 dd	adox   r11,rbp
+    // 49: Add r11, rbp, and of and store the result in r11
+    (of_49, r11_49) = adox r11_32 rbp_47 of_46
+
+// 0x000000000001aecc <+300>:	c4 e2 fb f6 6b 08	mulx   rbp,rax,QWORD PTR [rbx+0x8]
+    // 50: Multiply b[1] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_50, rax_50) = mulx (b @ 1) rdx_45
+
+// 0x000000000001aed2 <+306>:	66 4c 0f 38 f6 d8	adcx   r11,rax
+    // 51: Add r11, rax, and cf and store the result in r11
+    (cf_51, r11_51) = adcx r11_49 rax_50 cf_48
+
+// 0x000000000001aed8 <+312>:	f3 4c 0f 38 f6 e5	adox   r12,rbp
+    // 52: Add r12, rbp, and of and store the result in r12
+    (of_52, r12_52) = adox r12_35 rbp_50 of_49
+
+// 0x000000000001aede <+318>:	c4 e2 fb f6 6b 10	mulx   rbp,rax,QWORD PTR [rbx+0x10]
+    // 53: Multiply b[2] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_53, rax_53) = mulx (b @ 2) rdx_45
+
+// 0x000000000001aee4 <+324>:	66 4c 0f 38 f6 e0	adcx   r12,rax
+    // 54: Add r12, rax, and cf and store the result in r12
+    (cf_54, r12_54) = adcx r12_52 rax_53 cf_51
+
+// 0x000000000001aeea <+330>:	f3 4c 0f 38 f6 ed	adox   r13,rbp
+    // 55: Add r13, rbp, and of and store the result in r13
+    (of_55, r13_55) = adox r13_38 rbp_53 of_52
+
+// 0x000000000001aef0 <+336>:	c4 e2 fb f6 6b 18	mulx   rbp,rax,QWORD PTR [rbx+0x18]
+    // 56: Multiply b[3] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_56, rax_56) = mulx (b @ 3) rdx_45
+
+// 0x000000000001aef6 <+342>:	66 4c 0f 38 f6 e8	adcx   r13,rax
+    // 57: Add r13, rax, and cf and store the result in r13
+    (cf_57, r13_57) = adcx r13_55 rax_56 cf_54
+
+// 0x000000000001aefc <+348>:	f3 4c 0f 38 f6 f5	adox   r14,rbp
+    // 58: Add r14, rbp, and of and store the result in r14
+    (of_58, r14_58) = adox r14_42 rbp_56 of_55
+
+// 0x000000000001af02 <+354>:	c4 e2 fb f6 6b 20	mulx   rbp,rax,QWORD PTR [rbx+0x20]
+    // 59: Multiply b[4] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_59, rax_59) = mulx (b @ 4) rdx_45
+
+// 0x000000000001af08 <+360>:	66 4c 0f 38 f6 f0	adcx   r14,rax
+    // 60: Add r14, rax, and cf and store the result in r14
+    (cf_60, r14_60) = adcx r14_58 rax_59 cf_57
+
+// 0x000000000001af0e <+366>:	f3 4c 0f 38 f6 fd	adox   r15,rbp
+    // 61: Add r15, rbp, and of and store the result in r15
+    (of_61, r15_61) = adox r15_44 rbp_59 of_58
+
+// 0x000000000001af14 <+372>:	c4 e2 fb f6 6b 28	mulx   rbp,rax,QWORD PTR [rbx+0x28]
+    // 62: Multiply b[5] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_62, rax_62) = mulx (b @ 5) rdx_45
+
+// 0x000000000001af1a <+378>:	48 89 ca	mov    rdx,rcx
+    // 63: Move rcx to rdx
+    rdx_63 = n0
+
+// 0x000000000001af1d <+381>:	66 4c 0f 38 f6 f8	adcx   r15,rax
+    // 64: Add r15, rax, and cf and store the result in r15
+    (cf_64, r15_64) = adcx r15_61 rax_62 cf_60
+
+// 0x000000000001af23 <+387>:	f3 49 0f 38 f6 e8	adox   rbp,r8
+    // 65: Add rbp, r8, and of and store the result in rbp
+    (of_65, rbp_65) = adox rbp_62 r8_46 of_61
+
+// 0x000000000001af29 <+393>:	66 4c 0f 38 f6 c5	adcx   r8,rbp
+    // 66: Add r8, rbp, and cf and store the result in r8
+    (cf_66, r8_66) = adcx r8_46 rbp_65 cf_64
+
+// 0x000000000001af2f <+399>:	49 0f af d3	imul   rdx,r11
+    // 67: Multiply rdx and r11 and store the low bits in rdx
+    rdx_67 = imul rdx_63 r11_51
+
+// 0x000000000001af33 <+403>:	4d 31 c9	xor    r9,r9
+    // 68: Zero r9, of, and cf
+    r9_68 = 0
+    of_68 = False
+    cf_68 = False
+
+// 0x000000000001af36 <+406>:	c4 e2 fb f6 2b	mulx   rbp,rax,QWORD PTR [rbx]
+    // 69: Multiply b[0] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_69, rax_69) = mulx (b @ 0) rdx_67
+
+// 0x000000000001af3b <+411>:	66 4c 0f 38 f6 d8	adcx   r11,rax
+    // 70: Add r11, rax, and cf and store the result in r11
+    (cf_70, r11_70) = adcx r11_51 rax_69 cf_68
+
+// 0x000000000001af41 <+417>:	f3 4c 0f 38 f6 e5	adox   r12,rbp
+    // 71: Add r12, rbp, and of and store the result in r12
+    (of_71, r12_71) = adox r12_54 rbp_69 of_68
+
+// 0x000000000001af47 <+423>:	c4 e2 fb f6 6b 08	mulx   rbp,rax,QWORD PTR [rbx+0x8]
+    // 72: Multiply b[1] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_72, rax_72) = mulx (b @ 1) rdx_67
+
+// 0x000000000001af4d <+429>:	66 4c 0f 38 f6 e0	adcx   r12,rax
+    // 73: Add r12, rax, and cf and store the result in r12
+    (cf_73, r12_73) = adcx r12_71 rax_72 cf_70
+
+// 0x000000000001af53 <+435>:	f3 4c 0f 38 f6 ed	adox   r13,rbp
+    // 74: Add r13, rbp, and of and store the result in r13
+    (of_74, r13_74) = adox r13_57 rbp_72 of_71
+
+// 0x000000000001af59 <+441>:	c4 e2 fb f6 6b 10	mulx   rbp,rax,QWORD PTR [rbx+0x10]
+    // 75: Multiply b[2] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_75, rax_75) = mulx (b @ 2) rdx_67
+
+// 0x000000000001af5f <+447>:	66 4c 0f 38 f6 e8	adcx   r13,rax
+    // 76: Add r13, rax, and cf and store the result in r13
+    (cf_76, r13_76) = adcx r13_74 rax_75 cf_73
+
+// 0x000000000001af65 <+453>:	f3 4c 0f 38 f6 f5	adox   r14,rbp
+    // 77: Add r14, rbp, and of and store the result in r14
+    (of_77, r14_77) = adox r14_60 rbp_75 of_74
+
+// 0x000000000001af6b <+459>:	c4 e2 fb f6 6b 18	mulx   rbp,rax,QWORD PTR [rbx+0x18]
+    // 78: Multiply b[3] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_78, rax_78) = mulx (b @ 3) rdx_67
+
+// 0x000000000001af71 <+465>:	66 4c 0f 38 f6 f0	adcx   r14,rax
+    // 79: Add r14, rax, and cf and store the result in r14
+    (cf_79, r14_79) = adcx r14_77 rax_78 cf_76
+
+// 0x000000000001af77 <+471>:	f3 4c 0f 38 f6 fd	adox   r15,rbp
+    // 80: Add r15, rbp, and of and store the result in r15
+    (of_80, r15_80) = adox r15_64 rbp_78 of_77
+
+// 0x000000000001af7d <+477>:	c4 e2 fb f6 6b 20	mulx   rbp,rax,QWORD PTR [rbx+0x20]
+    // 81: Multiply b[4] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_81, rax_81) = mulx (b @ 4) rdx_67
+
+// 0x000000000001af83 <+483>:	66 4c 0f 38 f6 f8	adcx   r15,rax
+    // 82: Add r15, rax, and cf and store the result in r15
+    (cf_82, r15_82) = adcx r15_80 rax_81 cf_79
+
+// 0x000000000001af89 <+489>:	f3 4c 0f 38 f6 c5	adox   r8,rbp
+    // 83: Add r8, rbp, and of and store the result in r8
+    (of_83, r8_83) = adox r8_66 rbp_81 of_80
+
+// 0x000000000001af8f <+495>:	c4 e2 fb f6 6b 28	mulx   rbp,rax,QWORD PTR [rbx+0x28]
+    // 84: Multiply b[5] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_84, rax_84) = mulx (b @ 5) rdx_67
+
+// 0x000000000001af95 <+501>:	48 89 ca	mov    rdx,rcx
+    // 85: Move rcx to rdx
+    rdx_85 = n0
+
+// 0x000000000001af98 <+504>:	66 4c 0f 38 f6 c0	adcx   r8,rax
+    // 86: Add r8, rax, and cf and store the result in r8
+    (cf_86, r8_86) = adcx r8_83 rax_84 cf_82
+
+// 0x000000000001af9e <+510>:	f3 49 0f 38 f6 e9	adox   rbp,r9
+    // 87: Add rbp, r9, and of and store the result in rbp
+    (of_87, rbp_87) = adox rbp_84 r9_68 of_83
+
+// 0x000000000001afa4 <+516>:	66 4c 0f 38 f6 cd	adcx   r9,rbp
+    // 88: Add r9, rbp, and cf and store the result in r9
+    (cf_88, r9_88) = adcx r9_68 rbp_87 cf_86
+
+// 0x000000000001afaa <+522>:	49 0f af d4	imul   rdx,r12
+    // 89: Multiply rdx and r12 and store the low bits in rdx
+    rdx_89 = imul rdx_85 r12_73
+
+// 0x000000000001afae <+526>:	4d 31 d2	xor    r10,r10
+    // 90: Zero r10, of, and cf
+    r10_90 = 0
+    of_90 = False
+    cf_90 = False
+
+// 0x000000000001afb1 <+529>:	c4 e2 fb f6 2b	mulx   rbp,rax,QWORD PTR [rbx]
+    // 91: Multiply b[0] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_91, rax_91) = mulx (b @ 0) rdx_89
+
+// 0x000000000001afb6 <+534>:	66 4c 0f 38 f6 e0	adcx   r12,rax
+    // 92: Add r12, rax, and cf and store the result in r12
+    (cf_92, r12_92) = adcx r12_73 rax_91 cf_90
+
+// 0x000000000001afbc <+540>:	f3 4c 0f 38 f6 ed	adox   r13,rbp
+    // 93: Add r13, rbp, and of and store the result in r13
+    (of_93, r13_93) = adox r13_76 rbp_91 of_90
+
+// 0x000000000001afc2 <+546>:	c4 e2 fb f6 6b 08	mulx   rbp,rax,QWORD PTR [rbx+0x8]
+    // 94: Multiply b[1] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_94, rax_94) = mulx (b @ 1) rdx_89
+
+// 0x000000000001afc8 <+552>:	66 4c 0f 38 f6 e8	adcx   r13,rax
+    // 95: Add r13, rax, and cf and store the result in r13
+    (cf_95, r13_95) = adcx r13_93 rax_94 cf_92
+
+// 0x000000000001afce <+558>:	f3 4c 0f 38 f6 f5	adox   r14,rbp
+    // 96: Add r14, rbp, and of and store the result in r14
+    (of_96, r14_96) = adox r14_79 rbp_94 of_93
+
+// 0x000000000001afd4 <+564>:	c4 e2 fb f6 6b 10	mulx   rbp,rax,QWORD PTR [rbx+0x10]
+    // 97: Multiply b[2] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_97, rax_97) = mulx (b @ 2) rdx_89
+
+// 0x000000000001afda <+570>:	66 4c 0f 38 f6 f0	adcx   r14,rax
+    // 98: Add r14, rax, and cf and store the result in r14
+    (cf_98, r14_98) = adcx r14_96 rax_97 cf_95
+
+// 0x000000000001afe0 <+576>:	f3 4c 0f 38 f6 fd	adox   r15,rbp
+    // 99: Add r15, rbp, and of and store the result in r15
+    (of_99, r15_99) = adox r15_82 rbp_97 of_96
+
+// 0x000000000001afe6 <+582>:	c4 e2 fb f6 6b 18	mulx   rbp,rax,QWORD PTR [rbx+0x18]
+    // 100: Multiply b[3] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_100, rax_100) = mulx (b @ 3) rdx_89
+
+// 0x000000000001afec <+588>:	66 4c 0f 38 f6 f8	adcx   r15,rax
+    // 101: Add r15, rax, and cf and store the result in r15
+    (cf_101, r15_101) = adcx r15_99 rax_100 cf_98
+
+// 0x000000000001aff2 <+594>:	f3 4c 0f 38 f6 c5	adox   r8,rbp
+    // 102: Add r8, rbp, and of and store the result in r8
+    (of_102, r8_102) = adox r8_86 rbp_100 of_99
+
+// 0x000000000001aff8 <+600>:	c4 e2 fb f6 6b 20	mulx   rbp,rax,QWORD PTR [rbx+0x20]
+    // 103: Multiply b[4] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_103, rax_103) = mulx (b @ 4) rdx_89
+
+// 0x000000000001affe <+606>:	66 4c 0f 38 f6 c0	adcx   r8,rax
+    // 104: Add r8, rax, and cf and store the result in r8
+    (cf_104, r8_104) = adcx r8_102 rax_103 cf_101
+
+// 0x000000000001b004 <+612>:	f3 4c 0f 38 f6 cd	adox   r9,rbp
+    // 105: Add r9, rbp, and of and store the result in r9
+    (of_105, r9_105) = adox r9_88 rbp_103 of_102
+
+// 0x000000000001b00a <+618>:	c4 e2 fb f6 6b 28	mulx   rbp,rax,QWORD PTR [rbx+0x28]
+    // 106: Multiply b[5] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_106, rax_106) = mulx (b @ 5) rdx_89
+
+// 0x000000000001b010 <+624>:	48 89 ca	mov    rdx,rcx
+    // 107: Move rcx to rdx
+    rdx_107 = n0
+
+// 0x000000000001b013 <+627>:	66 4c 0f 38 f6 c8	adcx   r9,rax
+    // 108: Add r9, rax, and cf and store the result in r9
+    (cf_108, r9_108) = adcx r9_105 rax_106 cf_104
+
+// 0x000000000001b019 <+633>:	f3 49 0f 38 f6 ea	adox   rbp,r10
+    // 109: Add rbp, r10, and of and store the result in rbp
+    (of_109, rbp_109) = adox rbp_106 r10_90 of_105
+
+// 0x000000000001b01f <+639>:	66 4c 0f 38 f6 d5	adcx   r10,rbp
+    // 110: Add r10, rbp, and cf and store the result in r10
+    (cf_110, r10_110) = adcx r10_90 rbp_109 cf_108
+
+// 0x000000000001b025 <+645>:	49 0f af d5	imul   rdx,r13
+    // 111: Multiply rdx and r13 and store the low bits in rdx
+    rdx_111 = imul rdx_107 r13_95
+
+// 0x000000000001b029 <+649>:	4d 31 db	xor    r11,r11
+    // 112: Zero r11, of, and cf
+    r11_112 = 0
+    of_112 = False
+    cf_112 = False
+
+// 0x000000000001b02c <+652>:	c4 e2 fb f6 2b	mulx   rbp,rax,QWORD PTR [rbx]
+    // 113: Multiply b[0] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_113, rax_113) = mulx (b @ 0) rdx_111
+
+// 0x000000000001b031 <+657>:	66 4c 0f 38 f6 e8	adcx   r13,rax
+    // 114: Add r13, rax, and cf and store the result in r13
+    (cf_114, r13_114) = adcx r13_95 rax_113 cf_112
+
+// 0x000000000001b037 <+663>:	f3 4c 0f 38 f6 f5	adox   r14,rbp
+    // 115: Add r14, rbp, and of and store the result in r14
+    (of_115, r14_115) = adox r14_98 rbp_113 of_112
+
+// 0x000000000001b03d <+669>:	c4 e2 fb f6 6b 08	mulx   rbp,rax,QWORD PTR [rbx+0x8]
+    // 116: Multiply b[1] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_116, rax_116) = mulx (b @ 1) rdx_111
+
+// 0x000000000001b043 <+675>:	66 4c 0f 38 f6 f0	adcx   r14,rax
+    // 117: Add r14, rax, and cf and store the result in r14
+    (cf_117, r14_117) = adcx r14_115 rax_116 cf_114
+
+// 0x000000000001b049 <+681>:	f3 4c 0f 38 f6 fd	adox   r15,rbp
+    // 118: Add r15, rbp, and of and store the result in r15
+    (of_118, r15_118) = adox r15_101 rbp_116 of_115
+
+// 0x000000000001b04f <+687>:	c4 e2 fb f6 6b 10	mulx   rbp,rax,QWORD PTR [rbx+0x10]
+    // 119: Multiply b[2] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_119, rax_119) = mulx (b @ 2) rdx_111
+
+// 0x000000000001b055 <+693>:	66 4c 0f 38 f6 f8	adcx   r15,rax
+    // 120: Add r15, rax, and cf and store the result in r15
+    (cf_120, r15_120) = adcx r15_118 rax_119 cf_117
+
+// 0x000000000001b05b <+699>:	f3 4c 0f 38 f6 c5	adox   r8,rbp
+    // 121: Add r8, rbp, and of and store the result in r8
+    (of_121, r8_121) = adox r8_104 rbp_119 of_118
+
+// 0x000000000001b061 <+705>:	c4 e2 fb f6 6b 18	mulx   rbp,rax,QWORD PTR [rbx+0x18]
+    // 122: Multiply b[3] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_122, rax_122) = mulx (b @ 3) rdx_111
+
+// 0x000000000001b067 <+711>:	66 4c 0f 38 f6 c0	adcx   r8,rax
+    // 123: Add r8, rax, and cf and store the result in r8
+    (cf_123, r8_123) = adcx r8_121 rax_122 cf_120
+
+// 0x000000000001b06d <+717>:	f3 4c 0f 38 f6 cd	adox   r9,rbp
+    // 124: Add r9, rbp, and of and store the result in r9
+    (of_124, r9_124) = adox r9_108 rbp_122 of_121
+
+// 0x000000000001b073 <+723>:	c4 e2 fb f6 6b 20	mulx   rbp,rax,QWORD PTR [rbx+0x20]
+    // 125: Multiply b[4] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_125, rax_125) = mulx (b @ 4) rdx_111
+
+// 0x000000000001b079 <+729>:	66 4c 0f 38 f6 c8	adcx   r9,rax
+    // 126: Add r9, rax, and cf and store the result in r9
+    (cf_126, r9_126) = adcx r9_124 rax_125 cf_123
+
+// 0x000000000001b07f <+735>:	f3 4c 0f 38 f6 d5	adox   r10,rbp
+    // 127: Add r10, rbp, and of and store the result in r10
+    (of_127, r10_127) = adox r10_110 rbp_125 of_124
+
+// 0x000000000001b085 <+741>:	c4 e2 fb f6 6b 28	mulx   rbp,rax,QWORD PTR [rbx+0x28]
+    // 128: Multiply b[5] and rdx (implicit) and store the high bits in rbp and low bits in rax
+    (rbp_128, rax_128) = mulx (b @ 5) rdx_111
+
+// 0x000000000001b08b <+747>:	48 89 ca	mov    rdx,rcx
+    // 129: Move rcx to rdx
+    rdx_129 = n0
+
+// 0x000000000001b08e <+750>:	66 4c 0f 38 f6 d0	adcx   r10,rax
+    // 130: Add r10, rax, and cf and store the result in r10
+    (cf_130, r10_130) = adcx r10_127 rax_128 cf_126
+
+// 0x000000000001b094 <+756>:	f3 49 0f 38 f6 eb	adox   rbp,r11
+    // 131: Add rbp, r11, and of and store the result in rbp
+    (of_131, rbp_131) = adox rbp_128 r11_112 of_127
+
+// 0x000000000001b09a <+762>:	66 4c 0f 38 f6 dd	adcx   r11,rbp
+    // 132: Add r11, rbp, and cf and store the result in r11
+    (cf_132, r11_132) = adcx r11_112 rbp_131 cf_130
+
+    result = [r8_123, r9_126, r10_130, r11_132, r12_92, r13_114, r14_117, r15_120]
+
+__mulx_mont_384
+  : [9][64] // acc registers
+  -> [64] // b[0]; stored in rdx
+  -> [64] // stack[1]
+  -> [64] // lo; stored in rdi
+  -> [64] // hi; stored in rbp
+  -> Vec384 // a; pointer in rsi
+  -> Vec384 // b; pointer in rbx
+  -> Vec384 // n; pointer in rcx
+  -> Vec384 // result
+__mulx_mont_384 acc b0 stack1_0 lo hi a b n = result
+  where
+    // 0
+    [r8_0, r9_0, _, _, r12_0, _, r14_0, r15_0, rax_0] = acc
+    rdx_0 = b0
+    rdi_0 = lo
+    rbp_0 = hi
+
+// 0x000000000001b384 <+4>:	c4 42 8b f6 d7	mulx   r10,r14,r15
+    // 1: Multiply r15 and rdx (implicit) and store the high bits in r10 and low bits in r14
+    (r10_1, r14_1) = mulx r15_0 rdx_0
+    // 1
+
+// 0x000000000001b389 <+9>:	c4 62 83 f6 d8	mulx   r11,r15,rax
+    // 2: Multiply rax and rdx (implicit) and store the high bits in r11 and low bits in r15
+    (r11_2, r15_2) = mulx rax_0 rdx_0
+    // 2
+
+// 0x000000000001b38e <+14>:	4d 01 f1	add    r9,r14
+    // 3: Add r9 and r14 and store the result in r9 (setting cf)
+    (cf_3, r9_13) = add r9_0 r14_1
+
+// 0x000000000001b391 <+17>:	c4 42 fb f6 e4	mulx   r12,rax,r12
+    // 4: Multiply r12 and rdx (implicit) and store the high bits in r12 and low bits in rax
+    (r12_4, rax_4) = mulx r12_0 rdx_0
+    // 4
+
+// 0x000000000001b396 <+22>:	4d 11 fa	adc    r10,r15
+    // 5: Add r10, r15, and cf and store the result in r10 (setting cf)
+    (cf_5, r10_5) = adc r10_1 r15_2 cf_3
+
+// 0x000000000001b399 <+25>:	c4 62 c3 f6 ef	mulx   r13,rdi,rdi
+    // 6: Multiply rdi and rdx (implicit) and store the high bits in r13 and low bits in rdi
+    (r13_6, rdi_6) = mulx rdi_0 rdx_0
+    // 6
+
+// 0x000000000001b39e <+30>:	49 11 c3	adc    r11,rax
+    // 7: Add r11, rax, and cf and store the result in r11 (setting cf)
+    (cf_7, r11_7) = adc r11_2 rax_4 cf_5
+
+// 0x000000000001b3a1 <+33>:	c4 62 d3 f6 f5	mulx   r14,rbp,rbp
+    // 8: Multiply rbp and rdx (implicit) and store the high bits in r14 and low bits in rbp
+    (r14_8, rbp_8) = mulx rbp_0 rdx_0
+    // 8
+
+// 0x000000000001b3a6 <+38>:	48 8b 53 08	mov    rdx,QWORD PTR [rbx+0x8]
+    // 9: Store b[1] in rdx
+    rdx_9 = b @ 1
+
+// 0x000000000001b3aa <+42>:	49 11 fc	adc    r12,rdi
+    // 10: Add r12, rdi, and cf and store the result in r12 (setting cf)
+    (cf_10, r12_10) = adc r12_4 rdi_6 cf_7
+
+// 0x000000000001b3ad <+45>:	49 11 ed	adc    r13,rbp
+    // 11: Add r13, rbp, and cf and store the result in r12 (setting cf)
+    (cf_11, r13_11) = adc r13_6 rbp_8 cf_10
+
+// 0x000000000001b3b0 <+48>:	49 83 d6 00	adc    r14,0x0
+    // 12: Add r13, 0, and cf and store the result in r14 (setting cf)
+    (cf_12, r14_12) = adc r14_8 0 cf_11
+
+// 0x000000000001b3b4 <+52>:	4d 31 ff	xor    r15,r15
+    // 13: Zero r15, of, and cf
+    r15_13 = 0
+    of_13 = False
+    cf_13 = False
+
+// 0x000000000001b3b7 <+55>:	4c 89 44 24 10	mov    QWORD PTR [rsp+0x10],r8
+    // 14: Store r8 at stack[2]
+    stack2_14 = r8_0
+
+// 0x000000000001b3bc <+60>:	4c 0f af 44 24 08	imul   r8,QWORD PTR [rsp+0x8]
+    // 15: Multiply r8 and stack[1] and store the low bits in r8
+    r8_15 = imul r8_0 stack1_0
+
+// 0x000000000001b3c2 <+66>:	48 31 c0	xor    rax,rax
+    // 16: Zero rax, of, and cf
+    rax_16 = 0
+    of_16 = False
+    cf_16 = False
+
+// 0x000000000001b3c5 <+69>:	c4 e2 c3 f6 ae 80 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x80]
+    // 17: Multiply a[0] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_17, rdi_17) = mulx (a @ 0) rdx_9
+    // 17
+
+// 0x000000000001b3ce <+78>:	f3 4c 0f 38 f6 cf	adox   r9,rdi
+    // 18: Add r9, rdi, and of and store the result in r9
+    (of_18, r9_18) = adox r9_13 rdi_17 of_16
+    // 18
+
+// 0x000000000001b3d4 <+84>:	66 4c 0f 38 f6 d5	adcx   r10,rbp
+    // 19: Add r10, rbp, and cf and store the result in r10
+    (cf_19, r10_19) = adcx r10_5 rbp_17 cf_16
+
+// 0x000000000001b3da <+90>:	c4 e2 c3 f6 ae 88 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x88]
+    // 20: Multiply a[1] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_20, rdi_20) = mulx (a @ 1) rdx_9
+    // 20
+
+// 0x000000000001b3e3 <+99>:	f3 4c 0f 38 f6 d7	adox   r10,rdi
+    // 21: Add r10, rdi, and of and store the result in r10
+    (of_21, r10_21) = adox r10_19 rdi_20 of_18
+    // 21
+
+// 0x000000000001b3e9 <+105>:	66 4c 0f 38 f6 dd	adcx   r11,rbp
+    // 22: Add r11, rbp, and cf and store the result in r11
+    (cf_22, r11_22) = adcx r11_7 rbp_20 cf_19
+    // 22
+
+// 0x000000000001b3ef <+111>:	c4 e2 c3 f6 ae 90 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x90]
+    // 23: Multiply a[2] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_23, rdi_23) = mulx (a @ 2) rdx_9
+    // 23
+
+// 0x000000000001b3f8 <+120>:	f3 4c 0f 38 f6 df	adox   r11,rdi
+    // 24: Add r11, rdi, and of and store the result in r11
+    (of_24, r11_24) = adox r11_22 rdi_23 of_21
+    // 24
+
+// 0x000000000001b3fe <+126>:	66 4c 0f 38 f6 e5	adcx   r12,rbp
+    // 25: Add r12, rbp, and cf and store the result in r12
+    (cf_25, r12_25) = adcx r12_10 rbp_23 cf_22
+    // 25
+
+// 0x000000000001b404 <+132>:	c4 e2 c3 f6 ae 98 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x98]
+    // 26: Multiply a[3] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_26, rdi_26) = mulx (a @ 3) rdx_9
+    // 26
+
+// 0x000000000001b40d <+141>:	f3 4c 0f 38 f6 e7	adox   r12,rdi
+    // 27: Add r12, rdi, and of and store the result in r12
+    (of_27, r12_27) = adox r12_25 rdi_26 of_24
+    // 27
+
+// 0x000000000001b413 <+147>:	66 4c 0f 38 f6 ed	adcx   r13,rbp
+    // 28: Add r13, rbp, and cf and store the result in r13
+    (cf_28, r13_28) = adcx r13_11 rbp_26 cf_25
+    // 28
+
+// 0x000000000001b419 <+153>:	c4 e2 c3 f6 ae a0 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0xa0]
+    // 29: Multiply a[4] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_29, rdi_29) = mulx (a @ 4) rdx_9
+    // 29
+
+// 0x000000000001b422 <+162>:	f3 4c 0f 38 f6 ef	adox   r13,rdi
+    // 30: Add r13, rdi, and of and store the result in r13
+    (of_30, r13_30) = adox r13_28 rdi_29 of_27
+    // 30
+
+// 0x000000000001b428 <+168>:	66 4c 0f 38 f6 f5	adcx   r14,rbp
+    // 31: Add r14, rbp, and cf and store the result in r14
+    (cf_31, r14_31) = adcx r14_12 rbp_29 cf_28
+    // 31
+
+// 0x000000000001b42e <+174>:	c4 e2 c3 f6 ae a8 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0xa8]
+    // 32: Multiply a[5] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_32, rdi_32) = mulx (a @ 5) rdx_9
+    // 32
+
+// 0x000000000001b437 <+183>:	4c 89 c2	mov    rdx,r8
+    // 33: Store r8 in rdx
+    rdx_33 = r8_15
+
+// 0x000000000001b43a <+186>:	f3 4c 0f 38 f6 f7	adox   r14,rdi
+    // 34: Add r14, rdi, and of and store the result in r14
+    (of_34, r14_34) = adox r14_31 rdi_32 of_30
+    // 34
+
+// 0x000000000001b440 <+192>:	66 4c 0f 38 f6 fd	adcx   r15,rbp
+    // 35: Add r15, rbp, and cf and store the result in r15
+    (cf_35, r15_35) = adcx r15_13 rbp_32 cf_31
+    // 35
+
+// 0x000000000001b446 <+198>:	f3 4c 0f 38 f6 f8	adox   r15,rax
+    // 36: Add r15, rax, and of and store the result in r15
+    (of_36, r15_36) = adox r15_35 rax_16 of_34
+    // 36
+
+// 0x000000000001b44c <+204>:	f3 48 0f 38 f6 c0	adox   rax,rax
+    // 37: Add rax, rax, and of and store the result in rax
+    (of_37, rax_37) = adox rax_16 rax_16 of_36
+    // 37
+
+// 0x000000000001b452 <+210>:	4d 31 c0	xor    r8,r8
+    // 38: Zero r8, of, and cf
+    r8_38 = 0
+    of_38 = False
+    cf_38 = False
+
+// 0x000000000001b455 <+213>:	c4 e2 c3 f6 a9 80 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x80]
+    // 39: Multiply n[0] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_39, rdi_39) = mulx (n @ 0) rdx_33
+    // 39
+
+// 0x000000000001b45e <+222>:	66 48 0f 38 f6 7c 24 10	adcx   rdi,QWORD PTR [rsp+0x10]
+    // 40: Add rdi, stack[2], and cf and store the result in rdi
+    (cf_40, rdi_40) = adcx rdi_39 stack2_14 cf_38
+
+// 0x000000000001b466 <+230>:	f3 4c 0f 38 f6 cd	adox   r9,rbp
+    // 41: Add r9, rbp, and of and store the result in r9
+    (of_41, r9_41) = adox r9_18 rbp_39 of_38
+    // 41
+
+// 0x000000000001b46c <+236>:	c4 e2 c3 f6 a9 88 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x88]
+    // 42: Multiply n[1] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_42, rdi_42) = mulx (n @ 1) rdx_33
+    // 42
+
+// 0x000000000001b475 <+245>:	66 4c 0f 38 f6 cf	adcx   r9,rdi
+    // 43: Add r9, rdi, and cf and store the result in r9
+    (cf_43, r9_43) = adcx r9_41 rdi_42 cf_40
+    // 43
+
+// 0x000000000001b47b <+251>:	f3 4c 0f 38 f6 d5	adox   r10,rbp
+    // 44: Add r10, rbp, and of and store the result in r10
+    (of_44, r10_44) = adox r10_21 rbp_42 of_41
+    // 44
+
+// 0x000000000001b481 <+257>:	c4 e2 c3 f6 a9 90 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x90]
+    // 45: Multiply n[2] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_45, rdi_45) = mulx (n @ 2) rdx_33
+    // 45
+
+// 0x000000000001b48a <+266>:	66 4c 0f 38 f6 d7	adcx   r10,rdi
+    // 46: Add r10, rdi, and cf and store the result in r10
+    (cf_46, r10_46) = adcx r10_44 rdi_45 cf_43
+    // 46
+
+// 0x000000000001b490 <+272>:	f3 4c 0f 38 f6 dd	adox   r11,rbp
+    // 47: Add r11, rbp, and of and store the result in r11
+    (of_47, r11_47) = adox r11_24 rbp_45 of_44
+    // 47
+
+// 0x000000000001b496 <+278>:	c4 e2 c3 f6 a9 98 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x98]
+    // 48: Multiply n[3] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_48, rdi_48) = mulx (n @ 3) rdx_33
+    // 48
+
+// 0x000000000001b49f <+287>:	66 4c 0f 38 f6 df	adcx   r11,rdi
+    // 49: Add r11, rdi, and cf and store the result in r11
+    (cf_49, r11_49) = adcx r11_47 rdi_48 cf_46
+    // 49
+
+// 0x000000000001b4a5 <+293>:	f3 4c 0f 38 f6 e5	adox   r12,rbp
+    // 50: Add r12, rbp, and of and store the result in r12
+    (of_50, r12_50) = adox r12_27 rbp_48 of_47
+    // 50
+
+// 0x000000000001b4ab <+299>:	c4 e2 c3 f6 a9 a0 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0xa0]
+    // 51: Multiply n[4] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_51, rdi_51) = mulx (n @ 4) rdx_33
+    // 51
+
+// 0x000000000001b4b4 <+308>:	66 4c 0f 38 f6 e7	adcx   r12,rdi
+    // 52: Add r12, rdi, and cf and store the result in r12
+    (cf_52, r12_52) = adcx r12_50 rdi_51 cf_49
+    // 52
+
+// 0x000000000001b4ba <+314>:	f3 4c 0f 38 f6 ed	adox   r13,rbp
+    // 53: Add r13, rbp, and of and store the result in r13
+    (of_53, r13_53) = adox r13_30 rbp_51 of_50
+    // 53
+
+// 0x000000000001b4c0 <+320>:	c4 e2 c3 f6 a9 a8 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0xa8]
+    // 54: Multiply n[5] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_54, rdi_54) = mulx (n @ 5) rdx_33
+    // 54
+
+// 0x000000000001b4c9 <+329>:	48 8b 53 10	mov    rdx,QWORD PTR [rbx+0x10]
+    // 55: Load b[2] into rdx
+    rdx_55 = b @ 2
+
+// 0x000000000001b4cd <+333>:	66 4c 0f 38 f6 ef	adcx   r13,rdi
+    // 56: Add r13, rdi, and cf and store the result in r13
+    (cf_56, r13_56) = adcx r13_53 rdi_54 cf_52
+    // 56
+
+// 0x000000000001b4d3 <+339>:	f3 4c 0f 38 f6 f5	adox   r14,rbp
+    // 57: Add r14, rbp, and of and store the result in r14
+    (of_57, r14_57) = adox r14_34 rbp_54 of_53
+    // 57
+
+// 0x000000000001b4d9 <+345>:	66 4d 0f 38 f6 f0	adcx   r14,r8
+    // 58: Add r14, r8, and cf and store the result in r14
+    (cf_58, r14_58) = adcx r14_57 r8_38 cf_56
+    // 58
+
+// 0x000000000001b4df <+351>:	f3 4d 0f 38 f6 f8	adox   r15,r8
+    // 59: Add r15, r8, and of and store the result in r15
+    (of_59, r15_59) = adox r15_36 r8_38 of_57
+    // 59
+
+// 0x000000000001b4e5 <+357>:	66 4d 0f 38 f6 f8	adcx   r15,r8
+    // 60: Add r15, r8, and cf and store the result in r15
+    (cf_60, r15_60) = adcx r15_59 r8_38 cf_58
+    // 60
+
+// 0x000000000001b4eb <+363>:	f3 49 0f 38 f6 c0	adox   rax,r8
+    // 61: Add rax, r8, and of and store the result in rax
+    (of_61, rax_61) = adox rax_37 r8_38 of_59
+    // 61
+
+// 0x000000000001b4f1 <+369>:	66 49 0f 38 f6 c0	adcx   rax,r8
+    // 62: Add rax, r8, and cf and store the result in rax
+    (cf_62, rax_62) = adcx rax_61 r8_38 cf_60
+    // 62
+
+// 0x000000000001b4f7 <+375>:	4c 89 4c 24 10	mov    QWORD PTR [rsp+0x10],r9
+    // 63: Store r9 at stack[2]
+    stack2_63 = r9_43
+
+// 0x000000000001b4fc <+380>:	4c 0f af 4c 24 08	imul   r9,QWORD PTR [rsp+0x8]
+    // 64: Multiply r9 and stack[1] and store the low bits in r9
+    r9_64 = imul r9_43 stack1_0
+
+// 0x000000000001b502 <+386>:	4d 31 c0	xor    r8,r8
+    // 65: Zero r8, of, and cf
+    r8_65 = 0
+    of_65 = False
+    cf_65 = False
+
+// 0x000000000001b505 <+389>:	c4 e2 c3 f6 ae 80 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x80]
+    // 66: Multiply a[0] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_66, rdi_66) = mulx (a @ 0) rdx_55
+    // 66
+
+// 0x000000000001b50e <+398>:	f3 4c 0f 38 f6 d7	adox   r10,rdi
+    // 67: Add r10, rdi, and of and store the result in r10
+    (of_67, r10_67) = adox r10_46 rdi_66 of_65
+    // 67
+
+// 0x000000000001b514 <+404>:	66 4c 0f 38 f6 dd	adcx   r11,rbp
+    // 68: Add r11, rbp, and cf and store the result in r11
+    (cf_68, r11_68) = adcx r11_49 rbp_66 cf_65
+    // 68
+
+// 0x000000000001b51a <+410>:	c4 e2 c3 f6 ae 88 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x88]
+    // 69: Multiply a[1] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_69, rdi_69) = mulx (a @ 1) rdx_55
+    // 69
+
+// 0x000000000001b523 <+419>:	f3 4c 0f 38 f6 df	adox   r11,rdi
+    // 70: Add r11, rdi, and of and store the result in r11
+    (of_70, r11_70) = adox r11_68 rdi_69 of_67
+    // 70
+
+// 0x000000000001b529 <+425>:	66 4c 0f 38 f6 e5	adcx   r12,rbp
+    // 71: Add r12, rbp, and cf and store the result in r12
+    (cf_71, r12_71) = adcx r12_52 rbp_69 cf_68
+    // 71
+
+// 0x000000000001b52f <+431>:	c4 e2 c3 f6 ae 90 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x90]
+    // 72: Multiply a[2] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_72, rdi_72) = mulx (a @ 2) rdx_55
+    // 72
+
+// 0x000000000001b538 <+440>:	f3 4c 0f 38 f6 e7	adox   r12,rdi
+    // 73: Add r12, rdi, and of and store the result in r12
+    (of_73, r12_73) = adox r12_71 rdi_72 of_70
+    // 73
+
+// 0x000000000001b53e <+446>:	66 4c 0f 38 f6 ed	adcx   r13,rbp
+    // 74: Add r13, rbp, and cf and store the result in r13
+    (cf_74, r13_74) = adcx r13_56 rbp_72 cf_71
+    // 74
+
+// 0x000000000001b544 <+452>:	c4 e2 c3 f6 ae 98 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x98]
+    // 75: Multiply a[3] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_75, rdi_75) = mulx (a @ 3) rdx_55
+    // 75
+
+// 0x000000000001b54d <+461>:	f3 4c 0f 38 f6 ef	adox   r13,rdi
+    // 76: Add r13, rdi, and of and store the result in r13
+    (of_76, r13_76) = adox r13_74 rdi_75 of_73
+    // 76
+
+// 0x000000000001b553 <+467>:	66 4c 0f 38 f6 f5	adcx   r14,rbp
+    // 77: Add r14, rbp, and cf and store the result in r14
+    (cf_77, r14_77) = adcx r14_58 rbp_75 cf_74
+    // 77
+
+// 0x000000000001b559 <+473>:	c4 e2 c3 f6 ae a0 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0xa0]
+    // 78: Multiply a[4] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_78, rdi_78) = mulx (a @ 4) rdx_55
+    // 78
+
+// 0x000000000001b562 <+482>:	f3 4c 0f 38 f6 f7	adox   r14,rdi
+    // 79: Add r14, rdi, and of and store the result in r14
+    (of_79, r14_79) = adox r14_77 rdi_78 of_76
+    // 79
+
+// 0x000000000001b568 <+488>:	66 4c 0f 38 f6 fd	adcx   r15,rbp
+    // 80: Add r15, rbp, and cf and store the result in r15
+    (cf_80, r15_80) = adcx r15_60 rbp_78 cf_77
+    // 80
+
+// 0x000000000001b56e <+494>:	c4 e2 c3 f6 ae a8 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0xa8]
+    // 81: Multiply a[5] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_81, rdi_81) = mulx (a @ 5) rdx_55
+    // 81
+
+// 0x000000000001b577 <+503>:	4c 89 ca	mov    rdx,r9
+    // 82: Store r9 in rdx
+    rdx_82 = r9_64
+
+// 0x000000000001b57a <+506>:	f3 4c 0f 38 f6 ff	adox   r15,rdi
+    // 83: Add r15, rdi, and of and store the result in r15
+    (of_83, r15_83) = adox r15_80 rdi_81 of_79
+    // 83
+
+// 0x000000000001b580 <+512>:	66 48 0f 38 f6 c5	adcx   rax,rbp
+    // 84: Add rax, rbp, and cf and store the result in rax
+    (cf_84, rax_84) = adcx rax_62 rbp_81 cf_80
+    // 84
+
+// 0x000000000001b586 <+518>:	f3 49 0f 38 f6 c0	adox   rax,r8
+    // 85: Add rax, r8, and of and store the result in rax
+    (of_85, rax_85) = adox rax_84 r8_65 of_83
+    // 85
+
+// 0x000000000001b58c <+524>:	f3 4d 0f 38 f6 c0	adox   r8,r8
+    // 86: Add r8, r8, and of and store the result in r8
+    (of_86, r8_86) = adox r8_65 r8_65 of_85
+    // 86
+
+// 0x000000000001b592 <+530>:	4d 31 c9	xor    r9,r9
+    // 87: Zero r9, of, and cf
+    r9_87 = 0
+    of_87 = False
+    cf_87 = False
+
+// 0x000000000001b595 <+533>:	c4 e2 c3 f6 a9 80 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x80]
+    // 88: Multiply n[0] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_88, rdi_88) = mulx (n @ 0) rdx_82
+    // 88
+
+// 0x000000000001b59e <+542>:	66 48 0f 38 f6 7c 24 10	adcx   rdi,QWORD PTR [rsp+0x10]
+    // 89: Add rdi, stack[2], and cf and store the result in rdi
+    (cf_89, rdi_89) = adcx rdi_88 stack2_63 cf_87
+
+// 0x000000000001b5a6 <+550>:	f3 4c 0f 38 f6 d5	adox   r10,rbp
+    // 90: Add r10, rbp, and of and store the result in r10
+    (of_90, r10_90) = adox r10_67 rbp_88 of_87
+    // 90
+
+// 0x000000000001b5ac <+556>:	c4 e2 c3 f6 a9 88 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x88]
+    // 91: Multiply n[1] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_91, rdi_91) = mulx (n @ 1) rdx_82
+    // 91
+
+// 0x000000000001b5b5 <+565>:	66 4c 0f 38 f6 d7	adcx   r10,rdi
+    // 92: Add r10, rdi, and cf and store the result in r10
+    (cf_92, r10_92) = adcx r10_90 rdi_91 cf_89
+    // 92
+
+// 0x000000000001b5bb <+571>:	f3 4c 0f 38 f6 dd	adox   r11,rbp
+    // 93: Add r11, rbp, and of and store the result in r11
+    (of_93, r11_93) = adox r11_70 rbp_91 of_90
+    // 93
+
+// 0x000000000001b5c1 <+577>:	c4 e2 c3 f6 a9 90 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x90]
+    // 94: Multiply n[2] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_94, rdi_94) = mulx (n @ 2) rdx_82
+    // 94
+
+// 0x000000000001b5ca <+586>:	66 4c 0f 38 f6 df	adcx   r11,rdi
+    // 95: Add r11, rdi, and cf and store the result in r11
+    (cf_95, r11_95) = adcx r11_93 rdi_94 cf_92
+    // 95
+
+// 0x000000000001b5d0 <+592>:	f3 4c 0f 38 f6 e5	adox   r12,rbp
+    // 96: Add r12, rbp, and of and store the result in r12
+    (of_96, r12_96) = adox r12_73 rbp_94 of_93
+    // 96
+
+// 0x000000000001b5d6 <+598>:	c4 e2 c3 f6 a9 98 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x98]
+    // 97: Multiply n[3] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_97, rdi_97) = mulx (n @ 3) rdx_82
+    // 97
+
+// 0x000000000001b5df <+607>:	66 4c 0f 38 f6 e7	adcx   r12,rdi
+    // 98: Add r12, rdi, and cf and store the result in r12
+    (cf_98, r12_98) = adcx r12_96 rdi_97 cf_95
+    // 98
+
+// 0x000000000001b5e5 <+613>:	f3 4c 0f 38 f6 ed	adox   r13,rbp
+    // 99: Add r13, rbp, and of and store the result in r13
+    (of_99, r13_99) = adox r13_76 rbp_97 of_96
+    // 99
+
+// 0x000000000001b5eb <+619>:	c4 e2 c3 f6 a9 a0 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0xa0]
+    // 100: Multiply n[4] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_100, rdi_100) = mulx (n @ 4) rdx_82
+    // 100
+
+// 0x000000000001b5f4 <+628>:	66 4c 0f 38 f6 ef	adcx   r13,rdi
+    // 101: Add r13, rdi, and cf and store the result in r13
+    (cf_101, r13_101) = adcx r13_99 rdi_100 cf_98
+    // 101
+
+// 0x000000000001b5fa <+634>:	f3 4c 0f 38 f6 f5	adox   r14,rbp
+    // 102: Add r14, rbp, and of and store the result in r14
+    (of_102, r14_102) = adox r14_79 rbp_100 of_99
+    // 102
+
+// 0x000000000001b600 <+640>:	c4 e2 c3 f6 a9 a8 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0xa8]
+    // 103: Multiply n[5] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_103, rdi_103) = mulx (n @ 5) rdx_82
+    // 103
+
+// 0x000000000001b609 <+649>:	48 8b 53 18	mov    rdx,QWORD PTR [rbx+0x18]
+    // 104
+    rdx_104 = b @ 3
+
+// 0x000000000001b60d <+653>:	66 4c 0f 38 f6 f7	adcx   r14,rdi
+    // 105: Add r14, rdi, and cf and store the result in r14
+    (cf_105, r14_105) = adcx r14_102 rdi_103 cf_101
+    // 105
+
+// 0x000000000001b613 <+659>:	f3 4c 0f 38 f6 fd	adox   r15,rbp
+    // 106: Add r15, rbp, and of and store the result in r15
+    (of_106, r15_106) = adox r15_83 rbp_103 of_102
+    // 106
+
+// 0x000000000001b619 <+665>:	66 4d 0f 38 f6 f9	adcx   r15,r9
+    // 107: Add r15, r9, and cf and store the result in r15
+    (cf_107, r15_107) = adcx r15_106 r9_87 cf_105
+    // 107
+
+// 0x000000000001b61f <+671>:	f3 49 0f 38 f6 c1	adox   rax,r9
+    // 108: Add rax, r9, and of and store the result in rax
+    (of_108, rax_108) = adox rax_85 r9_87 of_106
+    // 108
+
+// 0x000000000001b625 <+677>:	66 49 0f 38 f6 c1	adcx   rax,r9
+    // 109: Add rax, r9, and cf and store the result in rax
+    (cf_109, rax_109) = adcx rax_108 r9_87 cf_107
+    // 109
+
+// 0x000000000001b62b <+683>:	f3 4d 0f 38 f6 c1	adox   r8,r9
+    // 110: Add r8, r9, and of and store the result in r8
+    (of_110, r8_110) = adox r8_86 r9_87 of_108
+    // 110
+
+// 0x000000000001b631 <+689>:	66 4d 0f 38 f6 c1	adcx   r8,r9
+    // 111: Add r8, r9, and cf and store the result in r8
+    (cf_111, r8_111) = adcx r8_110 r9_87 cf_109
+    // 111
+
+// 0x000000000001b637 <+695>:	4c 89 54 24 10	mov    QWORD PTR [rsp+0x10],r10
+    // 112: Store r10 at stack[2]
+    stack2_112 = r10_92
+
+// 0x000000000001b63c <+700>:	4c 0f af 54 24 08	imul   r10,QWORD PTR [rsp+0x8]
+    // 113: Multiply r10 and stack[1] and store the low bits in r10
+    r10_113 = imul r10_92 stack1_0
+
+// 0x000000000001b642 <+706>:	4d 31 c9	xor    r9,r9
+    // 114: Zero r9, of, and cf
+    r9_114 = 0
+    of_114 = False
+    cf_114 = False
+
+// 0x000000000001b645 <+709>:	c4 e2 c3 f6 ae 80 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x80]
+    // 115: Multiply a[0] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_115, rdi_115) = mulx (a @ 0) rdx_104
+    // 115
+
+// 0x000000000001b64e <+718>:	f3 4c 0f 38 f6 df	adox   r11,rdi
+    // 116: Add r11, rdi, and of and store the result in r11
+    (of_116, r11_116) = adox r11_95 rdi_115 of_114
+    // 116
+
+// 0x000000000001b654 <+724>:	66 4c 0f 38 f6 e5	adcx   r12,rbp
+    // 117: Add r12, rbp, and cf and store the result in r12
+    (cf_117, r12_117) = adcx r12_98 rbp_115 cf_114
+    // 117
+
+// 0x000000000001b65a <+730>:	c4 e2 c3 f6 ae 88 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x88]
+    // 118: Multiply a[1] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_118, rdi_118) = mulx (a @ 1) rdx_104
+    // 118
+
+// 0x000000000001b663 <+739>:	f3 4c 0f 38 f6 e7	adox   r12,rdi
+    // 119: Add r12, rdi, and of and store the result in r12
+    (of_119, r12_119) = adox r12_117 rdi_118 of_116
+    // 119
+
+// 0x000000000001b669 <+745>:	66 4c 0f 38 f6 ed	adcx   r13,rbp
+    // 120: Add r13, rbp, and cf and store the result in r13
+    (cf_120, r13_120) = adcx r13_101 rbp_118 cf_117
+    // 120
+
+// 0x000000000001b66f <+751>:	c4 e2 c3 f6 ae 90 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x90]
+    // 121: Multiply a[2] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_121, rdi_121) = mulx (a @ 2) rdx_104
+    // 121
+
+// 0x000000000001b678 <+760>:	f3 4c 0f 38 f6 ef	adox   r13,rdi
+    // 122: Add r13, rdi, and of and store the result in r13
+    (of_122, r13_122) = adox r13_120 rdi_121 of_119
+    // 122
+
+// 0x000000000001b67e <+766>:	66 4c 0f 38 f6 f5	adcx   r14,rbp
+    // 123: Add r14, rbp, and cf and store the result in r14
+    (cf_123, r14_123) = adcx r14_105 rbp_121 cf_120
+    // 123
+
+// 0x000000000001b684 <+772>:	c4 e2 c3 f6 ae 98 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x98]
+    // 124: Multiply a[3] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_124, rdi_124) = mulx (a @ 3) rdx_104
+    // 124
+
+// 0x000000000001b68d <+781>:	f3 4c 0f 38 f6 f7	adox   r14,rdi
+    // 125: Add r14, rdi, and of and store the result in r14
+    (of_125, r14_125) = adox r14_123 rdi_124 of_122
+    // 125
+
+// 0x000000000001b693 <+787>:	66 4c 0f 38 f6 fd	adcx   r15,rbp
+    // 126: Add r15, rbp, and cf and store the result in r15
+    (cf_126, r15_126) = adcx r15_107 rbp_124 cf_123
+    // 126
+
+// 0x000000000001b699 <+793>:	c4 e2 c3 f6 ae a0 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0xa0]
+    // 127: Multiply a[4] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_127, rdi_127) = mulx (a @ 4) rdx_104
+    // 127
+
+// 0x000000000001b6a2 <+802>:	f3 4c 0f 38 f6 ff	adox   r15,rdi
+    // 128: Add r15, rdi, and of and store the result in r15
+    (of_128, r15_128) = adox r15_126 rdi_127 of_125
+    // 128
+
+// 0x000000000001b6a8 <+808>:	66 48 0f 38 f6 c5	adcx   rax,rbp
+    // 129: Add rax, rbp, and cf and store the result in rax
+    (cf_129, rax_129) = adcx rax_109 rbp_127 cf_126
+    // 129
+
+// 0x000000000001b6ae <+814>:	c4 e2 c3 f6 ae a8 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0xa8]
+    // 130: Multiply a[5] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_130, rdi_130) = mulx (a @ 5) rdx_104
+    // 130
+
+// 0x000000000001b6b7 <+823>:	4c 89 d2	mov    rdx,r10
+    // 131: Store r10 in rdx
+    rdx_131 = r10_113
+
+// 0x000000000001b6ba <+826>:	f3 48 0f 38 f6 c7	adox   rax,rdi
+    // 132: Add rax, rdi, and of and store the result in rax
+    (of_132, rax_132) = adox rax_129 rdi_130 of_128
+    // 132
+
+// 0x000000000001b6c0 <+832>:	66 4c 0f 38 f6 c5	adcx   r8,rbp
+    // 133: Add r8, rbp, and cf and store the result in r8
+    (cf_133, r8_133) = adcx r8_111 rbp_130 cf_129
+    // 133
+
+// 0x000000000001b6c6 <+838>:	f3 4d 0f 38 f6 c1	adox   r8,r9
+    // 134: Add r8, r9, and of and store the result in r8
+    (of_134, r8_134) = adox r8_133 r9_114 of_132
+    // 134
+
+// 0x000000000001b6cc <+844>:	f3 4d 0f 38 f6 c9	adox   r9,r9
+    // 135: Add r9, r9, and of and store the result in r9
+    (of_135, r9_135) = adox r9_114 r9_114 of_134
+    // 135
+
+// 0x000000000001b6d2 <+850>:	4d 31 d2	xor    r10,r10
+    // 136: Zero r10, of, and cf
+    r10_136 = 0
+    of_136 = False
+    cf_136 = False
+
+// 0x000000000001b6d5 <+853>:	c4 e2 c3 f6 a9 80 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x80]
+    // 137: Multiply n[0] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_137, rdi_137) = mulx (n @ 0) rdx_131
+    // 137
+
+// 0x000000000001b6de <+862>:	66 48 0f 38 f6 7c 24 10	adcx   rdi,QWORD PTR [rsp+0x10]
+    // 138: Add rdi, stack[2], and cf and store the result in rdi
+    (cf_138, rdi_138) = adcx rdi_137 stack2_112 cf_136
+
+// 0x000000000001b6e6 <+870>:	f3 4c 0f 38 f6 dd	adox   r11,rbp
+    // 139: Add r11, rbp, and of and store the result in r11
+    (of_139, r11_139) = adox r11_116 rbp_137 of_136
+    // 139
+
+// 0x000000000001b6ec <+876>:	c4 e2 c3 f6 a9 88 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x88]
+    // 140: Multiply n[1] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_140, rdi_140) = mulx (n @ 1) rdx_131
+    // 140
+
+// 0x000000000001b6f5 <+885>:	66 4c 0f 38 f6 df	adcx   r11,rdi
+    // 141: Add r11, rdi, and cf and store the result in r11
+    (cf_141, r11_141) = adcx r11_139 rdi_140 cf_138
+    // 141
+
+// 0x000000000001b6fb <+891>:	f3 4c 0f 38 f6 e5	adox   r12,rbp
+    // 142: Add r12, rbp, and of and store the result in r12
+    (of_142, r12_142) = adox r12_119 rbp_140 of_139
+    // 142
+
+// 0x000000000001b701 <+897>:	c4 e2 c3 f6 a9 90 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x90]
+    // 143: Multiply n[2] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_143, rdi_143) = mulx (n @ 2) rdx_131
+    // 143
+
+// 0x000000000001b70a <+906>:	66 4c 0f 38 f6 e7	adcx   r12,rdi
+    // 144: Add r12, rdi, and cf and store the result in r12
+    (cf_144, r12_144) = adcx r12_142 rdi_143 cf_141
+    // 144
+
+// 0x000000000001b710 <+912>:	f3 4c 0f 38 f6 ed	adox   r13,rbp
+    // 145: Add r13, rbp, and of and store the result in r13
+    (of_145, r13_145) = adox r13_122 rbp_143 of_142
+    // 145
+
+// 0x000000000001b716 <+918>:	c4 e2 c3 f6 a9 98 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x98]
+    // 146: Multiply n[3] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_146, rdi_146) = mulx (n @ 3) rdx_131
+    // 146
+
+// 0x000000000001b71f <+927>:	66 4c 0f 38 f6 ef	adcx   r13,rdi
+    // 147: Add r13, rdi, and cf and store the result in r13
+    (cf_147, r13_147) = adcx r13_145 rdi_146 cf_144
+    // 147
+
+// 0x000000000001b725 <+933>:	f3 4c 0f 38 f6 f5	adox   r14,rbp
+    // 148: Add r14, rbp, and of and store the result in r14
+    (of_148, r14_148) = adox r14_125 rbp_146 of_145
+    // 148
+
+// 0x000000000001b72b <+939>:	c4 e2 c3 f6 a9 a0 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0xa0]
+    // 149: Multiply n[4] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_149, rdi_149) = mulx (n @ 4) rdx_131
+    // 149
+
+// 0x000000000001b734 <+948>:	66 4c 0f 38 f6 f7	adcx   r14,rdi
+    // 150: Add r14, rdi, and cf and store the result in r14
+    (cf_150, r14_150) = adcx r14_148 rdi_149 cf_147
+    // 150
+
+// 0x000000000001b73a <+954>:	f3 4c 0f 38 f6 fd	adox   r15,rbp
+    // 151: Add r15, rbp, and of and store the result in r15
+    (of_151, r15_151) = adox r15_128 rbp_149 of_148
+    // 151
+
+// 0x000000000001b740 <+960>:	c4 e2 c3 f6 a9 a8 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0xa8]
+    // 152: Multiply n[5] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_152, rdi_152) = mulx (n @ 5) rdx_131
+    // 152
+
+// 0x000000000001b749 <+969>:	48 8b 53 20	mov    rdx,QWORD PTR [rbx+0x20]
+    // 153
+    rdx_153 = b @ 4
+
+// 0x000000000001b74d <+973>:	66 4c 0f 38 f6 ff	adcx   r15,rdi
+    // 154: Add r15, rdi, and cf and store the result in r15
+    (cf_154, r15_154) = adcx r15_151 rdi_152 cf_150
+    // 154
+
+// 0x000000000001b753 <+979>:	f3 48 0f 38 f6 c5	adox   rax,rbp
+    // 155: Add rax, rbp, and of and store the result in rax
+    (of_155, rax_155) = adox rax_132 rbp_152 of_151
+    // 155
+
+// 0x000000000001b759 <+985>:	66 49 0f 38 f6 c2	adcx   rax,r10
+    // 156: Add rax, r10, and cf and store the result in rax
+    (cf_156, rax_156) = adcx rax_155 r10_136 cf_154
+    // 156
+
+// 0x000000000001b75f <+991>:	f3 4d 0f 38 f6 c2	adox   r8,r10
+    // 157: Add r8, r10, and of and store the result in r8
+    (of_157, r8_157) = adox r8_134 r10_136 of_155
+    // 157
+
+// 0x000000000001b765 <+997>:	66 4d 0f 38 f6 c2	adcx   r8,r10
+    // 158: Add r8, r10, and cf and store the result in r8
+    (cf_158, r8_158) = adcx r8_157 r10_136 cf_156
+    // 158
+
+// 0x000000000001b76b <+1003>:	f3 4d 0f 38 f6 ca	adox   r9,r10
+    // 159: Add r9, r10, and of and store the result in r9
+    (of_159, r9_159) = adox r9_135 r10_136 of_157
+    // 159
+
+// 0x000000000001b771 <+1009>:	66 4d 0f 38 f6 ca	adcx   r9,r10
+    // 160: Add r9, r10, and cf and store the result in r9
+    (cf_160, r9_160) = adcx r9_159 r10_136 cf_158
+    // 160
+
+// 0x000000000001b777 <+1015>:	4c 89 5c 24 10	mov    QWORD PTR [rsp+0x10],r11
+    // 161: Store r11 at stack[2]
+    stack2_161 = r11_141
+
+// 0x000000000001b77c <+1020>:	4c 0f af 5c 24 08	imul   r11,QWORD PTR [rsp+0x8]
+    // 162: Multiply r11 and stack[1] and store the low bits in r11
+    r11_162 = imul r11_141 stack1_0
+
+// 0x000000000001b782 <+1026>:	4d 31 d2	xor    r10,r10
+    // 163: Zero r10, of, and cf
+    r10_163 = 0
+    of_163 = False
+    cf_163 = False
+
+// 0x000000000001b785 <+1029>:	c4 e2 c3 f6 ae 80 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x80]
+    // 164: Multiply a[0] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_164, rdi_164) = mulx (a @ 0) rdx_153
+    // 164
+
+// 0x000000000001b78e <+1038>:	f3 4c 0f 38 f6 e7	adox   r12,rdi
+    // 165: Add r12, rdi, and of and store the result in r12
+    (of_165, r12_165) = adox r12_144 rdi_164 of_163
+    // 165
+
+// 0x000000000001b794 <+1044>:	66 4c 0f 38 f6 ed	adcx   r13,rbp
+    // 166: Add r13, rbp, and cf and store the result in r13
+    (cf_166, r13_166) = adcx r13_147 rbp_164 cf_163
+    // 166
+
+// 0x000000000001b79a <+1050>:	c4 e2 c3 f6 ae 88 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x88]
+    // 167: Multiply a[1] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_167, rdi_167) = mulx (a @ 1) rdx_153
+    // 167
+
+// 0x000000000001b7a3 <+1059>:	f3 4c 0f 38 f6 ef	adox   r13,rdi
+    // 168: Add r13, rdi, and of and store the result in r13
+    (of_168, r13_168) = adox r13_166 rdi_167 of_165
+    // 168
+
+// 0x000000000001b7a9 <+1065>:	66 4c 0f 38 f6 f5	adcx   r14,rbp
+    // 169: Add r14, rbp, and cf and store the result in r14
+    (cf_169, r14_169) = adcx r14_150 rbp_167 cf_166
+    // 169
+
+// 0x000000000001b7af <+1071>:	c4 e2 c3 f6 ae 90 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x90]
+    // 170: Multiply a[2] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_170, rdi_170) = mulx (a @ 2) rdx_153
+    // 170
+
+// 0x000000000001b7b8 <+1080>:	f3 4c 0f 38 f6 f7	adox   r14,rdi
+    // 171: Add r14, rdi, and of and store the result in r14
+    (of_171, r14_171) = adox r14_169 rdi_170 of_168
+    // 171
+
+// 0x000000000001b7be <+1086>:	66 4c 0f 38 f6 fd	adcx   r15,rbp
+    // 172: Add r15, rbp, and cf and store the result in r15
+    (cf_172, r15_172) = adcx r15_154 rbp_170 cf_169
+    // 172
+
+// 0x000000000001b7c4 <+1092>:	c4 e2 c3 f6 ae 98 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x98]
+    // 173: Multiply a[3] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_173, rdi_173) = mulx (a @ 3) rdx_153
+    // 173
+
+// 0x000000000001b7cd <+1101>:	f3 4c 0f 38 f6 ff	adox   r15,rdi
+    // 174: Add r15, rdi, and of and store the result in r15
+    (of_174, r15_174) = adox r15_172 rdi_173 of_171
+    // 174
+
+// 0x000000000001b7d3 <+1107>:	66 48 0f 38 f6 c5	adcx   rax,rbp
+    // 175: Add rax, rbp, and cf and store the result in rax
+    (cf_175, rax_175) = adcx rax_156 rbp_173 cf_172
+    // 175
+
+// 0x000000000001b7d9 <+1113>:	c4 e2 c3 f6 ae a0 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0xa0]
+    // 176: Multiply a[4] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_176, rdi_176) = mulx (a @ 4) rdx_153
+    // 176
+
+// 0x000000000001b7e2 <+1122>:	f3 48 0f 38 f6 c7	adox   rax,rdi
+    // 177: Add rax, rdi, and of and store the result in rax
+    (of_177, rax_177) = adox rax_175 rdi_176 of_174
+    // 177
+
+// 0x000000000001b7e8 <+1128>:	66 4c 0f 38 f6 c5	adcx   r8,rbp
+    // 178: Add r8, rbp, and cf and store the result in r8
+    (cf_178, r8_178) = adcx r8_158 rbp_176 cf_175
+    // 178
+
+// 0x000000000001b7ee <+1134>:	c4 e2 c3 f6 ae a8 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0xa8]
+    // 179: Multiply a[5] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_179, rdi_179) = mulx (a @ 5) rdx_153
+    // 179
+
+// 0x000000000001b7f7 <+1143>:	4c 89 da	mov    rdx,r11
+    // 180: Store r11 in rdx
+    rdx_180 = r11_162
+
+// 0x000000000001b7fa <+1146>:	f3 4c 0f 38 f6 c7	adox   r8,rdi
+    // 181: Add r8, rdi, and of and store the result in r8
+    (of_181, r8_181) = adox r8_178 rdi_179 of_177
+    // 181
+
+// 0x000000000001b800 <+1152>:	66 4c 0f 38 f6 cd	adcx   r9,rbp
+    // 182: Add r9, rbp, and cf and store the result in r9
+    (cf_182, r9_182) = adcx r9_160 rbp_179 cf_178
+    // 182
+
+// 0x000000000001b806 <+1158>:	f3 4d 0f 38 f6 ca	adox   r9,r10
+    // 183: Add r9, r10, and of and store the result in r9
+    (of_183, r9_183) = adox r9_182 r10_163 of_181
+    // 183
+
+// 0x000000000001b80c <+1164>:	f3 4d 0f 38 f6 d2	adox   r10,r10
+    // 184: Add r10, r10, and of and store the result in r10
+    (of_184, r10_184) = adox r10_163 r10_163 of_183
+    // 184
+
+// 0x000000000001b812 <+1170>:	4d 31 db	xor    r11,r11
+    // 185: Zero r11, of, and cf
+    r11_185 = 0
+    of_185 = False
+    cf_185 = False
+
+// 0x000000000001b815 <+1173>:	c4 e2 c3 f6 a9 80 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x80]
+    // 186: Multiply n[0] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_186, rdi_186) = mulx (n @ 0) rdx_180
+    // 186
+
+// 0x000000000001b81e <+1182>:	66 48 0f 38 f6 7c 24 10	adcx   rdi,QWORD PTR [rsp+0x10]
+    // 187: Add rdi, stack[2], and cf and store the result in rdi
+    (cf_187, rdi_187) = adcx rdi_186 stack2_161 cf_185
+
+// 0x000000000001b826 <+1190>:	f3 4c 0f 38 f6 e5	adox   r12,rbp
+    // 188: Add r12, rbp, and of and store the result in r12
+    (of_188, r12_188) = adox r12_165 rbp_186 of_185
+    // 188
+
+// 0x000000000001b82c <+1196>:	c4 e2 c3 f6 a9 88 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x88]
+    // 189: Multiply n[1] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_189, rdi_189) = mulx (n @ 1) rdx_180
+    // 189
+
+// 0x000000000001b835 <+1205>:	66 4c 0f 38 f6 e7	adcx   r12,rdi
+    // 190: Add r12, rdi, and cf and store the result in r12
+    (cf_190, r12_190) = adcx r12_188 rdi_189 cf_187
+    // 190
+
+// 0x000000000001b83b <+1211>:	f3 4c 0f 38 f6 ed	adox   r13,rbp
+    // 191: Add r13, rbp, and of and store the result in r13
+    (of_191, r13_191) = adox r13_168 rbp_189 of_188
+    // 191
+
+// 0x000000000001b841 <+1217>:	c4 e2 c3 f6 a9 90 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x90]
+    // 192: Multiply n[2] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_192, rdi_192) = mulx (n @ 2) rdx_180
+    // 192
+
+// 0x000000000001b84a <+1226>:	66 4c 0f 38 f6 ef	adcx   r13,rdi
+    // 193: Add r13, rdi, and cf and store the result in r13
+    (cf_193, r13_193) = adcx r13_191 rdi_192 cf_190
+    // 193
+
+// 0x000000000001b850 <+1232>:	f3 4c 0f 38 f6 f5	adox   r14,rbp
+    // 194: Add r14, rbp, and of and store the result in r14
+    (of_194, r14_194) = adox r14_171 rbp_192 of_191
+    // 194
+
+// 0x000000000001b856 <+1238>:	c4 e2 c3 f6 a9 98 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x98]
+    // 195: Multiply n[3] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_195, rdi_195) = mulx (n @ 3) rdx_180
+    // 195
+
+// 0x000000000001b85f <+1247>:	66 4c 0f 38 f6 f7	adcx   r14,rdi
+    // 196: Add r14, rdi, and cf and store the result in r14
+    (cf_196, r14_196) = adcx r14_194 rdi_195 cf_193
+    // 196
+
+// 0x000000000001b865 <+1253>:	f3 4c 0f 38 f6 fd	adox   r15,rbp
+    // 197: Add r15, rbp, and of and store the result in r15
+    (of_197, r15_197) = adox r15_174 rbp_195 of_194
+    // 197
+
+// 0x000000000001b86b <+1259>:	c4 e2 c3 f6 a9 a0 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0xa0]
+    // 198: Multiply n[4] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_198, rdi_198) = mulx (n @ 4) rdx_180
+    // 198
+
+// 0x000000000001b874 <+1268>:	66 4c 0f 38 f6 ff	adcx   r15,rdi
+    // 199: Add r15, rdi, and cf and store the result in r15
+    (cf_199, r15_199) = adcx r15_197 rdi_198 cf_196
+    // 199
+
+// 0x000000000001b87a <+1274>:	f3 48 0f 38 f6 c5	adox   rax,rbp
+    // 200: Add rax, rbp, and of and store the result in rax
+    (of_200, rax_200) = adox rax_177 rbp_198 of_197
+    // 200
+
+// 0x000000000001b880 <+1280>:	c4 e2 c3 f6 a9 a8 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0xa8]
+    // 201: Multiply n[5] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_201, rdi_201) = mulx (n @ 5) rdx_180
+    // 201
+
+// 0x000000000001b889 <+1289>:	48 8b 53 28	mov    rdx,QWORD PTR [rbx+0x28]
+    // 202
+    rdx_202 = b @ 5
+
+// 0x000000000001b88d <+1293>:	66 48 0f 38 f6 c7	adcx   rax,rdi
+    // 203: Add rax, rdi, and cf and store the result in rax
+    (cf_203, rax_203) = adcx rax_200 rdi_201 cf_199
+    // 203
+
+// 0x000000000001b893 <+1299>:	f3 4c 0f 38 f6 c5	adox   r8,rbp
+    // 204: Add r8, rbp, and of and store the result in r8
+    (of_204, r8_204) = adox r8_181 rbp_201 of_200
+    // 204
+
+// 0x000000000001b899 <+1305>:	66 4d 0f 38 f6 c3	adcx   r8,r11
+    // 205: Add r8, r11, and cf and store the result in r8
+    (cf_205, r8_205) = adcx r8_204 r11_185 cf_203
+    // 205
+
+// 0x000000000001b89f <+1311>:	f3 4d 0f 38 f6 cb	adox   r9,r11
+    // 206: Add r9, r11, and of and store the result in r9
+    (of_206, r9_206) = adox r9_183 r11_185 of_204
+    // 206
+
+// 0x000000000001b8a5 <+1317>:	66 4d 0f 38 f6 cb	adcx   r9,r11
+    // 207: Add r9, r11, and cf and store the result in r9
+    (cf_207, r9_207) = adcx r9_206 r11_185 cf_205
+    // 207
+
+// 0x000000000001b8ab <+1323>:	f3 4d 0f 38 f6 d3	adox   r10,r11
+    // 208: Add r10, r11, and of and store the result in r10
+    (of_208, r10_208) = adox r10_184 r11_185 of_206
+    // 208
+
+// 0x000000000001b8b1 <+1329>:	66 4d 0f 38 f6 d3	adcx   r10,r11
+    // 209: Add r10, r11, and cf and store the result in r10
+    (cf_209, r10_209) = adcx r10_208 r11_185 cf_207
+    // 209
+
+// 0x000000000001b8b7 <+1335>:	4c 89 64 24 10	mov    QWORD PTR [rsp+0x10],r12
+    // 210: Store r12 at stack[2]
+    stack2_210 = r12_190
+
+// 0x000000000001b8bc <+1340>:	4c 0f af 64 24 08	imul   r12,QWORD PTR [rsp+0x8]
+    // 211: Multiply r12 and stack[1] and store the low bits in r12
+    r12_211 = imul r12_190 stack1_0
+
+// 0x000000000001b8c2 <+1346>:	4d 31 db	xor    r11,r11
+    // 212: Zero r11, of, and cf
+    r11_212 = 0
+    of_212 = False
+    cf_212 = False
+
+// 0x000000000001b8c5 <+1349>:	c4 e2 c3 f6 ae 80 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x80]
+    // 213: Multiply a[0] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_213, rdi_213) = mulx (a @ 0) rdx_202
+    // 213
+
+// 0x000000000001b8ce <+1358>:	f3 4c 0f 38 f6 ef	adox   r13,rdi
+    // 214: Add r13, rdi, and of and store the result in r13
+    (of_214, r13_214) = adox r13_193 rdi_213 of_212
+    // 214
+
+// 0x000000000001b8d4 <+1364>:	66 4c 0f 38 f6 f5	adcx   r14,rbp
+    // 215: Add r14, rbp, and cf and store the result in r14
+    (cf_215, r14_215) = adcx r14_196 rbp_213 cf_212
+    // 215
+
+// 0x000000000001b8da <+1370>:	c4 e2 c3 f6 ae 88 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x88]
+    // 216: Multiply a[1] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_216, rdi_216) = mulx (a @ 1) rdx_202
+    // 216
+
+// 0x000000000001b8e3 <+1379>:	f3 4c 0f 38 f6 f7	adox   r14,rdi
+    // 217: Add r14, rdi, and of and store the result in r14
+    (of_217, r14_217) = adox r14_215 rdi_216 of_214
+    // 217
+
+// 0x000000000001b8e9 <+1385>:	66 4c 0f 38 f6 fd	adcx   r15,rbp
+    // 218: Add r15, rbp, and cf and store the result in r15
+    (cf_218, r15_218) = adcx r15_199 rbp_216 cf_215
+    // 218
+
+// 0x000000000001b8ef <+1391>:	c4 e2 c3 f6 ae 90 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x90]
+    // 219: Multiply a[2] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_219, rdi_219) = mulx (a @ 2) rdx_202
+    // 219
+
+// 0x000000000001b8f8 <+1400>:	f3 4c 0f 38 f6 ff	adox   r15,rdi
+    // 220: Add r15, rdi, and of and store the result in r15
+    (of_220, r15_220) = adox r15_218 rdi_219 of_217
+    // 220
+
+// 0x000000000001b8fe <+1406>:	66 48 0f 38 f6 c5	adcx   rax,rbp
+    // 221: Add rax, rbp, and cf and store the result in rax
+    (cf_221, rax_221) = adcx rax_203 rbp_219 cf_218
+    // 221
+
+// 0x000000000001b904 <+1412>:	c4 e2 c3 f6 ae 98 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0x98]
+    // 222: Multiply a[3] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_222, rdi_222) = mulx (a @ 3) rdx_202
+    // 222
+
+// 0x000000000001b90d <+1421>:	f3 48 0f 38 f6 c7	adox   rax,rdi
+    // 223: Add rax, rdi, and of and store the result in rax
+    (of_223, rax_223) = adox rax_221 rdi_222 of_220
+    // 223
+
+// 0x000000000001b913 <+1427>:	66 4c 0f 38 f6 c5	adcx   r8,rbp
+    // 224: Add r8, rbp, and cf and store the result in r8
+    (cf_224, r8_224) = adcx r8_205 rbp_222 cf_221
+    // 224
+
+// 0x000000000001b919 <+1433>:	c4 e2 c3 f6 ae a0 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0xa0]
+    // 225: Multiply a[4] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_225, rdi_225) = mulx (a @ 4) rdx_202
+    // 225
+
+// 0x000000000001b922 <+1442>:	f3 4c 0f 38 f6 c7	adox   r8,rdi
+    // 226: Add r8, rdi, and of and store the result in r8
+    (of_226, r8_226) = adox r8_224 rdi_225 of_223
+    // 226
+
+// 0x000000000001b928 <+1448>:	66 4c 0f 38 f6 cd	adcx   r9,rbp
+    // 227: Add r9, rbp, and cf and store the result in r9
+    (cf_227, r9_227) = adcx r9_207 rbp_225 cf_224
+    // 227
+
+// 0x000000000001b92e <+1454>:	c4 e2 c3 f6 ae a8 00 00 00	mulx   rbp,rdi,QWORD PTR [rsi+0xa8]
+    // 228: Multiply a[5] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_228, rdi_228) = mulx (a @ 5) rdx_202
+    // 228
+
+// 0x000000000001b937 <+1463>:	4c 89 e2	mov    rdx,r12
+    // 229: Store r12 in rdx
+    rdx_229 = r12_211
+
+// 0x000000000001b93a <+1466>:	f3 4c 0f 38 f6 cf	adox   r9,rdi
+    // 230: Add r9, rdi, and of and store the result in r9
+    (of_230, r9_230) = adox r9_227 rdi_228 of_226
+    // 230
+
+// 0x000000000001b940 <+1472>:	66 4c 0f 38 f6 d5	adcx   r10,rbp
+    // 231: Add r10, rbp, and cf and store the result in r10
+    (cf_231, r10_231) = adcx r10_209 rbp_228 cf_227
+    // 231
+
+// 0x000000000001b946 <+1478>:	f3 4d 0f 38 f6 d3	adox   r10,r11
+    // 232: Add r10, r11, and of and store the result in r10
+    (of_232, r10_232) = adox r10_231 r11_212 of_230
+    // 232
+
+// 0x000000000001b94c <+1484>:	f3 4d 0f 38 f6 db	adox   r11,r11
+    // 233: Add r11, r11, and of and store the result in r11
+    (of_233, r11_233) = adox r11_212 r11_212 of_232
+    // 233
+
+// 0x000000000001b952 <+1490>:	4d 31 e4	xor    r12,r12
+    // 234: Zero r12, of, and cf
+    r12_234 = 0
+    of_234 = False
+    cf_234 = False
+
+// 0x000000000001b955 <+1493>:	c4 e2 c3 f6 a9 80 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x80]
+    // 235: Multiply n[0] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_235, rdi_235) = mulx (n @ 0) rdx_229
+    // 235
+
+// 0x000000000001b95e <+1502>:	66 48 0f 38 f6 7c 24 10	adcx   rdi,QWORD PTR [rsp+0x10]
+    // 236: Add rdi, stack[2], and cf and store the result in rdi
+    (cf_236, rdi_236) = adcx rdi_235 stack2_210 cf_234
+
+// 0x000000000001b966 <+1510>:	f3 4c 0f 38 f6 ed	adox   r13,rbp
+    // 237: Add r13, rbp, and of and store the result in r13
+    (of_237, r13_237) = adox r13_214 rbp_235 of_234
+    // 237
+
+// 0x000000000001b96c <+1516>:	c4 e2 c3 f6 a9 88 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x88]
+    // 238: Multiply n[1] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_238, rdi_238) = mulx (n @ 1) rdx_229
+    // 238
+
+// 0x000000000001b975 <+1525>:	66 4c 0f 38 f6 ef	adcx   r13,rdi
+    // 239: Add r13, rdi, and cf and store the result in r13
+    (cf_239, r13_239) = adcx r13_237 rdi_238 cf_236
+    // 239
+
+// 0x000000000001b97b <+1531>:	f3 4c 0f 38 f6 f5	adox   r14,rbp
+    // 240: Add r14, rbp, and of and store the result in r14
+    (of_240, r14_240) = adox r14_217 rbp_238 of_237
+    // 240
+
+// 0x000000000001b981 <+1537>:	c4 e2 c3 f6 a9 90 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x90]
+    // 241: Multiply n[2] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_241, rdi_241) = mulx (n @ 2) rdx_229
+    // 241
+
+// 0x000000000001b98a <+1546>:	66 4c 0f 38 f6 f7	adcx   r14,rdi
+    // 242: Add r14, rdi, and cf and store the result in r14
+    (cf_242, r14_242) = adcx r14_240 rdi_241 cf_239
+    // 242
+
+// 0x000000000001b990 <+1552>:	f3 4c 0f 38 f6 fd	adox   r15,rbp
+    // 243: Add r15, rbp, and of and store the result in r15
+    (of_243, r15_243) = adox r15_220 rbp_241 of_240
+    // 243
+
+// 0x000000000001b996 <+1558>:	c4 e2 c3 f6 a9 98 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x98]
+    // 244: Multiply n[3] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_244, rdi_244) = mulx (n @ 3) rdx_229
+    // 244
+
+// 0x000000000001b99f <+1567>:	66 4c 0f 38 f6 ff	adcx   r15,rdi
+    // 245: Add r15, rdi, and cf and store the result in r15
+    (cf_245, r15_245) = adcx r15_243 rdi_244 cf_242
+    // 245
+
+// 0x000000000001b9a5 <+1573>:	f3 48 0f 38 f6 c5	adox   rax,rbp
+    // 246: Add rax, rbp, and of and store the result in rax
+    (of_246, rax_246) = adox rax_223 rbp_244 of_243
+    // 246
+
+// 0x000000000001b9ab <+1579>:	c4 e2 c3 f6 a9 a0 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0xa0]
+    // 247: Multiply n[4] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_247, rdi_247) = mulx (n @ 4) rdx_229
+    // 247
+
+// 0x000000000001b9b4 <+1588>:	66 48 0f 38 f6 c7	adcx   rax,rdi
+    // 248: Add rax, rdi, and cf and store the result in rax
+    (cf_248, rax_248) = adcx rax_246 rdi_247 cf_245
+    // 248
+
+// 0x000000000001b9ba <+1594>:	f3 4c 0f 38 f6 c5	adox   r8,rbp
+    // 249: Add r8, rbp, and of and store the result in r8
+    (of_249, r8_249) = adox r8_226 rbp_247 of_246
+    // 249
+
+// 0x000000000001b9c0 <+1600>:	c4 e2 c3 f6 a9 a8 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0xa8]
+    // 250: Multiply n[5] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_250, rdi_250) = mulx (n @ 5) rdx_229
+    // 250
+
+// 0x000000000001b9c9 <+1609>:	4c 89 ea	mov    rdx,r13
+    // 251: Store r13 in rdx
+    rdx_251 = r13_239
+
+// 0x000000000001b9cc <+1612>:	66 4c 0f 38 f6 c7	adcx   r8,rdi
+    // 252: Add r8, rdi, and cf and store the result in r8
+    (cf_252, r8_252) = adcx r8_249 rdi_250 cf_248
+    // 252
+
+// 0x000000000001b9d2 <+1618>:	f3 4c 0f 38 f6 cd	adox   r9,rbp
+    // 253: Add r9, rbp, and of and store the result in r9
+    (of_253, r9_253) = adox r9_230 rbp_250 of_249
+    // 253
+
+// 0x000000000001b9d8 <+1624>:	66 4d 0f 38 f6 cc	adcx   r9,r12
+    // 254: Add r9, r12, and cf and store the result in r9
+    (cf_254, r9_254) = adcx r9_253 r12_234 cf_252
+    // 254
+
+// 0x000000000001b9de <+1630>:	f3 4d 0f 38 f6 d4	adox   r10,r12
+    // 255: Add r10, r12, and of and store the result in r10
+    (of_255, r10_255) = adox r10_232 r12_234 of_253
+    // 255
+
+// 0x000000000001b9e4 <+1636>:	66 4d 0f 38 f6 d4	adcx   r10,r12
+    // 256: Add r10, r12, and cf and store the result in r10
+    (cf_256, r10_256) = adcx r10_255 r12_234 cf_254
+    // 256
+
+// 0x000000000001b9ea <+1642>:	f3 4d 0f 38 f6 dc	adox   r11,r12
+    // 257: Add r11, r12, and of and store the result in r11
+    (of_257, r11_257) = adox r11_233 r12_234 of_255
+    // 257
+
+// 0x000000000001b9f0 <+1648>:	66 4d 0f 38 f6 dc	adcx   r11,r12
+    // 258: Add r11, r12, and cf and store the result in r11
+    (cf_258, r11_258) = adcx r11_257 r12_234 cf_256
+    // 258
+
+// 0x000000000001b9f6 <+1654>:	48 0f af 54 24 08	imul   rdx,QWORD PTR [rsp+0x8]
+    // 259: Multiply rdx and stack[1] and store the low bits in rdx
+    rdx_259 = imul rdx_251 stack1_0
+
+// 0x000000000001b9fc <+1660>:	48 8b 5c 24 18	mov    rbx,QWORD PTR [rsp+0x18]
+    // 260: Restore rbx from stack
+
+// 0x000000000001ba01 <+1665>:	4d 31 e4	xor    r12,r12
+    // 261: Zero r12, of, and cf
+    r12_261 = 0
+    of_261 = False
+    cf_261 = False
+
+// 0x000000000001ba04 <+1668>:	c4 e2 c3 f6 a9 80 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x80]
+    // 262: Multiply n[0] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_262, rdi_262) = mulx (n @ 0) rdx_259
+    // 262
+
+// 0x000000000001ba0d <+1677>:	66 4c 0f 38 f6 ef	adcx   r13,rdi
+    // 263: Add r13, rdi, and cf and store the result in r13
+    (cf_263, r13_263) = adcx r13_239 rdi_262 cf_261
+    // 263
+
+// 0x000000000001ba13 <+1683>:	f3 4c 0f 38 f6 f5	adox   r14,rbp
+    // 264: Add r14, rbp, and of and store the result in r14
+    (of_264, r14_264) = adox r14_242 rbp_262 of_261
+    // 264
+
+// 0x000000000001ba19 <+1689>:	c4 e2 c3 f6 a9 88 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x88]
+    // 265: Multiply n[1] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_265, rdi_265) = mulx (n @ 1) rdx_259
+    // 265
+
+// 0x000000000001ba22 <+1698>:	66 4c 0f 38 f6 f7	adcx   r14,rdi
+    // 266: Add r14, rdi, and cf and store the result in r14
+    (cf_266, r14_266) = adcx r14_264 rdi_265 cf_263
+    // 266
+
+// 0x000000000001ba28 <+1704>:	f3 4c 0f 38 f6 fd	adox   r15,rbp
+    // 267: Add r15, rbp, and of and store the result in r15
+    (of_267, r15_267) = adox r15_245 rbp_265 of_264
+    // 267
+
+// 0x000000000001ba2e <+1710>:	c4 e2 c3 f6 a9 90 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x90]
+    // 268: Multiply n[2] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_268, rdi_268) = mulx (n @ 2) rdx_259
+    // 268
+
+// 0x000000000001ba37 <+1719>:	66 4c 0f 38 f6 ff	adcx   r15,rdi
+    // 269: Add r15, rdi, and cf and store the result in r15
+    (cf_269, r15_269) = adcx r15_267 rdi_268 cf_266
+    // 269
+
+// 0x000000000001ba3d <+1725>:	f3 48 0f 38 f6 c5	adox   rax,rbp
+    // 270: Add rax, rbp, and of and store the result in rax
+    (of_270, rax_270) = adox rax_248 rbp_268 of_267
+    // 270
+
+// 0x000000000001ba43 <+1731>:	c4 e2 c3 f6 a9 98 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0x98]
+    // 271: Multiply n[3] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_271, rdi_271) = mulx (n @ 3) rdx_259
+    // 271
+
+// 0x000000000001ba4c <+1740>:	66 48 0f 38 f6 c7	adcx   rax,rdi
+    // 272: Add rax, rdi, and cf and store the result in rax
+    (cf_272, rax_272) = adcx rax_270 rdi_271 cf_269
+    // 272
+
+// 0x000000000001ba52 <+1746>:	f3 4c 0f 38 f6 c5	adox   r8,rbp
+    // 273: Add r8, rbp, and of and store the result in r8
+    (of_273, r8_273) = adox r8_252 rbp_271 of_270
+    // 273
+
+// 0x000000000001ba58 <+1752>:	4d 89 fd	mov    r13,r15
+    // 274: Store r15 in r13
+    r13_274 = r15_269
+
+// 0x000000000001ba5b <+1755>:	c4 e2 c3 f6 a9 a0 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0xa0]
+    // 275: Multiply n[4] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_275, rdi_275) = mulx (n @ 4) rdx_259
+    // 275
+
+// 0x000000000001ba64 <+1764>:	66 4c 0f 38 f6 c7	adcx   r8,rdi
+    // 276: Add r8, rdi, and cf and store the result in r8
+    (cf_276, r8_276) = adcx r8_273 rdi_275 cf_272
+    // 276
+
+// 0x000000000001ba6a <+1770>:	f3 4c 0f 38 f6 cd	adox   r9,rbp
+    // 277: Add r9, rbp, and of and store the result in r9
+    (of_277, r9_277) = adox r9_254 rbp_275 of_273
+    // 277
+
+// 0x000000000001ba70 <+1776>:	48 89 c6	mov    rsi,rax
+    // 278: Store rax in rsi
+    rsi_278 = rax_272
+
+// 0x000000000001ba73 <+1779>:	c4 e2 c3 f6 a9 a8 00 00 00	mulx   rbp,rdi,QWORD PTR [rcx+0xa8]
+    // 279: Multiply n[5] and rdx (implicit) and store the high bits in rbp and low bits in rdi
+    (rbp_279, rdi_279) = mulx (n @ 5) rdx_259
+    // 279
+
+// 0x000000000001ba7c <+1788>:	66 4c 0f 38 f6 cf	adcx   r9,rdi
+    // 280: Add r9, rdi, and cf and store the result in r9
+    (cf_280, r9_280) = adcx r9_277 rdi_279 cf_276
+    // 280
+
+// 0x000000000001ba82 <+1794>:	f3 4c 0f 38 f6 d5	adox   r10,rbp
+    // 281: Add r10, rbp, and of and store the result in r10
+    (of_281, r10_281) = adox r10_256 rbp_279 of_277
+    // 281
+
+// 0x000000000001ba88 <+1800>:	4c 89 f2	mov    rdx,r14
+    // 282: Store r14 in rdx
+    rdx_282 = r14_266
+
+// 0x000000000001ba8b <+1803>:	66 4d 0f 38 f6 d4	adcx   r10,r12
+    // 283: Add r10, r12, and cf and store the result in r10
+    (cf_283, r10_283) = adcx r10_281 r12_261 cf_280
+    // 283
+
+// 0x000000000001ba91 <+1809>:	f3 4d 0f 38 f6 dc	adox   r11,r12
+    // 284: Add r11, r12, and of and store the result in r11
+    (of_284, r11_284) = adox r11_258 r12_261 of_281
+    // 284
+
+// 0x000000000001ba97 <+1815>:	48 8d 89 80 00 00 00	lea    rcx,[rcx+0x80]
+    // 285: Add offset to rcx (n)
+
+// 0x000000000001ba9e <+1822>:	4d 89 c4	mov    r12,r8
+    // 286: Store r8 in r12
+    r12_286 = r8_276
+
+// 0x000000000001baa1 <+1825>:	49 83 d3 00	adc    r11,0x0
+    // 287: Add r11, 0, and cf and store the result in r11 (setting cf)
+    (cf_287, r11_287) = adc r11_284 0 cf_283
+
+// 0x000000000001baa5 <+1829>:	4c 2b 31	sub    r14,QWORD PTR [rcx]
+    // 288
+    (cf_288, r14_288) = sub r14_266 (n @ 0)
+
+// 0x000000000001baa8 <+1832>:	4c 1b 79 08	sbb    r15,QWORD PTR [rcx+0x8]
+    // 289
+    (cf_289, r15_288) = sbb r15_269 (n @ 1) cf_288
+
+// 0x000000000001baac <+1836>:	4c 89 cf	mov    rdi,r9
+    // 290: Store r9 in rdi
+    rdi_290 = r9_280
+
+// 0x000000000001baaf <+1839>:	48 1b 41 10	sbb    rax,QWORD PTR [rcx+0x10]
+    // 291
+    (cf_291, rax_291) = sbb rax_272 (n @ 2) cf_289
+
+// 0x000000000001bab3 <+1843>:	4c 1b 41 18	sbb    r8,QWORD PTR [rcx+0x18]
+    // 292
+    (cf_292, r8_292) = sbb r8_276 (n @ 3) cf_291
+
+// 0x000000000001bab7 <+1847>:	4c 1b 49 20	sbb    r9,QWORD PTR [rcx+0x20]
+    // 293
+    (cf_293, r9_293) = sbb r9_280 (n @ 4) cf_292
+
+// 0x000000000001babb <+1851>:	4c 89 d5	mov    rbp,r10
+    // 294: Store r10 in rbp
+    rbp_294 = r10_283
+
+// 0x000000000001babe <+1854>:	4c 1b 51 28	sbb    r10,QWORD PTR [rcx+0x28]
+    // 295
+    (cf_295, r10_295) = sbb r10_283 (n @ 5) cf_293
+
+// 0x000000000001bac2 <+1858>:	49 83 db 00	sbb    r11,0x0
+    // 296
+    (cf_296, r11_296) = sbb r11_287 0 cf_295
+
+// 0x000000000001bac6 <+1862>:	49 0f 43 d6	cmovae rdx,r14
+    // 297
+    rdx_297 = cmovae rdx_282 r14_288 cf_296
+
+// 0x000000000001baca <+1866>:	4d 0f 42 fd	cmovb  r15,r13
+    // 298
+    r15_298 = cmovb r15_288 r13_274 cf_296
+
+// 0x000000000001bace <+1870>:	48 0f 42 c6	cmovb  rax,rsi
+    // 299
+    rax_299 = cmovb rax_291 rsi_278 cf_296
+
+// 0x000000000001bad2 <+1874>:	4d 0f 43 e0	cmovae r12,r8
+    // 300
+    r12_300 = cmovae r12_286 r8_292 cf_296
+
+// 0x000000000001bad6 <+1878>:	48 89 13	mov    QWORD PTR [rbx],rdx
+    // 301
+    result0 = rdx_297
+
+// 0x000000000001bad9 <+1881>:	49 0f 43 f9	cmovae rdi,r9
+    // 302
+    rdi_302 = cmovae rdi_290 r9_293 cf_296
+
+// 0x000000000001badd <+1885>:	4c 89 7b 08	mov    QWORD PTR [rbx+0x8],r15
+    // 303
+    result1 = r15_298
+
+// 0x000000000001bae1 <+1889>:	49 0f 43 ea	cmovae rbp,r10
+    // 304
+    rbp_304 = cmovae rbp_294 r10_295 cf_296
+
+// 0x000000000001bae5 <+1893>:	48 89 43 10	mov    QWORD PTR [rbx+0x10],rax
+    // 305
+    result2 = rax_299
+
+// 0x000000000001bae9 <+1897>:	4c 89 63 18	mov    QWORD PTR [rbx+0x18],r12
+    // 306
+    result3 = r12_300
+
+// 0x000000000001baed <+1901>:	48 89 7b 20	mov    QWORD PTR [rbx+0x20],rdi
+    // 307
+    result4 = rdi_302
+
+// 0x000000000001baf1 <+1905>:	48 89 6b 28	mov    QWORD PTR [rbx+0x28],rbp
+    // 308
+    result5 = rbp_304
+
+// 0x000000000001baf5 <+1909>:	f3 c3	repz ret 
+    // 309
+    result = [result0, result1, result2, result3, result4, result5]

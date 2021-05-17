@@ -1,0 +1,147 @@
+module implementation::x86 where
+
+import implementation::Types
+import implementation::x86::helpers
+
+// Top-level functions
+fromx_mont_384
+  : Vec384 // a; passed in rsi
+  -> Vec384 // m; passed in rdx
+  -> [64] // n0; passed in rcx
+  -> Vec384 // result
+fromx_mont_384 a m n0 = result
+  where
+    // 0
+    [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = mulx_by_1_mont_384 a m n0
+
+    // 1
+    rax_1 = r14_0
+    rcx_1 = r15_0
+    rdx_1 = r8_0
+    rbp_1 = r9_0
+
+    // 2
+    (cf_2, r14_2) = sub r14_0 (m @ 0)
+
+    // 3
+    (cf_3, r15_3) = sbb r15_0 (m @ 1) cf_2
+
+    // 4
+    r13_4 = r10_0
+
+    // 5
+    (cf_5, r8_5) = sbb r8_0 (m @ 2) cf_3
+
+    // 6
+    (cf_6, r9_6) = sbb r9_0 (m @ 3) cf_5
+
+    // 7
+    (cf_7, r10_7) = sbb r10_0 (m @ 4) cf_6
+
+    // 8
+    rsi_8 = r11_0
+
+    // 9
+    (cf_9, r11_9) = sbb r11_0 (m @ 5) cf_7
+
+    // 10
+    r14_10 = cmovb r14_2 rax_1 cf_9
+    r15_10 = cmovb r15_3 rcx_1 cf_9
+    r8_10 = cmovb r8_5 rdx_1 cf_9
+    r9_10 = cmovb r9_6 rbp_1 cf_9
+    r10_10 = cmovb r10_7 r13_4 cf_9
+    r11_10 = cmovb r11_9 rsi_8 cf_9
+
+    result = [r14_10, r15_10, r8_10, r9_10, r10_10, r11_10]
+
+sgn0x_pty_mont_384
+  : Vec384 // a; passed in rdi
+  -> Vec384 // p; passed in rsi
+  -> [64] // n0; passed in rdx
+  -> [64]
+sgn0x_pty_mont_384 a p n0 = result
+  where
+    // 0
+    [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = mulx_by_1_mont_384 a p n0
+
+    // 1
+    rax_1 = 0
+
+    // 2
+    r13_2 = r14_0
+
+    // 3
+    (cf_3, r14_3) = adcx r14_0 r14_0 False
+
+    // 4
+    (cf_4, r15_4) = adcx r15_0 r15_0 cf_3
+
+    // 5
+    (cf_5, r8_5) = adcx r8_0 r8_0 cf_4
+
+    // 6
+    (cf_6, r9_6) = adcx r9_0 r9_0 cf_5
+
+    // 7
+    (cf_7, r10_7) = adcx r10_0 r10_0 cf_6
+
+    // 8
+    (cf_8, r11_8) = adcx r11_0 r11_0 cf_7
+
+    // 9
+    (_, rax_9) = adcx rax_1 0 cf_8
+
+    // 10
+    (cf_10, r14_10) = sub r14_3 (p @ 0)
+
+    // 11
+    (cf_11, r15_11) = sbb r15_4 (p @ 1) cf_10
+
+    // 12
+    (cf_12, r8_12) = sbb r8_5 (p @ 2) cf_11
+
+    // 13
+    (cf_13, r9_13) = sbb r9_6 (p @ 3) cf_12
+
+    // 14
+    (cf_14, r10_14) = sbb r10_7 (p @ 4) cf_13
+
+    // 15
+    (cf_15, r11_15) = sbb r11_8 (p @ 5) cf_14
+
+    // 16
+    (_, rax_16) = sbb rax_9 0 cf_15
+
+    // 17
+    rax_17 = ~rax_16
+
+    // 18
+    r13_18 = r13_2 && (zext 0x1 : [64])
+    rax_18 = rax_17 && (zext 0x2 : [64])
+
+    // 19
+    result = rax_18 || r13_18
+
+mulx_mont_384
+  : Vec384 // a; passed in rsi
+  -> Vec384 // b; passed in rdx
+  -> Vec384 // m; passed in rcx
+  -> [64] // n0; passed in r8
+  -> Vec384 // result
+mulx_mont_384 a b m n0 = result
+  where
+    (r9, r8) = mulx (a @ 0) (b @ 0)
+    acc =
+      [ r8 // r8
+      , r9 // r9
+      , undefined // r10
+      , undefined // r11
+      , a @ 3 // r12
+      , undefined // r13
+      , a @ 0 // r14
+      , a @ 1 // r15
+      , a @ 2 // rax
+      ]
+    lo = a @ 4
+    hi = a @ 5
+    result = __mulx_mont_384 acc (b @ 0) n0 lo hi a b m
