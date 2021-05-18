@@ -31,5 +31,4 @@ rules <- for [
             [b1, b2, b3, b4, b5, b6] = b
         )
       }}
-, {{ \x y c -> affinify E (if c then x else y) == if c then affinify E x else affinify E y }}
 ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
