@@ -70,8 +70,9 @@ me_3 <- admit_cryptol {{ \x k -> Fp.mul (fp_exp x k, x) == fp_exp x (k+1) }};
 me_4 <- admit_cryptol {{ \x n k -> Fp.mul (fp_exp x n, fp_exp x k) == fp_exp x (k+n) }};
 me_5 <- admit_cryptol {{ \x n k -> fp_exp (fp_exp x n) k == fp_exp x (k*n) }};
 me_6 <- admit_cryptol {{ \n -> fp_exp Fp.field_unit n == Fp.field_unit }};
+me_7 <- admit_cryptol {{ \n -> fp_exp Fp.field_zero n == Fp.field_zero }};
 
-fp_exp_simps <- addsimps (concat [me_1, me_2, me_3, me_4, me_5, me_6] fp_alg_thms) fp_simpset;
+fp_exp_simps <- addsimps (concat [me_1, me_2, me_3, me_4, me_5, me_6, me_7] fp_alg_thms) fp_simpset;
 
 // We will assume (and should prove in Coq)
 //  (fp_exp_fact)   {{ fp_exp x e == F_expt`{n} x `e }}

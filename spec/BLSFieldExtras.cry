@@ -1,6 +1,6 @@
 module BLSFieldExtras where
 
-import Parameters (p, Fp, t_Fp, Fp_2, t_Fp_2)
+import Parameters (p, Fp, t_Fp, Fp_2, t_Fp_2, u)
 import FieldExtras
 
 is_square_fp x =  y == 0 \/ y == 1 where
@@ -50,6 +50,13 @@ sqrt_fp2_c2 = [sqrt_fp2_k, Fp.neg sqrt_fp2_k]
 sqrt_fp2_c3: t_Fp_2
 sqrt_fp2_c3 = [sqrt_fp2_k, sqrt_fp2_k]
 
+// the C implementation of sqrt deviates from the above and uses the following defintion
+sqrt_align_fp2_coeff: t_Fp_2 -> t_Fp_2 -> t_Fp_2
+sqrt_align_fp2_coeff s inp =
+  if Fp_2.sq (Fp_2.mul(sqrt_fp2_c3, s)) == inp then sqrt_fp2_c3
+   | Fp_2.sq (Fp_2.mul(sqrt_fp2_c2, s)) == inp then sqrt_fp2_c2
+   | Fp_2.sq (Fp_2.mul(          u, s)) == inp then u
+  else Fp_2.field_unit
 
 // (a*u + b) inverse is (-a*u + b)/(a^2+b^2), as can be checked by multiplying out
 inverse_fp2: t_Fp_2 -> t_Fp_2
@@ -68,8 +75,17 @@ is_square_fp2 [x_2, x_1] = (tv1' != Fp_2.neg Fp_2.field_unit) where
     // NB our representation of polynomnials is big-endian unlike the spec
     tv1 = Fp.sq x_1
     tv2 = Fp_2.sq [x_2, Fp.field_zero] // = Fp2_sq (Fp_2.mul (u, const_poly x_2))
-    tv1' = F_expt Fp_2 (Fp_2.sub ([Fp.field_zero, tv1], tv2)) (((`p-1)/2):[381])
+    tv1' = F_expt`{n=381} Fp_2 (Fp_2.sub ([Fp.field_zero, tv1], tv2)) ((`p-1)/2)
 
-// fp_exp is for positive exponents only, avoiding the need for rewriting x*1 to x
 fp_exp: t_Fp -> Integer -> t_Fp
-fp_exp x e = if e == 1 then x else Fp.mul (x, fp_exp x (e-1))
+fp_exp x e = if e < 0 then Fp.div (Fp.field_unit, fp_exp x (-e))
+              | e == 0 /\ x == Fp.field_zero then Fp.field_zero // needed for the alg. rules
+              | e == 0 then Fp.field_unit
+              else Fp.mul (x, fp_exp x (e-1))
+
+// TODO: generic definition to avoid duplicating the above
+fp2_exp: t_Fp_2 -> Integer -> t_Fp_2
+fp2_exp x e = if e < 0 then Fp_2.div (Fp_2.field_unit, fp2_exp x (-e))
+              | e == 0 /\ x == Fp_2.field_zero then Fp_2.field_zero // needed for the alg. rules
+              | e == 0 then Fp_2.field_unit
+              else Fp_2.mul (x, fp2_exp x (e-1))

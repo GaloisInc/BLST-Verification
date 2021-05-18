@@ -23,10 +23,10 @@ F_prod F vs = prods!0 where
 /**
  * F_expt F x e = x^e, computed in field F.
  */
-F_expt: {t, n} (fin n) => FieldRep t -> t -> [n] -> t
+F_expt: {t, n} (fin n) => FieldRep t -> t -> Integer -> t
 F_expt F x e = powers ! 0 where
     powers = [F.field_unit] #
-             [if b then F.mul (x, F.sq p) else F.sq p | p <- powers | b <- e]
+             [if b then F.mul (x, F.sq p) else F.sq p | p <- powers | b <- ((fromInteger e):[n])]
 
 /**
  * Is a field element zero?

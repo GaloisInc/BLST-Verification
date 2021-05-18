@@ -33,7 +33,7 @@ fp2_frobenius x = fp2_conjugate x
 // Then v^p = v^(3 ((p-1)/3)) * v = (u+1)^((p-1)/3) * v
 
 v_frobenius_constant: t2
-v_frobenius_constant = F_expt f2 P::u_plus_1 (`((P::p-1)/3):[381])
+v_frobenius_constant = F_expt`{n=381} f2 P::u_plus_1 `((P::p-1)/3)
 
 v_frobenius_constant_sq: t2
 v_frobenius_constant_sq = f2.sq v_frobenius_constant
@@ -52,7 +52,7 @@ fp6_frobenius [a,b,c] = [a',b',c'] where
 // thus w^p = w^(6 ((p-1)/6)) * w = (u+1)^((p-1)/6) * w
 
 w_frobenius_constant: t6
-w_frobenius_constant = P::Fp_2_to_Fp_6 (F_expt f2 P::u_plus_1 (`((P::p-1)/6):[381]))
+w_frobenius_constant = P::Fp_2_to_Fp_6 (F_expt`{n=381} f2 P::u_plus_1 `((P::p-1)/6))
 
 fp12_frobenius: t12 -> t12
 fp12_frobenius [a,b] = [a', b'] where

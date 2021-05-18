@@ -61,10 +61,10 @@ rep_w_frobenius_constant_const_part = // fp2_rep (w_frobenius_constant!0)
       0xc11b9cba40a8e8d0, 0x2e3813cbe5a0de89, 0x110eefda88847faf]]
 
 // The double Frobenius for fp6 and fp12 have similar formulas to the single
-v_frobenius_constant_2 = F_expt f2 u_plus_1 (`((p*p-1)/3):[762])
+v_frobenius_constant_2 = F_expt`{n=762} f2 u_plus_1 `((p*p-1)/3)
 v_frobenius_constant_2_sq = Fp_2.sq v_frobenius_constant_2
 
-w_frobenius_constant_2_part = F_expt f2 u_plus_1 (`((p*p-1)/6):[762])
+w_frobenius_constant_2_part = F_expt`{n=762} f2 u_plus_1 `((p*p-1)/6)
 
 rep_v_frobenius_constant_2 =
     [[0x30f1361b798a64e8, 0xf3b8ddab7ece5a2a, 0x16a8ca3ac61577f7,
@@ -93,10 +93,10 @@ fp12_frobenius2 [a,b] = [a',b'] where
     b' = fp6_frobenius (fp6_frobenius b)
 
 // for triple Frobenius
-v_frobenius_constant_3 = F_expt f2 u_plus_1 (`((p*p*p-1)/3):[1143])
+v_frobenius_constant_3 = F_expt`{n=1143} f2 u_plus_1 `((p*p*p-1)/3)
 v_frobenius_constant_3_sq = Fp_2.sq v_frobenius_constant_3
 
-w_frobenius_constant_3_part = F_expt f2 u_plus_1 (`((p*p*p-1)/6):[1143])
+w_frobenius_constant_3_part = F_expt`{n=1143} f2 u_plus_1 `((p*p*p-1)/6)
 
 rep_v_frobenius_constant_3 =
     [[0x0000000000000000, 0x0000000000000000, 0x0000000000000000,

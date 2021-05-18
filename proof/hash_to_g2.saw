@@ -1,0 +1,434 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+// Imports
+
+// include "helpers.saw";
+// include "list_utils.saw";
+// include "types.saw";
+
+// m <- llvm_load_module "../build/llvm/libblst.a.bc";
+
+// enable_experimental;
+
+// let do_prove = false;
+
+// include "proof-helpers.saw";
+// include "algebraic-laws.saw";
+
+// include "hash_to_field.saw";
+// include "fp_overrides.saw";
+// include "vect.saw";
+// include "curve_operations.saw";
+// include "ec_mult.saw";
+// include "exp.saw";
+// include "sgn0.saw";
+
+// include "fp2_overrides.saw";
+// include "curve_operations_e2.saw";
+// include "exp2.saw";
+// include "ec_mult2.saw";
+// include "psi.saw";
+// include "subgroup_check_g2.saw";
+// include "clear_cofactor_p2.saw";
+
+// let do_prove = true;
+
+import "../spec/Parameters.cry";
+import "../spec/ShortWeierstrassCurve.cry";
+HE2 <- cryptol_load "../spec/HashToCurveE2.cry";
+import "../spec/BLSFieldExtras.cry";
+import "../spec/implementation/CurveOperation.cry";
+Aux <- cryptol_load "../spec/HashToCurveE2Aux.cry";
+import "../spec/implementation/HashToG2.cry";
+
+// Specs
+
+let blst_hash_to_g2_spec msg_len DST_len aug_len = do {
+  p_ptr <- llvm_alloc POINTonE2_type;
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
+  (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
+  llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
+  new_p <- llvm_fresh_var "new_blst_hash_to_g2_p" POINTonE2_type;
+  llvm_points_to p_ptr (llvm_term new_p);
+  llvm_postcond {{ affinify E' (POINTonE2_abs new_p) == HE2::hash_to_curve_opt (aug#msg, DST) }};
+};
+
+let blst_hash_to_g2_impl_spec msg_len DST_len aug_len = do {
+  p_ptr <- llvm_alloc POINTonE2_type;
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
+  (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
+  llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
+  llvm_points_to p_ptr (llvm_term {{ (POINTonE2_rep (hash_to_curve_E2_opt_impl (aug#msg, DST))) }});
+};
+
+let map_to_g2_nonnull_spec = do {
+  out_ptr <- llvm_alloc POINTonE2_type;
+  (u,u_ptr) <- ptr_to_fresh_readonly "u" vec384x_type;
+  (v,v_ptr) <- ptr_to_fresh_readonly "v" vec384x_type;
+  llvm_precond {{ fp2_invariant u }};
+  llvm_precond {{ fp2_invariant v }};
+  llvm_execute_func [out_ptr, u_ptr, v_ptr];
+  llvm_points_to out_ptr (llvm_term {{ POINTonE2_rep (map_to_g2_impl [fp2_abs u, fp2_abs v]) }});
+};
+
+let map_to_isogenous_E2_impl_spec = do {
+  out_ptr <- llvm_alloc POINTonE2_type;
+  (u, u_ptr) <- ptr_to_fresh_readonly "u" vec384x_type;
+  llvm_precond {{ fp2_invariant u }};
+  llvm_execute_func [out_ptr, u_ptr];
+  llvm_points_to out_ptr (llvm_term {{ POINTonE2_rep (map_to_isogenous_E2_impl (fp2_abs u)) }});
+};
+
+let isogeny_map_to_E2_impl_alias_spec = do {
+  (out, out_ptr) <- ptr_to_fresh "out" POINTonE2_type;
+  llvm_precond {{ POINTonE2_invariant out }};
+  llvm_execute_func [out_ptr, out_ptr];
+  llvm_points_to out_ptr (llvm_term {{ POINTonE2_rep (isogeny_map_to_E2_impl (POINTonE2_abs out)) }} );
+};
+
+// Assumptions
+
+// The optimized version of clear_cofactor given in the IETF spec is correct:
+clear_cofactor_bls12381_correct <- admit_cryptol {{ \p -> Aux::clear_cofactor_bls12381_g2 p == HE2::clear_cofactor p }};
+
+// The SWU map maps to the isogenous curve:
+swu_on_curve <- simp_then_admit {{ \u -> is_point_affine HE2::Isogenous_Curve (HE2::map_to_curve_simple_swu u) == True }};
+
+// The implementation of the isogeny map is correct
+isogeny_map_to_E2_correct <- admit_cryptol {{ \p -> affinify E' (isogeny_map_to_E2_impl p) == if is_point_projective HE2::Isogenous_Curve p then HE2::iso_map (affinify HE2::Isogenous_Curve p) else affinify E' (apply isogeny_map_to_E2_impl p) }};
+
+// The implementation of map_to_isogenous_E2 is correct:
+map_to_isogenous_E2_correct <- admit_cryptol {{ \u -> affinify HE2::Isogenous_Curve (map_to_isogenous_E2_impl u) == HE2::map_to_curve_simple_swu u }};
+
+// point_dadd implements add:
+dadd_thm <- simp_then_admit {{ \ p1 p2 -> affinify HE2::Isogenous_Curve (point_dadd Fp_2 p1 p2 HE2::A' False) == add HE2::Isogenous_Curve (affinify HE2::Isogenous_Curve p1) (affinify HE2::Isogenous_Curve p2) }};
+
+// the addition of two points on the curve is on the curve:
+point_dadd_on_curve <- simp_then_admit {{ \p q -> is_point_projective HE2::Isogenous_Curve (point_dadd Fp_2 p q HE2::A' False) == if is_point_projective HE2::Isogenous_Curve p /\ is_point_projective HE2::Isogenous_Curve q then True else apply is_point_projective HE2::Isogenous_Curve (point_dadd Fp_2 p q HE2::A' False) }};
+
+// The implementation of the map to the isogenous curve never returns anything of the form (0,0,_) or (_,_,0)
+swu_impl_xy_nz <- simp_then_admit {{ \u -> (~((x,y) == (Fp_2.field_zero,Fp_2.field_zero) \/ z == Fp_2.field_zero) where (x,y,z) = map_to_isogenous_E2_impl u) == True }};
+
+/*
+ * If p is a projective point and `is_point_affine (affinify p)` is true, then
+ * `is_point_projective p` is not necessarily true. For example, with `p =
+ * (1,1,0)`, `is_point_projective p` is false while `affinify p == point_O` and
+ * `is_point_affine point_O` is true. This happens when `affinify p` is
+ * `point_O` but `p != (0,0,0)`, hence the following property:
+ *
+ * If p is a projective point such that p is not of the form (0,0,_) or (_,_,0)
+ * and `is_point_affine (affinify p)` holds, then `is_point_projective p`
+ * holds.
+ *
+ * We use this together with `swu_on_curve` and `swu_impl_xy_nz` to establish
+ * that the implementation of the map to the isogenous curve (the SWU map)
+ * produces a projective point p such that `is_point_projective p` is true.
+ */
+is_point_projective_lemma <- simp_then_admit {{ \p -> is_point_projective HE2::Isogenous_Curve p == if is_point_affine HE2::Isogenous_Curve (affinify HE2::Isogenous_Curve p) /\ ~((p.0, p.1) == (Fp_2.field_zero,Fp_2.field_zero) \/ p.2 == Fp_2.field_zero) then True else apply is_point_projective HE2::Isogenous_Curve p }};
+
+// Proofs
+
+let {{
+  fp2_mul = Fp_2.mul
+  fp2_sq = Fp_2.sq
+  fp2_add = Fp_2.add
+  fp2_div = Fp_2.div
+  fp2_zero = Fp_2.field_zero
+  fp2_unit = Fp_2.field_unit
+  fp2_is_equal = Fp_2.is_equal
+  fp2_neg = Fp_2.neg
+}};
+
+readability_rewrites <- for [
+  {{ \p q -> Fp_2.mul (p,q) == fp2_mul (p,q) }}
+, {{ \p q -> Fp_2.add (p,q) == fp2_add (p,q) }}
+, {{ \p -> Fp_2.sq p == fp2_sq p }}
+, {{ \p -> Fp_2.neg p == fp2_neg p }}
+, {{ \p q -> Fp_2.div (p, q) == fp2_div (p, q) }}
+, {{ Fp_2.field_zero == fp2_zero }}
+, {{ Fp_2.field_unit == fp2_unit }}
+, {{ \x y -> Fp_2.is_equal (x,y) == fp2_is_equal (x,y) }}
+  ] simp_then_admit;
+
+let print_readably =  do {
+    simplify (addsimps readability_rewrites empty_ss); // NOTE this modifies the goal
+    print_goal;
+};
+
+// aux_rewrites <- for [
+    // {{ Aux::HE2::A' == HE2::A' }}
+  // , {{ Aux::Z == Z }}
+  // , {{ Aux::HE2::B' == HE2::B' }}
+  // , {{ \x -> Aux::sgn0 x == sgn0 x}}
+// ] (\ eq -> prove_cryptol eq []);
+
+
+// First we verify the C functions against their implementation-level specs
+
+// isogeny_map_to_E2
+
+isogeny_map_to_E2_impl_alias_ov <- custom_verify
+  "isogeny_map_to_E2"
+  fp2_overrides
+  isogeny_map_to_E2_impl_alias_spec
+  (goal_num_ite 44 // 44 is the main safety goal
+    (do {
+      simplify fp2_simpset; // eliminate `abs . rep` etc.
+      // simplify (addsimps isogeny_invs empty_ss); // NOTE: unecessary
+      goal_eval_unint ["Fp_2","Fp","fp2_rep","fp2_abs","fp2_invariant","HashToCurveE2Aux::k1s","HashToCurveE2Aux::k2s","HashToCurveE2Aux::k3s","HashToCurveE2Aux::k4s"]; // TODO: why do we need to keep the kns opaque?
+      let algebra_rules = run (for [ // here we only use a subset of the fp2_laws; as a whole it's too slow (or is it looping?)
+          {{ \x y -> Fp_2.mul(x,y) == Fp_2.mul(y,x) }}
+        , {{ \x y z -> Fp_2.mul(Fp_2.mul(x,y),z) == Fp_2.mul(x, Fp_2.mul(y,z)) }}
+        , {{ \x y -> Fp_2.add(x,y) == Fp_2.add(y,x) }}
+        , {{ \x y z -> Fp_2.add(Fp_2.add(x,y),z) == Fp_2.add(x, Fp_2.add(y,z)) }}
+      ] (\ eq -> prove_cryptol eq []));
+      let restiching_rules = run (for [
+          {{ \(a:[2]Integer) -> ([x,y] == a where [x,y] = a) }}
+        , {{ \(a:[2][6][64]) -> ([x,y] == a where [x,y] = a) }}
+        , {{ \(a:[6][64]) -> ([a1,a2,a3,a4,a5,a6] == a where [a1,a2,a3,a4,a5,a6] = a) }}
+      ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4));
+      simplify (addsimps (concat restiching_rules algebra_rules) empty_ss);
+      w4_unint_z3  ["fp2_rep"];
+    })
+    (do { // discharge simulation side-conditions:
+      unfolding ["POINTonE2_invariant"];
+      simplify fp2_simpset;
+      w4_unint_z3 ["fp2_rep"];
+    })
+  );
+
+//map_to_isogenous
+
+map_to_iso_constants_rewrites <- for [
+    {{ fp2_abs [[zero, zero, zero, zero, zero, zero], [ 0xd4c4fffffcec5869, 0x1da3f3eed25bfd79, 0x7fa833c5136fff67, 0x59261433cd540cbd, 0x48450f5f2b84682c, 0x07e05d00bf959233 ]] == Fp_2.neg HE2::A' }} // first is 15331660506401101929
+  , {{ fp2_abs [[ 0x87ebfffffff9555c, 0x656fffe5da8ffffa, 0x0fd0749345d33ad2, 0xd951e663066576f4, 0xde291a3d41e980d3, 0x0815664c7dfe040d], [ 0x43f5fffffffcaaae, 0x32b7fff2ed47fffd, 0x07e83a49a2e99d69, 0xeca8f3318332bb7a, 0xef148d1ea0f4c069, 0x040ab3263eff0206]] == HE2::Z }}
+  , {{ fp2_abs [[ 0x019af5f980a3680c, 0x4ed7da0e66063afa, 0x600354723b5d9972, 0x8b2f958b20d09d72, 0x0474938f02d461db, 0x0dcf8b9e0684ab1c], [ 0x486f252db11dd19c, 0x791ffda2c3d18950, 0x5af6c27debf95eb4, 0x73b1fd8f2a929cde, 0xfc59602a1a90b871, 0x08d7daafa8baddb3]] == F_expt`{n=758} Fp_2 ZZZ `((p^^2+7)/16) }}
+  , {{ fp2_abs [[ 0x65018f5c28f598eb, 0xe6020417f022d916, 0xd6327313288369c7, 0x622ded8eb447156f, 0xe52a2aee72c2a01f, 0x089812fb8481ffe4], [ 0x2574eb851eb8619f, 0xdba2e97912925604, 0x67e495a909e7a18e, 0xdf2da23b8145b8f7, 0xcf5d3728310ebf6d, 0x11be446236f4c116]] == Fp_2.div (Fp_2.field_unit, ZZZ) }}
+  // ZxHE2::A':
+  , {{ fp2_abs [[ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467], [ 0xa989fffff9d8b0d2, 0x3b47e7dda4b7faf3, 0xff50678a26dffece, 0xb24c28679aa8197a, 0x908a1ebe5708d058, 0x0fc0ba017f2b2466]] == Fp_2.mul(HE2::Z, HE2::A') }}
+  // ZxHE2::A' again:
+  , {{ [[ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467], [ 0xa989fffff9d8b0d2, 0x3b47e7dda4b7faf3, 0xff50678a26dffece, 0xb24c28679aa8197a, 0x908a1ebe5708d058, 0x0fc0ba017f2b2466]] == fp2_rep (Fp_2.mul (HE2::Z, HE2::A')) }}
+  // HE2::B':
+  , {{ fp2_abs [[ 0x22ea00000cf89db2, 0x6ec832df71380aa4, 0x6e1b94403db5a66e, 0x75bf3c53a79473ba, 0x3dd3a569412c0a34, 0x125cdb5e74dc4fd1], [ 0x22ea00000cf89db2, 0x6ec832df71380aa4, 0x6e1b94403db5a66e, 0x75bf3c53a79473ba, 0x3dd3a569412c0a34, 0x125cdb5e74dc4fd1]] == HE2::B' }}
+  // HE2::A':
+  , {{ fp2_abs [[zero, zero, zero, zero, zero, zero], [ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467]] == HE2::A' }}
+  // Fp_2.field_unit (BLS12_381_Rx.p2):
+  , {{ fp2_abs [
+            [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+            , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
+          , [zero, zero, zero, zero, zero, zero] ] // a single zero would introduce Prelude.replicate, which would be annoying
+          == Fp_2.field_unit }}
+  // fp2_invariant:
+  , {{ fp2_invariant [[zero, zero, zero, zero, zero, zero], [ 0xd4c4fffffcec5869, 0x1da3f3eed25bfd79, 0x7fa833c5136fff67, 0x59261433cd540cbd, 0x48450f5f2b84682c, 0x07e05d00bf959233 ]] == True}}
+  , {{ fp2_invariant [[ 0x87ebfffffff9555c, 0x656fffe5da8ffffa, 0x0fd0749345d33ad2, 0xd951e663066576f4, 0xde291a3d41e980d3, 0x0815664c7dfe040d], [ 0x43f5fffffffcaaae, 0x32b7fff2ed47fffd, 0x07e83a49a2e99d69, 0xeca8f3318332bb7a, 0xef148d1ea0f4c069, 0x040ab3263eff0206]] == True}}
+  , {{ fp2_invariant [[ 0x019af5f980a3680c, 0x4ed7da0e66063afa, 0x600354723b5d9972, 0x8b2f958b20d09d72, 0x0474938f02d461db, 0x0dcf8b9e0684ab1c], [ 0x486f252db11dd19c, 0x791ffda2c3d18950, 0x5af6c27debf95eb4, 0x73b1fd8f2a929cde, 0xfc59602a1a90b871, 0x08d7daafa8baddb3]]  == True}}
+  , {{ fp2_invariant [[ 0x65018f5c28f598eb, 0xe6020417f022d916, 0xd6327313288369c7, 0x622ded8eb447156f, 0xe52a2aee72c2a01f, 0x089812fb8481ffe4], [ 0x2574eb851eb8619f, 0xdba2e97912925604, 0x67e495a909e7a18e, 0xdf2da23b8145b8f7, 0xcf5d3728310ebf6d, 0x11be446236f4c116]]  == True}}
+  // ZxHE2::A':
+  , {{ fp2_invariant [[ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467], [ 0xa989fffff9d8b0d2, 0x3b47e7dda4b7faf3, 0xff50678a26dffece, 0xb24c28679aa8197a, 0x908a1ebe5708d058, 0x0fc0ba017f2b2466]] == True}}
+  // HE2::B':
+  , {{ fp2_invariant [[ 0x22ea00000cf89db2, 0x6ec832df71380aa4, 0x6e1b94403db5a66e, 0x75bf3c53a79473ba, 0x3dd3a569412c0a34, 0x125cdb5e74dc4fd1], [ 0x22ea00000cf89db2, 0x6ec832df71380aa4, 0x6e1b94403db5a66e, 0x75bf3c53a79473ba, 0x3dd3a569412c0a34, 0x125cdb5e74dc4fd1]] == True}}
+  // HE2::A':
+  , {{ fp2_invariant [[zero, zero, zero, zero, zero, zero], [ 0xe53a000003135242, 0x01080c0fdef80285, 0xe7889edbe340f6bd, 0x0b51375126310601, 0x02d6985717c744ab, 0x1220b4e979ea5467]] == True}}
+  // Fp_2.field_unit (BLS12_381_Rx.p2):
+  , {{ fp2_invariant [
+            [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+            , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
+          , [zero, zero, zero, zero, zero, zero] ]  == True}}
+  ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
+
+map_to_isogenous_E2_impl_ov <- custom_verify
+  "map_to_isogenous_E2"
+  (concat_all [vec_fp2_overrides, fp2_overrides, [recip_sqrt_fp2_nonsquare_ov, sgn0x_pty_mont_384x_ov, sqrt_align_fp2_alias_1_2_ov]])
+  map_to_isogenous_E2_impl_spec
+  (do {
+    // Below are two rules to "fix" the term extracted from C:
+    let fix_vec_12 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{
+      \(x:t_Fp_2) y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 c -> (
+         [[z1, z2, z3, z4, z5, z6], [z7, z8, z9, z10, z11, z12]] == (if c then [[y1, y2, y3, y4, y5, y6], [y7, y8, y9, y10, y11, y12]] else (fp2_rep x)) where
+            [a,b] = fp2_rep x
+            [a1, a2, a3, a4, a5, a6] = a
+            [b1, b2, b3, b4, b5, b6] = b
+            z = (if c then [y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12] else [a1, a2, a3, a4, a5, a6, b1, b2, b3, b4, b5, b6])
+            [z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12] = z
+        )
+      }}) w4);
+    let fix_vec_12_2 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{
+      \(x:t_Fp_2) -> (
+         [[a1, a2, a3, a4, a5, a6], [b1, b2, b3, b4, b5, b6]] == fp2_rep x where
+            [a,b] = fp2_rep x
+            [a1, a2, a3, a4, a5, a6] = a
+            [b1, b2, b3, b4, b5, b6] = b
+        )
+      }}) w4);
+    (goal_num_ite 34
+      (do {
+        // First we deal with the term extracted from the C code:
+          unfolding ["select"];
+          // deal with constants and SAW mangling
+            simplify (addsimps (concat map_to_iso_constants_rewrites [fix_vec_12_2, fix_vec_12]) fp2_simpset);
+          // We get rid of bitvector ops:
+            let bvEq_term = parse_core "\\ (x:Vec 64 Bool) (y:Vec 64 Bool) -> bvEq 64 x y";
+            let rewrite_xor = run ( custom_prove_cryptol (rewrite (cryptol_ss ()) (beta_reduce_term {{ \a b c d -> bvEq_term (((1:[64]) && (zext [a,b])) ^ ((1:[64]) && (zext [c,d]))) (0:[64]) == (b == d) }})) w4);
+            let bvEq_term_2 = parse_core "\\ (x:Bool) (f:Bool -> Vec 64 Bool) -> not (bvEq 64 (f x) (bvNat 64 0))";
+            let rewrite_1 = run (custom_prove_cryptol (beta_reduce_term {{ \x -> bvEq_term_2 x bool_to_limb == x }}) w4);
+            let rewrite_2 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x -> bvEq_term (if (Fp_2.is_equal (x, Fp_2.field_zero)) then (1:[64]) else (0:[64])) zero == ~(Fp_2.is_equal (x, Fp_2.field_zero)) }}) w4);
+            simplify (addsimps [rewrite_xor, rewrite_1, rewrite_2] empty_ss);
+        // Now we deal with the term extracted from the Cryptol code:
+          unfolding ["map_to_isogenous_E2_impl","recip_ZZZ","F_is_zero","POINTonE2_rep"];
+          let hoist_ifs = run (for [
+              {{ \ c (x1:t_Fp_2) (x2:t_Fp_2) y1 y2 -> (if c then (x1,x2) else (y1,y2)).0 == if c then x1 else y1 }}
+            , {{ \ c (x1:t_Fp_2) (x2:t_Fp_2) y1 y2 -> (if c then (x1,x2) else (y1,y2)).1 == if c then x2 else y2 }}
+          ] (\e -> custom_prove_cryptol e w4));
+          simplify (addsimps hoist_ifs empty_ss);
+          let F_rewrites = run (for [ // unfolds F_prod and F_sum; note the use of pattern matching to produce "nice" saw-core terms
+              {{ \(x:[5]t_Fp_2) -> (F_prod Fp_2 x == Fp_2.mul(a, Fp_2.mul(b, Fp_2.mul(c, Fp_2.mul(d, e)))) where [a,b,c,d,e] = x) }}
+            , {{ \(x:[3]t_Fp_2) -> (F_prod Fp_2 x == Fp_2.mul(a, Fp_2.mul(b, c)) where [a,b,c] = x) }}
+            , {{ \(x:[3]t_Fp_2) -> (F_sum Fp_2 x == Fp_2.add(a, Fp_2.add(b, c)) where [a,b,c] = x)}}
+            ] (\ e -> custom_prove_cryptol e w4));
+          simplify (addsimps F_rewrites (cryptol_ss ())); // get rid of F_prod and F_sum
+          simplify (addsimps fp2_laws empty_ss); // try to normalize field expressions
+          simplify (add_cryptol_defs ["ecEq","PEqBit"] empty_ss); // transform those to boolEq?
+          let elim_sqrt_fp2 = run (admit_cryptol {{ \x -> sqrt_fp2 x == HE2::sqrt x }});
+          let elim_is_square_fp2 = run (admit_cryptol {{ \x -> is_square_fp2 x == HE2::is_square x }});
+          simplify (addsimps [elim_sqrt_fp2,elim_is_square_fp2] empty_ss);
+        // Finally:
+          w4_unint_z3 ["sqrt_align_fp2_coeff","fp2_rep", "fp2_abs","Fp_2","HE2::sqrt","HE2::sgn0","fp2_invariant","HE2::A'","HE2::B'","HE2::Z","ZZZ"];
+      })
+      (do {
+        unfolding ["select"];
+        simplify (addsimps [fix_vec_12_2, fix_vec_12] fp2_simpset);
+        simplify basic_ss; // NOTE: does not work without this...
+        w4_unint_z3 ["Fp_2","Fp","sqrt_align_fp2_coeff"];
+      }));
+  });
+
+// We need to establish that we get a point on the isogenous curve
+map_to_isogenous_E2_on_curve <- custom_prove_cryptol {{ \u -> is_point_projective HE2::Isogenous_Curve (map_to_isogenous_E2_impl u) == True }}
+do {
+  simplify (addsimps [is_point_projective_lemma,swu_impl_xy_nz,map_to_isogenous_E2_correct,swu_on_curve] empty_ss);
+  w4_unint_z3 (concat fp_unints ["map_to_isogenous_E2_impl"]);
+};
+
+affinify_invariant <- custom_prove_cryptol {{ \P -> AffinePoint_Fp_2_invariant (affinify E' P) == True }}
+do {
+  let mul_invariant_thm = run ( custom_prove_cryptol {{ \x y -> Fp_2.is_val (Fp_2.mul (x,y)) == True }} w4);
+  let point_O_invariant_thm = run ( custom_prove_cryptol {{ AffinePoint_Fp_2_invariant (point_O E') == True }} w4);
+  let hoist_AffinePoint_Fp_2_invariant = run ( custom_prove_cryptol {{ \x y z -> AffinePoint_Fp_2_invariant (if x then y else z) == if x then AffinePoint_Fp_2_invariant y else AffinePoint_Fp_2_invariant z }} w4);
+  unfolding ["affinify"];
+  simplify (addsimps [hoist_AffinePoint_Fp_2_invariant, point_O_invariant_thm] empty_ss);
+  unfolding ["AffinePoint_Fp_2_invariant","E'"];
+  simplify (addsimps [mul_invariant_thm] empty_ss);
+  w4_unint_z3 ["Fp_2"];
+};
+
+let prove_final_thm aug_len msg_len DST_len =
+  custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> affinify E' (hash_to_curve_E2_opt_impl (aug#msg,dst)) == HE2::hash_to_curve_opt (aug#msg, dst) }}
+    do {
+      unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl"];
+      let clear_cofactor_correct = run (custom_prove_cryptol {{ \P -> affinify E' (clear_cofactor_E2_impl P) == if AffinePoint_Fp_2_invariant (affinify E' P) then clear_cofactor_bls12381_g2 (affinify E' P) else affinify E' (apply clear_cofactor_E2_impl P) }}
+        do {
+          simplify (addsimp clear_cofactor_E2_equiv_thm empty_ss);
+          simplify remove_higher_order_function_simpset;
+          w4_unint_z3 ["clear_cofactor_E2_impl","clear_cofactor_bls12381_g2","affinify_E'","AffinePoint_Fp_2_invariant"];
+        }
+      );
+      simplify (addsimps [clear_cofactor_bls12381_correct, clear_cofactor_correct] (cryptol_ss ()));
+      simplify (addsimps [affinify_invariant] (cryptol_ss ()));
+      simplify (addsimps [isogeny_map_to_E2_correct,point_dadd_on_curve,map_to_isogenous_E2_on_curve,dadd_thm,map_to_isogenous_E2_correct] (cryptol_ss ()));
+      unfolding ["/\\","HE2::hash_to_curve_opt"];
+      simplify cleanup_simpset;
+      w4_unint_z3 (concat fp_unints ["HE2::iso_map","HE2::map_to_curve_simple_swu","HE2::clear_cofactor","HE2::hash_to_field"]);
+    };
+
+// And we're ready for the final overrides:
+
+// abstract version:
+let prove_blst_hash_to_g2_abstract_postcond aug_len msg_len DST_len hash_to_field_fp2_ovs = custom_verify
+  "blst_hash_to_g2"
+  (concat_all [curve_operations_e2_ovs,[clear_cofactor_ov,map_to_isogenous_E2_impl_ov,isogeny_map_to_E2_impl_alias_ov],hash_to_field_fp2_ovs])
+  (blst_hash_to_g2_spec msg_len DST_len aug_len)
+  do {
+    let final_thm = run (prove_final_thm aug_len msg_len DST_len);
+    let join_map_term = parse_core "\\(f : Vec 2 Integer -> Vec 2 (Vec 6 (Vec 64 Bool))) -> \\(y : Vec 2 (Vec 2 Integer)) -> join 2 2 (Vec 6 (Vec 64 Bool)) (map (Vec 2 Integer) (Vec 2 (Vec 6 (Vec 64 Bool))) f 2 y)";
+    let join_map_eq_1 = beta_reduce_term {{ \x -> ([z1,z2] == fp2_rep (x@0) where [z1,z2,_,_] = join_map_term (\(y : [2]Integer) -> fp2_rep y) x) }};
+    let join_map_eq_2 = beta_reduce_term {{ \x -> ([z1,z2] == fp2_rep (x@1) where [_,_,z1,z2] = join_map_term (\(y : [2]Integer) -> fp2_rep y) x) }};
+    let join_map_thm_1 = run (prove_cryptol (rewrite (cryptol_ss ()) join_map_eq_1) []);
+    let join_map_thm_2 = run (prove_cryptol (rewrite (cryptol_ss ()) join_map_eq_2) []);
+    (goal_num_ite 5
+      do {
+        let to_impl = run (
+          custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> HE2::hash_to_curve_opt (aug#msg, dst) == affinify E' (hash_to_curve_E2_opt_impl (aug#msg,dst)) }}
+          do {
+            simplify (addsimp final_thm empty_ss);
+            w4_unint_z3 ["HE2::hash_to_curve_opt"];
+          }
+        );
+        simplify (addsimp to_impl empty_ss);
+        simplify (addsimps (concat fp2_rep_thms POINTonE2_thms) empty_ss);// simplify (abs rep)
+        unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl","map","join"];
+        simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
+        simplify (addsimps [join_map_thm_1,join_map_thm_2] (cryptol_ss ())); // get rid of join and map terms
+        simplify (addsimps (concat fp2_rep_thms POINTonE2_thms) empty_ss);// simplify (abs rep)
+        simplify (addsimps map_to_iso_constants_rewrites empty_ss);
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 ["affinify_E'","fp2_invariant","clear_cofactor_E2_impl","map_to_isogenous_E2_impl","isogeny_map_to_E2_impl","HashToCurveE2::hash_to_field"];
+      }
+      do {
+        unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl","map","join"];
+        simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
+        simplify (addsimps [join_map_thm_1,join_map_thm_2] (cryptol_ss ())); // get rid of join and map terms
+        simplify (addsimps (concat fp2_rep_thms POINTonE2_thms) empty_ss);
+        w4;
+      });
+    };
+
+// concrete version:
+let prove_blst_hash_to_g2_concrete aug_len msg_len DST_len hash_to_field_fp2_ovs = custom_verify
+  "blst_hash_to_g2"
+  (concat_all [curve_operations_e2_ovs,[clear_cofactor_ov,map_to_isogenous_E2_impl_ov,isogeny_map_to_E2_impl_alias_ov],hash_to_field_fp2_ovs])
+  (blst_hash_to_g2_impl_spec msg_len DST_len aug_len)
+  do {
+    let join_map_term = parse_core "\\(f : Vec 2 Integer -> Vec 2 (Vec 6 (Vec 64 Bool))) -> \\(y : Vec 2 (Vec 2 Integer)) -> join 2 2 (Vec 6 (Vec 64 Bool)) (map (Vec 2 Integer) (Vec 2 (Vec 6 (Vec 64 Bool))) f 2 y)";
+    let join_map_eq_1 = beta_reduce_term {{ \x -> ([z1,z2] == fp2_rep (x@0) where [z1,z2,_,_] = join_map_term (\(y : [2]Integer) -> fp2_rep y) x) }};
+    let join_map_eq_2 = beta_reduce_term {{ \x -> ([z1,z2] == fp2_rep (x@1) where [_,_,z1,z2] = join_map_term (\(y : [2]Integer) -> fp2_rep y) x) }};
+    let join_map_thm_1 = run (prove_cryptol (rewrite (cryptol_ss ()) join_map_eq_1) []);
+    let join_map_thm_2 = run (prove_cryptol (rewrite (cryptol_ss ()) join_map_eq_2) []);
+    (goal_num_ite 5
+      do {
+        unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl","map","join"];
+        simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
+        simplify (addsimps [join_map_thm_1,join_map_thm_2] (cryptol_ss ())); // get rid of join and map terms
+        simplify (addsimps (concat fp2_rep_thms POINTonE2_thms) empty_ss);// simplify (abs rep)
+        simplify (addsimps map_to_iso_constants_rewrites empty_ss);
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 ["affinify_E'","fp2_invariant","clear_cofactor_E2_impl","map_to_isogenous_E2_impl","isogeny_map_to_E2_impl","HashToCurveE2::hash_to_field"];
+      }
+      do {
+        unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl","map","join"];
+        simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
+        simplify (addsimps [join_map_thm_1,join_map_thm_2] (cryptol_ss ())); // get rid of join and map terms
+        simplify (addsimps (concat fp2_rep_thms POINTonE2_thms) empty_ss);
+        w4;
+      });
+    };
+
+let aug_len = 48; // aug_len should be 96 or 48
+let msg_len = 32;
+let DST_len= 8;
+
+hash_to_field_fp2_ovs <- for hash_to_field_nelems (verify_hash_to_field_fp2_for aug_len msg_len DST_len);
+prove_blst_hash_to_g2_abstract_postcond aug_len msg_len DST_len hash_to_field_fp2_ovs;
+prove_blst_hash_to_g2_concrete aug_len msg_len DST_len hash_to_field_fp2_ovs;
+
+let aug_len = 96; // aug_len should be 96 or 48
+let msg_len = 69;
+let DST_len= 32;
+
+hash_to_field_fp2_ovs <- for hash_to_field_nelems (verify_hash_to_field_fp2_for aug_len msg_len DST_len);
+prove_blst_hash_to_g2_abstract_postcond aug_len msg_len DST_len hash_to_field_fp2_ovs;
+prove_blst_hash_to_g2_concrete aug_len msg_len DST_len hash_to_field_fp2_ovs;

@@ -3,21 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import Parameters (Fp, t_Fp, to_Fp, E)
-import ShortWeierstrassCurve (ProjectivePoint, AffinePoint)
-import BLSFieldExtras (sqrt_fp, fp_exp)
+module implementation::HashToG1 where
+
+import Parameters (Fp, t_Fp)
+import ShortWeierstrassCurve (ProjectivePoint)
+import BLSFieldExtras (sqrt_fp)
 import ExpandMessage (Expandable)
 import implementation::CurveOperation (point_dadd, point_add, point_double)
 import HashToCurveE1
 import HashToCurveE1Aux as Aux
 
 // the SWU map
-
-// Projective version of map_to_curve_simple_swu_3mod4:
-map_to_curve_simple_swu_3mod4_impl : t_Fp -> ProjectivePoint t_Fp
-map_to_curve_simple_swu_3mod4_impl u = (Fp.mul (xn, xd), Fp.mul (y, gxd), xd) where
-  (xn, xd, y, _) = Aux::map_to_curve_simple_swu_3mod4 u
-  gxd = Fp.mul(xd, Fp.sq xd) // xd^3
 
 // This is what the implementation does:
 map_to_curve_simple_swu_impl : t_Fp -> ProjectivePoint t_Fp
@@ -93,6 +89,7 @@ map_fp_times_Zz ks zzs = zipWith (curry Fp.mul) (take`{front=n}ks) (drop`{back=n
 map_fp kzzs x = last rs where
   rs = [last kzzs] # [Fp.add (Fp.mul (ri, x), kzzi) | kzzi <- tail (reverse kzzs) | ri <- rs]
 
+// NOTE: this does not follow jacobian_to_projective_pair in G2SubGroupCheck.cry
 to_jacobian xn xd yn yd = (X, Y, Z) where
   Z = Fp.mul (xd, yd)
   X = Fp.mul (Fp.mul (xn, yd) , Z)

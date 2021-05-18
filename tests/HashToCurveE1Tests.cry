@@ -58,13 +58,13 @@ ex1_expected_us =
 property hash_to_field_test_1 =
     ex1_us == ex1_expected_us
 
-// .. the first step works (map_to_curve, going to Curve_E')
+// .. the first step works (map_to_curve, going to Isogenous_Curve)
 
 property map_to_curve_test_1_1_a =
-    EC::is_point_affine Curve_E' (map_to_curve_simple_swu (ex1_us@0))
+    EC::is_point_affine Isogenous_Curve (map_to_curve_simple_swu (ex1_us@0))
 
 property map_to_curve_test_1_1_b =
-    EC::is_point_affine Curve_E' (map_to_curve_simple_swu (ex1_us@1))
+    EC::is_point_affine Isogenous_Curve (map_to_curve_simple_swu (ex1_us@1))
 
 // ... and the isogeny gets us to the curve C
 

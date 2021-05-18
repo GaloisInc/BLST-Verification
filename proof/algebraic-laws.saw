@@ -4,12 +4,13 @@
 */
 
 /* For stand-alone testing:
-import "../spec/Parameters.cry";
 include "helpers.saw";
 m <- llvm_load_module "../build/llvm/libblst.a.bc";
 let do_prove = true;
 include "proof-helpers.saw";
 */
+
+import "../spec/Parameters.cry";
 
 /* SAW recently acquired the ability to handle permutative rewrite rules, allow for the
    use of rewrite rules for properties like commutativity.  This new set of algebraic laws

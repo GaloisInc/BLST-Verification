@@ -1,0 +1,35 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+import HashToCurveE2
+import HashToCurveE2Aux
+import Parameters
+import Serialization
+import ShortWeierstrassCurve
+
+import implementation::HashToG2
+
+// Check that the two clear_cofactor specifications agree
+spec_eq : AffinePoint t_Fp_2 -> Bit
+spec_eq P = (clear_cofactor_bls12381_g2 P) == (clear_cofactor P)
+
+to_Fp2: ([384], [384]) -> t_Fp_2
+to_Fp2 (a,b) = [to_Fp b, to_Fp a] // a+b*I
+
+// Get a point on the curve through deserialization
+point = deserialize_E2 (serialize_E2 (to_Fp2 (0, 1), to_Fp2 (0, 1)))
+
+// Generate a few more points on the curve from `point`
+points = [mult E' x (point.1) | x <- [0x1, 0x2 .. 0x5 : [4]]]
+
+// Check that the implementation function agrees with clear_cofactor
+impl_eq P = (clear_cofactor P) == (affinify E' (clear_cofactor_E2_impl (projectify E' P)))
+
+// Since changing `mult` to `scalar_mult` in clear_cofactor_bls12381_g2,
+// running this check is too slow.  It can be uncommented if
+// clear_cofactor_bls12381_g2 is ever changed back to use `mult`.
+//property spec_eq_many = all spec_eq points
+
+property impl_eq_many = all impl_eq points

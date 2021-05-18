@@ -125,6 +125,8 @@ let really_test_cryptol thm =
 // Other helpers for proofs
 //
 
+let simp_then_admit r = admit_cryptol (rewrite (cryptol_ss ()) r);
+
 // rewrite with a list of theorems
 let rw_with thms = simplify (addsimps thms (cryptol_ss ()));
 // ... or just one
@@ -145,6 +147,7 @@ propositional_rewrites <- for
   , "(a:Bool) -> (b:Bool) -> EqTrue (boolEq (ite Bool a b False) (and a b))"
   , "(a:Bool) -> (b:Bool) -> EqTrue (boolEq (not (and a b)) (or (not a) (not b)))"
   , "(a:Bool) -> (b:Bool) -> EqTrue (boolEq (not (or a b)) (and (not a) (not b)))"
+  , "(a:Bool) -> EqTrue (boolEq (not (not a)) a)"
    ] (prove_core abc);
 
 let prop_simpset = add_prelude_eqs
@@ -162,3 +165,4 @@ let print_clean_goal = do {
   simplify cleanup_simpset;
   print_goal;
   };
+

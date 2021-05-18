@@ -1,0 +1,35 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+module implementation::Psi where
+
+import Frobenius
+import G2SubGroupCheck
+import Pairing
+import Parameters
+import ShortWeierstrassCurve
+
+psi_imp: ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
+psi_imp P = projective_pair_to_jacobian_imp qpp where
+  pp = jacobian_to_projective_pair P
+  qpp = psi_projective_imp pp
+
+psi_x_factor = Fp_2.mul (alpha, [Fp.field_zero,psi_c1@0])
+qi_x_abs x = fp2_frobenius (Fp_2.mul (x, psi_x_factor))
+psi_y_factor = Fp_2.mul (alpha, Fp_2.neg psi_c2)
+qi_y_abs x = fp2_frobenius (Fp_2.mul (x, psi_y_factor))
+
+psi_projective_imp (xn, xd, yn, yd) = (qxn, qxd, qyn, qyd) where
+  qxn = Fp_2.mul (qi_x_abs xn, psi_c1)
+  qxd = qi_x_abs xd
+  qyn = Fp_2.mul (qi_y_abs yn, psi_c2)
+  qyd = qi_y_abs yd
+
+// This is a simple algebraic reanrrangement of `projective_pair_to_jacobian`
+projective_pair_to_jacobian_imp: projective_pair_fp2 -> ProjectivePoint t_Fp_2
+projective_pair_to_jacobian_imp (xn, xd, yn, yd) = (X', Y', Z') where
+  X' = Fp_2.mul (xn, Fp_2.mul (yd, Z'))
+  Y' = Fp_2.mul (Fp_2.sq Z', Fp_2.mul (xd, yn))
+  Z' = Fp_2.mul (xd, yd)

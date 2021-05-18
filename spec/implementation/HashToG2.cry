@@ -1,0 +1,180 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+module implementation::HashToG2 where
+
+import FieldExtras (F_is_zero, F_sum, F_prod, F_expt)
+import BLSFieldExtras (sqrt_align_fp2_coeff)
+import Parameters (Fp_2, t_Fp_2, u)
+import ShortWeierstrassCurve (ProjectivePoint, point_O, projectify)
+import ExpandMessage (Expandable)
+import implementation::CurveOperation (point_dadd, point_add, point_double, point_neg)
+import HashToCurveE2
+import HashToCurveE2Aux as Aux
+import implementation::Psi
+
+// This follows the code very closely:
+map_to_isogenous_E2_impl : t_Fp_2 -> ProjectivePoint t_Fp_2
+map_to_isogenous_E2_impl u = res where
+  // x1n, x2n, and xd:
+  Zuu = Fp_2.mul (Z, Fp_2.sq u)
+  tv2 = Fp_2.add (Fp_2.sq Zuu, Zuu)
+  x1n = Fp_2.mul (Fp_2.add (tv2, Fp_2.field_unit), B')
+  x2n = Fp_2.mul (Zuu, x1n)
+  xd' = Fp_2.mul (Fp_2.neg A', tv2)
+  xd = if F_is_zero Fp_2 xd' then Fp_2.mul(Z,A') else xd'
+  // y1:
+  gxd = Fp_2.mul(xd, Fp_2.sq xd) // xd^3
+  gx1 = F_sum Fp_2 [Fp_2.mul(x1n, Fp_2.sq x1n), F_prod Fp_2 [A', x1n, Fp_2.sq xd], Fp_2.mul(B', gxd)]
+  tv4 = F_prod Fp_2 [gx1, gxd, Fp_2.sq gxd] // gx1 gxd^3
+  e2 = is_square tv4
+  y1' = if e2 then Fp_2.div (sqrt tv4, tv4) else (F_expt`{n=758} Fp_2 tv4 `((p^^2-9)/16))
+  y1 = F_prod Fp_2 [gx1, gxd, y1']
+  // y2:
+  tv4_recip_ZZZ = (Fp_2.mul (tv4, recip_ZZZ))
+  y1'_sqrt_ZZZ = Fp_2.mul (y1', F_expt`{n=758} Fp_2 ZZZ `((p^^2+7)/16))
+  y2' = Fp_2.mul (y1'_sqrt_ZZZ, sqrt_align_fp2_coeff (Fp_2.mul (y1'_sqrt_ZZZ, tv4_recip_ZZZ)) tv4_recip_ZZZ)
+  y2 = F_prod Fp_2 [y2', gx1, gxd, Fp_2.sq u, u]
+  // xn and y:
+  (xn,y') = if e2 then (x1n,y1) else (x2n,y2)
+  y = if sgn0(u) == sgn0(y') then y' else Fp_2.neg y'
+  // convert to Jacobian coordinates
+  res = (Fp_2.mul (xn, xd), Fp_2.mul (y, gxd), xd)
+
+recip_ZZZ = Fp_2.div(Fp_2.field_unit, ZZZ)
+ZZZ = Fp_2.mul(Z, Fp_2.sq Z)
+
+map_to_g2_impl: [2]t_Fp_2 -> ProjectivePoint t_Fp_2
+map_to_g2_impl uv = P where
+    Q0 = map_to_isogenous_E2_impl (uv@0)
+    Q2 = map_to_isogenous_E2_impl (uv@1)
+    R = point_dadd Fp_2 Q0 Q2 A' False // This is addition on the isogenous curve E'
+    S = isogeny_map_to_E2_impl R
+    P = clear_cofactor_E2_impl S
+
+hash_to_curve_E2_opt_impl: {msg_len, DST_len}
+               (fin msg_len, fin DST_len
+               , DST_len <= 255
+               , Expandable msg_len DST_len
+               , 8 *( ((lg2 p) + 128) /^ 8 ) >= 384
+               ) =>
+               ([msg_len][8], [DST_len][8]) -> ProjectivePoint t_Fp_2
+hash_to_curve_E2_opt_impl (msg,dst) = map_to_g2_impl u where
+    u = hash_to_field`{count=2} msg dst
+
+isogeny_map_to_E2_impl: ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
+isogeny_map_to_E2_impl (X, Y, Z) = to_jacobian xn xd yn yd where
+  zzs = Zz_powers Z
+  xn = map_fp2 (kzzs#[last Aux::k1s]) X where
+    kzzs = map_fp2_times_Zz`{n=3} Aux::k1s zzs
+  xd = Fp_2.mul (xs, last zzs) where // multiply by Z^2
+    xs = map_fp2 ((take`{front=1}kzzs)#[xkzz1]) X
+    xkzz1 = Fp_2.add (X, last kzzs)
+    kzzs = map_fp2_times_Zz`{n=2} Aux::k2s zzs
+  yn = Fp_2.mul (map_fp2 (kzzs#[last Aux::k3s]) X, Y) where
+    kzzs = map_fp2_times_Zz`{n=3} Aux::k3s zzs
+  yd = Fp_2.mul (Fp_2.mul (xs, Z), last zzs) where // multiply by Z^3
+    xs = map_fp2 ((take`{front=2}kzzs)#[xkzz2]) X
+    xkzz2 = Fp_2.add (X, last kzzs)
+    kzzs = map_fp2_times_Zz`{n=3} Aux::k4s zzs
+
+// NOTE: below there's some duplication with HashToG1, but it would be cumbersome to factor this out due to the peculiarities of the current Cryptol module system
+to_jacobian xn xd yn yd = (X, Y, Z) where
+  Z = Fp_2.mul (xd, yd)
+  X = Fp_2.mul (Fp_2.mul (xn, yd) , Z)
+  Y = Fp_2.mul (Fp_2.mul (Fp_2.sq Z, xd) , yn)
+
+map_fp2_times_Zz : {m1,m2,n} (fin n, fin m2, m1 >= n, m2 >= n) => [m1]t_Fp_2 -> [m2]t_Fp_2 -> [n]t_Fp_2
+map_fp2_times_Zz ks zzs = zipWith (curry Fp_2.mul) (take`{front=n}ks) (drop`{back=n}zzs)
+
+map_fp2 kzzs x = last rs where
+  rs = [last kzzs] # [F.add (F.mul (ri, x), kzzi) | kzzi <- tail (reverse kzzs) | ri <- rs]
+
+Zz_powers : t_Fp_2 -> [3]t_Fp_2
+Zz_powers Z = reverse [Fp_2.sq Z, Fp_2.sq (Fp_2.sq Z), Fp_2.mul (Fp_2.sq (Fp_2.sq Z), Fp_2.sq Z)]
+
+add_n_dbl : {n} (fin n, n >= 1) =>
+            ProjectivePoint t_Fp_2 ->
+            ProjectivePoint t_Fp_2 ->
+            ProjectivePoint t_Fp_2
+add_n_dbl out p = doublings ! 0 where
+  outp = point_dadd Fp_2 out p Fp_2.field_zero True
+  doublings = [outp] # [point_double Fp_2 d | d <- doublings | i <- [1 .. n]]
+
+times_minus_z : ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
+times_minus_z P = out6 where
+  out1 = point_double Fp_2 P
+  out2 = add_n_dbl`{2} out1 P
+  out3 = add_n_dbl`{3} out2 P
+  out4 = add_n_dbl`{9} out3 P
+  out5 = add_n_dbl`{32} out4 P
+  out6 = add_n_dbl`{16} out5 P
+
+psi_psi_double_impl: ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
+psi_psi_double_impl P = psi_imp (psi_imp (point_double Fp_2 P))
+
+clear_cofactor_E2_impl:  ProjectivePoint t_Fp_2 -> ProjectivePoint t_Fp_2
+clear_cofactor_E2_impl P = out4 where
+  out1 = psi_psi_double_impl P
+  t0_1 = point_neg Fp_2 P
+  t1   = psi_imp t0_1
+  out2 = point_dadd Fp_2 out1 t0_1 Fp_2.field_zero True
+  out3 = point_dadd Fp_2 out2 t1 Fp_2.field_zero True
+  t0_2 = point_dadd Fp_2 (times_minus_z P) P Fp_2.field_zero True
+  t0_3 = point_dadd Fp_2 t0_2 t1 Fp_2.field_zero True
+  t1'  = times_minus_z t0_3
+  out4 = point_dadd Fp_2 out3 t1' Fp_2.field_zero True
+
+// A slightly simplified version that we could use in a proof that the implementation corresponds to the specification:
+_map_to_isogenous_E2_impl : t_Fp_2 -> ProjectivePoint t_Fp_2
+_map_to_isogenous_E2_impl u = res where
+  // x1n, x2n, and xd:
+  Zuu = Fp_2.mul (Z, Fp_2.sq u)
+  tv2 = Fp_2.add (Fp_2.sq Zuu, Zuu)
+  x1n = Fp_2.mul (Fp_2.add (tv2, Fp_2.field_unit), B')
+  x2n = Fp_2.mul (Zuu, x1n)
+  xd' = Fp_2.mul (Fp_2.neg A', tv2)
+  xd = if F_is_zero Fp_2 xd' then Fp_2.mul(Z,A') else xd'
+  // y1:
+  gxd = Fp_2.mul(xd, Fp_2.sq xd) // xd^3
+  gx1 = F_sum Fp_2 [Fp_2.mul(x1n, Fp_2.sq x1n), F_prod Fp_2 [A', x1n, Fp_2.sq xd], Fp_2.mul(B', gxd)]
+  tv4 = F_prod Fp_2 [gx1, gxd, Fp_2.sq gxd] // gx1 gxd^3
+  e2 = is_square tv4
+  xn = if e2 then x1n else x2n
+  y' = if e2
+        then F_prod Fp_2 [gx1, gxd, Fp_2.div (sqrt tv4, tv4)]
+        else F_prod Fp_2 [sqrt (Fp_2.div(ZZZ, tv4)), gx1, gxd, Fp_2.sq u, u]
+  y = if sgn0(u) == sgn0(y') then y' else Fp_2.neg y'
+  // convert to Jacobian coordinates
+  res = (Fp_2.mul (xn, xd), Fp_2.mul (y, gxd), xd)
+
+// other facts we would need for the proof
+
+_one_of_is_square u = Fp_2.is_val u /\ ~(is_square x) ==> is_square b where
+  b = Fp_2.mul (x, recip_ZZZ)
+  x = F_prod Fp_2 [gx1, gxd, Fp_2.sq gxd]
+  gxd = Fp_2.mul(xd, Fp_2.sq xd) // xd^3
+  gx1 = F_sum Fp_2 [Fp_2.mul(x1n, Fp_2.sq x1n), F_prod Fp_2 [A', x1n, Fp_2.sq xd], Fp_2.mul(B', gxd)]
+  Zuu = Fp_2.mul (Z, Fp_2.sq u)
+  tv2 = Fp_2.add (Fp_2.sq Zuu, Zuu)
+  x1n = Fp_2.mul (Fp_2.add (tv2, Fp_2.field_unit), B')
+  xd' = Fp_2.mul (Fp_2.neg A', tv2)
+  xd = if F_is_zero Fp_2 xd' then Fp_2.mul(Z,A') else xd'
+
+// It may be possible to use this instead of the above:
+// Fp_2.is_val x /\ ~(is_square x) ==> is_square (Fp_2.mul (x, recip_ZZZ))
+// Should be true because ZZZ is not a square, so dividing by it turns squares into nonsquares and vice versa
+
+_sqrt_align_prop x' = Fp_2.is_val x /\ is_square b ==>
+  Fp_2.sq (sqrt_align a ab b) == Fp_2.sq (Fp_2.div (sqrt b, b)) where
+    a = Fp_2.mul (F_expt`{n=758} Fp_2 x `((p^^2-9)/16), F_expt`{n=758} Fp_2 ZZZ `((p^^2+7)/16))
+    b = Fp_2.mul (x, recip_ZZZ)
+    ab = Fp_2.mul (a,b)
+    sqrt_align x y z = Fp_2.mul (x, sqrt_align_fp2_coeff y z)
+    recip_ZZZ = Fp_2.div (Fp_2.field_unit, ZZZ)
+    x = Fp_2.normalize x'
+
+_square_same_sign_prop x y u = Fp_2.sq x == Fp_2.sq y ==>
+  (if sgn0(x) == sgn0(u) then x else Fp_2.neg x) == (if sgn0(y) == sgn0(u) then y else Fp_2.neg y)
