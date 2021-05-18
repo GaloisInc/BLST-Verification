@@ -111,32 +111,6 @@ recip_sqrt_fp_3mod4_ov <- custom_verify "recip_sqrt_fp_3mod4"
                       w4_unint_z3 (concat ["fp_exp"] fp_unints);
                       };
 
-let simp_then_admit r = admit_cryptol (rewrite (cryptol_ss ()) r);
-
-// some rewrites for printing things readably:
-
-let {{
-  fp_mul = Fp.mul
-  fp_sq = Fp.sq
-  fp_add = Fp.add
-  fp_div = Fp.div
-  fp_zero = Fp.field_zero
-  fp_unit = Fp.field_unit
-  fp_is_equal = Fp.is_equal
-  fp_neg = Fp.neg
-}};
-
-readability_rewrites <- for [
-  {{ \p q -> Fp.mul (p,q) == fp_mul (p,q) }}
-, {{ \p q -> Fp.add (p,q) == fp_add (p,q) }}
-, {{ \p -> Fp.sq p == fp_sq p }}
-, {{ \p -> Fp.neg p == fp_neg p }}
-, {{ \p q -> Fp.div (p, q) == fp_div (p, q) }}
-, {{ Fp.field_zero == fp_zero }}
-, {{ Fp.field_unit == fp_unit }}
-, {{ \x y -> Fp.is_equal (x,y) == fp_is_equal (x,y) }}
-  ] simp_then_admit;
-
 let print_readably =  do {
     simplify (addsimps readability_rewrites empty_ss); // NOTE this modifies the goal
     print_goal;
