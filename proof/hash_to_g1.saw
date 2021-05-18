@@ -3,29 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
 
-// Imports
-
-// include "helpers.saw";
-// include "list_utils.saw";
-// include "types.saw";
-
-// m <- llvm_load_module "../build/llvm/libblst.a.bc";
-
-// enable_experimental;
-
-// let do_prove = false;
-
-// include "proof-helpers.saw";
-// include "hash_to_field.saw";
-// include "fp_overrides.saw";
-// include "vect.saw";
-// include "curve_operations.saw";
-// include "ec_mult.saw";
-// include "exp.saw";
-// include "sgn0.saw";
-
-// let do_prove = true;
-
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
 HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
@@ -110,11 +87,6 @@ recip_sqrt_fp_3mod4_ov <- custom_verify "recip_sqrt_fp_3mod4"
                       simplify fp_exp_simps;
                       w4_unint_z3 (concat ["fp_exp"] fp_unints);
                       };
-
-let print_readably =  do {
-    simplify (addsimps readability_rewrites empty_ss); // NOTE this modifies the goal
-    print_goal;
-};
 
 // rewrite rules to get rid of the Aux version of some definitions
 
