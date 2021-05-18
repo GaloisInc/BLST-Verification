@@ -12,6 +12,7 @@ import "../spec/implementation/Types.cry";
 import "../spec/Maybe.cry";
 import "../spec/implementation/CurveOperation.cry";
 import "../spec/implementation/serialization.cry";
+HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
@@ -50,8 +51,7 @@ let POINTonE1_Uncompress_BE_OK_spec = do {
   crucible_execute_func [out_ptr, in_ptr];
   crucible_points_to out_ptr (crucible_term {{
      (fp_rep (uncompress_E1_x_fp inp), fp_rep (sqrt_fp (uncompress_E1_y2 inp))) }}) ;
-  // This return value is copied from sgn0_pty_mont_384_spec
-  crucible_return (crucible_term {{ if sign_F_p (sqrt_fp (uncompress_E1_y2 inp)) then zext 0b10 else (zero:[64]) }});
+  crucible_return (crucible_term {{ ((zext [sign_F_p a, HE1::sgn0 a]):Limb) where a = sqrt_fp (uncompress_E1_y2 inp) }});
 };
 
 // ... first error case, when the given X coordinate is too large
@@ -252,16 +252,6 @@ let add_fp_noabs_spec = do {
   //  {{ if vec384_abs a < `p then a else vec384_rep ((vec384_abs a) - `p) }}) ;
 };
 
-let sgn0_pty_mont_384_spec = do {
-  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  (b, b_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  crucible_precond {{ b == vec384_rep `p }};
-  crucible_execute_func [a_ptr, b_ptr, crucible_term {{0x89f3fffcfffcfffd}}];
-  return_value <- crucible_fresh_var "return_value" limb_type;
-  // TODO: Not sure what the return value should be. From what follows in the C code, it seems that the sign bit is the second bit of the return value.
-  crucible_return (crucible_term {{ (if (sign_F_p (fp_abs a)) then (zext 0b10) else zero):[64] }});
-};
-
 ////////////////////////////////////////////////////////////////////////////////
 // Proofs
 ////////////////////////////////////////////////////////////////////////////////
@@ -335,8 +325,6 @@ custom_prove_cryptol
 
 add_fp_noabs_ov <- admit "add_fp" add_fp_noabs_spec;
 
-sgn0_pty_mont_384_ov <- admit "sgn0x_pty_mont_384" sgn0_pty_mont_384_spec;
-
 limbs_from_be_bytes_48_ov <- verify "limbs_from_be_bytes" [] limbs_from_be_bytes_spec48;
 
 blst_p1_deserialize_inf_ov <- verify "blst_p1_deserialize" [] blst_p1_deserialize_inf_spec;
@@ -347,7 +335,7 @@ add_rep_invariant_thm <- prove_cryptol
 
 let overrides_for_POINTonE1_Uncompress_BE =
    foldr concat [sqrt_fp_ovs, fp_overrides]
-         [sgn0_pty_mont_384_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov, vec_is_equal_48_vec_ov];
+         [sgn0x_pty_mont_384_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov, vec_is_equal_48_vec_ov];
 
 POINTonE1_Uncompress_BE_BAD0_ov <- custom_verify "POINTonE1_Uncompress_BE"
   overrides_for_POINTonE1_Uncompress_BE
@@ -407,7 +395,8 @@ POINTonE1_Uncompress_BE_OK_ov <- custom_verify "POINTonE1_Uncompress_BE"
   do { apply_fp_rewrites;
        simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm, fp_abs_B_E1_thm, fp_invariant_B_E1_thm] empty_ss);
        simplify (addsimp add_rep_invariant_thm empty_ss); // only after applying fp_inv_RR_thm!
-       w4_unint_z3 fp_unints;};
+       w4_unint_z3 (concat ["sign_F_p", "HashToCurveE1::sgn0"] fp_unints);
+  };
 
 let POINTonE1_Uncompress_BE_overrides =
   [POINTonE1_Uncompress_BE_OK_ov, POINTonE1_Uncompress_BE_BAD0_ov, POINTonE1_Uncompress_BE_BAD1_ov];
