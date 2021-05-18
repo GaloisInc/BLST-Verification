@@ -150,7 +150,7 @@ _map_to_isogenous_E2_impl u = res where
   // convert to Jacobian coordinates
   res = (Fp_2.mul (xn, xd), Fp_2.mul (y, gxd), xd)
 
-// others facts we would need for the proof
+// other facts we would need for the proof
 
 _one_of_is_square u = Fp_2.is_val u /\ ~(is_square x) ==> is_square b where
   b = Fp_2.mul (x, recip_ZZZ)
@@ -162,6 +162,10 @@ _one_of_is_square u = Fp_2.is_val u /\ ~(is_square x) ==> is_square b where
   x1n = Fp_2.mul (Fp_2.add (tv2, Fp_2.field_unit), B')
   xd' = Fp_2.mul (Fp_2.neg A', tv2)
   xd = if F_is_zero Fp_2 xd' then Fp_2.mul(Z,A') else xd'
+
+// It may be possible to use this instead of the above:
+// Fp_2.is_val x /\ ~(is_square x) ==> is_square (Fp_2.mul (x, recip_ZZZ))
+// Should be true because ZZZ is not a square, so dividing by it turns squares into nonsquares and vice versa
 
 _sqrt_align_prop x' = Fp_2.is_val x /\ is_square b ==>
   Fp_2.sq (sqrt_align a ab b) == Fp_2.sq (Fp_2.div (sqrt b, b)) where
