@@ -24,104 +24,87 @@ include "ec_mult.saw";
 include "exp.saw";
 include "sgn0.saw";
 include "deserialize-p1.saw";
-include "map_to_g1.saw";
+include "subgroup_check_g1.saw";
+include "misc_rules.saw";
 
 let do_prove = true;
 
 // NOTE: we only consider inputs that either have the infinity-bit set or compressed-bit set
 
-// the case in which zwire's infinity bit is not set and we return BLST_SUCCESS:
-let blst_aggregate_in_g1_OK_spec = do {
+// aggregate_in_g1_error_precond describes the circumstances under which aggregate_in_g1 returns an error (assuming either the compressed bit is set of the infinity bit is set)
+let {{
+  aggregate_in_g1_error_precond : [48][8] -> Bool
+  aggregate_in_g1_error_precond zwire =
+      ~(zwire@0)@1 // not infinity
+    /\ (   uncompress_E1_x zwire >= `p
+        \/ ~ is_square_fp (uncompress_E1_y2 zwire) // not on curve
+        \/ uncompress_E1_x_fp zwire == Fp.field_zero // uncompresses to zero
+        \/ ~ is_in_g1_impl (uncompress_E1_OK zwire) ) // not in group g1
+}};
+
+// case in which the input is not null and we return BLST_SUCCESS:
+let blst_aggregate_in_g1_OK_nonnull_spec = do {
   //
-  out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
-  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1"); // implies in_ptr != null
-  //
+  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g1_out" (llvm_struct "struct.POINTonE1");
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1");
   (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
-  llvm_precond {{ ~(zwire@0)@1 }}; // infinity bit not set
+  //
   llvm_precond {{ (zwire@0)@0 }}; // compressed
-  llvm_precond {{ uncompress_E1_x zwire < `p /\ is_square_fp (uncompress_E1_y2 zwire) }};
-  llvm_precond {{ uncompress_E1_x_fp zwire != Fp.field_zero }}; // decompressed value is not zero
   llvm_precond {{ POINTonE1_invariant inp }}; // inp is a valid point (precondition of add)
-  llvm_precond {{ is_in_g1_impl (uncompress_E1_OK zwire)  }}; // subgroup check succeeds
+  llvm_precond {{ ~aggregate_in_g1_error_precond zwire }}; // no error condition
   //
   llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
   //
   new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
   llvm_points_to out_ptr (llvm_term new_out);
-  llvm_postcond {{ POINTonE1_abs new_out == point_dadd_affine Fp (POINTonE1_abs inp) (uncompress_E1_OK zwire) }};
+  llvm_postcond {{ POINTonE1_abs new_out == if (zwire@0)@1 then POINTonE1_abs out else point_dadd_affine Fp (POINTonE1_abs inp) (uncompress_E1_OK zwire) }};
   //
   llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
 };
 
-// Now we have two overrides (in null and in non-null) for the case in which the infinity bit is set
+// Special case: the input is null:
 
-let blst_aggregate_in_g1_infinity_bit_in_nonull_spec = do {
+let blst_aggregate_in_g1_null_spec = do {
   //
-  out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
-  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1"); // implies in_ptr != null
-  //
-  (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
-  llvm_precond {{ (zwire@0)@1 }}; // infinity bit set
-  //
-  llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
-  //
-  llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
-};
-
-let blst_aggregate_in_g1_infinity_bit_null_spec = do {
-  //
-  out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
+  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g1_out" (llvm_struct "struct.POINTonE1");
   let inp_ptr = llvm_null;
   //
   (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
-  llvm_precond {{ (zwire@0)@1 }}; // infinity bit set
+  llvm_precond {{ (zwire@0)@0 }}; // compressed
+  llvm_precond {{ ~aggregate_in_g1_error_precond zwire }}; // no error condition
   //
   llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
   //
-  llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep zero }});
+  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
+  llvm_points_to out_ptr (llvm_term new_out);
+  llvm_postcond {{ POINTonE1_abs new_out ==
+    if (zwire@0)@1
+    then zero
+    else projectify E (uncompress_E1_OK zwire)
+  }};
   //
   llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
 };
 
 // here we cover the error cases:
 let blst_aggregate_in_g1_error_spec = do {
-  out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
-  inp_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
+  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g1_out" (llvm_struct "struct.POINTonE1");
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1");
   (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
-  llvm_precond {{
-      ~(zwire@0)@1 // not infinity
-    /\ (zwire@0)@0 // compressed
-    /\ (   uncompress_E1_x zwire >= `p
-        \/ ~ is_square_fp (uncompress_E1_y2 zwire) // not on curve
-        \/ uncompress_E1_x_fp zwire == Fp.field_zero
-        \/ ~ is_in_g1_impl (uncompress_E1_OK zwire)
-        )
-  }};
+  llvm_precond {{ (zwire@0)@0 }}; // compressed
+  llvm_precond {{ aggregate_in_g1_error_precond zwire }};
   llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
   ret <- llvm_fresh_var "blst_aggregate_in_g1_ret" (llvm_int 32);
   llvm_return (llvm_term ret);
   llvm_postcond {{ ret != `BLST_SUCCESS }};
+  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
+  llvm_points_to out_ptr (llvm_term new_out);
+  llvm_postcond {{ new_out == out }};
 };
 
-// a more precise error case for the case in which the subgroup check fails
-let blst_aggregate_in_g1_compressed_not_in_group_spec = do {
-  //
-  out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
-  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1"); // implies in_ptr != null
-  //
-  (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
-  llvm_precond {{ ~(zwire@0)@1 }}; // infinity bit not set
-  llvm_precond {{ (zwire@0)@0 }}; // compressed
-  llvm_precond {{ uncompress_E1_x zwire < `p /\ is_square_fp (uncompress_E1_y2 zwire) }};
-  llvm_precond {{ uncompress_E1_x_fp zwire != Fp.field_zero }}; // decompressed value is not zero
-  llvm_precond {{ ~is_in_g1_impl (uncompress_E1_OK zwire)  }}; // subgroup check fails
-  //
-  llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
-  //
-  llvm_return (llvm_term {{ (`BLST_POINT_NOT_IN_GROUP):[32] }});
-};
 
-let blst_aggregate_in_g1_in_null_spec = do {
+// TODO: old spec; keep?
+let _blst_aggregate_in_g1_in_null_spec = do {
   //
   out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
   let inp_ptr = llvm_null;
@@ -171,56 +154,42 @@ blst_aggregate_in_g1_error_ov <- custom_verify
       w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
     });
 
-blst_aggregate_in_g1_ov <- custom_verify
+blst_aggregate_in_g1_OK_nonnull_ov <- custom_verify
   "blst_aggregate_in_g1"
   overrides
-  blst_aggregate_in_g1_OK_spec
+  blst_aggregate_in_g1_OK_nonnull_spec
+  (goal_num_ite 1 // preconditions of the subgroup check
+    do {
+      simplify (addsimps (concat POINTonE1_THMs [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
+      w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl"];
+    }
+    do {
+      simplify (addsimps misc_rules empty_ss);
+      simplify (addsimps POINTonE1_thms empty_ss);
+      simplify remove_higher_order_function_simpset;
+      w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
+    });
+
+blst_aggregate_in_g1_null_ov <- custom_verify
+  "blst_aggregate_in_g1"
+  overrides
+  blst_aggregate_in_g1_null_spec
   (goal_num_ite 1 // preconditions of the subgroup check
     do {
       simplify (addsimps (concat POINTonE1_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
       w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl"];
     }
     do {
+      simplify (addsimps misc_rules empty_ss);
       simplify (addsimps POINTonE1_thms empty_ss);
+      unfolding ["POINTonE1_abs","POINTonE1_affine_rep"];
+      let rewrite_unit = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp_abs [ 8505329371266088957 , 17002214543764226050 , 6865905132761471162 , 8632934651105793861 , 6631298214892334189 , 1582556514881692819 ] == Fp.field_unit }}) w4);
+      simplify (addsimp rewrite_unit fp_simpset);
       simplify remove_higher_order_function_simpset;
       w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
     });
 
-blst_aggregate_in_g1_infinity_bit_ov <- custom_verify
-  "blst_aggregate_in_g1"
-  []
-  blst_aggregate_in_g1_infinity_bit_in_nonull_spec
-  do {
-    simplify (addsimps POINTonE1_thms empty_ss);
-    simplify remove_higher_order_function_simpset;
-    w4;
-  };
-
-blst_aggregate_in_g1_infinity_bit_in_null_ov <- custom_verify
-  "blst_aggregate_in_g1"
-  []
-  blst_aggregate_in_g1_infinity_bit_null_spec
-  do {
-    simplify (addsimps POINTonE1_thms empty_ss);
-    simplify remove_higher_order_function_simpset;
-    w4;
-  };
-
-blst_aggregate_in_g1_compressed_not_in_group_ov <- custom_verify
-  "blst_aggregate_in_g1"
-  [POINTonE1_Uncompress_OK_ov,POINTonE1_in_G1_ov]
-  blst_aggregate_in_g1_compressed_not_in_group_spec
-  (goal_num_ite 1 // preconditions of the subgroup check
-    do {
-      simplify (addsimps (concat POINTonE1_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
-      w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl"];
-    }
-    do {
-      simplify (addsimps POINTonE1_thms empty_ss);
-      simplify remove_higher_order_function_simpset;
-      w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
-    });
-
+// TODO: old stuff; keep?
 blst_aggregate_in_g1_in_null_ov <- custom_verify
   "blst_aggregate_in_g1"
   [POINTonE1_Uncompress_OK_ov,POINTonE1_in_G1_ov]
@@ -252,5 +221,3 @@ blst_aggregate_in_g1_in_null_ov <- custom_verify
         simplify remove_higher_order_function_simpset;
         w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
       }));
-
-// TODO: could we use compositional extraction to verify that all cases are covered?
