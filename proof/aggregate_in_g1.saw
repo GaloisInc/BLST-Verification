@@ -3,31 +3,31 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-include "helpers.saw";
-include "list_utils.saw";
-include "types.saw";
+// include "helpers.saw";
+// include "list_utils.saw";
+// include "types.saw";
 
-m <- llvm_load_module "../build/llvm/libblst.a.bc";
+// m <- llvm_load_module "../build/llvm/libblst.a.bc";
 
-let do_prove = false;
+// let do_prove = false;
 
-enable_experimental;
+// enable_experimental;
 
-include "proof-helpers.saw";
-include "print_readably.saw";
-include "blst_error.saw";
-// include "hash_to_field.saw";
-include "fp_overrides.saw";
-include "vect.saw";
-include "curve_operations.saw";
-include "ec_mult.saw";
-include "exp.saw";
-include "sgn0.saw";
-include "deserialize-p1.saw";
-include "subgroup_check_g1.saw";
-include "misc_rules.saw";
+// include "proof-helpers.saw";
+// include "print_readably.saw";
+// include "blst_error.saw";
+// // include "hash_to_field.saw";
+// include "fp_overrides.saw";
+// include "vect.saw";
+// include "curve_operations.saw";
+// include "ec_mult.saw";
+// include "exp.saw";
+// include "sgn0.saw";
+// include "deserialize-p1.saw";
+// include "subgroup_check_g1.saw";
+// include "misc_rules.saw";
 
-let do_prove = true;
+// let do_prove = true;
 
 // NOTE: we only consider inputs that either have the infinity-bit set or compressed-bit set
 
@@ -160,7 +160,7 @@ blst_aggregate_in_g1_OK_nonnull_ov <- custom_verify
   blst_aggregate_in_g1_OK_nonnull_spec
   (goal_num_ite 1 // preconditions of the subgroup check
     do {
-      simplify (addsimps (concat POINTonE1_THMs [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
+      simplify (addsimps (concat POINTonE1_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
       w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl"];
     }
     do {
@@ -190,10 +190,10 @@ blst_aggregate_in_g1_null_ov <- custom_verify
     });
 
 // TODO: old stuff; keep?
-blst_aggregate_in_g1_in_null_ov <- custom_verify
+_blst_aggregate_in_g1_in_null_ov <- custom_verify
   "blst_aggregate_in_g1"
   [POINTonE1_Uncompress_OK_ov,POINTonE1_in_G1_ov]
-  blst_aggregate_in_g1_in_null_spec
+  _blst_aggregate_in_g1_in_null_spec
   (goal_num_ite 1 // preconditions of the subgroup check
     do {
       simplify (addsimps (concat POINTonE1_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);

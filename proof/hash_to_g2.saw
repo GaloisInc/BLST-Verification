@@ -3,39 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-// Imports
-
-// include "helpers.saw";
-// include "list_utils.saw";
-// include "types.saw";
-
-// m <- llvm_load_module "../build/llvm/libblst.a.bc";
-
-// enable_experimental;
-
-// let do_prove = false;
-
-// include "proof-helpers.saw";
-// include "algebraic-laws.saw";
-
-// include "hash_to_field.saw";
-// include "fp_overrides.saw";
-// include "vect.saw";
-// include "curve_operations.saw";
-// include "ec_mult.saw";
-// include "exp.saw";
-// include "sgn0.saw";
-
-// include "fp2_overrides.saw";
-// include "curve_operations_e2.saw";
-// include "exp2.saw";
-// include "ec_mult2.saw";
-// include "psi.saw";
-// include "subgroup_check_g2.saw";
-// include "clear_cofactor_p2.saw";
-
-// let do_prove = true;
-
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
 HE2 <- cryptol_load "../spec/HashToCurveE2.cry";
@@ -132,41 +99,6 @@ swu_impl_xy_nz <- simp_then_admit {{ \u -> (~((x,y) == (Fp_2.field_zero,Fp_2.fie
 is_point_projective_lemma <- simp_then_admit {{ \p -> is_point_projective HE2::Isogenous_Curve p == if is_point_affine HE2::Isogenous_Curve (affinify HE2::Isogenous_Curve p) /\ ~((p.0, p.1) == (Fp_2.field_zero,Fp_2.field_zero) \/ p.2 == Fp_2.field_zero) then True else apply is_point_projective HE2::Isogenous_Curve p }};
 
 // Proofs
-
-let {{
-  fp2_mul = Fp_2.mul
-  fp2_sq = Fp_2.sq
-  fp2_add = Fp_2.add
-  fp2_div = Fp_2.div
-  fp2_zero = Fp_2.field_zero
-  fp2_unit = Fp_2.field_unit
-  fp2_is_equal = Fp_2.is_equal
-  fp2_neg = Fp_2.neg
-}};
-
-readability_rewrites <- for [
-  {{ \p q -> Fp_2.mul (p,q) == fp2_mul (p,q) }}
-, {{ \p q -> Fp_2.add (p,q) == fp2_add (p,q) }}
-, {{ \p -> Fp_2.sq p == fp2_sq p }}
-, {{ \p -> Fp_2.neg p == fp2_neg p }}
-, {{ \p q -> Fp_2.div (p, q) == fp2_div (p, q) }}
-, {{ Fp_2.field_zero == fp2_zero }}
-, {{ Fp_2.field_unit == fp2_unit }}
-, {{ \x y -> Fp_2.is_equal (x,y) == fp2_is_equal (x,y) }}
-  ] simp_then_admit;
-
-let print_readably =  do {
-    simplify (addsimps readability_rewrites empty_ss); // NOTE this modifies the goal
-    print_goal;
-};
-
-// aux_rewrites <- for [
-    // {{ Aux::HE2::A' == HE2::A' }}
-  // , {{ Aux::Z == Z }}
-  // , {{ Aux::HE2::B' == HE2::B' }}
-  // , {{ \x -> Aux::sgn0 x == sgn0 x}}
-// ] (\ eq -> prove_cryptol eq []);
-
 
 // First we verify the C functions against their implementation-level specs
 
