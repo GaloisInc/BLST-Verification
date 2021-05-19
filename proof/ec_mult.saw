@@ -393,7 +393,7 @@ invariant_booth'_thm <-
   custom_prove_cryptol
   {{ \p1 booth_index -> POINTonE1_invariant (booth' (precomputed_table p1) booth_index) == True }}
   do { unfolding ["booth'", "booth_lookup"];
-       simplify (addsimp (nth POINTonE1_thms 1) (cryptol_ss ())); // the "invariant_rep" theorem
+       simplify (addsimp (nth POINTonE1_thms 2) (cryptol_ss ())); // the "invariant_rep" theorem
        w4_unint_z3 ec_mult_unints; } ;
 
 let {{
