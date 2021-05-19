@@ -290,6 +290,26 @@ let POINTonE1_dadd_null_spec = do {
      crucible_points_to out_ptr (crucible_term {{ POINTonE1_rep (point_dadd Fp (POINTonE1_abs p1) (POINTonE1_abs p2) Fp.field_zero True) }});
 };
 
+// fails
+POINTonE1_dadd_null_ov <- custom_verify "POINTonE1_dadd"
+                      (concat vec_overrides fp_overrides)
+                      POINTonE1_dadd_null_spec
+                      // (do {apply_fp_rewrites; w4_unint_z3 fp_unints;});
+                      (do {
+                          unfolding ["point_dadd", "POINTonE1_abs", "POINTonE1_affine_abs"
+                                    , "POINTonE1_invariant", "POINTonE1_affine_invariant"
+                                    , "POINTonE1_rep"
+                                    , "select"
+                                    // , "/\\", "Fp", "prime_field_bv", "prime_field_integer", "prime_field"
+                                    , "F_is_zero"];
+                          simplify (addsimps structural_rewrites fp_simpset);
+                          rw_with fp_alg_thms;
+                          unfolding ["/\\", "Fp", "prime_field_bv", "prime_field_integer", "prime_field"];
+                          print_goal_nicely;
+                          w4_unint_z3 fp_unints;
+                          });
+
+// old proof
 POINTonE1_dadd_null_ov <- custom_verify "POINTonE1_dadd"
                       (concat vec_overrides fp_overrides)
                       POINTonE1_dadd_null_spec

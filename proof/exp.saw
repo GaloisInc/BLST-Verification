@@ -72,11 +72,16 @@ me_5 <- admit_cryptol {{ \x n k -> fp_exp (fp_exp x n) k == fp_exp x (k*n) }};
 me_6 <- admit_cryptol {{ \n -> fp_exp Fp.field_unit n == Fp.field_unit }};
 me_7 <- admit_cryptol {{ \n -> fp_exp Fp.field_zero n == Fp.field_zero }};
 
-fp_exp_simps <- addsimps (concat [me_1, me_2, me_3, me_4, me_5, me_6, me_7] fp_alg_thms) fp_simpset;
+// me_is_val <- admit_cryptol {{ \x n -> Fp.is_val (fp_exp x n) == True }} ; // CHECK
+me_normalize_1 <- admit_cryptol {{ \x n -> Fp.normalize (fp_exp x n) == fp_exp x n }};
+me_normalize_2 <- admit_cryptol {{ \x n -> fp_exp (Fp.normalize x) n == fp_exp x n }};
+
+fp_exp_simps <- addsimps (concat [me_1, me_2, me_3, me_4, me_5, me_6, me_7, me_normalize_1, me_normalize_2] fp_alg_thms)
+                fp_simpset; // TODO: (add_prelude_eqs [ "ite_true", "ite_false"] fp_simpset);
 
 // We will assume (and should prove in Coq)
 //  (fp_exp_fact)   {{ fp_exp x e == F_expt`{n} x `e }}
-// provided 1 <= e < 2^^n
+
 
 
 // Assumed overrides

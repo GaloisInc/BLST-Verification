@@ -89,10 +89,10 @@ fpx2_invariant v = (vec768_abs v) < `shifted_p
 type Fp_2x2_rep_t = [2]Vec768
 type t_Fp_2x2 = [2]t_Fpx2
 
-fp2x2_abs: Fp_2x2_rep_t -> t_Fp_2
+fp2x2_abs: Fp_2x2_rep_t -> t_Fp_2x2
 fp2x2_abs [x, y] = [fpx2_abs y, fpx2_abs x]
 
-fp2x2_rep: t_Fp_2 -> Fp_2x2_rep_t
+fp2x2_rep: t_Fp_2x2 -> Fp_2x2_rep_t
 fp2x2_rep [x, y] = [fpx2_rep y, fpx2_rep x]
 
 fp2x2_invariant [x, y] = fpx2_invariant x /\ fpx2_invariant y
