@@ -31,4 +31,6 @@ misc_rules <- for [
             [b1, b2, b3, b4, b5, b6] = b
         )
       }}
+, {{ \c (x:[6][64]) y a -> [if c then x else y, a] == if c then [x,a] else [y,a] }}
+, {{ \c (x:[6][64]) y a -> [a, if c then x else y] == if c then [a,x] else [a,y] }}
 ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);

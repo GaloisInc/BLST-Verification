@@ -404,9 +404,11 @@ POINTonE2_thms <- for
  , {{ \ c (x1: [2]Vec384) (x2: [2]Vec384) (x3: [2]Vec384) y1 y2 y3 ->
         (if c then x1 else y1, if c then x2 else y2, if c then x3 else y3) ==
         if c then (x1,x2,x3) else (y1,y2,y3) }}
+ , {{ \p -> POINTonE2_affine_abs (POINTonE2_affine_rep p) == p }}
+ , {{ \p2 -> POINTonE2_affine_invariant (POINTonE2_affine_rep p2) == True }}
  ]
  (\t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
-    do { unfolding ["POINTonE2_abs", "POINTonE2_rep", "POINTonE2_invariant", "POINTonE2_normalize"];
+    do { unfolding ["POINTonE2_abs", "POINTonE2_rep", "POINTonE2_affine_abs", "POINTonE2_affine_rep", "POINTonE2_invariant", "POINTonE2_affine_invariant", "POINTonE2_normalize"];
          simplify fp2_simpset;
          simplify (addsimp fp2_normalize_thm empty_ss); // for the rep_abs rule
          w4_unint_z3 fp2_unints; }) ;
