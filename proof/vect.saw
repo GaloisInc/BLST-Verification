@@ -236,6 +236,8 @@ vec_copy_POINTonE2_affine_ov <- verify "vec_copy" [] (vec_copy_spec 192 POINTonE
 
 vec_copy_fp12_ov <- verify "vec_copy" [] (vec_copy_spec 576 vec384fp12_type);
 
+vec_copy_2fp_ov <- verify "vec_copy" [] (vec_copy_spec 192 vec768x_type);
+
 // all overrides
 
 let vec_overrides = concat [ vec_is_zero_fp_ov, vec_is_zero_2fp_ov
