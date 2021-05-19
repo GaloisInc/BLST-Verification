@@ -11,7 +11,7 @@ import "../Parameters.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/Maybe.cry";
 import "../spec/implementation/CurveOperation.cry";
-import "../spec/implementation/serialization.cry";
+import "../spec/implementation/SerializationP1.cry";
 HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
 
 ///////////////////////////////////////////////////////////////////////////////
