@@ -1,0 +1,36 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+import "../spec/Parameters.cry";
+import "../spec/implementation/Field.cry";
+import "../spec/ShortWeierstrassCurve.cry";
+
+misc_rules <- for [
+  {{ \(x:[6][64]) -> ([x1,x2,x3,x4,x5,x6] == x where [x1,x2,x3,x4,x5,x6] = x) }}
+, {{ \(x1:[64]) (x2:[64]) (x3:[64]) (x4:[64]) (x5:[64]) (x6:[64]) (y1:[64]) (y2:[64]) (y3:[64]) (y4:[64]) (y5:[64]) (y6:[64]) c -> [if c then x1 else y1, if c then x2 else y2, if c then x3 else y3, if c then x4 else y4, if c then x5 else y5, if c then x6 else y6] == if c then [x1,x2,x3,x4,x5,x6] else [y1,y2,y3,y4,y5,y6] }}
+, {{ \(a:[2]Integer) -> ([x,y] == a where [x,y] = a) }}
+, {{ \(a:[2][6][64]) -> ([x,y] == a where [x,y] = a) }}
+, {{ \(a:[6][64]) -> ([a1,a2,a3,a4,a5,a6] == a where [a1,a2,a3,a4,a5,a6] = a) }}
+, {{
+      \(x:t_Fp_2) y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 c -> (
+         [[z1, z2, z3, z4, z5, z6], [z7, z8, z9, z10, z11, z12]] == (if c then [[y1, y2, y3, y4, y5, y6], [y7, y8, y9, y10, y11, y12]] else (fp2_rep x)) where
+            [a,b] = fp2_rep x
+            [a1, a2, a3, a4, a5, a6] = a
+            [b1, b2, b3, b4, b5, b6] = b
+            z = (if c then [y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12] else [a1, a2, a3, a4, a5, a6, b1, b2, b3, b4, b5, b6])
+            [z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12] = z
+        )
+      }}
+, {{
+      \(x:t_Fp_2) -> (
+         [[a1, a2, a3, a4, a5, a6], [b1, b2, b3, b4, b5, b6]] == fp2_rep x where
+            [a,b] = fp2_rep x
+            [a1, a2, a3, a4, a5, a6] = a
+            [b1, b2, b3, b4, b5, b6] = b
+        )
+      }}
+, {{ \c (x:[6][64]) y a -> [if c then x else y, a] == if c then [x,a] else [y,a] }}
+, {{ \c (x:[6][64]) y a -> [a, if c then x else y] == if c then [a,x] else [a,y] }}
+] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
