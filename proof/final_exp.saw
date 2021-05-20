@@ -1,0 +1,270 @@
+import "../spec/Pairing.cry";
+import "../spec/Parameters.cry" (p);
+
+cyclotomic_sqr_fp12_C_expt_thm <- admit_cryptol
+  {{ \x -> cyclotomic_sqr_fp12 x == if is_cyclotomic x
+                                    then C_expt x 2
+                                    else apply cyclotomic_sqr_fp12 x}};
+
+double_C_expt_thm <- admit_cryptol
+  {{ \b e1 e2 -> C_expt (C_expt b e1) e2 == C_expt b (e1 * e2) }};
+
+let mul_n_sqr_spec n = do {
+  (ret, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+
+  llvm_precond {{ fp12_invariant ret }};
+  llvm_precond {{ fp12_invariant a }};
+
+  llvm_execute_func [ ret_ptr, a_ptr, llvm_term {{ `n : [64] }} ];
+
+  llvm_points_to ret_ptr (llvm_term {{ fp12_rep (mul_n_sqr`{n} (fp12_abs ret) (fp12_abs a)) }});
+};
+
+let mul_n_sqr_ns = [2, 3, 9, 32, 15];
+mul_n_sqr_ovs <- for mul_n_sqr_ns
+  (\x -> really_custom_verify "mul_n_sqr"
+    fp12_overrides
+    (mul_n_sqr_spec x)
+    do {
+      unfolding ["mul_n_sqr", "Pairing::f12"];
+      simplify fp12_simpset;
+      w4_unint_z3 fp12_unints;
+    });
+
+let raise_to_z_div_by_2_spec = do {
+  ret_ptr <- llvm_alloc vec384fp12_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
+
+  llvm_precond {{ fp12_invariant a }};
+  llvm_precond {{ is_cyclotomic (fp12_abs a) }};
+
+  llvm_execute_func [ret_ptr, a_ptr];
+
+  let ret = {{ fp12_rep (raise_to_z_div_by_2 (fp12_abs a)) }};
+
+  llvm_postcond {{ fp12_invariant ret }};
+  llvm_points_to ret_ptr (llvm_term ret);
+};
+
+
+mul_C_expt_thm <- admit_cryptol
+  {{ \b e1 e2 -> Fp_12.mul (C_expt b e1, C_expt b e2) ==
+                 C_expt b (e1 + e2) }};
+
+fp12_conjugate_C_expt_thm <- admit_cryptol
+  {{ \x -> fp12_conjugate x == C_expt x (`p^^6) }};
+
+expand_chain_cyclotomic_sqr_1_thm <- really_prove_cryptol
+  {{ \x -> chain_cyclotomic_sqr_fp12`{1} x == cyclotomic_sqr_fp12 x }} [];
+
+expand_chain_cyclotomic_sqr_recurse_thms <- for [2, 3]
+  ( \x -> really_prove_cryptol
+    {{ \y -> chain_cyclotomic_sqr_fp12`{x} y ==
+             chain_cyclotomic_sqr_fp12`{x-1} (cyclotomic_sqr_fp12 y) }} []);
+
+expand_chain_cyclotomic_sqr_thms <-
+  concat [expand_chain_cyclotomic_sqr_1_thm]
+         expand_chain_cyclotomic_sqr_recurse_thms;
+
+hoist_if_C_expt_thm <- really_prove_cryptol
+  {{ \b x1 x2 e -> C_expt (if b then x1 else x2) e ==
+                   if b then C_expt x1 e else C_expt x2 e }} ["C_expt"];
+
+hoist_if_chain_cyclotomic_sqr_fp12_thms <- for [2, 3]
+  (\x -> really_prove_cryptol
+    {{ \b y1 y2 -> chain_cyclotomic_sqr_fp12`{x} (if b then y1 else y2) ==
+                   if b
+                   then chain_cyclotomic_sqr_fp12`{x} y1
+                   else chain_cyclotomic_sqr_fp12`{x} y2 }}
+    ["chain_cyclotomic_sqr_fp12"]);
+
+is_cyclotomic_expt_thm <- admit_cryptol
+  {{ \b e -> is_cyclotomic (C_expt b e) ==
+             if is_cyclotomic b
+             then True
+             else apply is_cyclotomic (C_expt b e) }};
+
+hoist_if_is_cyclotomic_thm <- really_prove_cryptol
+  {{ \b x1 x2 -> is_cyclotomic (if b then x1 else x2) ==
+                 if b then is_cyclotomic x1 else is_cyclotomic x2 }}
+  ["is_cyclotomic"];
+
+// Useful to avoid the blowup of ites when expanding chain_cyclomatic_sqr_fp12
+// TODO: Come back and prove this one after proving some others
+// TODO: Explain that this is proved only for n=2 and n=3, but assumed for all
+// larger n because the term blows up with a bunch of ites and SAW hangs.
+chain_cyclotomic_sqr_fp12_C_expt_thms <- for mul_n_sqr_ns
+  (\x -> really_custom_prove_cryptol
+    {{ \b e f -> chain_cyclotomic_sqr_fp12`{x} (if is_cyclotomic b then C_expt b e else f) ==
+                 if is_cyclotomic b
+                 then C_expt b (e * 2^^`x)
+                 else apply chain_cyclotomic_sqr_fp12`{x} (if is_cyclotomic b then C_expt b e else f) }}
+    do {
+      if eval_bool {{ (`x == 2) || (`x == 3) }} then do {
+        unfolding ["apply"];
+        simplify fp12_simpset;
+        simplify (addsimps (concat hoist_if_chain_cyclotomic_sqr_fp12_thms
+                                   expand_chain_cyclotomic_sqr_thms)
+                           empty_ss);
+        simplify (addsimps [ cyclotomic_sqr_fp12_C_expt_thm
+                           , double_C_expt_thm
+                           , hoist_if_C_expt_thm
+                           , hoist_if_is_cyclotomic_thm
+                           , is_cyclotomic_expt_thm
+                           ]
+                           empty_ss);
+        w4_unint_z3 (concat ["is_cyclotomic", "C_expt"] fp12_unints);
+      } else do {
+        assume_unsat;
+      };
+    });
+
+hoist_if_fp12_conjugate_thm <- really_prove_cryptol
+  {{ \b x1 x2 -> fp12_conjugate (if b then x1 else x2) ==
+                 if b then fp12_conjugate x1 else fp12_conjugate x2 }} [];
+
+hoist_if_mul_fp12_thm <- really_prove_cryptol
+  {{ \b x1 x2 y -> Fp_12.mul ((if b then x1 else x2), y) ==
+                   if b then Fp_12.mul (x1, y) else Fp_12.mul (x2, y) }} [];
+
+
+mul_C_expt_base_thm <- admit_cryptol
+  {{ \b e -> Fp_12.mul (b, C_expt b e) == C_expt b (e + 1) }};
+
+// TODO: Why wasn't mul_commutes_fp12_thm with mul_C_expt_base_thm enough?
+mul_C_expt_base_thm' <- admit_cryptol
+  {{ \b e -> Fp_12.mul (C_expt b e, b) == C_expt b (e + 1) }};
+
+mul_commutes_fp12_thm <- really_prove_cryptol {{ \x y  -> Fp_12.mul (x, y) == Fp_12.mul (y,x) }} [];
+
+fp12_conjugate_inverse_thm <- admit_cryptol
+  {{ \b e -> fp12_conjugate (C_expt b e) ==
+             if is_cyclotomic b
+             then C_expt b (-1 * e)
+             else apply fp12_conjugate (C_expt b e) }};
+
+
+raise_to_z_div_by_2_ov <- really_custom_verify "raise_to_z_div_by_2"
+  (concat mul_n_sqr_ovs fp12_overrides)
+  raise_to_z_div_by_2_spec
+  do {
+    unfolding ["raise_to_z_div_by_2", "mul_n_sqr", "Pairing::f12"];
+    simplify fp12_simpset;
+    simplify (addsimps (concat chain_cyclotomic_sqr_fp12_C_expt_thms
+                               [ cyclotomic_sqr_fp12_C_expt_thm
+                               , hoist_if_mul_fp12_thm
+                               , mul_C_expt_base_thm'
+                               , hoist_if_fp12_conjugate_thm
+                               , fp12_conjugate_inverse_thm])
+                       empty_ss);
+    w4_unint_z3 (concat ["C_expt", "is_cyclotomic", "fp12_conjugate", "chain_cyclotomic_sqr_fp12", "cyclotomic_sqr_fp12"] fp12_unints);
+  };
+
+// TODO: Explain why this is true (exponent for k_expt is always positive)
+k_expt_C_expt_thm <- admit_cryptol
+  {{ \b e -> k_expt`{5} Fp_12 b e == C_expt b (toInteger e) }};
+
+
+comp_x2_is_cyclotomic_thm <- admit_cryptol
+  {{ \x -> is_cyclotomic (comp_x2 x) == True }};
+
+log_cyclotomic_thm <- admit_cryptol
+  {{ \b e1 e2 -> Fp_12.is_equal (C_expt b e1, C_expt b e2) ==
+                 if is_cyclotomic b
+                 then (e1 % `final_exponent_modulus) ==
+                      (e2 % `final_exponent_modulus)
+                 else apply Fp_12.is_equal (C_expt b e1, C_expt b e2) }};
+
+final_exponentiation_equiv_thm <- really_custom_prove_cryptol
+  {{ \x -> Fp_12.is_equal (C_expt (final_exponentiation x) 3,
+                           final_exponentiation_impl x) }}
+  do {
+    unfolding [ "final_exponentiation"
+              , "final_exponentiation_impl"
+              , "Pairing::f12"
+              , "apply" ];
+    simplify fp12_simpset;
+    simplify (addsimps [ k_expt_C_expt_thm
+                       , double_C_expt_thm
+                       , comp_x2_is_cyclotomic_thm
+                       , log_cyclotomic_thm ]
+                       empty_ss);
+    w4_unint_z3 fp12_unints;
+  };
+
+
+
+
+let final_exp_spec = do {
+  ret_ptr <- llvm_alloc vec384fp12_type;
+  (f, f_ptr) <- ptr_to_fresh_readonly "f" vec384fp12_type;
+  llvm_precond {{ fp12_invariant f }};
+  llvm_execute_func [ret_ptr, f_ptr];
+  llvm_points_to ret_ptr (llvm_term {{ fp12_rep (final_exponentiation_impl (fp12_abs f)) }});
+};
+
+vec_copy_fp12_ov <- really_verify "vec_copy"
+  []
+  (vec_copy_spec 576 vec384fp12_type);
+
+mul_inverse_div_fp12_ov <- admit_cryptol
+  {{ \x y -> Fp_12.mul (x, Fp_12.div (Fp_12.field_unit, y)) == Fp_12.div (x, y) }};
+
+cyclotomic_unit_thm <- really_prove_cryptol (rewrite fp12_simpset
+  {{ \x -> C_expt x `final_exponent_modulus ==
+           if is_cyclotomic x
+           then Fp_12.field_unit
+           else apply C_expt x `final_exponent_modulus }})
+  fp12_unints;
+
+expt_comp_x2_is_cyclotomic_thm <- really_custom_prove_cryptol
+  {{ \x e -> is_cyclotomic (C_expt (comp_x2 x) e) == True }}
+  do {
+    unfolding ["is_cyclotomic", "Pairing::f12"];
+    simplify fp12_simpset;
+    simplify (addsimps [ cyclotomic_unit_thm
+                       , is_cyclotomic_expt_thm
+                       , comp_x2_is_cyclotomic_thm ] empty_ss);
+    w4_unint_z3 fp12_unints;
+  };
+
+// TODO: It feels like I shouldn't need this
+if_true_fp12 <- parse_core "\\ (x:(Vec 2 (Vec 3 (Vec 2 Integer)))) -> \\ (y:(Vec 2 (Vec 3 (Vec 2 Integer)))) -> ite (Vec 2 (Vec 3 (Vec 2 Integer))) True x y";
+elim_if_true_thm <- really_prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> if_true_fp12 x y == x }}) [];
+
+frobenius_map_fp12_C_expt_thm <- admit_cryptol
+  {{ \x -> fp12_frobenius x == C_expt x `p }};
+
+to_comp_x2_thm <- really_custom_prove_cryptol {{ \x -> Fp_12.mul (Fp_12.div (fp12_conjugate x, x), fp12_frobenius (fp12_frobenius (Fp_12.div (fp12_conjugate x, x)))) == comp_x2 x }}
+  do {
+    unfolding ["comp_x2", "Pairing::f12"];
+    simplify (addsimp mul_commutes_fp12_thm empty_ss);
+    w4_unint_z3 fp12_unints;
+  };
+
+
+
+// TODO: Should this be over blst_final_exp instead?  It's just a wrapper for
+// final_exp.
+final_exp_ov <- really_custom_verify "final_exp"
+  (concat [vec_copy_fp12_ov, raise_to_z_div_by_2_ov] fp12_overrides)
+  final_exp_spec
+  do {
+    unfolding ["final_exponentiation_impl", "raise_to_z_div_by_2", "Pairing::f12"];
+    simplify fp12_simpset;
+    simplify (addsimp mul_inverse_div_fp12_ov empty_ss);
+    simplify (addsimp mul_commutes_fp12_thm empty_ss);
+    simplify (addsimp to_comp_x2_thm empty_ss);
+    simplify (addsimps [ cyclotomic_sqr_fp12_C_expt_thm
+                       , elim_if_true_thm
+                       , double_C_expt_thm
+                       , fp12_conjugate_C_expt_thm
+                       , mul_C_expt_thm
+                       , mul_C_expt_base_thm
+                       , comp_x2_is_cyclotomic_thm
+                       , expt_comp_x2_is_cyclotomic_thm
+                       , frobenius_map_fp12_C_expt_thm ]
+                       empty_ss);
+    w4_unint_z3 (concat ["raise_to_z_div_by_2", "C_expt"] fp12_unints);
+  };

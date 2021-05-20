@@ -10,7 +10,7 @@
    Cryptol sources for implementation::Pairing.
 */
 
-import "../spec/implementation/Pairing.cry";
+import "../spec/implementation/PairingImpl.cry";
 
 /* Notes:
 

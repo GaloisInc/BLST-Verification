@@ -11,6 +11,9 @@ import ShortWeierstrassCurve as EC
 import FieldExtras
 import Frobenius
 
+// TODO: Remove this import
+import implementation::Fp12
+
 type t1 = P::t_Fp
 type t2 = P::t_Fp_2
 type t12 = P::t_Fp_12 
@@ -129,6 +132,37 @@ miller_step P negQ (f, T) ci = (f', T') where
 type r = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 type final_exponent = (P::p^^12 - 1) / r
 type small_final_e =  (P::p^^4 - P::p^^2 +1)/r
+type final_exponent_modulus = P::p^^4 - P::p^^2 + 1
+
+// TODO: Dedup with pos_c1
+// TODO: Make these types?
+pos_z = 0 # 0xd201000000010000 : [128] // Be safe with the size of Z to enable lots of multiplication
+zee = -(toInteger pos_z)  // TODO: "zee" is a horrible name
+small_final_e_imp : Integer
+small_final_e_imp = `P::p^^27 +
+                    2*`P::p^^21*zee +
+                    `P::p^^19 +
+                    `P::p^^18*zee +
+                    `P::p^^15*zee^^2 +
+                    `P::p^^14*zee +
+                    `P::p^^13*zee^^2 +
+                    2*`P::p^^13*zee +
+                    `P::p^^12*zee^^3 +
+                    2*`P::p^^12*zee^^2 +
+                    2*`P::p^^8*zee^^2 +
+                    2*`P::p^^7*zee^^3 +
+                    `P::p^^7*zee^^2 +
+                    2*`P::p^^6*zee^^4 +
+                    `P::p^^6*zee^^3 +
+                    `P::p^^2*zee^^3 +
+                    `P::p*zee^^4 +
+                    zee^^5 +
+                    3
+// TODO: Rename
+comp_x2: t12 -> t12
+comp_x2 x = x2 where
+  x1 = f12.div (fp12_conjugate x, x) // = x^(p^6 - 1)
+  x2 = f12.mul (fp12_frobenius (fp12_frobenius x1), x1) // x1^(p^2+1)
 
 final_exponentiation: t12 -> t12
 /* We could most simply define
@@ -156,5 +190,35 @@ final_exponentiation: t12 -> t12
       ordinary elliptic curves." eprint.iacr.org/2008/490
  */
 final_exponentiation x = k_expt`{5} f12 x2 (`small_final_e:[1268+2]) where
-  x1 = f12.div (fp12_conjugate x, x) // = x^(p^6 - 1)
-  x2 = f12.mul (fp12_frobenius (fp12_frobenius x1), x1) // x1^(p^2+1)
+  x2 = comp_x2 x
+
+
+// TODO: Move all below to implementation::Pairing?
+
+
+// TODO: Explain.  C is for "cyclotomic"
+C_expt: t12 -> Integer -> t12
+C_expt b e = if e >= 0 then x else fp12_conjugate x where
+  x = F_expt`{n=128} f12 b (abs e) // TODO: Make the [128] configurable?
+
+
+final_exponentiation_impl: t12 -> t12
+final_exponentiation_impl x = C_expt (comp_x2 x) small_final_e_imp
+
+chain_cyclotomic_sqr_fp12: {n} (fin n, n >= 1) => t12 -> t12
+chain_cyclotomic_sqr_fp12 x = acc ! 0 where
+  acc = [x] # [ cyclotomic_sqr_fp12 y | y <- acc | z <- [1..n]]
+
+mul_n_sqr: {n} (fin n, n >= 1) => t12 -> t12 -> t12
+mul_n_sqr ret a = chain_cyclotomic_sqr_fp12`{n} (f12.mul (ret, a)) //C_expt (f12.mul (ret, a)) (2^^n)
+
+// TODO: Could define this using F_expt, which is close to the implementation,
+// but F_expt uses F.sq instead of cyclotomic_sqr_fp12.  As such you'd need
+// some precondition if this is defined using F_expt that the input is
+// in the cyclotomic subgroup.  Punting on this decision for now by leaving
+// this function undefined.
+raise_to_z_div_by_2: t12 -> t12
+raise_to_z_div_by_2 x = C_expt x (zee / 2)
+
+is_cyclotomic: t12 -> Bit
+is_cyclotomic x = C_expt x `final_exponent_modulus == f12.field_unit
