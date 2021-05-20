@@ -359,6 +359,7 @@ start_dbl_1 T Px2 = ret where
     ret = fp6_to_fp12_xy00z0 line_b
 
 // effect on point T -- each of the T_i, Q_i affected independently in the same way
+// named _alt to avoid conflict with the definition in HashToG2.cry
 add_n_dbl_alt: {k} (fin k) => EC::ProjectivePoint t_Fp_2 ->  EC::AffinePoint t_Fp_2 -> EC::ProjectivePoint t_Fp_2
 add_n_dbl_alt T Q = doubles@`k where
     doubles = [point_add_affine_alt Fp_2 T Q] # [ point_double Fp_2 D | D <- doubles]
