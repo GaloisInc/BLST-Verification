@@ -143,7 +143,7 @@ let add_n_dbl_n_1_spec k = do {
   crucible_points_to ret_ptr (llvm_term
     {{ fp12_rep (add_n_dbl_ret`{k} (fp12_abs ret) (POINTonE2_abs T) (POINTonE2_affine_abs Q) (POINTonE1_affine_abs Px2)) }});
   crucible_points_to T_ptr (llvm_term
-    {{ POINTonE2_rep (add_n_dbl`{k}  (POINTonE2_abs T) (POINTonE2_affine_abs Q)) }});
+    {{ POINTonE2_rep (add_n_dbl_alt`{k}  (POINTonE2_abs T) (POINTonE2_affine_abs Q)) }});
   };
 
 let add_n_dbl_n_spec n k = do {
@@ -161,7 +161,7 @@ let add_n_dbl_n_spec n k = do {
     {{ fp12_rep (add_n_dbl_n_ret`{n,k} (fp12_abs ret) (map POINTonE2_abs T)
                                        (map POINTonE2_affine_abs Q) (map POINTonE1_affine_abs Px2)) }});
   crucible_points_to T_ptr (llvm_term
-    {{ [ POINTonE2_rep (add_n_dbl`{k} (POINTonE2_abs Ti) (POINTonE2_affine_abs Qi)) | Ti <- T | Qi <- Q ] }});
+    {{ [ POINTonE2_rep (add_n_dbl_alt`{k} (POINTonE2_abs Ti) (POINTonE2_affine_abs Qi)) | Ti <- T | Qi <- Q ] }});
   };
 
 // The Miller loop `miller_loop_n` takes three arrays of `n` inputs each, and behaves a bit
@@ -409,7 +409,7 @@ add_dbl_n_ovs <- for [(2,12), (3,16), (9, 40), (16, 68), (32, 132)] // (k, 4k+4)
    (add_n_dbl_n_1_spec k) // n=2
    do { goal_num_ite goal_n
         do {
-          unfolding ["add_n_dbl_ret", "add_n_dbl", "add_n_dbl_n_ret"];
+          unfolding ["add_n_dbl_ret", "add_n_dbl_alt", "add_n_dbl_n_ret"];
           simplify remove_higher_order_function_simpset_alt;
           goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
           simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
@@ -427,7 +427,7 @@ add_dbl_n_2_ovs <- for [2,3,9,16,32]
    (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
    (add_n_dbl_n_spec 2 k) // n=2
    do { // rw_with (concat size_2_expander_thms add_n_dbl_n_2_expander_thms); // CHECK-may be needed
-        unfolding ["add_n_dbl_ret", "add_n_dbl", "add_n_dbl_n_ret"];
+        unfolding ["add_n_dbl_ret", "add_n_dbl_alt", "add_n_dbl_n_ret"];
         simplify remove_higher_order_function_simpset_alt;
         goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
         simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
@@ -437,7 +437,7 @@ add_dbl_n_3_ovs <-for [2,3,9,16,32]
  (\ k -> custom_verify "add_n_dbl_n"
    (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
    (add_n_dbl_n_spec 3 k) // n=2
-   do { unfolding ["add_n_dbl_ret", "add_n_dbl", "add_n_dbl_n_ret"];
+   do { unfolding ["add_n_dbl_ret", "add_n_dbl_alt", "add_n_dbl_n_ret"];
         simplify remove_higher_order_function_simpset_alt;
         goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
         simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
@@ -478,7 +478,7 @@ seq_ite_thms <- for
 miller_loop_imp_equiv_thm <- custom_prove_cryptol
     {{ \ Q P -> miller_loop_opt Q P == miller_loop_imp P Q }}
   do { // open up the _imp, and simplify
-       unfolding ["miller_loop_opt", "miller_step_opt", "miller_loop_imp", "add_n_dbl", "add_n_dbl_ret"];
+       unfolding ["miller_loop_opt", "miller_step_opt", "miller_loop_imp", "add_n_dbl_alt", "add_n_dbl_ret"];
        simplify remove_higher_order_function_simpset_alt;
        goal_eval_unint [ "point_add_affine_alt_fp2", "Fp_12", "fp6_to_fp12_xy00z0"
                        , "Fp_2", "Fp", "fp12_conjugate", "point_double_fp2", "line_add_imp"
@@ -512,7 +512,7 @@ let ovs_for_miller_loop =
 
 let miller_loop_n_unints =
   concat_all [ fp_unints, fp2_unints, fp12_unints
-             , ["add_n_dbl", "add_n_dbl_ret", "start_dbl_n_imp", "point_double_fp2"
+             , ["add_n_dbl_alt", "add_n_dbl_ret", "start_dbl_n_imp", "point_double_fp2"
                , "fp12_conjugate"]]; // why is that not in fp12_unints?
 
 /*
@@ -610,7 +610,7 @@ add_n_dbl_n_ret_n2_thms <- for [2,3,9,16,32] (\ k ->
 
 let miller_loop_n_2_unints =
   concat_all [ fp_unints, fp2_unints, fp12_unints
-             , ["add_n_dbl", "add_n_dbl_ret", "add_n_dbl_n_ret", "start_dbl_n_imp", "start_dbl_1"
+             , ["add_n_dbl_alt", "add_n_dbl_ret", "add_n_dbl_n_ret", "start_dbl_n_imp", "start_dbl_1"
                , "point_double_fp2", "point_add_affine_alt_fp2"
                , "fp12_conjugate"]];
 
