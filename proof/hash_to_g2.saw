@@ -342,8 +342,8 @@ let prove_blst_hash_to_g2_abstract_postcond aug_len msg_len DST_len = do {
 
 // concrete version:
 let prove_blst_hash_to_g2_concrete aug_len msg_len DST_len = do {
-  Hash_to_G2_ov <- prove_Hash_to_G2_concrete aug_len msg_len DST_len hash_to_field_fp2_ovs;
   hash_to_field_fp2_ovs <- for hash_to_field_nelems (verify_hash_to_field_fp2_for aug_len msg_len DST_len);
+  Hash_to_G2_ov <- prove_Hash_to_G2_concrete aug_len msg_len DST_len hash_to_field_fp2_ovs;
   custom_verify
     "blst_hash_to_g2"
     [Hash_to_G2_ov]
