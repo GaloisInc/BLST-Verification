@@ -178,10 +178,6 @@ expt_final_exp_frobenius_map_is_cyclotomic_thm <- custom_prove_cryptol
     w4_unint_z3 fp12_unints;
   };
 
-// (if True then x else y) == x
-if_true_fp12 <- parse_core "\\ (x:(Vec 2 (Vec 3 (Vec 2 Integer)))) -> \\ (y:(Vec 2 (Vec 3 (Vec 2 Integer)))) -> ite (Vec 2 (Vec 3 (Vec 2 Integer))) True x y";
-elim_if_true_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> if_true_fp12 x y == x }}) [];
-
 // fp12_frobenius x == x^p
 frobenius_map_fp12_C_expt_thm <- admit_cryptol
   {{ \x -> fp12_frobenius x == C_expt x `p }};
@@ -292,7 +288,6 @@ final_exp_ov <- custom_verify "final_exp"
                        , to_final_exp_frobenius_map_thm ]
                        empty_ss);
     simplify (addsimps [ cyclotomic_sqr_fp12_C_expt_thm
-                       , elim_if_true_thm
                        , double_C_expt_thm
                        , fp12_conjugate_C_expt_thm
                        , mul_C_expt_thm
@@ -301,6 +296,6 @@ final_exp_ov <- custom_verify "final_exp"
                        , final_exp_frobenius_map_is_cyclotomic_thm
                        , expt_final_exp_frobenius_map_is_cyclotomic_thm
                        , frobenius_map_fp12_C_expt_thm ]
-                       empty_ss);
+                       basic_ss);
     w4_unint_z3 (concat ["raise_to_z_div_by_2", "C_expt"] fp12_unints);
   };
