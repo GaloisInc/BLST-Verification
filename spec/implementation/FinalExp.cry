@@ -1,0 +1,72 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+module implementation::FinalExp where
+
+import FieldExtras
+import Frobenius
+import HashToCurveE2Aux
+import Pairing
+import Parameters as P
+
+import implementation::Fp12
+
+// If x is in the cyclotomic subgroup, then x^(cyclotomic_exponent_modulus) = 1
+type cyclotomic_exponent_modulus = P::p^^4 - P::p^^2 + 1
+
+// An integer representation of the constant `z`
+int_z = -pos_c1
+
+// Small final exponent from the implementation
+small_final_e_imp : Integer
+small_final_e_imp = `P::p^^27 +
+                    2*`P::p^^21*int_z +
+                    `P::p^^19 +
+                    `P::p^^18*int_z +
+                    `P::p^^15*int_z^^2 +
+                    `P::p^^14*int_z +
+                    `P::p^^13*int_z^^2 +
+                    2*`P::p^^13*int_z +
+                    `P::p^^12*int_z^^3 +
+                    2*`P::p^^12*int_z^^2 +
+                    2*`P::p^^8*int_z^^2 +
+                    2*`P::p^^7*int_z^^3 +
+                    `P::p^^7*int_z^^2 +
+                    2*`P::p^^6*int_z^^4 +
+                    `P::p^^6*int_z^^3 +
+                    `P::p^^2*int_z^^3 +
+                    `P::p*int_z^^4 +
+                    int_z^^5 +
+                    3
+
+// An exponential function that supports negative exponents.  Uses
+// fp12_conjugate to compute the inverse of x, so x must be in the cyclotomic
+// subgroup if e is negative.
+C_expt: P::t_Fp_12 -> Integer -> P::t_Fp_12
+C_expt b e = if e >= 0 then x else fp12_conjugate x where
+  // Use 16384 bits because thats the smallest "round" number that fits
+  // small_final_e_imp.
+  x = F_expt`{P::t_Fp_12, 16384} P::Fp_12 b (abs e)
+
+final_exponentiation_impl: P::t_Fp_12 -> P::t_Fp_12
+final_exponentiation_impl x = C_expt (final_exp_frobenius_map x) small_final_e_imp
+
+// Repeatedly square `x`.  `x` must be in the cyclotomic subgroup.
+chain_cyclotomic_sqr_fp12: {n} (fin n, n >= 1) => P::t_Fp_12 -> P::t_Fp_12
+chain_cyclotomic_sqr_fp12 x = acc ! 0 where
+  acc = [x] # [ cyclotomic_sqr_fp12 y | y <- acc | z <- [1..n]]
+
+// Multiply `ret` by `a`, then square the result `n` times.  `ret * a` must be
+// in the cyclotomic subgroup.
+mul_n_sqr: {n} (fin n, n >= 1) => P::t_Fp_12 -> P::t_Fp_12 -> P::t_Fp_12
+mul_n_sqr ret a = chain_cyclotomic_sqr_fp12`{n} (P::Fp_12.mul (ret, a))
+
+// Compute x^(z/2).
+raise_to_z_div_by_2: P::t_Fp_12 -> P::t_Fp_12
+raise_to_z_div_by_2 x = C_expt x (int_z / 2)
+
+// True iff `x` is in the cyclotomic subgroup.
+is_cyclotomic: P::t_Fp_12 -> Bit
+is_cyclotomic x = C_expt x `cyclotomic_exponent_modulus == P::Fp_12.field_unit
