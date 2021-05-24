@@ -1394,28 +1394,28 @@
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/final_exp.saw:214:18",
+    "loc": "/workdir/proof/final_exp.saw:210:18",
     "method": "mul_n_sqr",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/final_exp.saw:238:27",
+    "loc": "/workdir/proof/final_exp.saw:234:27",
     "method": "raise_to_z_div_by_2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/final_exp.saw:281:21",
+    "loc": "/workdir/proof/final_exp.saw:277:21",
     "method": "vec_copy",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/final_exp.saw:285:17",
+    "loc": "/workdir/proof/final_exp.saw:281:17",
     "method": "final_exp",
     "type": "method",
     "specification": "unknown"
@@ -7388,12 +7388,6 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = Prelude.Vec 3 x@2\n      x@4 = Prelude.Vec 2 x@3\n      x@5 = Prelude.natToInt\n              256617403732428082911713098829358466826502709893317423274164519189057579459067718648630900581642194569486023536159679292713201496773094628402515173256805074082148378848401811721831645158191252408572062655802000251980000729631345767080472003723503734796780504822954640194951639083742322763345359769157579083140061699242297227571698867621267056040724752357952125845506385303763755808475747639975977474295162733931498164641759941333618221164232547762766975580793\n    }\n in (x : x@4)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@4\n        (Cryptol.PEqVec 2 x@3\n           (Cryptol.PEqVec 3 x@2\n              (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/FinalExp/C_expt x x@5)\n        (Prelude.ite x@4 (cryptol:/implementation/FinalExp/is_cyclotomic x)\n           cryptol:/Parameters/Fp_12.2.2.1\n           (cryptol:/implementation/CryptolHelpers/apply x@4\n              (Prelude.Integer\n               -> x@4)\n              cryptol:/implementation/FinalExp/C_expt\n              x\n              x@5)))",
-    "type": "property"
-  },
-  {
-    "status": "verified",
-    "loc": "unknown",
-    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = Prelude.Vec 3 x@2\n      x@4 = Prelude.Vec 2 x@3\n    }\n in (x : x@4)\n-> (y : x@4)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@4\n        (Cryptol.PEqVec 2 x@3\n           (Cryptol.PEqVec 3 x@2\n              (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)))\n        (Prelude.ite x@4 Prelude.True x y)\n        x)",
     "type": "property"
   },
   {
