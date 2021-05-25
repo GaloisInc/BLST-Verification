@@ -1,0 +1,41 @@
+diff --git a/bindings/blst.h b/bindings/blst.h
+index 3a333b1..cbd3642 100644
+--- a/bindings/blst.h
++++ b/bindings/blst.h
+@@ -168,10 +168,10 @@ bool blst_p1_is_equal(const blst_p1 *a, const blst_p1 *b);
+ bool blst_p1_is_inf(const blst_p1 *a);
+ const blst_p1 *blst_p1_generator();
+ 
+-bool blst_p1_affine_on_curve(const blst_p1_affine *p);
+-bool blst_p1_affine_in_g1(const blst_p1_affine *p);
++limb_t blst_p1_affine_on_curve(const blst_p1_affine *p);
++limb_t blst_p1_affine_in_g1(const blst_p1_affine *p);
+ bool blst_p1_affine_is_equal(const blst_p1_affine *a, const blst_p1_affine *b);
+-bool blst_p1_affine_is_inf(const blst_p1_affine *a);
++limb_t blst_p1_affine_is_inf(const blst_p1_affine *a);
+ const blst_p1_affine *blst_p1_affine_generator();
+ 
+ typedef struct { blst_fp2 x, y, z; } blst_p2;
+@@ -194,10 +194,10 @@ bool blst_p2_is_equal(const blst_p2 *a, const blst_p2 *b);
+ bool blst_p2_is_inf(const blst_p2 *a);
+ const blst_p2 *blst_p2_generator();
+ 
+-bool blst_p2_affine_on_curve(const blst_p2_affine *p);
+-bool blst_p2_affine_in_g2(const blst_p2_affine *p);
++limb_t blst_p2_affine_on_curve(const blst_p2_affine *p);
++limb_t blst_p2_affine_in_g2(const blst_p2_affine *p);
+ bool blst_p2_affine_is_equal(const blst_p2_affine *a, const blst_p2_affine *b);
+-bool blst_p2_affine_is_inf(const blst_p2_affine *a);
++limb_t blst_p2_affine_is_inf(const blst_p2_affine *a);
+ const blst_p2_affine *blst_p2_affine_generator();
+ 
+ /*
+@@ -351,7 +351,7 @@ BLST_ERROR blst_core_verify_pk_in_g1(const blst_p1_affine *pk,
+                                      size_t aug_len DEFNULL);
+ BLST_ERROR blst_core_verify_pk_in_g2(const blst_p2_affine *pk,
+                                      const blst_p1_affine *signature,
+-                                     bool hash_or_encode,
++                                     int hash_or_encode,
+                                      const byte *msg, size_t msg_len,
+                                      const byte *DST DEFNULL,
+                                      size_t DST_len DEFNULL,

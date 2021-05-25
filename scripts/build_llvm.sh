@@ -20,6 +20,14 @@ build () {
         export LLVM_COMPILER=clang
         sed -i'' 's/^CFLAGS=/# CFLAGS=/' build.sh
         ./build.sh
+
+
+        if [ "$2" = blst ]; then
+            cp ../../proof/bls_operations.c .
+            cp bindings/*.h .
+            wllvm -c bls_operations.c
+            ar rcs libblst.a bls_operations.o
+        fi
         extract-bc --bitcode libblst.a
     )
 }

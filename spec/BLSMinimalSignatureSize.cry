@@ -28,10 +28,12 @@ other_curve = E'
 // hash_to_point  BLS12381G1_XMD:SHA-256_SSWU_RO_
 type DST_len = 43
 
+// TODO: Make this match whatever DST string we use (what about null
+// terminator?)
 DST: [DST_len][8]
 DST = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_"
 
-hash_to_point hx = hash_to_curve (DST, hx)
+hash_to_point hx = hash_to_curve (hx, DST)
 
 // other primitives "determined by the above parameters"
 
@@ -57,7 +59,9 @@ pubkey_to_point S = deserialize_E2 (split S)
 
 // signature_to_point: [signature_len] -> Maybe (EC::AffinePoint t_F) // can fail
 // signature_to_point = octets_to_point_E1
-signature_to_point S = deserialize_E1 (split S)
+// TODO: Was deserialize_E1, but types didn't line up with the expected
+// signature length
+signature_to_point S = uncompress_E1 (split S)
 
 // Here are the unoptimized versions of the subgroup check
 
