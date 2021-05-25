@@ -359,8 +359,9 @@ start_dbl_1 T Px2 = ret where
     ret = fp6_to_fp12_xy00z0 line_b
 
 // effect on point T -- each of the T_i, Q_i affected independently in the same way
-add_n_dbl: {k} (fin k) => EC::ProjectivePoint t_Fp_2 ->  EC::AffinePoint t_Fp_2 -> EC::ProjectivePoint t_Fp_2
-add_n_dbl T Q = doubles@`k where
+// named _alt to avoid conflict with the definition in HashToG2.cry
+add_n_dbl_alt: {k} (fin k) => EC::ProjectivePoint t_Fp_2 ->  EC::AffinePoint t_Fp_2 -> EC::ProjectivePoint t_Fp_2
+add_n_dbl_alt T Q = doubles@`k where
     doubles = [point_add_affine_alt Fp_2 T Q] # [ point_double Fp_2 D | D <- doubles]
 
 // effect on ret - n=1 case
@@ -393,13 +394,13 @@ miller_loop_imp Q P = fp12_conjugate ret_f where
     ret_a = start_dbl_n_imp [T] [Px2]
     T_a = point_double Fp_2 T
     ret_b = add_n_dbl_ret`{2} ret_a T_a Q Px2
-    T_b = add_n_dbl`{2} T_a Q
+    T_b = add_n_dbl_alt`{2} T_a Q
     ret_c = add_n_dbl_ret`{3} ret_b T_b Q Px2
-    T_c = add_n_dbl`{3} T_b Q
+    T_c = add_n_dbl_alt`{3} T_b Q
     ret_d = add_n_dbl_ret`{9} ret_c T_c Q Px2
-    T_d = add_n_dbl`{9} T_c Q
+    T_d = add_n_dbl_alt`{9} T_c Q
     ret_e = add_n_dbl_ret`{32} ret_d T_d Q Px2
-    T_e = add_n_dbl`{32} T_d Q
+    T_e = add_n_dbl_alt`{32} T_d Q
     ret_f = add_n_dbl_ret`{16} ret_e T_e Q Px2
 
 miller_loop_n_1_imp:  EC::AffinePoint t_Fp_2 -> EC::AffinePoint t_Fp -> t_Fp_12
