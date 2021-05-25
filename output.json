@@ -2401,6 +2401,90 @@
     "specification": "unknown"
   },
   {
+    "status": "assumed",
+    "loc": "/workdir/proof/pairing.saw:212:28",
+    "method": "lshift_mod_384",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/pairing.saw:214:24",
+    "method": "lshift_fp2",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/pairing.saw:225:19",
+    "method": "line_by_Px2",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/pairing.saw:255:22",
+    "method": "line_dbl",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/pairing.saw:269:17",
+    "method": "line_add",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/pairing.saw:358:20",
+    "method": "start_dbl_n",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/pairing.saw:406:18",
+    "method": "add_n_dbl_n",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/pairing.saw:425:20",
+    "method": "add_n_dbl_n",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/pairing.saw:436:19",
+    "method": "add_n_dbl_n",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/pairing.saw:550:23",
+    "method": "miller_loop_n",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/pairing.saw:617:23",
+    "method": "miller_loop_n",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/pairing.saw:668:23",
+    "method": "miller_loop_n",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
     "status": "verified",
     "loc": "/workdir/proof/psi.saw:127:17",
     "method": "qi_x_iwsc",
@@ -3799,7 +3883,7 @@
   {
     "status": "assumed",
     "loc": "unknown",
-    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n      x@5 = Prelude.Vec 2 x@4\n      x@6 = Cryptol.TCNum 5\n    }\n in (u16950 : Cryptol.Num)\n-> (b : x@5)\n-> (e : Cryptol.seq (Cryptol.tcMul x@6 u16950) Prelude.Bool)\n-> let { x@7 = Cryptol.tcMul x@6 u16950\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@5\n         (Cryptol.PEqSeq x@2 x@4\n            (Cryptol.PEqSeq (Cryptol.TCNum 3) x@3\n               (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n         (cryptol:/FieldExtras/k_expt x@6 u16950 x@5 cryptol:/Parameters/Fp_12 b\n            e)\n         (cryptol:/implementation/FinalExp/C_expt b\n            (Cryptol.ecToInteger (Cryptol.seq x@7 Prelude.Bool)\n               (Cryptol.PIntegralSeqBool x@7)\n               e)))",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n      x@5 = Prelude.Vec 2 x@4\n      x@6 = Cryptol.TCNum 5\n    }\n in (u18117 : Cryptol.Num)\n-> (b : x@5)\n-> (e : Cryptol.seq (Cryptol.tcMul x@6 u18117) Prelude.Bool)\n-> let { x@7 = Cryptol.tcMul x@6 u18117\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@5\n         (Cryptol.PEqSeq x@2 x@4\n            (Cryptol.PEqSeq (Cryptol.TCNum 3) x@3\n               (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n         (cryptol:/FieldExtras/k_expt x@6 u18117 x@5 cryptol:/Parameters/Fp_12 b\n            e)\n         (cryptol:/implementation/FinalExp/C_expt b\n            (Cryptol.ecToInteger (Cryptol.seq x@7 Prelude.Bool)\n               (Cryptol.PIntegralSeqBool x@7)\n               e)))",
     "type": "property"
   },
   {
@@ -4753,6 +4837,12 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@3 = Cryptol.TCNum 2\n      x@4 = Prelude.Vec 2 Prelude.Integer\n      x@5 = Prelude.Vec 3 x@4\n      x@6 = Prelude.Vec 2 x@5\n    }\n in (x : Prelude.Bool)\n-> (y0 : x@5)\n-> (y1 : x@5)\n-> (z0 : x@5)\n-> (z1 : x@5)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@6\n        (Cryptol.PEqSeq x@3 x@5\n           (Cryptol.PEqSeq (Cryptol.TCNum 3) x@4\n              (Cryptol.PEqSeq x@3 Prelude.Integer Cryptol.PEqInteger)))\n        [Prelude.ite x@5 x y0 z0, Prelude.ite x@5 x y1 z1]\n        (Prelude.ite x@6 x [y0, y1] [z0, z1]))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@3 = Prelude.Vec 12 (Prelude.Vec 64 Prelude.Bool)\n    }\n in (x : Prelude.Bool)\n-> (y : x@3)\n-> (z : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/implementation/Field/fpx2_invariant (Prelude.ite x@3 x y z))\n        (Prelude.ite Prelude.Bool x\n           (cryptol:/implementation/Field/fpx2_invariant y)\n           (cryptol:/implementation/Field/fpx2_invariant z)))",
     "type": "property"
   },
@@ -4802,6 +4892,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 2 (Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool))\n    }\n in (x : Prelude.Bool)\n-> (y : x@4)\n-> (z : x@4)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@3\n        (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger)\n        (cryptol:/implementation/Field/fp2_abs (Prelude.ite x@4 x y z))\n        (Prelude.ite x@3 x (cryptol:/implementation/Field/fp2_abs y)\n           (cryptol:/implementation/Field/fp2_abs z)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n    }\n in (x : Prelude.Bool)\n-> (y0 : x@3)\n-> (y1 : x@3)\n-> (y2 : x@3)\n-> (z0 : x@3)\n-> (z1 : x@3)\n-> (z2 : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@4\n        (Cryptol.PEqSeq (Cryptol.TCNum 3) x@3\n           (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer\n              Cryptol.PEqInteger))\n        [ Prelude.ite x@3 x y0 z0\n        , Prelude.ite x@3 x y1 z1\n        , Prelude.ite x@3 x y2 z2 ]\n        (Prelude.ite x@4 x [y0, y1, y2] [z0, z1, z2]))",
     "type": "property"
   },
   {
@@ -5011,6 +5107,12 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = x@2 * x@2\n      x@4 = Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger\n      x@5 = x@2 * x@3\n    }\n in (c : Prelude.Bool)\n-> (x1 : x@2)\n-> (x2 : x@2)\n-> (y1 : x@2)\n-> (y2 : x@2)\n-> (z1 : x@2)\n-> (z2 : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@5\n        (Cryptol.PEqPair x@2 x@3 x@4 (Cryptol.PEqPair x@2 x@2 x@4 x@4))\n        (Prelude.ite x@2 c x1 x2,\n         Prelude.ite x@2 c y1 y2,Prelude.ite x@2 c z1 z2)\n        (Prelude.ite x@5 c (x1,y1,z1) (x2,y2,z2)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = x@2 * x@2\n      x@4 = Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger\n    }\n in (k : Prelude.Integer)\n-> (c : Prelude.Bool)\n-> (P : x@3)\n-> (Q : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@3 (Cryptol.PEqPair x@2 x@2 x@4 x@4)\n        (cryptol:e2_scalar_mult#7387 k (Prelude.ite x@3 c P Q))\n        (Prelude.ite x@3 c (cryptol:e2_scalar_mult#7387 k P)\n           (cryptol:e2_scalar_mult#7387 k Q)))",
     "type": "property"
   },
@@ -5078,6 +5180,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (c : Prelude.Bool)\n-> (x1 : x@2)\n-> (x2 : x@2)\n-> (y1 : x@2)\n-> (y2 : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2\n        (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger)\n        (Prelude.ite (x@2 * x@2) c (x1,x2) (y1,y2)).2\n        (Prelude.ite x@2 c x2 y2))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = (a : sort 1)\n      -> Prelude.Bool\n      -> a\n      -> a\n      -> a\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (x : Prelude.Bool)\n-> (y0 : Prelude.Integer)\n-> (y1 : Prelude.Integer)\n-> (z0 : Prelude.Integer)\n-> (z1 : Prelude.Integer)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2\n        (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger)\n        [ Prelude.ite Prelude.Integer x y0 z0\n        , Prelude.ite Prelude.Integer x y1 z1 ]\n        (Prelude.ite x@2 x [y0, y1] [z0, z1]))",
     "type": "property"
   },
   {
@@ -5342,6 +5450,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Cryptol.PEqInteger\n      x@2 = Prelude.Integer * Prelude.Integer\n      x@3 = cryptol:/Parameters/Fp\n      x@4 = cryptol:/Parameters/E\n    }\n in (p : (Prelude.Integer * x@2))\n-> let { x@5 = cryptol:/implementation/CurveOperation/point_double\n                 Prelude.Integer\n                 x@3\n                 p\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@2\n         (Cryptol.PEqPair Prelude.Integer Prelude.Integer x@1 x@1)\n         (cryptol:/ShortWeierstrassCurve/affinify Prelude.Integer x@4\n            (cryptol:/implementation/CurveOperation/point_add Prelude.Integer\n               x@3\n               x@5\n               p))\n         (cryptol:/ShortWeierstrassCurve/add Prelude.Integer x@4\n            (cryptol:/ShortWeierstrassCurve/affinify Prelude.Integer x@4 x@5)\n            (cryptol:/ShortWeierstrassCurve/affinify Prelude.Integer x@4 p)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Cryptol.PEqInteger\n      x@2 = Prelude.Integer * Prelude.Integer\n      x@3 = cryptol:/Parameters/Fp.2.2.2.1\n    }\n in (P : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/ShortWeierstrassCurve/is_point_O Prelude.Integer\n           cryptol:/Parameters/E\n           P)\n        (Cryptol.ecEq x@2\n           (Cryptol.PEqPair Prelude.Integer Prelude.Integer x@1 x@1)\n           P\n           (x@3,x@3)))",
     "type": "property"
   },
   {
@@ -5995,6 +6109,12 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Cryptol.ecNumber (Cryptol.TCNum 0) Prelude.Integer\n              Cryptol.PLiteralInteger\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 2 Prelude.Integer)\n         (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger)\n         cryptol:/Parameters/Fp_2.2.2.2.1\n         [x@1, x@1])",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Cryptol.ecNumber (Cryptol.TCNum 1) Prelude.Integer\n              Cryptol.PLiteralInteger\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = x@2 * x@2\n      x@4 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (p1 : (x@2 * x@3))\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@3 (Cryptol.PEqPair x@2 x@2 x@4 x@4)\n        (cryptol:affinify_E'#7392 (cryptol:small_mult#7407 x@1 p1))\n        (cryptol:e2_scalar_mult#7387 x@1 (cryptol:affinify_E'#7392 p1)))",
     "type": "property"
   },
@@ -6134,6 +6254,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = (n : Prelude.Nat)\n      -> Prelude.Nat\n      -> Prelude.Vec n Prelude.Bool\n      x@3 = Prelude.Vec 64 Prelude.Bool\n      x@4 = Prelude.bvNat 64 0\n      x@5 = Prelude.Vec 2 Prelude.Integer\n      x@6 = x@5 * x@5\n      x@7 = Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger\n      x@8 = Prelude.Vec 6 x@3\n      x@9 = Prelude.Vec 2 x@8\n    }\n in (x : (x@9 * x@9))\n-> Prelude.EqTrue\n     (Cryptol.ecEq (x@5 * x@6)\n        (Cryptol.PEqPair x@5 x@6 x@7 (Cryptol.PEqPair x@5 x@5 x@7 x@7))\n        (cryptol:/implementation/CurveOperation/POINTonE2_abs\n           (x.1,\n            x.2,\n            [ [ Prelude.bvNat 64 8505329371266088957\n            , Prelude.bvNat 64 17002214543764226050\n            , Prelude.bvNat 64 6865905132761471162\n            , Prelude.bvNat 64 8632934651105793861\n            , Prelude.bvNat 64 6631298214892334189\n            , Prelude.bvNat 64 1582556514881692819 ]\n            , [x@4, x@4, x@4, x@4, x@4, x@4] ]))\n        (cryptol:/ShortWeierstrassCurve/projectify x@5 cryptol:/Parameters/E'\n           (cryptol:/implementation/CurveOperation/POINTonE2_affine_abs x)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = (n : Prelude.Nat)\n      -> Prelude.Nat\n      -> Prelude.Vec n Prelude.Bool\n      x@3 = Prelude.Vec 64 Prelude.Bool\n      x@4 = Prelude.bvNat 64 0\n      x@5 = Prelude.Vec 6 x@3\n      x@6 = Prelude.Vec 2 x@5\n      x@7 = Prelude.Vec 3 x@6\n      x@8 = [x@4, x@4, x@4, x@4, x@4, x@4]\n      x@9 = [x@8, x@8]\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 2 x@7)\n         (Cryptol.PEqVec 2 x@7\n            (Cryptol.PEqVec 3 x@6\n               (Cryptol.PEqVec 2 x@5\n                  (Cryptol.PEqVec 6 x@3 (Cryptol.PEqWord 64)))))\n         (cryptol:/implementation/Field/fp12_rep\n            cryptol:/Parameters/Fp_12.2.2.1)\n         [ [ [ [ Prelude.bvNat 64 8505329371266088957\n         , Prelude.bvNat 64 17002214543764226050\n         , Prelude.bvNat 64 6865905132761471162\n         , Prelude.bvNat 64 8632934651105793861\n         , Prelude.bvNat 64 6631298214892334189\n         , Prelude.bvNat 64 1582556514881692819 ]\n         , x@8 ]\n         , x@9\n         , x@9 ]\n         , [x@9, x@9, x@9] ])",
     "type": "property"
   },
   {
@@ -6811,6 +6937,84 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Cryptol.TCNum 32\n      x@4 = Prelude.Integer * Prelude.Integer\n      x@5 = Cryptol.TCNum 3\n      x@6 = Prelude.Vec 2 Prelude.Integer\n      x@7 = x@6 * x@6\n      x@8 = Prelude.Vec 3 x@6\n      x@9 = Prelude.Vec 2 x@8\n      x@10 = cryptol:/Parameters/Fp_12.2.2.2.2.2.2.2\n      x@11 = x@6 * x@7\n    }\n in (r0 : x@9)\n-> (r1 : x@9)\n-> (r2 : x@9)\n-> (T0 : x@11)\n-> (T1 : x@11)\n-> (T2 : x@11)\n-> (Q0 : x@7)\n-> (Q1 : x@7)\n-> (Q2 : x@7)\n-> (P0 : x@4)\n-> (P1 : x@4)\n-> (P2 : x@4)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@9\n        (Cryptol.PEqSeq x@2 x@8\n           (Cryptol.PEqSeq x@5 x@6\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/add_n_dbl_n_ret x@5 x@3\n           (x@10.1 (r0,x@10.1 (r1,r2)))\n           [T0, T1, T2]\n           [Q0, Q1, Q2]\n           [P0, P1, P2])\n        (x@10.1\n           (cryptol:/implementation/Pairing/add_n_dbl_ret x@3 r0 T0 Q0 P0,\n            x@10.1\n              (cryptol:/implementation/Pairing/add_n_dbl_ret x@3 r1 T1 Q1 P1,\n               cryptol:/implementation/Pairing/add_n_dbl_ret x@3 r2 T2 Q2 P2))))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Cryptol.TCNum 32\n      x@4 = Prelude.Integer * Prelude.Integer\n      x@5 = Prelude.Vec 2 Prelude.Integer\n      x@6 = x@5 * x@5\n      x@7 = Prelude.Vec 3 x@5\n      x@8 = Prelude.Vec 2 x@7\n      x@9 = cryptol:/Parameters/Fp_12.2.2.2.2.2.2.2\n      x@10 = x@5 * x@6\n    }\n in (r0 : x@8)\n-> (r1 : x@8)\n-> (T0 : x@10)\n-> (T1 : x@10)\n-> (Q0 : x@6)\n-> (Q1 : x@6)\n-> (P0 : x@4)\n-> (P1 : x@4)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@8\n        (Cryptol.PEqSeq x@2 x@7\n           (Cryptol.PEqSeq (Cryptol.TCNum 3) x@5\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/add_n_dbl_n_ret x@2 x@3 (x@9.1 (r0,r1))\n           [T0, T1]\n           [Q0, Q1]\n           [P0, P1])\n        (x@9.1\n           (cryptol:/implementation/Pairing/add_n_dbl_ret x@3 r0 T0 Q0 P0,\n            cryptol:/implementation/Pairing/add_n_dbl_ret x@3 r1 T1 Q1 P1)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Cryptol.TCNum 9\n      x@4 = Prelude.Integer * Prelude.Integer\n      x@5 = Cryptol.TCNum 3\n      x@6 = Prelude.Vec 2 Prelude.Integer\n      x@7 = x@6 * x@6\n      x@8 = Prelude.Vec 3 x@6\n      x@9 = Prelude.Vec 2 x@8\n      x@10 = cryptol:/Parameters/Fp_12.2.2.2.2.2.2.2\n      x@11 = x@6 * x@7\n    }\n in (r0 : x@9)\n-> (r1 : x@9)\n-> (r2 : x@9)\n-> (T0 : x@11)\n-> (T1 : x@11)\n-> (T2 : x@11)\n-> (Q0 : x@7)\n-> (Q1 : x@7)\n-> (Q2 : x@7)\n-> (P0 : x@4)\n-> (P1 : x@4)\n-> (P2 : x@4)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@9\n        (Cryptol.PEqSeq x@2 x@8\n           (Cryptol.PEqSeq x@5 x@6\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/add_n_dbl_n_ret x@5 x@3\n           (x@10.1 (r0,x@10.1 (r1,r2)))\n           [T0, T1, T2]\n           [Q0, Q1, Q2]\n           [P0, P1, P2])\n        (x@10.1\n           (cryptol:/implementation/Pairing/add_n_dbl_ret x@3 r0 T0 Q0 P0,\n            x@10.1\n              (cryptol:/implementation/Pairing/add_n_dbl_ret x@3 r1 T1 Q1 P1,\n               cryptol:/implementation/Pairing/add_n_dbl_ret x@3 r2 T2 Q2 P2))))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Cryptol.TCNum 9\n      x@4 = Prelude.Integer * Prelude.Integer\n      x@5 = Prelude.Vec 2 Prelude.Integer\n      x@6 = x@5 * x@5\n      x@7 = Prelude.Vec 3 x@5\n      x@8 = Prelude.Vec 2 x@7\n      x@9 = cryptol:/Parameters/Fp_12.2.2.2.2.2.2.2\n      x@10 = x@5 * x@6\n    }\n in (r0 : x@8)\n-> (r1 : x@8)\n-> (T0 : x@10)\n-> (T1 : x@10)\n-> (Q0 : x@6)\n-> (Q1 : x@6)\n-> (P0 : x@4)\n-> (P1 : x@4)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@8\n        (Cryptol.PEqSeq x@2 x@7\n           (Cryptol.PEqSeq (Cryptol.TCNum 3) x@5\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/add_n_dbl_n_ret x@2 x@3 (x@9.1 (r0,r1))\n           [T0, T1]\n           [Q0, Q1]\n           [P0, P1])\n        (x@9.1\n           (cryptol:/implementation/Pairing/add_n_dbl_ret x@3 r0 T0 Q0 P0,\n            cryptol:/implementation/Pairing/add_n_dbl_ret x@3 r1 T1 Q1 P1)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Integer * Prelude.Integer\n      x@4 = Cryptol.TCNum 3\n      x@5 = Prelude.Vec 2 Prelude.Integer\n      x@6 = Prelude.Vec 3 x@5\n      x@7 = Prelude.Vec 2 x@6\n      x@8 = x@5 * x@5 * x@5\n      x@9 = Cryptol.tcMin x@4 x@4\n    }\n in (Ts : Prelude.Vec 3 x@8)\n-> (Ps : Prelude.Vec 3 x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@7\n        (Cryptol.PEqSeq x@2 x@6\n           (Cryptol.PEqSeq x@4 x@5\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/start_dbl_n_imp x@4 Ts Ps)\n        (cryptol:/FieldExtras/F_prod x@7 x@4 cryptol:/Parameters/Fp_12\n           (Prelude.coerce (Cryptol.seq x@9 x@7) (Prelude.Vec 3 x@7)\n              (Cryptol.seq_cong1 x@9 x@4 x@7\n                 (Prelude.unsafeAssert Cryptol.Num x@9 x@4))\n              (Cryptol.seqMap (x@8 * x@3) x@7 x@9\n                 (Prelude.uncurry x@8 x@3 x@7\n                    (\\(T : x@8) ->\n                       \\(P : x@3) ->\n                         cryptol:/implementation/Pairing/start_dbl_1 T P))\n                 (Cryptol.seqZip x@8 x@3 x@4 x@4 Ts Ps)))))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Integer * Prelude.Integer\n      x@4 = Cryptol.TCNum 3\n      x@5 = Prelude.Vec 2 Prelude.Integer\n      x@6 = x@5 * x@5\n      x@7 = Prelude.Vec 3 x@5\n      x@8 = Prelude.Vec 2 x@7\n      x@9 = cryptol:/Parameters/Fp_12.2.2.2.2.2.2.2\n      x@10 = Cryptol.TCNum 16\n      x@11 = x@5 * x@6\n    }\n in (r0 : x@8)\n-> (r1 : x@8)\n-> (r2 : x@8)\n-> (T0 : x@11)\n-> (T1 : x@11)\n-> (T2 : x@11)\n-> (Q0 : x@6)\n-> (Q1 : x@6)\n-> (Q2 : x@6)\n-> (P0 : x@3)\n-> (P1 : x@3)\n-> (P2 : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@8\n        (Cryptol.PEqSeq x@2 x@7\n           (Cryptol.PEqSeq x@4 x@5\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/add_n_dbl_n_ret x@4 x@10\n           (x@9.1 (r0,x@9.1 (r1,r2)))\n           [T0, T1, T2]\n           [Q0, Q1, Q2]\n           [P0, P1, P2])\n        (x@9.1\n           (cryptol:/implementation/Pairing/add_n_dbl_ret x@10 r0 T0 Q0 P0,\n            x@9.1\n              (cryptol:/implementation/Pairing/add_n_dbl_ret x@10 r1 T1 Q1 P1,\n               cryptol:/implementation/Pairing/add_n_dbl_ret x@10 r2 T2 Q2\n                 P2))))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Integer * Prelude.Integer\n      x@4 = Cryptol.TCNum 3\n      x@5 = Prelude.Vec 2 Prelude.Integer\n      x@6 = x@5 * x@5\n      x@7 = Prelude.Vec 3 x@5\n      x@8 = Prelude.Vec 2 x@7\n      x@9 = cryptol:/Parameters/Fp_12.2.2.2.2.2.2.2\n      x@10 = x@5 * x@6\n    }\n in (r0 : x@8)\n-> (r1 : x@8)\n-> (T0 : x@10)\n-> (T1 : x@10)\n-> (Q0 : x@6)\n-> (Q1 : x@6)\n-> (P0 : x@3)\n-> (P1 : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@8\n        (Cryptol.PEqSeq x@2 x@7\n           (Cryptol.PEqSeq x@4 x@5\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/add_n_dbl_n_ret x@2 x@4 (x@9.1 (r0,r1))\n           [T0, T1]\n           [Q0, Q1]\n           [P0, P1])\n        (x@9.1\n           (cryptol:/implementation/Pairing/add_n_dbl_ret x@4 r0 T0 Q0 P0,\n            cryptol:/implementation/Pairing/add_n_dbl_ret x@4 r1 T1 Q1 P1)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Integer * Prelude.Integer\n      x@4 = Cryptol.TCNum 3\n      x@5 = Prelude.Vec 2 Prelude.Integer\n      x@6 = x@5 * x@5\n      x@7 = Prelude.Vec 3 x@5\n      x@8 = Prelude.Vec 2 x@7\n      x@9 = cryptol:/Parameters/Fp_12.2.2.2.2.2.2.2\n      x@10 = x@5 * x@6\n    }\n in (r0 : x@8)\n-> (r1 : x@8)\n-> (r2 : x@8)\n-> (T0 : x@10)\n-> (T1 : x@10)\n-> (T2 : x@10)\n-> (Q0 : x@6)\n-> (Q1 : x@6)\n-> (Q2 : x@6)\n-> (P0 : x@3)\n-> (P1 : x@3)\n-> (P2 : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@8\n        (Cryptol.PEqSeq x@2 x@7\n           (Cryptol.PEqSeq x@4 x@5\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/add_n_dbl_n_ret x@4 x@2\n           (x@9.1 (r0,x@9.1 (r1,r2)))\n           [T0, T1, T2]\n           [Q0, Q1, Q2]\n           [P0, P1, P2])\n        (x@9.1\n           (cryptol:/implementation/Pairing/add_n_dbl_ret x@2 r0 T0 Q0 P0,\n            x@9.1\n              (cryptol:/implementation/Pairing/add_n_dbl_ret x@2 r1 T1 Q1 P1,\n               cryptol:/implementation/Pairing/add_n_dbl_ret x@2 r2 T2 Q2 P2))))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Integer * Prelude.Integer\n      x@4 = Cryptol.TCNum 3\n      x@5 = Prelude.Vec 2 Prelude.Integer\n      x@6 = x@5 * x@5\n      x@7 = Prelude.Vec 3 x@5\n      x@8 = Prelude.Vec 2 x@7\n      x@9 = cryptol:/Parameters/Fp_12.2.2.2.2.2.2.2\n      x@10 = x@5 * x@6\n    }\n in (r0 : x@8)\n-> (r1 : x@8)\n-> (r2 : x@8)\n-> (T0 : x@10)\n-> (T1 : x@10)\n-> (T2 : x@10)\n-> (Q0 : x@6)\n-> (Q1 : x@6)\n-> (Q2 : x@6)\n-> (P0 : x@3)\n-> (P1 : x@3)\n-> (P2 : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@8\n        (Cryptol.PEqSeq x@2 x@7\n           (Cryptol.PEqSeq x@4 x@5\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/add_n_dbl_n_ret x@4 x@4\n           (x@9.1 (r0,x@9.1 (r1,r2)))\n           [T0, T1, T2]\n           [Q0, Q1, Q2]\n           [P0, P1, P2])\n        (x@9.1\n           (cryptol:/implementation/Pairing/add_n_dbl_ret x@4 r0 T0 Q0 P0,\n            x@9.1\n              (cryptol:/implementation/Pairing/add_n_dbl_ret x@4 r1 T1 Q1 P1,\n               cryptol:/implementation/Pairing/add_n_dbl_ret x@4 r2 T2 Q2 P2))))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Integer * Prelude.Integer\n      x@4 = Prelude.Vec 2 Prelude.Integer\n      x@5 = Prelude.Vec 3 x@4\n      x@6 = Prelude.Vec 2 x@5\n      x@7 = x@4 * x@4 * x@4\n      x@8 = Cryptol.tcMin x@2 x@2\n    }\n in (Ts : Prelude.Vec 2 x@7)\n-> (Ps : Prelude.Vec 2 x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@6\n        (Cryptol.PEqSeq x@2 x@5\n           (Cryptol.PEqSeq (Cryptol.TCNum 3) x@4\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/start_dbl_n_imp x@2 Ts Ps)\n        (cryptol:/FieldExtras/F_prod x@6 x@2 cryptol:/Parameters/Fp_12\n           (Prelude.coerce (Cryptol.seq x@8 x@6) (Prelude.Vec 2 x@6)\n              (Cryptol.seq_cong1 x@8 x@2 x@6\n                 (Prelude.unsafeAssert Cryptol.Num x@8 x@2))\n              (Cryptol.seqMap (x@7 * x@3) x@6 x@8\n                 (Prelude.uncurry x@7 x@3 x@6\n                    (\\(T : x@7) ->\n                       \\(P : x@3) ->\n                         cryptol:/implementation/Pairing/start_dbl_1 T P))\n                 (Cryptol.seqZip x@7 x@3 x@2 x@2 Ts Ps)))))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Integer * Prelude.Integer\n      x@4 = Prelude.Vec 2 Prelude.Integer\n      x@5 = Prelude.Vec 3 x@4\n      x@6 = x@4 * x@4 * x@4\n    }\n in (T : x@6)\n-> (P : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq (Prelude.Vec 2 x@5)\n        (Cryptol.PEqSeq x@2 x@5\n           (Cryptol.PEqSeq (Cryptol.TCNum 3) x@4\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/start_dbl_n_imp (Cryptol.TCNum 1) [T]\n           [P])\n        (cryptol:/implementation/Pairing/start_dbl_1 T P))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Integer * Prelude.Integer\n      x@4 = Prelude.Vec 2 Prelude.Integer\n      x@5 = x@4 * x@4\n      x@6 = Prelude.Vec 3 x@4\n      x@7 = Prelude.Vec 2 x@6\n      x@8 = cryptol:/Parameters/Fp_12.2.2.2.2.2.2.2\n      x@9 = Cryptol.TCNum 16\n      x@10 = x@4 * x@5\n    }\n in (r0 : x@7)\n-> (r1 : x@7)\n-> (T0 : x@10)\n-> (T1 : x@10)\n-> (Q0 : x@5)\n-> (Q1 : x@5)\n-> (P0 : x@3)\n-> (P1 : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@7\n        (Cryptol.PEqSeq x@2 x@6\n           (Cryptol.PEqSeq (Cryptol.TCNum 3) x@4\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/add_n_dbl_n_ret x@2 x@9 (x@8.1 (r0,r1))\n           [T0, T1]\n           [Q0, Q1]\n           [P0, P1])\n        (x@8.1\n           (cryptol:/implementation/Pairing/add_n_dbl_ret x@9 r0 T0 Q0 P0,\n            cryptol:/implementation/Pairing/add_n_dbl_ret x@9 r1 T1 Q1 P1)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Integer * Prelude.Integer\n      x@4 = Prelude.Vec 2 Prelude.Integer\n      x@5 = x@4 * x@4\n      x@6 = Prelude.Vec 3 x@4\n      x@7 = Prelude.Vec 2 x@6\n      x@8 = cryptol:/Parameters/Fp_12.2.2.2.2.2.2.2\n      x@9 = x@4 * x@5\n    }\n in (r0 : x@7)\n-> (r1 : x@7)\n-> (T0 : x@9)\n-> (T1 : x@9)\n-> (Q0 : x@5)\n-> (Q1 : x@5)\n-> (P0 : x@3)\n-> (P1 : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@7\n        (Cryptol.PEqSeq x@2 x@6\n           (Cryptol.PEqSeq (Cryptol.TCNum 3) x@4\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/add_n_dbl_n_ret x@2 x@2 (x@8.1 (r0,r1))\n           [T0, T1]\n           [Q0, Q1]\n           [P0, P1])\n        (x@8.1\n           (cryptol:/implementation/Pairing/add_n_dbl_ret x@2 r0 T0 Q0 P0,\n            cryptol:/implementation/Pairing/add_n_dbl_ret x@2 r1 T1 Q1 P1)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 2 x@3\n    }\n in (x : x@4)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@4\n        (Cryptol.PEqSeq x@2 x@3\n           (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger))\n        (cryptol:redc_mont_fp4#8192 x)\n        (cryptol:/implementation/CryptolHelpers/apply x@4 x@4\n           cryptol:redc_mont_fp4#8192\n           (cryptol:fp4_reduce_mod_p#8200 x)))",
     "type": "property"
   },
@@ -6944,6 +7148,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n      x@5 = Prelude.Vec 2 x@4\n      x@6 = cryptol:/Parameters/Fp_12.2.2.2.2.2.2.2\n    }\n in (x : x@5)\n-> (y : x@5)\n-> (z : x@5)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@5\n        (Cryptol.PEqSeq x@2 x@4\n           (Cryptol.PEqSeq (Cryptol.TCNum 3) x@3\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (x@6.1 (x@6.1 (x,y),z))\n        (x@6.1 (x,x@6.1 (y,z))))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n      x@5 = Prelude.Vec 2 x@4\n      x@6 = cryptol:/Parameters/Fp_12.2.2.2.2.2.2.2\n    }\n in (x : x@5)\n-> (y : x@5)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@5\n        (Cryptol.PEqSeq x@2 x@4\n           (Cryptol.PEqSeq (Cryptol.TCNum 3) x@3\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/Frobenius/fp12_conjugate (x@6.1 (x,y)))\n        (x@6.1\n           (cryptol:/Frobenius/fp12_conjugate x,\n            cryptol:/Frobenius/fp12_conjugate y)))",
     "type": "property"
   },
   {
@@ -7105,6 +7315,18 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n      x@5 = cryptol:/Parameters/Fp_12.2.2\n    }\n in (x : (x@3 * x@3 * x@3))\n-> (y : (Prelude.Integer * Prelude.Integer))\n-> let { x@6 = cryptol:/implementation/Pairing/line_double_opt x y\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 2 x@4)\n         (Cryptol.PEqSeq x@2 x@4\n            (Cryptol.PEqSeq (Cryptol.TCNum 3) x@3\n               (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n         (x@5.2.2.2.2.2.1 (x@5.1,x@6))\n         x@6)",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n      x@5 = cryptol:/Parameters/Fp_12.2.2.1\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 2 x@4)\n         (Cryptol.PEqSeq x@2 x@4\n            (Cryptol.PEqSeq (Cryptol.TCNum 3) x@3\n               (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n         (cryptol:/Frobenius/fp12_conjugate x@5)\n         x@5)",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n      x@5 = cryptol:/Parameters/Fp_12.2.2.2\n      x@6 = x@5.1\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 2 x@4)\n         (Cryptol.PEqSeq x@2 x@4\n            (Cryptol.PEqSeq (Cryptol.TCNum 3) x@3\n               (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n         (x@5.2.2.2.2.2.1 x@6)\n         x@6)",
     "type": "property"
   },
@@ -7129,7 +7351,25 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n    }\n in (Q : (Prelude.Integer * Prelude.Integer))\n-> (P : (x@3 * x@3))\n-> Prelude.EqTrue\n     (Cryptol.ecEq (Prelude.Vec 2 x@4)\n        (Cryptol.PEqSeq x@2 x@4\n           (Cryptol.PEqSeq (Cryptol.TCNum 3) x@3\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/miller_loop_opt Q P)\n        (cryptol:/implementation/Pairing/miller_loop_imp P Q))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n    }\n in (Q : (x@3 * x@3))\n-> (P : (Prelude.Integer * Prelude.Integer))\n-> Prelude.EqTrue\n     (Cryptol.ecEq (Prelude.Vec 2 x@4)\n        (Cryptol.PEqSeq x@2 x@4\n           (Cryptol.PEqSeq (Cryptol.TCNum 3) x@3\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Pairing/miller_loop_opt_checked P Q)\n        (cryptol:/implementation/Pairing/miller_loop_n_1_imp Q P))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n    }\n in (x\n       : Prelude.Vec 2\n           (Prelude.Vec 3\n              (Prelude.Vec 2 (Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool)))))\n-> Prelude.EqTrue\n     (Cryptol.ecEq (Prelude.Vec 2 x@4)\n        (Cryptol.PEqSeq x@2 x@4\n           (Cryptol.PEqSeq (Cryptol.TCNum 3) x@3\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:redc_mont_fp12#8160 (cryptol:fp12_abs_nom#8143 x))\n        (cryptol:/implementation/Field/fp12_abs x))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n    }\n in (x\n       : Prelude.Vec 3\n           (Prelude.Vec 2 (Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool))))\n-> Prelude.EqTrue\n     (Cryptol.ecEq (Prelude.Vec 2 x@4)\n        (Cryptol.PEqSeq x@2 x@4\n           (Cryptol.PEqSeq (Cryptol.TCNum 3) x@3\n              (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/Field/fp12_abs\n           (cryptol:/implementation/Fp12/xy00z0_expander x))\n        (cryptol:/implementation/Fp12/fp6_to_fp12_xy00z0\n           (cryptol:/implementation/Field/fp6_abs x)))",
     "type": "property"
   },
   {
@@ -7171,6 +7411,18 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = cryptol:/Parameters/Fp\n      x@4 = Prelude.Vec 2 Prelude.Integer\n      x@5 = Prelude.Vec 3 x@4\n    }\n in (T : (x@4 * x@4 * x@4))\n-> (P : (Prelude.Integer * Prelude.Integer))\n-> let { x@6 = P.1\n         x@7 = P.2\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 2 x@5)\n         (Cryptol.PEqSeq x@2 x@5\n            (Cryptol.PEqSeq (Cryptol.TCNum 3) x@4\n               (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n         (cryptol:/implementation/Fp12/fp6_to_fp12_xy00z0\n            (cryptol:/implementation/Pairing/line_by_Px2\n               (cryptol:/implementation/Pairing/line_double_imp T)\n               (x@3.2.2.2.2.2.2.2.2.1 (x@3.1 (x@6,x@6)),x@3.1 (x@7,x@7))))\n         (cryptol:/implementation/Pairing/line_double_opt T P))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 2\n      x@3 = cryptol:/Parameters/Fp\n      x@4 = Prelude.Vec 2 Prelude.Integer\n      x@5 = x@4 * x@4\n      x@6 = Prelude.Vec 3 x@4\n    }\n in (T : (x@4 * x@5))\n-> (Q : x@5)\n-> (P : (Prelude.Integer * Prelude.Integer))\n-> let { x@7 = P.1\n         x@8 = P.2\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 2 x@6)\n         (Cryptol.PEqSeq x@2 x@6\n            (Cryptol.PEqSeq (Cryptol.TCNum 3) x@4\n               (Cryptol.PEqSeq x@2 Prelude.Integer Cryptol.PEqInteger)))\n         (cryptol:/implementation/Fp12/fp6_to_fp12_xy00z0\n            (cryptol:/implementation/Pairing/line_by_Px2\n               (cryptol:/implementation/Pairing/line_add_imp T Q)\n               (x@3.2.2.2.2.2.2.2.2.1 (x@3.1 (x@7,x@7)),x@3.1 (x@8,x@8))))\n         (cryptol:/implementation/Pairing/line_add_opt T Q P))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 3\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n      x@5 = cryptol:/Parameters/Fp_2.2.2.2.2.2.2.2\n      x@6 = x@5.2.2\n    }\n in (x : x@4)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@4\n        (Cryptol.PEqSeq x@2 x@3\n           (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer\n              Cryptol.PEqInteger))\n        (cryptol:/Parameters/Fp_6.2.2.2.2.2.2.2.1 (cryptol:/Parameters/v,x))\n        [ x@6.1 (Cryptol.eListSel x@3 x@2 x 1)\n        , x@6.1 (Cryptol.eListSel x@3 x@2 x 2)\n        , x@5.1 (Cryptol.eListSel x@3 x@2 x 0,cryptol:/Parameters/u_plus_1) ])",
     "type": "property"
   },
@@ -7178,6 +7430,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 3\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n      x@5 = cryptol:/Parameters/Fp_2.2.2.2.2.2.2.2\n      x@6 = x@5.2.2\n    }\n in (x : x@4)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@4\n        (Cryptol.PEqSeq x@2 x@3\n           (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer\n              Cryptol.PEqInteger))\n        (cryptol:/Parameters/Fp_6.2.2.2.2.2.2.2.1 (cryptol:/Parameters/v,x))\n        [ x@6.1 (Cryptol.eListSel x@3 x@2 x 1)\n        , x@6.1 (Cryptol.eListSel x@3 x@2 x 2)\n        , x@5.1 (cryptol:/Parameters/u_plus_1,Cryptol.eListSel x@3 x@2 x 0) ])",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Cryptol.TCNum 3\n      x@3 = Prelude.Vec 2 Prelude.Integer\n      x@4 = Prelude.Vec 3 x@3\n      x@5 = cryptol:/Parameters/Fp_2.2.2.2.2.2.2.2\n    }\n in (A : x@4)\n-> (P : (Prelude.Integer * Prelude.Integer))\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@4\n        (Cryptol.PEqSeq x@2 x@3\n           (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer\n              Cryptol.PEqInteger))\n        (cryptol:/implementation/Pairing/line_by_Px2 A P)\n        [ x@5.1\n            (Cryptol.eListSel x@3 x@2 A 0,cryptol:/Parameters/Fp_to_Fp_2 P.2)\n        , x@5.1\n            (Cryptol.eListSel x@3 x@2 A 1,cryptol:/Parameters/Fp_to_Fp_2 P.1)\n        , Cryptol.eListSel x@3 x@2 A 2 ])",
     "type": "property"
   },
   {
@@ -7388,6 +7646,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = Prelude.Vec 3 x@2\n      x@4 = Prelude.Vec 2 x@3\n      x@5 = Prelude.natToInt\n              256617403732428082911713098829358466826502709893317423274164519189057579459067718648630900581642194569486023536159679292713201496773094628402515173256805074082148378848401811721831645158191252408572062655802000251980000729631345767080472003723503734796780504822954640194951639083742322763345359769157579083140061699242297227571698867621267056040724752357952125845506385303763755808475747639975977474295162733931498164641759941333618221164232547762766975580793\n    }\n in (x : x@4)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@4\n        (Cryptol.PEqVec 2 x@3\n           (Cryptol.PEqVec 3 x@2\n              (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)))\n        (cryptol:/implementation/FinalExp/C_expt x x@5)\n        (Prelude.ite x@4 (cryptol:/implementation/FinalExp/is_cyclotomic x)\n           cryptol:/Parameters/Fp_12.2.2.1\n           (cryptol:/implementation/CryptolHelpers/apply x@4\n              (Prelude.Integer\n               -> x@4)\n              cryptol:/implementation/FinalExp/C_expt\n              x\n              x@5)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = Prelude.Vec 3 x@2\n      x@4 = Prelude.Vec 2 x@3\n    }\n in (x : x@4)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@4\n        (Cryptol.PEqVec 2 x@3\n           (Cryptol.PEqVec 3 x@2\n              (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)))\n        [Prelude.at 2 x@3 x 0, Prelude.at 2 x@3 x 1]\n        x)",
     "type": "property"
   },
   {
@@ -7651,6 +7915,12 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = Prelude.Vec 3 x@2\n    }\n in (x : x@3)\n-> (y : (Prelude.Integer * Prelude.Integer))\n-> let { x@4 = cryptol:/implementation/Pairing/line_by_Px2 x y\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@3\n         (Cryptol.PEqSeq (Cryptol.TCNum 3) x@2\n            (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer\n               Cryptol.PEqInteger))\n         (cryptol:/implementation/Field/fp6_abs\n            (cryptol:/implementation/Field/fp6_rep x@4))\n         x@4)",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = Prelude.Vec 3 x@2\n    }\n in (x : x@3)\n-> (y : x@3)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@3\n        (Cryptol.PEqSeq (Cryptol.TCNum 3) x@2\n           (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer\n              Cryptol.PEqInteger))\n        (cryptol:fp6_reduce_mod_p#8179\n           (cryptol:/implementation/Fp12/Fp_6x2.1 (x,y)))\n        (cryptol:/Parameters/Fp_6.1\n           (cryptol:fp6_reduce_mod_p#8179 x,cryptol:fp6_reduce_mod_p#8179 y)))",
     "type": "property"
   },
@@ -7837,6 +8107,12 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n      x@3 = x@2 * x@2\n    }\n in (x : (x@2 * x@3))\n-> (y : x@3)\n-> let { x@4 = cryptol:/implementation/Pairing/line_add_imp x y\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 3 x@2)\n         (Cryptol.PEqSeq (Cryptol.TCNum 3) x@2\n            (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer\n               Cryptol.PEqInteger))\n         (cryptol:/implementation/Field/fp6_abs\n            (cryptol:/implementation/Field/fp6_rep x@4))\n         x@4)",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (p1 : (x@2 * x@2 * x@2))\n-> (booth_index : Prelude.Vec 64 Prelude.Bool)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/implementation/CurveOperation/POINTonE2_invariant\n           (cryptol:booth'#7416 (cryptol:precomputed_table#7405 p1)\n              booth_index))\n        Prelude.True)",
     "type": "property"
   },
@@ -7844,6 +8120,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (x\n       : Prelude.Vec 3\n           (Prelude.Vec 2 (Prelude.Vec 6 (Prelude.Vec 64 Prelude.Bool))))\n-> Prelude.EqTrue\n     (Cryptol.ecEq (Prelude.Vec 3 x@2)\n        (Cryptol.PEqSeq (Cryptol.TCNum 3) x@2\n           (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer\n              Cryptol.PEqInteger))\n        (cryptol:redc_mont_fp6#8155 (cryptol:fp6_abs_nom#8127 x))\n        (cryptol:/implementation/Field/fp6_abs x))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (x : (x@2 * x@2 * x@2))\n-> let { x@3 = cryptol:/implementation/Pairing/line_double_imp x\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 3 x@2)\n         (Cryptol.PEqSeq (Cryptol.TCNum 3) x@2\n            (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer\n               Cryptol.PEqInteger))\n         (cryptol:/implementation/Field/fp6_abs\n            (cryptol:/implementation/Field/fp6_rep x@3))\n         x@3)",
     "type": "property"
   },
   {
@@ -7898,6 +8180,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (x : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n        (cryptol:/implementation/Fp12/nest x@2 cryptol:/Frobenius/fp2_frobenius\n           x\n           (Prelude.bvNat 64 3))\n        (cryptol:/Frobenius/fp2_frobenius\n           (cryptol:/Frobenius/fp2_frobenius\n              (cryptol:/Frobenius/fp2_frobenius x))))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 2 Prelude.Integer\n    }\n in (x : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@2 (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n        (cryptol:/implementation/Pairing/lshift_fp2 x (Prelude.bvNat 64 2))\n        (cryptol:/FieldExtras/mul_by_4 x@2 cryptol:/Parameters/Fp_2 x))",
     "type": "property"
   },
   {
@@ -8155,7 +8443,25 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 64 Prelude.Bool\n      x@3 = Prelude.Vec 6 x@2\n      x@4 = Prelude.Vec 2 x@3\n      x@5 = Prelude.Vec 3 x@4\n      x@6 = Prelude.Vec 2 x@5\n    }\n in (x : x@6)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@6\n        (Cryptol.PEqVec 2 x@5\n           (Cryptol.PEqVec 3 x@4\n              (Cryptol.PEqVec 2 x@3\n                 (Cryptol.PEqVec 6 x@2 (Cryptol.PEqWord 64)))))\n        [Prelude.at 2 x@5 x 0, Prelude.at 2 x@5 x 1]\n        x)",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 64 Prelude.Bool\n      x@3 = Prelude.Vec 6 x@2\n      x@4 = Prelude.Vec 2 x@3\n      x@5 = Prelude.Vec 3 x@4\n      x@6 = Prelude.Vec 2 x@5\n    }\n in (x : x@6)\n-> let { x@7 = Prelude.at 2 x@5 x 1\n         x@8 = Prelude.at 2 x@5 x 0\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@6\n         (Cryptol.PEqVec 2 x@5\n            (Cryptol.PEqVec 3 x@4\n               (Cryptol.PEqVec 2 x@3\n                  (Cryptol.PEqVec 6 x@2 (Cryptol.PEqWord 64)))))\n         [ [ Prelude.at 3 x@4 x@8 0\n         , Prelude.at 3 x@4 x@8 1\n         , Prelude.at 3 x@4 x@8 2 ]\n         , [ Prelude.at 3 x@4 x@7 0\n         , Prelude.at 3 x@4 x@7 1\n         , Prelude.at 3 x@4 x@7 2 ] ]\n         x)",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 64 Prelude.Bool\n      x@3 = Prelude.Vec 6 x@2\n      x@4 = Prelude.Vec 2 x@3\n      x@5 = Prelude.Vec 3 x@4\n    }\n in (a : x@5)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@5\n        (Cryptol.PEqSeq (Cryptol.TCNum 3) x@4\n           (Cryptol.PEqSeq (Cryptol.TCNum 2) x@3\n              (Cryptol.PEqSeq (Cryptol.TCNum 6) x@2\n                 (Cryptol.PEqSeqBool (Cryptol.TCNum 64)))))\n        (cryptol:/implementation/Field/fp6_rep\n           (cryptol:/Parameters/Fp_6.2.2.2.2.2.2.2.2.2.2.1\n              (cryptol:/implementation/Field/fp6_abs a)))\n        (cryptol:fp6_rep_nom#8125\n           (cryptol:redc_mont_fp6#8155\n              (cryptol:/implementation/Fp12/sqr_fp6_imp\n                 (cryptol:fp6_abs_nom#8127 a)))))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 64 Prelude.Bool\n      x@3 = Prelude.Vec 6 x@2\n      x@4 = Prelude.Vec 2 x@3\n      x@5 = Prelude.Vec 3 x@4\n    }\n in (x : x@5)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@5\n        (Cryptol.PEqVec 3 x@4\n           (Cryptol.PEqVec 2 x@3 (Cryptol.PEqVec 6 x@2 (Cryptol.PEqWord 64))))\n        [Prelude.at 3 x@4 x 0, Prelude.at 3 x@4 x 1, Prelude.at 3 x@4 x 2]\n        x)",
     "type": "property"
   },
   {
@@ -8245,6 +8551,18 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 64 Prelude.Bool\n      x@3 = Prelude.bvNat 64 0\n      x@4 = [x@3, x@3, x@3, x@3, x@3, x@3]\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 2 Prelude.Integer)\n         (Cryptol.PEqVec 2 Prelude.Integer Cryptol.PEqInteger)\n         (cryptol:/implementation/Field/fp2_abs [x@4, x@4])\n         (Prelude.replicate 2 Prelude.Integer (Prelude.natToInt 0)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 64 Prelude.Bool\n      x@3 = Prelude.bvNat 64 0\n      x@4 = [x@3, x@3, x@3, x@3, x@3, x@3]\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n         (cryptol:/implementation/Field/fp2_invariant [x@4, x@4])\n         Prelude.True)",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 64 Prelude.Bool\n      x@3 = Prelude.natToInt 0\n      x@4 = Prelude.Vec 2 Prelude.Integer\n      x@5 = Prelude.Vec 6 x@2\n      x@6 = Prelude.Vec 2 x@5\n    }\n in (x : Prelude.Vec 2 x@4)\n-> let { x@7 = Prelude.join 2 2 x@5\n                 (Prelude.map x@4 x@6\n                    (\\(y : x@4) -> cryptol:/implementation/Field/fp2_rep y)\n                    2\n                    x)\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq x@6\n         (Cryptol.PEqVec 2 x@5 (Cryptol.PEqVec 6 x@2 (Cryptol.PEqWord 64)))\n         [Prelude.at 4 x@5 x@7 0, Prelude.at 4 x@5 x@7 1]\n         (cryptol:/implementation/Field/fp2_rep\n            (Prelude.ite x@4 (Prelude.intLe x@3 x@3)\n               (Prelude.at 2 x@4 x (Prelude.intToNat x@3))\n               (Prelude.at 2 x@4 x 0))))",
     "type": "property"
   },
@@ -8252,6 +8570,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 64 Prelude.Bool\n      x@3 = Prelude.natToInt 0\n      x@4 = Prelude.Vec 2 Prelude.Integer\n      x@5 = Prelude.Vec 6 x@2\n      x@6 = Prelude.Vec 2 x@5\n    }\n in (x : Prelude.Vec 3 x@4)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@6\n        (Cryptol.PEqVec 2 x@5 (Cryptol.PEqVec 6 x@2 (Cryptol.PEqWord 64)))\n        (Prelude.at 3 x@6 (cryptol:fp6_rep_nom#8125 x) 2)\n        (cryptol:fp2_rep_nom#8126\n           (Prelude.ite x@4 (Prelude.intLe x@3 x@3)\n              (Prelude.at 3 x@4 x (Prelude.intToNat x@3))\n              (Prelude.at 3 x@4 x 0))))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n      x@2 = Prelude.Vec 64 Prelude.Bool\n      x@3 = Prelude.natToInt 0\n      x@4 = Prelude.Vec 6 x@2\n    }\n in Prelude.EqTrue\n      (Cryptol.ecEq (Prelude.Vec 2 x@4)\n         (Cryptol.PEqVec 2 x@4 (Cryptol.PEqVec 6 x@2 (Cryptol.PEqWord 64)))\n         (cryptol:/implementation/Field/fp2_rep [x@3, x@3])\n         (Prelude.replicate 2 x@4\n            (Prelude.replicate 6 x@2 (Prelude.bvNat 64 0))))",
     "type": "property"
   },
   {
@@ -8491,6 +8815,12 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n    }\n in (x : Prelude.Vec 3 (Prelude.Vec 2 Prelude.Integer))\n-> (y : (Prelude.Integer * Prelude.Integer))\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/implementation/Field/fp6_invariant\n           (cryptol:/implementation/Field/fp6_rep\n              (cryptol:/implementation/Pairing/line_by_Px2 x y)))\n        Prelude.True)",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Nat\n      -> sort 0\n      -> sort 0\n    }\n in (x : Prelude.Vec 3 (Prelude.Vec 2 Prelude.Integer))\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/Parameters/Fp_6.2.2.2.2.2.2.1\n           (cryptol:/implementation/Fp12/inverse_fp6_imp x))\n        Prelude.True)",
     "type": "property"
   },
@@ -8540,6 +8870,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = cryptol:/Parameters/Fp_2\n      x@3 = x@2.2.2.2\n    }\n in (x : x@1)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@1\n        (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger)\n        (x@2.1 (x@3.1,x))\n        (x@3.2.2.2.2.2.2.1 x))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = cryptol:/Parameters/Fp_2\n      x@3 = x@2.2.2.2.2.2.2.2\n      x@4 = x@3.2.2.2\n    }\n in (y : x@1)\n-> (z : x@1)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@1\n        (Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger)\n        (x@4.2 (x@4.2 (x@4.1 (x@2.1 (y,z)),x@4.1 y),x@4.1 z))\n        (x@3.1 (x@2.1 (z,z),y)))",
     "type": "property"
   },
   {
@@ -8893,6 +9229,12 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n      x@4 = x@1 * x@2\n    }\n in (p1 : x@4)\n-> (p2 : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@4\n        (Cryptol.PEqPair x@1 x@2 x@3 (Cryptol.PEqPair x@1 x@1 x@3 x@3))\n        (cryptol:/implementation/Pairing/point_add_affine_alt x@1\n           cryptol:/Parameters/Fp_2\n           p1\n           p2)\n        (cryptol:point_add_affine_alt_fp2#8468 p1 p2))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n      x@4 = x@1 * x@2\n    }\n in (p1 : x@4)\n-> (p2 : x@4)\n-> (a4 : x@1)\n-> (c : Prelude.Bool)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@4\n        (Cryptol.PEqPair x@1 x@2 x@3 (Cryptol.PEqPair x@1 x@1 x@3 x@3))\n        (cryptol:/implementation/CurveOperation/point_dadd x@1\n           cryptol:/Parameters/Fp_2\n           p1\n           p2\n           a4\n           c)\n        (cryptol:point_dadd_fp2#7401 p1 p2 a4 c))",
     "type": "property"
   },
@@ -9031,6 +9373,24 @@
   {
     "status": "verified",
     "loc": "unknown",
+    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = cryptol:/Parameters/Fp_2.2.2.2.1\n      x@4 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n    }\n in (P : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/ShortWeierstrassCurve/is_point_O x@1 cryptol:/Parameters/E' P)\n        (Cryptol.ecEq x@2 (Cryptol.PEqPair x@1 x@1 x@4 x@4) P (x@3,x@3)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n      x@3 = x@2\n      -> x@1\n      x@4 = x@1\n      -> x@1\n      x@5 = cryptol:/Parameters/Fp_2\n      x@6 = Cryptol.PEqSeq (Cryptol.TCNum 2) Prelude.Integer Cryptol.PEqInteger\n      x@7 = x@1 * x@2\n    }\n in (P : x@7)\n-> (Q : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq x@7\n        (Cryptol.PEqPair x@1 x@2 x@6 (Cryptol.PEqPair x@1 x@1 x@6 x@6))\n        (cryptol:/implementation/Pairing/point_add_affine_alt x@1 x@5 P Q)\n        (Prelude.ite x@7 (Cryptol.ecEq x@1 x@6 P.2.2 x@5.2.2.2.1)\n           (cryptol:/implementation/CryptolHelpers/apply\n              (x@3 * x@3 * x@1 * x@1 * x@4 * (x@2\n                                              -> Prelude.Bool) * (x@1\n                                                                  -> Prelude.Bool) * x@3 * x@4 * x@4 * x@4 * x@3)\n              (x@7\n               -> x@2\n               -> x@7)\n              (cryptol:/implementation/Pairing/point_add_affine_alt x@1)\n              x@5\n              P\n              Q)\n           (cryptol:/implementation/CurveOperation/point_add_affine x@1 x@5 P\n              Q)))",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n      x@2 = x@1 * x@1\n    }\n in (x : (x@1 * x@2))\n-> (y : x@2)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/implementation/Field/fp6_invariant\n           (cryptol:/implementation/Field/fp6_rep\n              (cryptol:/implementation/Pairing/line_add_imp x y)))\n        Prelude.True)",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
     "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n    }\n in (P : (x@1 * x@1 * x@1))\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:AffinePoint_Fp_2_invariant#7704\n           (cryptol:/ShortWeierstrassCurve/affinify x@1 cryptol:/Parameters/E'\n              P))\n        Prelude.True)",
     "type": "property"
   },
@@ -9086,6 +9446,12 @@
     "status": "verified",
     "loc": "unknown",
     "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n    }\n in (u : x@1)\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/ShortWeierstrassCurve/is_point_projective x@1\n           cryptol:/HashToCurveE2/Isogenous_Curve\n           (cryptol:/implementation/HashToG2/map_to_isogenous_E2_impl u))\n        Prelude.True)",
+    "type": "property"
+  },
+  {
+    "status": "verified",
+    "loc": "unknown",
+    "term": "let { x@1 = Prelude.Vec 2 Prelude.Integer\n    }\n in (x : (x@1 * x@1 * x@1))\n-> Prelude.EqTrue\n     (Cryptol.ecEq Prelude.Bool Cryptol.PEqBit\n        (cryptol:/implementation/Field/fp6_invariant\n           (cryptol:/implementation/Field/fp6_rep\n              (cryptol:/implementation/Pairing/line_double_imp x)))\n        Prelude.True)",
     "type": "property"
   },
   {
