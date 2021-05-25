@@ -59,7 +59,7 @@ parameter
     point_to_signature: EC::AffinePoint t_F -> [signature_len]
 
     pubkey_to_point: [pubkey_len] -> Maybe (EC::AffinePoint t_F') // can fail
-    signature_to_point: [signature_len] -> Maybe (EC::AffinePoint t_F) // can fail
+    //signature_to_point: [signature_len] -> Maybe (EC::AffinePoint t_F) // can fail
 
     pubkey_subgroup_check: EC::AffinePoint t_F' -> Bool
     signature_subgroup_check: EC::AffinePoint t_F -> Bool
@@ -74,7 +74,9 @@ type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + 
 
 // 2.4 SkToPk
 
-sk_to_pk: [256] -> [pubkey_len]
+// TODO: This was 256, but the BLST sk_to_pk spec drops the first bit, so I
+// made it 255 to match.  Why do the parameter lengths differ?
+sk_to_pk: [255] -> [pubkey_len]
 sk_to_pk sk = point_to_pubkey (EC::mult other_curve sk P)
 
 
@@ -91,7 +93,8 @@ KeyValidate pk = ret where
 
 // 2.6 CoreSign
 
-CoreSign: {msg_len} (Hashable msg_len) => ([256], [msg_len][8]) -> [signature_len]
+// TODO: Same note about dropped first bit...
+CoreSign: {msg_len} (Hashable msg_len) => ([255], [msg_len][8]) -> [signature_len]
 CoreSign (sk, message) = signature where
     Q = hash_to_point message
     R = EC::mult main_curve sk Q
@@ -99,6 +102,7 @@ CoreSign (sk, message) = signature where
 
 // 2.7 CoreVerify
 
+/*
 CoreVerify: {msg_len} (Hashable msg_len) => ([pubkey_len], [msg_len][8], [signature_len]) -> Bool
 /* possible alternate definition
 CoreVerify(PK, message, signature) = maybe False step3 (signature_to_point signature) where // lines 1, 2
@@ -121,3 +125,4 @@ CoreVerify(PK, message, signature) =
                               Q = hash_to_point message // line
                               C1 = pairing (Q, xP) // line 7
                               C2 = pairing (R, P)))) // line 8
+                              */

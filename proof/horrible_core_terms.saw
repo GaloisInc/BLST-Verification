@@ -1,0 +1,497 @@
+let at_48_cores =
+  [ parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 0"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 1"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 2"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 3"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 4"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 5"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 6"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 7"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 8"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 9"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 10"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 11"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 12"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 13"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 14"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 15"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 16"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 17"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 18"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 19"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 20"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 21"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 22"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 23"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 24"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 25"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 26"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 27"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 28"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 29"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 30"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 31"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 32"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 33"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 34"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 35"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 36"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 37"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 38"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 39"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 40"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 41"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 42"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 43"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 44"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 45"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 46"
+  , parse_core "\\(v:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) v 47" ];
+
+let at_48_0 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 0";
+let at_48_1 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 1";
+let at_48_2 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 2";
+let at_48_3 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 3";
+let at_48_4 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 4";
+let at_48_5 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 5";
+let at_48_6 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 6";
+let at_48_7 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 7";
+let at_48_8 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 8";
+let at_48_9 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 9";
+let at_48_10 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 10";
+let at_48_11 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 11";
+let at_48_12 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 12";
+let at_48_13 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 13";
+let at_48_14 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 14";
+let at_48_15 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 15";
+let at_48_16 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 16";
+let at_48_17 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 17";
+let at_48_18 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 18";
+let at_48_19 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 19";
+let at_48_20 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 20";
+let at_48_21 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 21";
+let at_48_22 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 22";
+let at_48_23 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 23";
+let at_48_24 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 24";
+let at_48_25 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 25";
+let at_48_26 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 26";
+let at_48_27 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 27";
+let at_48_28 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 28";
+let at_48_29 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 29";
+let at_48_30 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 30";
+let at_48_31 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 31";
+let at_48_32 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 32";
+let at_48_33 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 33";
+let at_48_34 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 34";
+let at_48_35 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 35";
+let at_48_36 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 36";
+let at_48_37 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 37";
+let at_48_38 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 38";
+let at_48_39 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 39";
+let at_48_40 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 40";
+let at_48_41 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 41";
+let at_48_42 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 42";
+let at_48_43 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 43";
+let at_48_44 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 44";
+let at_48_45 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 45";
+let at_48_46 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 46";
+let at_48_47 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 47";
+
+unrip_thm_48 <- really_prove_cryptol (rewrite (cryptol_ss())
+  {{ \(v : [48][8]) ->
+    [ at_48_0 v
+    , at_48_1 v
+    , at_48_2 v
+    , at_48_3 v
+    , at_48_4 v
+    , at_48_5 v
+    , at_48_6 v
+    , at_48_7 v
+    , at_48_8 v
+    , at_48_9 v
+    , at_48_10 v
+    , at_48_11 v
+    , at_48_12 v
+    , at_48_13 v
+    , at_48_14 v
+    , at_48_15 v
+    , at_48_16 v
+    , at_48_17 v
+    , at_48_18 v
+    , at_48_19 v
+    , at_48_20 v
+    , at_48_21 v
+    , at_48_22 v
+    , at_48_23 v
+    , at_48_24 v
+    , at_48_25 v
+    , at_48_26 v
+    , at_48_27 v
+    , at_48_28 v
+    , at_48_29 v
+    , at_48_30 v
+    , at_48_31 v
+    , at_48_32 v
+    , at_48_33 v
+    , at_48_34 v
+    , at_48_35 v
+    , at_48_36 v
+    , at_48_37 v
+    , at_48_38 v
+    , at_48_39 v
+    , at_48_40 v
+    , at_48_41 v
+    , at_48_42 v
+    , at_48_43 v
+    , at_48_44 v
+    , at_48_45 v
+    , at_48_46 v
+    , at_48_47 v
+    ] == v }}) [];
+
+let at_96_cores =
+  [ parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 0"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 1"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 2"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 3"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 4"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 5"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 6"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 7"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 8"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 9"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 10"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 11"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 12"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 13"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 14"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 15"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 16"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 17"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 18"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 19"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 20"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 21"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 22"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 23"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 24"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 25"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 26"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 27"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 28"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 29"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 30"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 31"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 32"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 33"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 34"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 35"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 36"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 37"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 38"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 39"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 40"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 41"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 42"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 43"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 44"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 45"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 46"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 47"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 48"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 49"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 50"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 51"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 52"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 53"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 54"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 55"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 56"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 57"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 58"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 59"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 60"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 61"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 62"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 63"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 64"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 65"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 66"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 67"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 68"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 69"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 70"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 71"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 72"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 73"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 74"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 75"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 76"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 77"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 78"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 79"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 80"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 81"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 82"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 83"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 84"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 85"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 86"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 87"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 88"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 89"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 90"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 91"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 92"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 93"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 94"
+  , parse_core "\\(v:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) v 95" ];
+
+let at_96_0 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 0";
+let at_96_1 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 1";
+let at_96_2 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 2";
+let at_96_3 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 3";
+let at_96_4 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 4";
+let at_96_5 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 5";
+let at_96_6 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 6";
+let at_96_7 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 7";
+let at_96_8 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 8";
+let at_96_9 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 9";
+let at_96_10 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 10";
+let at_96_11 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 11";
+let at_96_12 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 12";
+let at_96_13 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 13";
+let at_96_14 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 14";
+let at_96_15 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 15";
+let at_96_16 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 16";
+let at_96_17 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 17";
+let at_96_18 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 18";
+let at_96_19 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 19";
+let at_96_20 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 20";
+let at_96_21 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 21";
+let at_96_22 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 22";
+let at_96_23 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 23";
+let at_96_24 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 24";
+let at_96_25 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 25";
+let at_96_26 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 26";
+let at_96_27 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 27";
+let at_96_28 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 28";
+let at_96_29 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 29";
+let at_96_30 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 30";
+let at_96_31 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 31";
+let at_96_32 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 32";
+let at_96_33 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 33";
+let at_96_34 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 34";
+let at_96_35 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 35";
+let at_96_36 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 36";
+let at_96_37 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 37";
+let at_96_38 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 38";
+let at_96_39 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 39";
+let at_96_40 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 40";
+let at_96_41 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 41";
+let at_96_42 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 42";
+let at_96_43 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 43";
+let at_96_44 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 44";
+let at_96_45 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 45";
+let at_96_46 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 46";
+let at_96_47 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 47";
+let at_96_48 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 48";
+let at_96_49 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 49";
+let at_96_50 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 50";
+let at_96_51 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 51";
+let at_96_52 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 52";
+let at_96_53 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 53";
+let at_96_54 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 54";
+let at_96_55 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 55";
+let at_96_56 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 56";
+let at_96_57 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 57";
+let at_96_58 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 58";
+let at_96_59 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 59";
+let at_96_60 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 60";
+let at_96_61 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 61";
+let at_96_62 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 62";
+let at_96_63 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 63";
+let at_96_64 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 64";
+let at_96_65 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 65";
+let at_96_66 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 66";
+let at_96_67 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 67";
+let at_96_68 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 68";
+let at_96_69 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 69";
+let at_96_70 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 70";
+let at_96_71 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 71";
+let at_96_72 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 72";
+let at_96_73 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 73";
+let at_96_74 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 74";
+let at_96_75 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 75";
+let at_96_76 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 76";
+let at_96_77 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 77";
+let at_96_78 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 78";
+let at_96_79 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 79";
+let at_96_80 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 80";
+let at_96_81 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 81";
+let at_96_82 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 82";
+let at_96_83 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 83";
+let at_96_84 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 84";
+let at_96_85 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 85";
+let at_96_86 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 86";
+let at_96_87 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 87";
+let at_96_88 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 88";
+let at_96_89 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 89";
+let at_96_90 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 90";
+let at_96_91 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 91";
+let at_96_92 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 92";
+let at_96_93 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 93";
+let at_96_94 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 94";
+let at_96_95 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 95";
+
+unrip_thm_96 <- really_prove_cryptol (rewrite (cryptol_ss())
+  {{ \(v : [96][8]) ->
+    [ at_96_0 v
+    , at_96_1 v
+    , at_96_2 v
+    , at_96_3 v
+    , at_96_4 v
+    , at_96_5 v
+    , at_96_6 v
+    , at_96_7 v
+    , at_96_8 v
+    , at_96_9 v
+    , at_96_10 v
+    , at_96_11 v
+    , at_96_12 v
+    , at_96_13 v
+    , at_96_14 v
+    , at_96_15 v
+    , at_96_16 v
+    , at_96_17 v
+    , at_96_18 v
+    , at_96_19 v
+    , at_96_20 v
+    , at_96_21 v
+    , at_96_22 v
+    , at_96_23 v
+    , at_96_24 v
+    , at_96_25 v
+    , at_96_26 v
+    , at_96_27 v
+    , at_96_28 v
+    , at_96_29 v
+    , at_96_30 v
+    , at_96_31 v
+    , at_96_32 v
+    , at_96_33 v
+    , at_96_34 v
+    , at_96_35 v
+    , at_96_36 v
+    , at_96_37 v
+    , at_96_38 v
+    , at_96_39 v
+    , at_96_40 v
+    , at_96_41 v
+    , at_96_42 v
+    , at_96_43 v
+    , at_96_44 v
+    , at_96_45 v
+    , at_96_46 v
+    , at_96_47 v
+    , at_96_48 v
+    , at_96_49 v
+    , at_96_50 v
+    , at_96_51 v
+    , at_96_52 v
+    , at_96_53 v
+    , at_96_54 v
+    , at_96_55 v
+    , at_96_56 v
+    , at_96_57 v
+    , at_96_58 v
+    , at_96_59 v
+    , at_96_60 v
+    , at_96_61 v
+    , at_96_62 v
+    , at_96_63 v
+    , at_96_64 v
+    , at_96_65 v
+    , at_96_66 v
+    , at_96_67 v
+    , at_96_68 v
+    , at_96_69 v
+    , at_96_70 v
+    , at_96_71 v
+    , at_96_72 v
+    , at_96_73 v
+    , at_96_74 v
+    , at_96_75 v
+    , at_96_76 v
+    , at_96_77 v
+    , at_96_78 v
+    , at_96_79 v
+    , at_96_80 v
+    , at_96_81 v
+    , at_96_82 v
+    , at_96_83 v
+    , at_96_84 v
+    , at_96_85 v
+    , at_96_86 v
+    , at_96_87 v
+    , at_96_88 v
+    , at_96_89 v
+    , at_96_90 v
+    , at_96_91 v
+    , at_96_92 v
+    , at_96_93 v
+    , at_96_94 v
+    , at_96_95 v
+    ] == v }}) [];
+
+hoist_unrip_48_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+  {{ \b (x1 : [48][8]) (x2 : [48][8]) ->
+    [ if b then at_48_0 x1 else at_48_0 x2
+    , if b then at_48_1 x1 else at_48_1 x2
+    , if b then at_48_2 x1 else at_48_2 x2
+    , if b then at_48_3 x1 else at_48_3 x2
+    , if b then at_48_4 x1 else at_48_4 x2
+    , if b then at_48_5 x1 else at_48_5 x2
+    , if b then at_48_6 x1 else at_48_6 x2
+    , if b then at_48_7 x1 else at_48_7 x2
+    , if b then at_48_8 x1 else at_48_8 x2
+    , if b then at_48_9 x1 else at_48_9 x2
+    , if b then at_48_10 x1 else at_48_10 x2
+    , if b then at_48_11 x1 else at_48_11 x2
+    , if b then at_48_12 x1 else at_48_12 x2
+    , if b then at_48_13 x1 else at_48_13 x2
+    , if b then at_48_14 x1 else at_48_14 x2
+    , if b then at_48_15 x1 else at_48_15 x2
+    , if b then at_48_16 x1 else at_48_16 x2
+    , if b then at_48_17 x1 else at_48_17 x2
+    , if b then at_48_18 x1 else at_48_18 x2
+    , if b then at_48_19 x1 else at_48_19 x2
+    , if b then at_48_20 x1 else at_48_20 x2
+    , if b then at_48_21 x1 else at_48_21 x2
+    , if b then at_48_22 x1 else at_48_22 x2
+    , if b then at_48_23 x1 else at_48_23 x2
+    , if b then at_48_24 x1 else at_48_24 x2
+    , if b then at_48_25 x1 else at_48_25 x2
+    , if b then at_48_26 x1 else at_48_26 x2
+    , if b then at_48_27 x1 else at_48_27 x2
+    , if b then at_48_28 x1 else at_48_28 x2
+    , if b then at_48_29 x1 else at_48_29 x2
+    , if b then at_48_30 x1 else at_48_30 x2
+    , if b then at_48_31 x1 else at_48_31 x2
+    , if b then at_48_32 x1 else at_48_32 x2
+    , if b then at_48_33 x1 else at_48_33 x2
+    , if b then at_48_34 x1 else at_48_34 x2
+    , if b then at_48_35 x1 else at_48_35 x2
+    , if b then at_48_36 x1 else at_48_36 x2
+    , if b then at_48_37 x1 else at_48_37 x2
+    , if b then at_48_38 x1 else at_48_38 x2
+    , if b then at_48_39 x1 else at_48_39 x2
+    , if b then at_48_40 x1 else at_48_40 x2
+    , if b then at_48_41 x1 else at_48_41 x2
+    , if b then at_48_42 x1 else at_48_42 x2
+    , if b then at_48_43 x1 else at_48_43 x2
+    , if b then at_48_44 x1 else at_48_44 x2
+    , if b then at_48_45 x1 else at_48_45 x2
+    , if b then at_48_46 x1 else at_48_46 x2
+    , if b then at_48_47 x1 else at_48_47 x2
+    ] == (if b then x1 else x2) }}) [];
