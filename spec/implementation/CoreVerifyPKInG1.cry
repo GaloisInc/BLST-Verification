@@ -1,0 +1,50 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+module implementation::CoreVerifyPKInG1 where
+
+import Parameters (Fp_12, t_Fp, t_Fp_2, BP, E')
+import ShortWeierstrassCurve (AffinePoint, affinify)
+import implementation::PairingImpl (miller_loop_opt)
+import implementation::HashToG2 (hash_to_curve_E2_opt_impl)
+import Pairing (final_exponentiation_impl)
+import implementation::PairingImpl (miller_loop_opt_checked)
+import ExpandMessage
+import Frobenius (fp12_conjugate)
+import implementation::CurveOperation (POINTonE1_abs')
+
+// the chosen generator of group G1
+G1 = ([0x5cb38790fd530c16, 0x7817fc679976fff5, 0x154f95c7143ba1c1,
+      0xf0ae6acdf3d0e747, 0xedce6ecc21dbf440, 0x120177419e0bfb75],
+     [0xbaac93d50ce72271, 0x8c22631a7918fd8e, 0xdd595f13570725ce,
+      0x51ac582950405194, 0x0e1c8c3fad0059c0, 0x0bbc3efc5008a26a],
+     [0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba,
+      0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493])
+
+// the chosen generator of group G2
+G2 = ([[0xf5f28fa202940a10, 0xb3f5fb2687b4961a, 0xa1a893b53e2ae580,
+       0x9894999d1a3caee9, 0x6f67b7631863366b, 0x058191924350bcd7],
+      [0xa5a9c0759e23f606, 0xaaa0c59dbccd60c3, 0x3bb17e18e2867806,
+       0x1b1ab6cc8541b367, 0xc2b6ed0ef2158547, 0x11922a097360edf3]],
+     [[0x4c730af860494c4a, 0x597cfa1f5e369c5a, 0xe7e6856caa0a635a,
+       0xbbefb5e96e0d495f, 0x07d3a975f0ef25a2, 0x0083fd8e7e80dae5],
+      [0xadc0fc92df64b05d, 0x18aa270a2b1461dc, 0x86adac6a3be4eba0,
+       0x79495c4ec93da33a, 0xe7175850a43ccaed, 0x0b2bc2a163de1bf2]],
+     [[0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba,
+       0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493],
+      [0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+      0x0000000000000000, 0x0000000000000000, 0x0000000000000000]])
+
+core_verify_pk_in_g1_impl : {msg_len,dst_len,aug_len}
+  (fin msg_len, fin dst_len, fin aug_len
+  , Expandable (msg_len+aug_len) dst_len
+  , dst_len <= 255) =>
+  AffinePoint t_Fp -> AffinePoint t_Fp_2 -> [msg_len][8] -> [dst_len][8] -> [aug_len][8] -> Bool
+
+core_verify_pk_in_g1_impl pk sig msg dst aug = Fp_12.is_equal(gt, Fp_12.field_unit) where
+    Q = affinify E' (hash_to_curve_E2_opt_impl (aug#msg, dst))
+    gtPQ = miller_loop_opt_checked pk Q
+    gtSig = fp12_conjugate (miller_loop_opt_checked BP sig)
+    gt = final_exponentiation_impl (Fp_12.mul (gtSig, gtPQ))

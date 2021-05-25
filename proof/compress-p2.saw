@@ -54,7 +54,7 @@ let POINTonE2_from_Jacobian_spec = do {
 };
 
 let POINTonE2_from_Jacobian_alias_spec = do {
-  (out, out_ptr) <- ptr_to_fresh "in" POINTonE2_type;
+  (out, out_ptr) <- ptr_to_fresh "out" POINTonE2_type;
 
   crucible_precond {{ POINTonE2_invariant out }};
   crucible_precond {{ is_point_projective E' (POINTonE2_abs out) }}; // on the curve

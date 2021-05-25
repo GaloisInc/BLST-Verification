@@ -6,13 +6,14 @@
 import "../spec/Parameters.cry";
 import "../spec/implementation/Field.cry";
 import "../spec/ShortWeierstrassCurve.cry";
+import "../spec/implementation/CurveOperation.cry";
 
-misc_rules <- for [
-  {{ \(x:[6][64]) -> ([x1,x2,x3,x4,x5,x6] == x where [x1,x2,x3,x4,x5,x6] = x) }}
-, {{ \(x1:[64]) (x2:[64]) (x3:[64]) (x4:[64]) (x5:[64]) (x6:[64]) (y1:[64]) (y2:[64]) (y3:[64]) (y4:[64]) (y5:[64]) (y6:[64]) c -> [if c then x1 else y1, if c then x2 else y2, if c then x3 else y3, if c then x4 else y4, if c then x5 else y5, if c then x6 else y6] == if c then [x1,x2,x3,x4,x5,x6] else [y1,y2,y3,y4,y5,y6] }}
-, {{ \(a:[2]Integer) -> ([x,y] == a where [x,y] = a) }}
-, {{ \(a:[2][6][64]) -> ([x,y] == a where [x,y] = a) }}
-, {{ \(a:[6][64]) -> ([a1,a2,a3,a4,a5,a6] == a where [a1,a2,a3,a4,a5,a6] = a) }}
+// a bunch of rules to move ite terms up
+hoist_ifs_rules_ <- for [
+  {{ \(x1:[64]) x2 x3 x4 x5 x6 y1 y2 y3 y4 y5 y6 c -> [if c then x1 else y1, if c then x2 else y2, if c then x3 else y3, if c then x4 else y4, if c then x5 else y5, if c then x6 else y6] == if c then [x1,x2,x3,x4,x5,x6] else [y1,y2,y3,y4,y5,y6] }}
+, {{ \(x1:[64]) x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 c -> [[if c then x1 else y1, if c then x2 else y2, if c then x3 else y3, if c then x4 else y4, if c then x5 else y5, if c then x6 else y6],[if c then x7 else y7, if c then x8 else y8, if c then x9 else y9, if c then x10 else y10, if c then x11 else y11, if c then x12 else y12]] == if c then [[x1,x2,x3,x4,x5,x6],[x7,x8,x9,x10,x11,x12]] else [[y1,y2,y3,y4,y5,y6],[y7,y8,y9,y10,y11,y12]] }}
+, {{ \c (x:[6][64]) y a -> [if c then x else y, a] == if c then [x,a] else [y,a] }}
+, {{ \c (x:[6][64]) y a -> [a, if c then x else y] == if c then [a,x] else [a,y] }}
 , {{
       \(x:t_Fp_2) y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 c -> (
          [[z1, z2, z3, z4, z5, z6], [z7, z8, z9, z10, z11, z12]] == (if c then [[y1, y2, y3, y4, y5, y6], [y7, y8, y9, y10, y11, y12]] else (fp2_rep x)) where
@@ -23,6 +24,21 @@ misc_rules <- for [
             [z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12] = z
         )
       }}
+, {{ \c (x:[12][64]) y -> ([[a1,a2,a3,a4,a5,a6],[a7,a8,a9,a10,a11,a12]] == if c then [[x1,x2,x3,x4,x5,x6],[x7,x8,x9,x10,x11,x12]] else [[y1,y2,y3,y4,y5,y6],[y7,y8,y9,y10,y11,y12]] where [a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12] = (if c then x else y); [x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12] = x; [y1,y2,y3,y4,y5,y6,y7,y8,y9,y10,y11,y12] = y) }}
+, {{ \c (x:[2][6][64]) y (a:[2][6][64]) (b:[2][6][64]) -> (a,b,if c then x else y) == if c then (a,b,x) else (a,b,y) }}
+, {{ \c x y -> POINTonE2_abs (if c then x else y) == if c then POINTonE2_abs x else POINTonE2_abs y }}
+, {{ \c x y -> is_point_projective E' (if c then x else y) == if c then is_point_projective E' x else is_point_projective E' y }}
+] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) (w4_unint_z3 ["POINTonE2_abs"]));
+// ] (\ eq -> custom_prove_cryptol eq w4);
+
+let hoist_ifs_rules = concat hoist_ifs_rules_ [fp2_abs_ite_thm, fp2_invariant_ite_thm, fp2_rep_ite_thm, fp_abs_ite_thm, fp_invariant_ite_thm, fp_rep_ite_thm];
+
+restitching_rules <- for [
+  {{ \(x:[6][64]) -> ([x1,x2,x3,x4,x5,x6] == x where [x1,x2,x3,x4,x5,x6] = x) }}
+, {{ \(x:[2][6][64]) -> ([x1,x2] == x where [x1,x2] = x) }}
+, {{ \(a:[2]Integer) -> ([x,y] == a where [x,y] = a) }}
+, {{ \(a:[2][6][64]) -> ([x,y] == a where [x,y] = a) }}
+, {{ \(a:[6][64]) -> ([a1,a2,a3,a4,a5,a6] == a where [a1,a2,a3,a4,a5,a6] = a) }}
 , {{
       \(x:t_Fp_2) -> (
          [[a1, a2, a3, a4, a5, a6], [b1, b2, b3, b4, b5, b6]] == fp2_rep x where
@@ -31,6 +47,6 @@ misc_rules <- for [
             [b1, b2, b3, b4, b5, b6] = b
         )
       }}
-, {{ \c (x:[6][64]) y a -> [if c then x else y, a] == if c then [x,a] else [y,a] }}
-, {{ \c (x:[6][64]) y a -> [a, if c then x else y] == if c then [a,x] else [a,y] }}
 ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
+
+let misc_rules = concat hoist_ifs_rules restitching_rules;

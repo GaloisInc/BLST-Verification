@@ -150,9 +150,16 @@ let vec_is_zero_2fp2_spec = do {
   crucible_return (crucible_term {{ if ((Fp_2.is_equal (fp2_abs (a@0), Fp_2.field_zero)) /\ (Fp_2.is_equal (fp2_abs (a@1), Fp_2.field_zero))) then 1 else (0:Limb) }});
   }; // TODO: is this specification okay?
 
+let vec_is_zero_10fp_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 10 vec384_type);
+  crucible_execute_func [a_ptr, crucible_term {{ (480:Size_t) }}]; // Non-portable
+  crucible_return (crucible_term {{ bool_to_limb (a == zero) }});
+  };
+
 // TODO: prove
 vec_is_zero_2fp_ov <- test "vec_is_zero" []  vec_is_zero_2fp_spec;
 vec_is_zero_2fp2_ov <- test "vec_is_zero" []  vec_is_zero_2fp2_spec;
+vec_is_zero_10fp_ov <- test "vec_is_zero" []  vec_is_zero_10fp_spec;
 
 // ... continuing with vec_is_equal
 
