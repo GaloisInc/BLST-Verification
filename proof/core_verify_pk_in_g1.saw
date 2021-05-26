@@ -12,9 +12,11 @@ let aug_len = 8;
 
 let blst_core_verify_pk_in_g1_spec msg_len dst_len aug_len = do {
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_struct "struct.POINTonE1_affine");
-  llvm_precond {{ POINTonE1_affine_invariant pk /\ pk != zero }};
+  llvm_precond {{ POINTonE1_affine_invariant pk /\ ~(is_point_O E (POINTonE1_affine_abs pk)) }};
+  // llvm_precond {{ POINTonE1_affine_invariant pk /\ pk != zero }};
   (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_struct "struct.POINTonE2_affine");
-  llvm_precond {{ POINTonE2_affine_invariant sig /\ sig != zero /\ is_point_affine E' (POINTonE2_affine_abs sig) }};
+  llvm_precond {{ POINTonE2_affine_invariant sig /\ ~(is_point_O E' (POINTonE2_affine_abs sig)) /\ is_point_affine E' (POINTonE2_affine_abs sig) }};
+  // llvm_precond {{ POINTonE2_affine_invariant sig /\ sig != zero /\ is_point_affine E' (POINTonE2_affine_abs sig) }};
   hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
   llvm_precond {{ hash_or_encode != zero }};
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
@@ -23,7 +25,7 @@ let blst_core_verify_pk_in_g1_spec msg_len dst_len aug_len = do {
   crucible_execute_func [pk_ptr, signature_ptr, crucible_term hash_or_encode, msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `dst_len : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}];
   // ret <- crucible_fresh_var "ret" (llvm_int 32);
   // crucible_return (crucible_term ret);
-  crucible_return (crucible_term {{ if core_verify_pk_in_g1_impl (POINTonE1_affine_abs pk) (POINTonE2_affine_abs sig) msg dst aug then (1:[32]) else zero }});
+  crucible_return (crucible_term {{ if core_verify_pk_in_g1_impl (POINTonE1_affine_abs pk) (POINTonE2_affine_abs sig) msg dst aug then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
 };
 
 // {{
@@ -44,9 +46,7 @@ hash_to_field_fp2_ovs <- for hash_to_field_nelems (verify_hash_to_field_fp2_for 
 Hash_to_G2_ov <- prove_Hash_to_G2_concrete msg_len dst_len aug_len hash_to_field_fp2_ovs;
 
 let overrides = foldr concat [
-  mul_fp12_ovs // fp12.saw TODO: needs fp12_invariant
-, vec_overrides
-, vec_fp2_overrides
+  mul_fp12_ovs // fp12.saw
 ]
 [
   Hash_to_G2_ov
@@ -57,131 +57,98 @@ let overrides = foldr concat [
 , conjugate_fp12_ov // fp12.saw
 , final_exp_alias_ov
 , vec_copy_2fp_ov
-, vec_copy_fp12_ov
+, vec_copy_POINTonE1_affine_ov
+, vec_copy_POINTonE2_affine_ov
+, vec_select_2Fp_ov
 , vec_is_zero_10fp_ov
+, vec_is_zero_2fp2_ov
+, vec_is_zero_2fp_ov
+, vec_is_equal_fp2_ov
 , POINTonE2_in_g2_ov // subgroup_check_g2.saw
 ];
 
 // Proofs
+rule_1 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x y c1 c2 a b c ->
+      final_exponentiation_impl
+         (Fp_12.mul
+            (fp12_conjugate
+               (miller_loop_opt_checked y
+                  (if c1 then (affinify E' a) else
+                     (if c2 then b else (affinify E' c)))), x)) ==
+      if c1 then
+        (final_exponentiation_impl
+           (Fp_12.mul
+              (fp12_conjugate
+                 (miller_loop_opt_checked y (affinify E' a)) , x)))
+      else if c2 then
+        (final_exponentiation_impl
+           (Fp_12.mul
+              (fp12_conjugate
+                 (miller_loop_opt_checked y b) , x)))
+      else
+        (final_exponentiation_impl
+           (Fp_12.mul
+              (fp12_conjugate
+                 (miller_loop_opt_checked y (affinify E' c)) , x))) }})
+  do {
+    simplify (addsimps remove_ho_rules empty_ss);
+    w4_unint_z3 ["affinify_E'","miller_loop_opt_checked","fp12_conjugate","final_exponentiation_impl","Fp_12","final_exponentiation_impl"];
+  };
+
+// rule_2 <- admit_cryptol {{ \x -> Fp_12.is_equal (x,Fp_12.field_unit) == ((x'@0@0 == fp2_rep Fp_2.field_unit) /\ ((drop (join x') == (zero:[5][2][6][64]))) where x' = fp12_rep x) }};
+rule_2 <- custom_prove_cryptol {{ \x -> Fp_12.is_equal (x,Fp_12.field_unit) == (x!0!0 == Fp_2.field_unit /\ x!1 == Fp_6.field_zero /\ x!0!1 == Fp_2.field_zero /\ x!0!2 == Fp_2.field_zero ) }} w4;
 
 core_verify_pk_in_g1_ov <- custom_verify
   "blst_core_verify_pk_in_g1"
   overrides
   (blst_core_verify_pk_in_g1_spec msg_len dst_len aug_len)
-  (goal_num_ite 24 // the main safety assertion
-    do {
-      print_readably;
-      assume_unsat; // TODO
-      // We'll probably need from_affine_nz_rewrite; the resulting projectify term should then cancel out because of the later from_Jacobian call.
-    }
-    (goal_num_ite 3
-      do { // precondition of POINTonE2_from_Jacobian in PAIRING_Aggregate_PK_in_G1
-        let on_curve = run (admit_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> is_point_projective E' (hash_to_curve_E2_opt_impl (aug#msg, DST)) == True }}));
-        // TODO: not_zero is unsound, but it's morally okay as it's deemed it will never happen
-        let not_zero = run (admit_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> Fp_2.is_equal ((hash_to_curve_E2_opt_impl (aug#msg, DST)).2, Fp_2.field_zero) == False }}));
+  do {
+    //
+    // we need to rewrite the term stemming from FROM_AFFINE
+    let FROM_AFFINE_rewrites = run (do {
+      fp2_unit_rep <- eval_term {{ fp2_rep Fp_2.field_unit }};
+      // rewrite_unit <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp2_unit_rep == fp2_rep Fp_2.field_unit }}) w4;
+      from_affine_nz_rewrite <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \ap -> POINTonE2_abs (ap.0, ap.1, fp2_unit_rep) == projectify E' (POINTonE2_affine_abs ap) }}) w4;
+      // return [rewrite_unit, from_affine_nz_rewrite];
+      return [from_affine_nz_rewrite];
+    });
+    //
+    (goal_num_ite 22 // the main safety assertion
+      do {
+        // strategy: obtain a VC that uses Fp operations only (no bitvector stuff), and leave Fp uninterpreted.
+        // TODO: fails...
         simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
+        simplify fp12_simpset;
+        let BP_impl = run ( eval_term {{ POINTonE1_affine_rep BP }});
+        let BP_rewrite = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ POINTonE1_affine_abs BP_impl == BP }}) w4);
+        simplify (addsimps [BP_rewrite] empty_ss);
+        let fp2_unit_rep = run ( eval_term {{ fp2_rep Fp_2.field_unit }} );
+        let rewrite_unit = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp2_abs fp2_unit_rep == Fp_2.field_unit }}) w4);
+        simplify (addsimps [rewrite_unit] empty_ss); // final comparison compares with unit
         unfolding ["POINTonE2_rep"];
         simplify fp2_simpset;
-        simplify (addsimps [on_curve,not_zero] (cryptol_ss ()));
-        simplify remove_higher_order_function_simpset;
-        w4_unint_z3 (foldr concat [fp2_unints, fp_unints] ["is_in_g2_impl","is_point_affine_E'"]);
+        // we need to rewrite the term stemming from FROM_AFFINE
+        unfolding ["select"];
+        let affinify_projectify_is_id = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> affinify E' (projectify E' (POINTonE2_affine_abs p)) == if POINTonE2_affine_invariant p then (POINTonE2_affine_abs p) else apply affinify E' (projectify E' (POINTonE2_affine_abs p)) }}) w4);
+        simplify (addsimps (concat FROM_AFFINE_rewrites hoist_ifs_rules) empty_ss);
+        simplify (addsimp affinify_projectify_is_id empty_ss);
+        //
+        simplify fp_simpset;
+        simplify (addsimps [rewrite_unit] empty_ss);
+        unfolding ["core_verify_pk_in_g1_impl"];
+        simplify (addsimps [rule_2] empty_ss);
+        unfolding ["fp12_rep","fp6_rep","fp2_rep","Fp_2","fp2_abs"];
+        simplify fp_simpset; // get rid of `abs rep`
+        unfolding ["apply"]; // otherwise `apply affinify E'` is not rewritten to `affinify_E'`
+        simplify (addsimps remove_ho_rules empty_ss);
+        // use goal_eval to get rid of `all`
+        goal_eval_unint ["BP","is_in_g2_impl","hash_to_curve_E2_opt_impl","miller_loop_opt_checked","final_exponentiation_impl","fp12_conjugate","affinify_E","affinify_E'", "projectify_E'", "projectify_E","is_point_projective_E","is_point_projective_E'","is_point_affine_E","is_point_affine_E'","Fp_12","fp_abs","fp_rep","Fp","POINTonE2_affine_invariant","POINTonE1_affine_invariant","POINTonE1_invariant","POINTonE2_invariant","fp_invariant","fp2_invariant","fp12_invariant"];
+        simplify (addsimps restitching_rules empty_ss);
+        simplify fp_simpset; // get rid of `abs rep`
+        print_readably;
+        // print_goal_consts;
+        // w4;
+        // offline_w4_unint_z3 ["is_in_g2_impl","hash_to_curve_E2_opt_impl","miller_loop_opt_checked","final_exponentiation_impl","fp12_conjugate","affinify_E","affinify_E'", "projectify_E'", "projectify_E","is_point_projective_E","is_point_projective_E'","is_point_affine_E","is_point_affine_E'","Fp_12","fp_abs","fp_rep","Fp","POINTonE2_affine_invariant","POINTonE1_affine_invariant","POINTonE1_invariant","POINTonE2_invariant","fp_invariant","fp2_invariant","fp12_invariant"] "/workdir/core_verify_pk_in_g1";
+        w4_unint_z3 ["is_in_g2_impl","hash_to_curve_E2_opt_impl","miller_loop_opt_checked","final_exponentiation_impl","fp12_conjugate","affinify_E","affinify_E'", "projectify_E'", "projectify_E","is_point_projective_E","is_point_projective_E'","is_point_affine_E","is_point_affine_E'","Fp_12"];
       }
-      (goal_num_ite 9 // precondition of POINTonE2_from_Jacobian in PAIRING_Aggregate_PK_in_G1 again?
-        do {
-          let on_curve = run (admit_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> is_point_projective E' (hash_to_curve_E2_opt_impl (aug#msg, DST)) == True }}));
-          // TODO: not_zero is unsound, but it's morally okay as it's deemed it will never happen
-          let not_zero = run (admit_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> Fp_2.is_equal ((hash_to_curve_E2_opt_impl (aug#msg, DST)).2, Fp_2.field_zero) == False }}));
-          simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
-          unfolding ["POINTonE2_rep"];
-          simplify fp2_simpset;
-          simplify (addsimps [on_curve,not_zero] (cryptol_ss ()));
-          simplify remove_higher_order_function_simpset;
-          w4_unint_z3 (foldr concat [fp2_unints, fp_unints] ["is_in_g2_impl","is_point_affine_E'"]);
-        }
-        (goal_num_ite 15 // precondition of POINTonE2_from_Jacobian in PAIRING_FinalVerify?
-          do {
-            // here we have a signature in projective form obtained with FROM_AFFINE(sig) and we need to show that it's on the curve and that its third component is not zero. Since sig is not zero at this point, the second property is immediate. The first must be established knowing that the affine sig is on the curve. We use an assumtpion for that.
-            unfolding ["select"];
-            // simplify (cryptol_ss ());
-            simplify (addsimps hoist_ifs_rules empty_ss);
-            simplify (addsimps restitching_rules empty_ss);
-            simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
-            unfolding ["POINTonE2_rep"];
-            simplify fp_simpset;
-            simplify fp2_simpset;
-            let rewrite_unit = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ [[ 8505329371266088957 , 17002214543764226050 , 6865905132761471162 , 8632934651105793861 , 6631298214892334189 , 1582556514881692819 ], [zero,zero,zero,zero,zero,zero]] == fp2_rep Fp_2.field_unit }}) w4);
-            simplify (addsimps [rewrite_unit] empty_ss);
-            let from_affine_nz_rewrite = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \ap -> POINTonE2_abs (ap.0, ap.1, fp2_rep Fp_2.field_unit) == projectify E' (POINTonE2_affine_abs ap) }}) w4);
-            simplify (addsimps [from_affine_nz_rewrite] empty_ss);
-            let lemma = run (admit_cryptol {{ \sig  -> is_point_projective E' (projectify E' (POINTonE2_affine_abs sig)) == if (sig != zero /\ is_point_affine E' (POINTonE2_affine_abs sig)) then True else apply is_point_projective E' (projectify E' (POINTonE2_affine_abs sig)) }}); // TODO: are the preconditions needed here?
-            simplify (addsimps [lemma] empty_ss);
-            unfolding ["POINTonE2_invariant"];
-            w4_unint_z3 ["is_in_g2_impl","hash_to_curve_E2_opt_impl"];
-          }
-          do {
-            simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
-            simplify fp_simpset;
-            simplify fp2_simpset;
-            simplify fp12_simpset;
-            simplify remove_higher_order_function_simpset;
-            w4_unint_z3 ["is_in_g2_impl","hash_to_curve_E2_opt_impl","miller_loop_opt_checked","final_exponentiation_impl","fp12_conjugate","affinify_E","affinify_E'"];
-          }))));
-
-POINTonE2_dadd_null_ov <- crucible_llvm_compositional_extract m
-  "blst_core_verify_pk_in_g1"
-  "blst_core_verify_pk_in_g1_term"
-  overrides
-  false
-  (blst_core_verify_pk_in_g1_spec msg_len dst_len aug_len)
-  (goal_num_ite 3
-      do { // precondition of POINTonE2_from_Jacobian in PAIRING_Aggregate_PK_in_G1
-        let on_curve = run (admit_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> is_point_projective E' (hash_to_curve_E2_opt_impl (aug#msg, DST)) == True }}));
-        // TODO: not_zero is unsound, but it's morally okay as it's deemed it will never happen
-        let not_zero = run (admit_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> Fp_2.is_equal ((hash_to_curve_E2_opt_impl (aug#msg, DST)).2, Fp_2.field_zero) == False }}));
-        simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
-        unfolding ["POINTonE2_rep"];
-        simplify fp2_simpset;
-        simplify (addsimps [on_curve,not_zero] (cryptol_ss ()));
-        simplify remove_higher_order_function_simpset;
-        w4_unint_z3 ["is_in_g2_impl","hash_to_curve_E2_opt_impl","miller_loop_opt_checked","final_exponentiation_impl","fp12_conjugate","affinify_E","affinify_E'"];
-      }
-      (goal_num_ite 9 // precondition of POINTonE2_from_Jacobian in PAIRING_Aggregate_PK_in_G1 again?
-        do {
-          let on_curve = run (admit_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> is_point_projective E' (hash_to_curve_E2_opt_impl (aug#msg, DST)) == True }}));
-          // TODO: not_zero is unsound, but it's morally okay as it's deemed it will never happen
-          let not_zero = run (admit_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> Fp_2.is_equal ((hash_to_curve_E2_opt_impl (aug#msg, DST)).2, Fp_2.field_zero) == False }}));
-          simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
-          unfolding ["POINTonE2_rep"];
-          simplify fp2_simpset;
-          simplify (addsimps [on_curve,not_zero] (cryptol_ss ()));
-          simplify remove_higher_order_function_simpset;
-          w4_unint_z3 ["is_in_g2_impl","hash_to_curve_E2_opt_impl","miller_loop_opt_checked","final_exponentiation_impl","fp12_conjugate","affinify_E","affinify_E'"];
-        }
-        (goal_num_ite 15 // precondition of POINTonE2_from_Jacobian in PAIRING_FinalVerify?
-          do {
-            // here we have a signature in projective form obtained with FROM_AFFINE(sig) and we need to show that it's on the curve and that its third component is not zero. Since sig is not zero at this point, the second property is immediate.
-            unfolding ["select"];
-            // simplify (cryptol_ss ());
-            simplify (addsimps hoist_ifs_rules empty_ss);
-            simplify (addsimps restitching_rules empty_ss);
-            simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
-            unfolding ["POINTonE2_rep"];
-            simplify fp_simpset;
-            simplify fp2_simpset;
-            let rewrite_unit = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ [[ 8505329371266088957 , 17002214543764226050 , 6865905132761471162 , 8632934651105793861 , 6631298214892334189 , 1582556514881692819 ], [zero,zero,zero,zero,zero,zero]] == fp2_rep Fp_2.field_unit }}) w4);
-            simplify (addsimps [rewrite_unit] empty_ss);
-            let from_affine_nz_rewrite = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \ap -> POINTonE2_abs (ap.0, ap.1, fp2_rep Fp_2.field_unit) == projectify E' (POINTonE2_affine_abs ap) }}) w4);
-            simplify (addsimps [from_affine_nz_rewrite] empty_ss);
-            let lemma = run (admit_cryptol {{ \sig  -> is_point_projective E' (projectify E' (POINTonE2_affine_abs sig)) == if (sig != zero /\ is_point_affine E' (POINTonE2_affine_abs sig)) then True else apply is_point_projective E' (projectify E' (POINTonE2_affine_abs sig)) }}); // TODO: are the preconditions needed here?
-            simplify (addsimps [lemma] empty_ss);
-            simplify remove_higher_order_function_simpset;
-            w4_unint_z3 ["is_in_g2_impl","hash_to_curve_E2_opt_impl","miller_loop_opt_checked","final_exponentiation_impl","fp12_conjugate","affinify_E","affinify_E'"];
-          }
-          do {
-            simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
-            simplify fp_simpset;
-            simplify fp2_simpset;
-            simplify fp12_simpset;
-            simplify remove_higher_order_function_simpset;
-            w4_unint_z3 ["is_in_g2_impl","hash_to_curve_E2_opt_impl","miller_loop_opt_checked","final_exponentiation_impl","fp12_conjugate","affinify_E","affinify_E'"];
-          })));
+      assume_unsat);};
