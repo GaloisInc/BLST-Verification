@@ -13,75 +13,20 @@ let aug_len = 8;
 let blst_core_verify_pk_in_g1_spec msg_len dst_len aug_len = do {
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_struct "struct.POINTonE1_affine");
   llvm_precond {{ POINTonE1_affine_invariant pk /\ ~(is_point_O E (POINTonE1_affine_abs pk)) }};
-  // llvm_precond {{ POINTonE1_affine_invariant pk /\ pk != zero }};
   (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_struct "struct.POINTonE2_affine");
   llvm_precond {{ POINTonE2_affine_invariant sig /\ ~(is_point_O E' (POINTonE2_affine_abs sig)) /\ is_point_affine E' (POINTonE2_affine_abs sig) /\ is_in_g2_impl (POINTonE2_affine_abs sig) }};
-  // llvm_precond {{ POINTonE2_affine_invariant sig /\ sig != zero /\ is_point_affine E' (POINTonE2_affine_abs sig) }};
   hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
   llvm_precond {{ hash_or_encode != zero }};
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (dst, dst_ptr) <- ptr_to_fresh_readonly "dst" (llvm_array dst_len (llvm_int 8));
   (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
   crucible_execute_func [pk_ptr, signature_ptr, crucible_term hash_or_encode, msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `dst_len : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}];
-  // ret <- crucible_fresh_var "ret" (llvm_int 32);
-  // crucible_return (crucible_term ret);
   crucible_return (crucible_term {{ if core_verify_pk_in_g1_impl (POINTonE1_affine_abs pk) (POINTonE2_affine_abs sig) msg dst aug then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
 };
-
-// {{
-// \aug dst msg sig pk -> (blst_core_verify_pk_in_g1_term (1:[32]) (aug:[8][8]) (dst:[8][8]) (msg:[32][8]) sig pk == if Fp_12.is_equal (gt, Fp_12.field_unit) then (1:[32]) else zero
-  // where
-    // S = POINTonE2_affine_abs sig
-    // Q = affinify E' (hash_to_curve_E2_opt_impl (aug#msg, dst))
-    // P = POINTonE1_affine_abs pk
-    // gtPQ = miller_loop_opt_checked P Q
-    // gtSig = fp12_conjugate (miller_loop_opt_checked BP S)
-    // gt = final_exponentiation_impl (Fp_12.mul (gtSig, gtPQ))
-// )
-  // }}
-
 
 // overrides:
 hash_to_field_fp2_ovs <- for hash_to_field_nelems (verify_hash_to_field_fp2_for aug_len msg_len dst_len);
 Hash_to_G2_ov <- prove_Hash_to_G2_concrete msg_len dst_len aug_len hash_to_field_fp2_ovs;
-
-let vec_is_zero_10fp_spec_ = do {
-  (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 10 vec384_type);
-  crucible_execute_func [a_ptr, crucible_term {{ (480:Size_t) }}]; // Non-portable
-  // crucible_return (crucible_term {{ bool_to_limb (zero_test_10fp (map (\x -> fp_abs x) a)) }});
-  crucible_return (crucible_term {{ bool_to_limb True }});
-  };
-
-vec_is_zero_10fp_ov_ <- admit "vec_is_zero" vec_is_zero_10fp_spec_;
-
-let vec_is_zero_2fp_spec_ = do {
-  (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 2 vec384_type);
-  crucible_precond {{ fp_invariant (a@0) /\ fp_invariant (a@1) }};
-  crucible_execute_func [a_ptr, crucible_term {{ (96:Size_t) }}]; // Non-portable
-  // crucible_return (crucible_term {{ if Fp.is_equal(fp_abs (a@0), Fp.field_zero) /\ Fp.is_equal(fp_abs (a@1), Fp.field_zero) then 1 else (0:Limb) }});
-  crucible_return (crucible_term {{ 0:Limb }});
-  };
-
-vec_is_zero_2fp_ov_ <- admit "vec_is_zero" vec_is_zero_2fp_spec_;
-
-let vec_is_equal_fp2_spec_ = do {
-  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
-  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384x_type;
-  crucible_precond {{ fp2_invariant a /\  fp2_invariant b }};
-  crucible_execute_func [a_ptr, b_ptr, crucible_term {{ (96:Size_t) }}]; // Non-portable
-  crucible_return (crucible_term {{ 1:Limb }});
-  };
-
-vec_is_equal_fp2_ov_ <- admit "vec_is_equal" vec_is_equal_fp2_spec_;
-
-let vec_is_zero_2fp2_spec_ = do {
-  (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 2 vec384x_type);
-  crucible_precond {{ fp2_invariant (a@0) /\ fp2_invariant (a@1) }};
-  crucible_execute_func [a_ptr, crucible_term {{ (192:Size_t) }}]; // Non-portable
-  crucible_return (crucible_term {{ 0:Limb }});
-  }; // TODO: is this specification okay?
-
-vec_is_zero_2fp2_ov_ <- admit "vec_is_zero" vec_is_zero_2fp2_spec_;
 
 let overrides = foldr concat [
   mul_fp12_ovs // fp12.saw
@@ -98,54 +43,18 @@ let overrides = foldr concat [
 , vec_copy_POINTonE1_affine_ov
 , vec_copy_POINTonE2_affine_ov
 , vec_select_2Fp_ov
-, vec_is_zero_10fp_ov_
-, vec_is_zero_2fp2_ov_
-, vec_is_zero_2fp_ov_
-, vec_is_equal_fp2_ov_
+, vec_is_zero_10fp_ov
+, vec_is_zero_2fp2_ov
+, vec_is_zero_2fp_ov
+, vec_is_equal_fp2_ov
 , POINTonE2_in_g2_ov // subgroup_check_g2.saw
 ];
-
-// Proofs
-rule_1 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x y c1 c2 a b c ->
-      final_exponentiation_impl
-         (Fp_12.mul
-            (fp12_conjugate
-               (miller_loop_opt_checked y
-                  (if c1 then (affinify E' a) else
-                     (if c2 then b else (affinify E' c)))), x)) ==
-      if c1 then
-        (final_exponentiation_impl
-           (Fp_12.mul
-              (fp12_conjugate
-                 (miller_loop_opt_checked y (affinify E' a)) , x)))
-      else if c2 then
-        (final_exponentiation_impl
-           (Fp_12.mul
-              (fp12_conjugate
-                 (miller_loop_opt_checked y b) , x)))
-      else
-        (final_exponentiation_impl
-           (Fp_12.mul
-              (fp12_conjugate
-                 (miller_loop_opt_checked y (affinify E' c)) , x))) }})
-  do {
-    simplify (addsimps remove_ho_rules empty_ss);
-    w4_unint_z3 ["affinify_E'","miller_loop_opt_checked","fp12_conjugate","final_exponentiation_impl","Fp_12","final_exponentiation_impl"];
-  };
-
-// some overrides to simplify things:
-
-let {{
-  zero_test_10fp : [10]t_Fp -> Bool
-  zero_test_10fp x = (x == zero)
-}};
 
 core_verify_pk_in_g1_ov <- custom_verify
   "blst_core_verify_pk_in_g1"
   overrides
   (blst_core_verify_pk_in_g1_spec msg_len dst_len aug_len)
   do {
-    //
     // we need to rewrite the term stemming from FROM_AFFINE
     let FROM_AFFINE_rewrites = run (do {
       fp2_unit_rep <- eval_term {{ fp2_rep Fp_2.field_unit }};
@@ -155,92 +64,42 @@ core_verify_pk_in_g1_ov <- custom_verify
       return [from_affine_nz_rewrite];
     });
     //
-    (goal_num_ite 19 // the main safety assertion
+    (goal_num_ite 22 // the main safety assertion
       do {
-        // strategy: obtain a VC that uses Fp operations only (no bitvector stuff), and leave Fp uninterpreted except for is_equal (we want commutativity).
-        // debugging strategy:
-        // - rewrite the check in FROM_AFFINE to False; same override is used to check pk != zero: rewrite both to False
-        // - rewrite hash_or_encode check to False; no way to single it out... maybe change the C code?
-        // - rewrite the zero_test_10fp to True
-        // - rewrite the fp12 test to True
-        // - rewrite the fp2 test to True
-        // - rewrite POINTonE2_affine_invariant to True
-        // - rewrite the non-zero sig check
-        // - rewrite is_in_g2_impl to True
-        // - rewrite (bvAnd 32 (bvNat 32 1) x to zero
-        let bvEq_rewrite = run (do{
-          let t = parse_core "\\(x:Vec 32 Bool) -> bvAnd 32 (bvNat 32 1) x";
-          admit_cryptol (rewrite (cryptol_ss ()) (beta_reduce_term {{ \x  -> t x == zero }}));
-        });
-        simplify (addsimps [bvEq_rewrite] empty_ss);
-        let is_in_g2 = run (admit_cryptol {{\x -> is_in_g2_impl x == True }});
-        simplify (addsimps [is_in_g2] empty_ss);
+        // first get rid of all (abs rep) terms
         simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
         simplify fp12_simpset;
         simplify fp2_simpset;
         simplify fp_simpset;
+        unfolding ["POINTonE2_rep"];
+        simplify fp2_simpset;
+        // rewrite impl constants to higher level
         let BP_impl = run ( eval_term {{ POINTonE1_affine_rep BP }});
         let BP_rewrite = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ POINTonE1_affine_abs BP_impl == BP }}) w4);
         simplify (addsimps [BP_rewrite] empty_ss);
         let fp2_unit_rep = run ( eval_term {{ fp2_rep Fp_2.field_unit }} );
         let rewrite_unit = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp2_abs fp2_unit_rep == Fp_2.field_unit }}) w4);
         simplify (addsimps [rewrite_unit] empty_ss); // final comparison compares with unit
-        unfolding ["POINTonE2_rep"];
-        simplify fp2_simpset;
         // we need to rewrite the term stemming from FROM_AFFINE
         unfolding ["select"];
         let affinify_projectify_is_id = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> affinify E' (projectify E' (POINTonE2_affine_abs p)) == if POINTonE2_affine_invariant p then (POINTonE2_affine_abs p) else apply affinify E' (projectify E' (POINTonE2_affine_abs p)) }}) w4);
         simplify (addsimps (concat FROM_AFFINE_rewrites hoist_ifs_rules) empty_ss);
         simplify (addsimp affinify_projectify_is_id empty_ss);
-        //
-        simplify fp_simpset;
-        simplify (addsimps [rewrite_unit] empty_ss);
-        // hoist if out of the final exponentiation
-        unfolding ["apply"];
-        simplify (addsimps [rule_1] empty_ss);
-        // now rewrite the abstract term
+        // now we rewrite the abstract term
         unfolding ["core_verify_pk_in_g1_impl"];
-        // let rewrite_is_equal = run (custom_prove_cryptol {{
-          // \x -> Fp_12.is_equal (x,Fp_12.field_unit) ==
-            // (x12 == Fp_2.field_unit /\ x0 == Fp_6.field_zero /\ x10 == Fp_2.field_zero /\ x11 == Fp_2.field_zero
-              // where [x0,x1] = x; [x00,x01,x02] = x0; [x10,x11,x12] = x1)
-        // }} w4);
-        // let rewrite_is_equal = run (custom_prove_cryptol {{
-          // \x -> Fp_12.is_equal (x,Fp_12.field_unit) ==
-            // (Fp_2.is_equal(x12, Fp_2.field_unit) /\ zero_test_10fp y
-              // where [x0,x1] = x; [x00,x01,x02] = x0; [x10,x11,x12] = x1; y = take`{front=10} (join (join x)))
-        // }} w4);
-        let rewrite_is_equal = run (admit_cryptol {{ \x -> Fp_12.is_equal (x,Fp_12.field_unit) == True }});
+        let rewrite_is_equal = run (custom_prove_cryptol {{ // there's no way to unfold just Fp_12.is_equal, so...
+          \x -> Fp_12.is_equal (x,Fp_12.field_unit) ==
+            (Fp_2.is_equal(x12, Fp_2.field_unit) /\ y == zero
+              where [x0,x1] = x; [x00,x01,x02] = x0; [x10,x11,x12] = x1; y = take`{front=10} (join (join x)))
+        }} w4);
         simplify (addsimps [rewrite_is_equal] empty_ss);
-        // unfolding ["fp12_rep","fp6_rep","fp2_rep","Fp_2","fp2_abs"];
-        unfolding ["fp12_rep","fp6_rep","fp2_rep","fp2_abs"];
-        simplify fp_simpset; // get rid of `abs rep`
+        print_readably;
         unfolding ["apply"]; // otherwise `apply affinify E'` is not rewritten to `affinify_E'`
         simplify (addsimps remove_ho_rules empty_ss);
-        // get rid of one ite conditions (unsound):
-        let unsound_1 = run (admit_cryptol {{ \p -> POINTonE2_affine_invariant p == True }});
-        simplify (addsimps [unsound_1] empty_ss);
-        // we might need commutativity of equal, so let's unfold it:
-        let unfold_is_equal = run ( custom_prove_cryptol {{ \x y -> Fp.is_equal (x,y) == (x == y) }} w4);
-        simplify (addsimps [unfold_is_equal] empty_ss);
-        // use goal_eval to get rid of `all`
-        goal_eval_unint ["BP","is_in_g2_impl","hash_to_curve_E2_opt_impl","miller_loop_opt_checked","final_exponentiation_impl","fp12_conjugate","affinify_E","affinify_E'", "projectify_E'", "projectify_E","is_point_projective_E","is_point_projective_E'","is_point_affine_E","is_point_affine_E'","Fp_12","fp_abs","fp_rep","Fp","POINTonE2_affine_invariant","POINTonE1_affine_invariant","POINTonE1_invariant","POINTonE2_invariant","fp_invariant","fp2_invariant","fp12_invariant","zero_test_10fp"];
+        goal_eval_unint ["BP","is_in_g2_impl","hash_to_curve_E2_opt_impl","miller_loop_opt_checked","final_exponentiation_impl","fp12_conjugate","affinify_E","affinify_E'", "projectify_E'", "projectify_E","is_point_projective_E","is_point_projective_E'","is_point_affine_E","is_point_affine_E'","Fp_12","fp_abs","fp_rep","Fp","POINTonE2_affine_invariant","POINTonE1_affine_invariant","POINTonE1_invariant","POINTonE2_invariant","fp_invariant","fp2_invariant","fp12_invariant"];
         simplify (addsimps restitching_rules empty_ss);
-        simplify fp_simpset; // get rid of `abs rep`
-        // let test = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \(x1:Integer) x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 c -> [if c then x1 else y1, if c then x2 else y2, if c then x3 else y3, if c then x4 else y4, if c then x5 else y5, if c then x6 else y6,if c then x7 else y7, if c then x8 else y8, if c then x9 else y9, if c then x10 else y10, if c then x11 else y11, if c then x12 else y12] == if c then [x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12] else [y1,y2,y3,y4,y5,y6,y7,y8,y9,y10,y11,y12] }}) w4);
-        // simplify (addsimp test empty_ss); // TODO: why doesn't this rewrite?
-        // let unsound_2 = run (admit_cryptol (rewrite (cryptol_ss ()) {{\x -> zero_test_10fp x == True }}));
-        // simplify (addsimps [unsound_2] empty_ss); // TODO: why does this not apply?
-        print_readably;
-        // print_goal_consts;
-        // let unsound_4 = run (do {
-          // let and_ = parse_core "and";
-          // admit_cryptol {{ \ (a:Bool) b c d -> (and_ (and_ (and_ a b) c) d) == False }};
-        // });
-        // simplify (addsimps [unsound_4] empty_ss);
-        // w4;
-        // offline_w4_unint_z3 ["is_in_g2_impl","hash_to_curve_E2_opt_impl","miller_loop_opt_checked","final_exponentiation_impl","fp12_conjugate","affinify_E","affinify_E'", "projectify_E'", "projectify_E","is_point_projective_E","is_point_projective_E'","is_point_affine_E","is_point_affine_E'","Fp_12","fp_abs","fp_rep","Fp","POINTonE2_affine_invariant","POINTonE1_affine_invariant","POINTonE1_invariant","POINTonE2_invariant","fp_invariant","fp2_invariant","fp12_invariant"] "/workdir/core_verify_pk_in_g1";
-        w4_unint_z3 ["is_in_g2_impl","hash_to_curve_E2_opt_impl","miller_loop_opt_checked","final_exponentiation_impl","fp12_conjugate","affinify_E","affinify_E'", "projectify_E'", "projectify_E","is_point_projective_E","is_point_projective_E'","is_point_affine_E","is_point_affine_E'","Fp_12","POINTonE2_affine_invariant","POINTonE1_affine_invariant","POINTonE1_invariant","POINTonE2_invariant","fp_invariant","fp2_invariant","fp12_invariant","fp_abs","fp_rep","Fp"];
+        simplify fp_simpset; // get rid of `abs rep` terms
+        w4_unint_z3 ["is_in_g2_impl","hash_to_curve_E2_opt_impl","miller_loop_opt_checked","final_exponentiation_impl","fp12_conjugate","affinify_E","affinify_E'", "projectify_E'", "projectify_E","is_point_projective_E","is_point_projective_E'","is_point_affine_E","is_point_affine_E'","Fp_12","POINTonE2_affine_invariant","POINTonE1_affine_invariant","POINTonE1_invariant","POINTonE2_invariant","fp_invariant","fp2_invariant","fp12_invariant"];
       }
       do {
         // print_readably;
