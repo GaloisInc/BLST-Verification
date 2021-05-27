@@ -87,6 +87,12 @@ POINTonE2_affine_abs (x,y) = (fp2_abs x, fp2_abs y)
 POINTonE2_affine_rep: AffinePoint t_Fp_2 -> POINTonE2_affine_t
 POINTonE2_affine_rep (x,y) = (fp2_rep x, fp2_rep y)
 
+normalize_affine_point: {t} FieldRep t ->  AffinePoint t -> AffinePoint t
+normalize_affine_point F (x, y) = (F.normalize x, F.normalize y)
+
+normalize_point:  {t} FieldRep t -> ProjectivePoint t -> ProjectivePoint t
+normalize_point F (x, y, z) = (F.normalize x, F.normalize y, F.normalize z)
+
 // e1_op f x y = POINTonE1_rep (f E (POINTonE1_abs x) (POINTonE1_abs y))
 
 // algorithms from transcription of the C code
@@ -96,9 +102,15 @@ POINTonE2_affine_rep (x,y) = (fp2_rep x, fp2_rep y)
 
 // If cryptol had "where*" or "let*" this would be easier.
 
+// In some places a raw input is normalized, which gives us some nicer theorems
+// in particular for the abs_rep rules.  This should not affect the correspondence with
+// the code because the inputs there are all assumed to satisfy the invariant.
+
 // TODO: Use a "maybe" type for a4, when the Maybe module is merged into the main code base
 point_dadd: {t} FieldRep t -> ProjectivePoint t -> ProjectivePoint t -> t -> Bit -> ProjectivePoint t
-point_dadd F (x1, y1, z1) (x2, y2, z2) a4 a4_is_null = out where
+point_dadd F p1 p2  a4 a4_is_null = out where
+    (x1, y1, z1) = normalize_point F p1
+    (x2, y2, z2) = normalize_point F p2
     dbl_h = F.add (y1, y1) // add_##field(dbl.H, p1->Y, p1->Y);
     dbl_r = F.sq x1
     dbl_sx = F.add (x1, x1)
@@ -149,7 +161,9 @@ point_dadd F (x1, y1, z1) (x2, y2, z2) a4 a4_is_null = out where
 
 
 point_dadd_affine: {t} FieldRep t -> ProjectivePoint t -> AffinePoint t  -> ProjectivePoint t
-point_dadd_affine F (x1, y1, z1) (x2, y2) = out where
+point_dadd_affine F p1 p2 = out where
+    (x1, y1, z1) = normalize_point F p1
+    (x2, y2) = normalize_affine_point F p2
     dbl_h = F.add (y2, y2) // add_##field(dbl.H, p2->Y, p2->Y);
     dbl_sx = F.add (x2, x2)
     dbl_r= mul_by_3 F (F.sq x2)
@@ -193,7 +207,9 @@ point_dadd_affine F (x1, y1, z1) (x2, y2) = out where
 
 
 point_add: {t} FieldRep t -> ProjectivePoint t -> ProjectivePoint t -> ProjectivePoint t
-point_add F (x1,y1,z1) (x2,y2,z2) = out where
+point_add F p1 p2 = out where
+    (x1, y1, z1) = normalize_point F p1
+    (x2, y2, z2) = normalize_point F p2
     z1z1 = F.sq z1
     z2z2 = F.sq z2
     u1 = F.mul (x1, z2z2)
@@ -225,7 +241,10 @@ point_add F (x1,y1,z1) (x2,y2,z2) = out where
 
 
 point_add_affine: {t} FieldRep t -> ProjectivePoint t -> AffinePoint t -> ProjectivePoint t
-point_add_affine F (x1,y1,z1) (x2,y2) = out where
+point_add_affine F p1 p2 = out where
+    (x1, y1, z1) = normalize_point F p1
+    (x2, y2) = normalize_affine_point F p2
+
     z1z1 = F.sq z1
     h = F.mul(x2,z1z1)
     r = F.mul(F.mul(y2,z1), z1z1)

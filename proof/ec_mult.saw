@@ -119,7 +119,7 @@ for [17,25,31,39] // gets slow for larger numbers of bits
    custom_prove_cryptol {{ \(e:[n_bits]) -> booth e == toInt e }}
      do { simplify (addsimp plain_lemma empty_ss); // so now we show booth e == plain e
           w4_unint_z3 ["block_val"]; };
-   } );       
+   } );
 
 // ... and a function to generate the version we need for the code proof below
 let booth_lemma_1 n_bits = do {
@@ -323,10 +323,13 @@ let POINTonE1_precompute_w5_spec = do {
     crucible_points_to row_ptr (crucible_term {{ precomputed_table (POINTonE1_abs point) }} );
     };
 
- POINTonE1_precompute_w5_ov <-
+POINTonE1_precompute_w5_ov <-
    custom_verify "POINTonE1_precompute_w5" ec_mult_overrides POINTonE1_precompute_w5_spec
      do { unfolding ["precomputed_table"];
-          simplify (addsimps POINTonE1_thms empty_ss);
+          rw_with (concat_all [ POINTonE1_selection_ite_rev_thms
+                              // , POINTonE1_normalization_thms
+                              , POINTonE1_thms]);
+          unfolding ["/\\", "apply"]; simplify basic_ss;
           simplify remove_higher_order_function_simpset;
           w4_unint_z3 ec_mult_unints; } ;
 
@@ -425,15 +428,30 @@ bpt_lemma5 <- prove_cryptol
   (rewrite (cryptol_ss ()) {{\p -> point_neg_fp (small_nonnegative_mult 0 p) == small_nonnegative_mult 0 p }})
   [];
 
+hoist_fp_triple_thm <- prove_cryptol (rewrite (cryptol_ss ())
+     {{ \ c (x:(t_Fp, t_Fp, t_Fp)) y -> ((if c then x0 else y0, if c then x1 else y1, if c then x2 else y2) ==
+                        if c then x else y where (x0,x1,x2) = x; (y0,y1,y2) = y) }}) [];
+
+//needed? yes
+normalize_small_nonnegative_mult_thm <- admit_cryptol // testing gives way-too-large integers m.
+  {{ \ m p -> normalize_point Fp (small_nonnegative_mult m p) ==
+              small_nonnegative_mult m (normalize_point Fp p) }};
+
 booth'_precomputed_table_thm <- custom_prove_cryptol 
-  {{ \p1 booth_index -> POINTonE1_abs (booth' (precomputed_table p1) booth_index) ==
-                        small_mult (booth_exponent booth_index) p1 }}
+  {{ \p1 booth_index -> POINTonE1_abs (booth' (precomputed_table (POINTonE1_abs p1)) booth_index) ==
+                        small_mult (booth_exponent booth_index) (POINTonE1_abs p1) }}
   do { unfolding ["booth'", "booth_lookup"];
        simplify (addsimp bpt_lemma3 (cryptol_ss()));
        unfolding ["booth_exponent", "small_mult"];
+       rw_with POINTonE1_thms;
        simplify (addsimp point_neg_fp_thm empty_ss);
        goal_eval_unint (concat ["small_nonnegative_mult"] ec_mult_unints);
-       simplify (addsimps (concat [bpt_lemma5, bpt_lemma4] POINTonE1_thms) fp_simpset);
+       // simplify (addsimps (concat [bpt_lemma5, bpt_lemma4] POINTonE1_thms) fp_simpset);
+       // rw_with (concat [normalize_small_nonnegative_mult_thm] POINTonE1_normalization_thms);
+       simplify (addsimps (concat_all [[bpt_lemma5, bpt_lemma4, normalize_small_nonnegative_mult_thm
+                                        , hoist_fp_triple_thm ]
+                                      , POINTonE1_thms]) // , POINTonE1_normalization_thms]) 
+                          fp_simpset);
        w4_unint_z3 (concat ["small_nonnegative_mult"] ec_mult_unints);} ;
 
 
