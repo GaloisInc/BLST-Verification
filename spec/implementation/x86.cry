@@ -604,3 +604,52 @@ mulx_mont_sparse_256 a b m n0 = result
     lo = a @ 2
     hi = a @ 3
     result = __mulx_mont_sparse_256 acc (b @ 0) n0 lo hi a b m
+
+redcx_mont_256
+  : Vec512 // a; pointer in rsi
+  -> Vec256 // m; pointer in rdx
+  -> [64] // n0; passed in rcx
+  -> Vec256 // result
+redcx_mont_256 a m n0 = result
+  where
+    [r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = __mulx_by_1_mont_256 (take a) m n0
+
+    (high_cf_0, high_0) = add r14_0 (a @ 4)
+    (high_cf_1, high_1) = adc r15_0 (a @ 5) high_cf_0
+    (high_cf_2, high_2) = adc r10_0 (a @ 6) high_cf_1
+    (high_cf_3, high_3) = adc r11_0 (a @ 7) high_cf_2
+    mask = if high_cf_3 then -1 else 0
+
+    (diff_cf_0, diff_0) = sub high_0 (m @ 0)
+    (diff_cf_1, diff_1) = sbb high_1 (m @ 1) diff_cf_0
+    (diff_cf_2, diff_2) = sbb high_2 (m @ 2) diff_cf_1
+    (diff_cf_3, diff_3) = sbb high_3 (m @ 3) diff_cf_2
+    (gt, _) = sbb mask 0 diff_cf_3
+
+    result0 = cmovae high_0 diff_0 gt
+    result1 = cmovae high_1 diff_1 gt
+    result2 = cmovae high_2 diff_2 gt
+    result3 = cmovae high_3 diff_3 gt
+
+    result = [result0, result1, result2, result3]
+
+fromx_mont_256
+  : Vec256 // a; pointer in rsi
+  -> Vec256 // m; pointer in rdx
+  -> [64] // n0; passed in rcx
+  -> Vec256 // result
+fromx_mont_256 a m n0 = result
+  where
+    [r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = __mulx_by_1_mont_256 a m n0
+
+    (diff_cf_0, diff_0) = sub r14_0 (m @ 0)
+    (diff_cf_1, diff_1) = sbb r15_0 (m @ 1) diff_cf_0
+    (diff_cf_2, diff_2) = sbb r10_0 (m @ 2) diff_cf_1
+    (diff_cf_3, diff_3) = sbb r11_0 (m @ 3) diff_cf_2
+
+    result0 = cmovae r14_0 diff_0 diff_cf_3
+    result1 = cmovae r15_0 diff_1 diff_cf_3
+    result2 = cmovae r10_0 diff_2 diff_cf_3
+    result3 = cmovae r11_0 diff_3 diff_cf_3
+
+    result = [result0, result1, result2, result3]
