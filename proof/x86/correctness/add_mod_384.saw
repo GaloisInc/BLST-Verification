@@ -3,32 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import "../../../spec/Parameters.cry";
-import "../../../spec/implementation/Types.cry";
-import "../../../spec/implementation/Field.cry";
-
-let modulus = {{ [ 0xb9feffffffffaaab, 0x1eabfffeb153ffff, 0x6730d2a0f6b0f624, 0x64774b84f38512bf, 0x4b1ba7b6434bacd7, 0x1a0111ea397fe69a ] : [6][64] }};
-
-let lt_modulus x = crucible_precond {{ vec384_abs x < vec384_abs modulus }};
-
-let ptr_to_modulus = do {
-  ptr <- crucible_alloc vec384_type;
-  crucible_points_to ptr (crucible_term modulus);
-  return ptr;
-};
-
-let ptr_to_fresh_vec384x_helper mutable nm = do {
-  ptr <- (if mutable then crucible_alloc else crucible_alloc_readonly) vec384x_type;
-  r <- crucible_fresh_var (str_concat nm "_r") vec384_type;
-  i <- crucible_fresh_var (str_concat nm "_i") vec384_type;
-  crucible_points_to ptr (crucible_term {{ [r, i] : [2]Vec384 }});
-  return (r, i, ptr);
-};
-let ptr_to_fresh_vec384x = ptr_to_fresh_vec384x_helper true;
-let ptr_to_fresh_vec384x_readonly = ptr_to_fresh_vec384x_helper false;
-
-let points_to_vec384x ptr r i = crucible_points_to ptr (crucible_term {{ [r, i] : [2]Vec384 }});
-
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
@@ -225,33 +199,6 @@ let mul_by_b_onE1_alias_out_in_spec = do {
   crucible_points_to out_ptr (crucible_term new_out);
 };
 
-// mul_by_4b_onE1
-// let mul_by_4b_onE1_spec = do {
-//   crucible_alloc_global "BLS12_381_P";
-//   crucible_points_to
-//     (crucible_global "BLS12_381_P")
-//     (crucible_term modulus);
-// 
-//   out_ptr <- crucible_alloc vec384_type;
-//   (in_, in_ptr) <- ptr_to_fresh_readonly "in" vec384_type;
-//   lt_modulus in_;
-//   crucible_execute_func [out_ptr, in_ptr];
-//   let new_out = {{ vec384_rep (repeat_double_mod 4 (vec384_abs in_)) : Vec384}};
-//   crucible_points_to out_ptr (crucible_term new_out);
-// };
-// let mul_by_4b_onE1_alias_out_in_spec = do {
-//   crucible_alloc_global "BLS12_381_P";
-//   crucible_points_to
-//     (crucible_global "BLS12_381_P")
-//     (crucible_term modulus);
-// 
-//   (in_, out_ptr) <- ptr_to_fresh "out" vec384_type;
-//   lt_modulus in_;
-//   crucible_execute_func [out_ptr, out_ptr];
-//   let new_out = {{ vec384_rep (repeat_double_mod 4 (vec384_abs in_)) : Vec384}};
-//   crucible_points_to out_ptr (crucible_term new_out);
-// };
-
 // mul_by_3_mod_384x
 let mul_by_3_mod_384x_spec = do {
   ret_ptr <- crucible_alloc vec384x_type;
@@ -303,8 +250,6 @@ let {{
     where diff = vec384_abs a - vec384_abs b
 }};
 
-let counterc = {{[1801017638483099649, 1009369257894608895, 216172783992860672, 14356874983899167, 426060755861507, 962479513600] : [6][64]}};
-
 // mul_by_b_onE2
 let mul_by_b_onE2_spec = do {
   crucible_alloc_global "BLS12_381_P";
@@ -341,21 +286,6 @@ let mul_by_b_onE2_alias_out_in_spec = do {
   let new_out_i = {{ vec384_rep (repeat_double_mod 2 ((vec384_abs in_r + vec384_abs in_i) % vec384_abs modulus)) : Vec384}};
   points_to_vec384x out_ptr new_out_r new_out_i;
 };
-
-// mul_by_4b_onE2
-// let mul_by_4b_onE2_spec = do {
-//   out_ptr <- crucible_alloc vec384x_type;
-//   (_, in_ptr) <- ptr_to_fresh_readonly "in" vec384x_type;
-//   crucible_execute_func [out_ptr, in_ptr];
-//   new_out <- crucible_fresh_var "new_out" vec384x_type;
-//   crucible_points_to out_ptr (crucible_term new_out);
-// };
-// let mul_by_4b_onE2_alias_out_in_spec = do {
-//   (_, out_ptr) <- ptr_to_fresh "out" vec384x_type;
-//   crucible_execute_func [out_ptr, out_ptr];
-//   new_out <- crucible_fresh_var "new_out" vec384x_type;
-//   crucible_points_to out_ptr (crucible_term new_out);
-// };
 
 // cneg_mod_384
 let cneg_mod_384_spec = do {
@@ -531,18 +461,6 @@ let sgn0_pty_mod_384_spec = do {
   crucible_return (crucible_term return_value);
 };
 
-let {{
-  compute a_r a_i =
-    zero #
-    [ if vec384_abs a_i != 0 then sgn_mod (vec384_abs a_i) else sgn_mod (vec384_abs a_r)
-    , if vec384_abs a_r == 0 then pty_mod (vec384_abs a_i) else pty_mod (vec384_abs a_r)
-    ] : [64]
-}};
-
-let counterc = {{[1801017638483099649, 1009369257894608895, 216172783992860672, 14356874983899167, 426060755861507, 962479513600] : [6][64]}};
-print {{pty_mod (vec384_abs counterc)}};
-print {{compute counterc zero}};
-
 // sgn0_pty_mod_384x
 let sgn0_pty_mod_384x_spec = do {
   (a_r, a_i, a_ptr) <- ptr_to_fresh_vec384x_readonly "a";
@@ -596,8 +514,6 @@ let vec_select_alias_1_2_spec bytes = do {
 // Proofs
 ///////////////////////////////////////////////////////////////////////////////
 
-let do_prove_x86 = false;
-
 // add_mod_384
 add_mod_384_ov <- verify_x86 "add_mod_384" add_mod_384_spec w4;
 add_mod_384_alias_ret_a_ov <- verify_x86 "add_mod_384" add_mod_384_alias_ret_a_spec w4;
@@ -616,7 +532,6 @@ verify_x86 "lshift_mod_384" (lshift_mod_384_spec {{ 2 : [64] }}) w4;
 lshift_mod_384_5_ov <- verify_x86 "lshift_mod_384" (lshift_mod_384_spec {{ 5 : [64] }}) w4;
 lshift_mod_384_alias_ret_a_5_ov <- verify_x86 "lshift_mod_384" (lshift_mod_384_alias_ret_a_spec {{ 5 : [64] }}) w4;
 lshift_mod_384_alias_ret_a_2_ov <- verify_x86 "lshift_mod_384" (lshift_mod_384_alias_ret_a_spec {{ 2 : [64] }}) w4;
-
 
 // mul_by_3_mod_384
 mul_by_3_mod_384_ov <- verify_x86 "mul_by_3_mod_384" mul_by_3_mod_384_spec w4;
@@ -638,15 +553,11 @@ mul_by_3_mod_384x_alias_ret_a_ov <- verify_x86 "mul_by_3_mod_384x" mul_by_3_mod_
 mul_by_8_mod_384x_ov <- verify_x86 "mul_by_8_mod_384x" mul_by_8_mod_384x_spec w4;
 mul_by_8_mod_384x_alias_ret_a_ov <- verify_x86 "mul_by_8_mod_384x" mul_by_8_mod_384x_alias_ret_a_spec w4;
 
-let do_prove_x86 = true;
-// mul_by_b_onE2
-mul_by_b_onE2_ov <- verify_x86 "mul_by_b_onE2" mul_by_b_onE2_spec (do {
-  goal_eval;
-  print_goal;
-  w4;
-});
-exit 1;
-mul_by_b_onE2_alias_out_in_ov <- verify_x86 "mul_by_b_onE2" mul_by_b_onE2_alias_out_in_spec w4;
+// mul_by_b_onE2 - TODO
+// mul_by_b_onE2_ov <- verify_x86 "mul_by_b_onE2" mul_by_b_onE2_spec do {
+//   w4;
+// };
+// mul_by_b_onE2_alias_out_in_ov <- verify_x86 "mul_by_b_onE2" mul_by_b_onE2_alias_out_in_spec w4;
 
 // cneg_mod_384
 cneg_mod_384_ov <- verify_x86 "cneg_mod_384" cneg_mod_384_spec w4;
@@ -690,61 +601,3 @@ vec_select_ovs <- do {
   ovs_1_3  <- (for vec_select_sizes mk_vec_select_alias_1_3_ov);
   return (foldr concat [ovs, ovs_1_2] ovs_1_3);
 };
-
-let add_mod_384_overrides = concat
-  [ add_mod_384_ov
-  , add_mod_384_alias_ret_a_ov
-  , add_mod_384_alias_ret_b_ov
-  , add_mod_384_alias_a_b_ov
-  , add_mod_384_alias_ret_a_b_ov
-
-  , add_mod_384x_ov
-  , add_mod_384x_alias_ret_a_ov
-  , add_mod_384x_alias_ret_b_ov
-  , add_mod_384x_alias_ret_a_b_ov
-
-  , lshift_mod_384_5_ov
-  , lshift_mod_384_alias_ret_a_2_ov
-  , lshift_mod_384_alias_ret_a_5_ov
-
-  , mul_by_3_mod_384_ov
-  , mul_by_3_mod_384_alias_ret_a_ov
-
-  , mul_by_8_mod_384_ov
-  , mul_by_8_mod_384_alias_ret_a_ov
-
-  , mul_by_b_onE1_ov
-  , mul_by_b_onE1_alias_out_in_ov
-
-  , mul_by_3_mod_384x_ov
-  , mul_by_3_mod_384x_alias_ret_a_ov
-
-  , mul_by_8_mod_384x_ov
-  , mul_by_8_mod_384x_alias_ret_a_ov
-
-  , mul_by_b_onE2_ov
-  , mul_by_b_onE2_alias_out_in_ov
-
-  , cneg_mod_384_ov
-  , cneg_mod_384_alias_ret_a_ov
-
-  , sub_mod_384_ov
-  , sub_mod_384_alias_ret_a_ov
-  , sub_mod_384_alias_ret_b_ov
-  , sub_mod_384_alias_a_b_ov
-  , sub_mod_384_alias_ret_a_b_ov
-
-  , sub_mod_384x_ov
-  , sub_mod_384x_alias_ret_a_ov
-  , sub_mod_384x_alias_ret_b_ov
-  , sub_mod_384x_alias_a_b_ov
-  , sub_mod_384x_alias_ret_a_b_ov
-
-  , mul_by_1_plus_i_mod_384x_ov
-  , mul_by_1_plus_i_mod_384x_alias_ret_a_ov
-
-  , sgn0_pty_mod_384_ov
-
-  , sgn0_pty_mod_384x_ov
-  ]
-  vec_select_ovs;

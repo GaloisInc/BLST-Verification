@@ -3,16 +3,130 @@ module implementation::x86 where
 import implementation::Types
 import implementation::x86::helpers
 
+addmod = __add_mod_384
+submod = __sub_mod_384
+mul384 = __mulx_384
+
+
 // Top-level functions
+mulx_mont_384x
+  : Vec768 // a
+  -> Vec768 // b
+  -> Vec384  // m
+  -> [64] // n0
+  -> Vec768 // result
+mulx_mont_384x a b m n0 = result
+  where
+    t0 = __mulx_384 (take a) (take b)
+    t1 = __mulx_384 (drop a) (drop b)
+    t2 = __mulx_384 (__add_mod_384 (take a) (drop a) m) (__add_mod_384 (take b) (drop b) m)
+    t2' = __sub_mod_384x384 (__sub_mod_384x384 t2 t0 m) t1 m
+    t0' = __sub_mod_384x384 t0 t1 m
+    ret_re = redcx_mont_384 t0' m n0
+    ret_im = redcx_mont_384 t2' m n0
+    result = ret_re # ret_im
+
+sqrx_mont_384x
+  : Vec768 // a
+  -> Vec384  // m
+  -> [64] // n0
+  -> Vec768 // result
+sqrx_mont_384x a m n0 = result
+  where
+    t0 = __add_mod_384 (take a) (drop a) m
+    t1 = __sub_mod_384 (take a) (drop a) m
+    tmp = mulx_mont_384 (take a) (drop a) m n0
+    ret_im = __add_mod_384 tmp tmp m // TODO
+    ret_re = mulx_mont_384 t0 t1 m n0
+    result = ret_re # ret_im
+
+mulx_382x
+  : Vec768 // a
+  -> Vec768 // b
+  -> Vec384  // m
+  -> [2]Vec768 // result
+mulx_382x a b m = result
+  where
+    a_re = take a
+    a_im = drop a
+    (t0_cf_0, t0_0) = add (a_re @ 0) (a_im @ 0)
+    (t0_cf_1, t0_1) = adc (a_re @ 1) (a_im @ 1) t0_cf_0
+    (t0_cf_2, t0_2) = adc (a_re @ 2) (a_im @ 2) t0_cf_1
+    (t0_cf_3, t0_3) = adc (a_re @ 3) (a_im @ 3) t0_cf_2
+    (t0_cf_4, t0_4) = adc (a_re @ 4) (a_im @ 4) t0_cf_3
+    (_, t0_5) = adc (a_re @ 5) (a_im @ 5) t0_cf_4
+
+    b_re = take b
+    b_im = drop b
+    (t1_cf_0, t1_0) = add (b_re @ 0) (b_im @ 0)
+    (t1_cf_1, t1_1) = adc (b_re @ 1) (b_im @ 1) t1_cf_0
+    (t1_cf_2, t1_2) = adc (b_re @ 2) (b_im @ 2) t1_cf_1
+    (t1_cf_3, t1_3) = adc (b_re @ 3) (b_im @ 3) t1_cf_2
+    (t1_cf_4, t1_4) = adc (b_re @ 4) (b_im @ 4) t1_cf_3
+    (_, t1_5) = adc (b_re @ 5) (b_im @ 5) t1_cf_4
+
+    tmp_im_0 = __mulx_384 [t0_0, t0_1, t0_2, t0_3, t0_4, t0_5] [t1_0, t1_1, t1_2, t1_3, t1_4, t1_5]
+    tmp_re = __mulx_384 a_re b_re
+    tx = __mulx_384 a_im b_im
+    tmp_im_1 = __sub_mod_384x384 tmp_im_0 tx m
+    ret_im = __sub_mod_384x384 tmp_im_1 tmp_re m
+    ret_re = __sub_mod_384x384 tmp_re tx m
+    result = [ret_re, ret_im]
+
+sqrx_382x
+  : Vec768 // a
+  -> Vec384  // m
+  -> [2]Vec768 // result
+sqrx_382x a m = result
+  where
+    a_re = take a
+    a_im = drop a
+    (t0_cf_0, t0_0) = add (a_re @ 0) (a_im @ 0)
+    (t0_cf_1, t0_1) = adc (a_re @ 1) (a_im @ 1) t0_cf_0
+    (t0_cf_2, t0_2) = adc (a_re @ 2) (a_im @ 2) t0_cf_1
+    (t0_cf_3, t0_3) = adc (a_re @ 3) (a_im @ 3) t0_cf_2
+    (t0_cf_4, t0_4) = adc (a_re @ 4) (a_im @ 4) t0_cf_3
+    (_, t0_5) = adc (a_re @ 5) (a_im @ 5) t0_cf_4
+
+    t1 = __sub_mod_384 a_re a_im m
+
+    ret_re = __mulx_384 [t0_0, t0_1, t0_2, t0_3, t0_4, t0_5] t1 
+    tmp_im = __mulx_384 a_re a_im
+
+    (ret_im_cf_0, ret_im_0) = add (tmp_im @ 0) (tmp_im @ 0)
+    (ret_im_cf_1, ret_im_1) = adc (tmp_im @ 1) (tmp_im @ 1) ret_im_cf_0
+    (ret_im_cf_2, ret_im_2) = adc (tmp_im @ 2) (tmp_im @ 2) ret_im_cf_1
+    (ret_im_cf_3, ret_im_3) = adc (tmp_im @ 3) (tmp_im @ 3) ret_im_cf_2
+    (ret_im_cf_4, ret_im_4) = adc (tmp_im @ 4) (tmp_im @ 4) ret_im_cf_3
+    (ret_im_cf_5, ret_im_5) = adc (tmp_im @ 5) (tmp_im @ 5) ret_im_cf_4
+    (ret_im_cf_6, ret_im_6) = adc (tmp_im @ 6) (tmp_im @ 6) ret_im_cf_5
+    (ret_im_cf_7, ret_im_7) = adc (tmp_im @ 7) (tmp_im @ 7) ret_im_cf_6
+    (ret_im_cf_8, ret_im_8) = adc (tmp_im @ 8) (tmp_im @ 8) ret_im_cf_7
+    (ret_im_cf_9, ret_im_9) = adc (tmp_im @ 9) (tmp_im @ 9) ret_im_cf_8
+    (ret_im_cf_10, ret_im_10) = adc (tmp_im @ 10) (tmp_im @ 10) ret_im_cf_9
+    (_, ret_im_11) = adc (tmp_im @ 11) (tmp_im @ 11) ret_im_cf_10
+    ret_im = [ret_im_0, ret_im_1, ret_im_2, ret_im_3, ret_im_4, ret_im_5, ret_im_6, ret_im_7, ret_im_8, ret_im_9, ret_im_10, ret_im_11]
+    result = [ret_re, ret_im]
+
+redcx_mont_384
+  : Vec768 // a; pointer in rsi
+  -> Vec384 // m; pointer in rdx
+  -> [64] // n0; passed in rcx
+  -> Vec384 // result
+redcx_mont_384 a m n0 = result
+  where
+    acc = __mulx_by_1_mont_384 (take a) m n0
+    result = __redc_tail_mont_384 acc a m
+
 fromx_mont_384
-  : Vec384 // a; passed in rsi
-  -> Vec384 // m; passed in rdx
+  : Vec384 // a; pointer in rsi
+  -> Vec384 // m; pointer in rdx
   -> [64] // n0; passed in rcx
   -> Vec384 // result
 fromx_mont_384 a m n0 = result
   where
     // 0
-    [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = mulx_by_1_mont_384 a m n0
+    [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = __mulx_by_1_mont_384 a m n0
 
     // 1
     rax_1 = r14_0
@@ -62,7 +176,7 @@ sgn0x_pty_mont_384
 sgn0x_pty_mont_384 a p n0 = result
   where
     // 0
-    [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = mulx_by_1_mont_384 a p n0
+    [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = __mulx_by_1_mont_384 a p n0
 
     // 1
     rax_1 = 0
@@ -121,6 +235,267 @@ sgn0x_pty_mont_384 a p n0 = result
 
     // 19
     result = rax_18 || r13_18
+
+sgn0x_pty_mont_384x
+  : Vec768 // a; passed in rdi
+  -> Vec384 // m; passed in rsi
+  -> [64] // n0; passed in rdx
+  -> [64]
+sgn0x_pty_mont_384x a m n0 = result
+  where
+// 0x000000000001b1f2 <+18>:	48 89 f3	mov    rbx,rsi
+    // 1: move m to rbx
+
+// 0x000000000001b1f5 <+21>:	48 8d 77 30	lea    rsi,[rdi+0x30]
+    // 2: rsi references imaginary part of a
+
+// 0x000000000001b1f9 <+25>:	48 89 d1	mov    rcx,rdx
+    // 3
+
+// 0x000000000001b1fc <+28>:	e8 9f fb ff ff	call   0x1ada0 <__mulx_by_1_mont_384>
+    // 4
+    [r8_4, r9_4, r10_4, r11_4, r12_4, r13_4, r14_4, r15_4] = __mulx_by_1_mont_384 (drop a) m n0
+
+// 0x000000000001b201 <+33>:	4d 89 f4	mov    r12,r14
+    // 5
+    r12_5 = r14_4
+
+// 0x000000000001b204 <+36>:	4d 09 fe	or     r14,r15
+    // 6
+    r14_6 = r14_4 || r15_4
+
+// 0x000000000001b207 <+39>:	4d 09 c6	or     r14,r8
+    // 7
+    r14_7 = r14_6 || r8_4
+
+// 0x000000000001b20a <+42>:	4d 09 ce	or     r14,r9
+    // 8
+    r14_8 = r14_7 || r9_4
+
+// 0x000000000001b20d <+45>:	4d 09 d6	or     r14,r10
+    // 9
+    r14_9 = r14_8 || r10_4
+
+// 0x000000000001b210 <+48>:	4d 09 de	or     r14,r11
+    // 10
+    r14_10 = r14_9 || r11_4
+
+// 0x000000000001b213 <+51>:	48 8d 37	lea    rsi,[rdi]
+    // 11: rsi references real part of a
+
+// 0x000000000001b216 <+54>:	48 31 ff	xor    rdi,rdi
+    // 12
+    rdi_12 = 0
+
+// 0x000000000001b219 <+57>:	4d 89 e5	mov    r13,r12
+    // 13
+    r13_13 = r12_5
+
+// 0x000000000001b21c <+60>:	4d 01 e4	add    r12,r12
+    // 14
+    (cf_14, r12_14) = add r12_5 r12_5
+
+// 0x000000000001b21f <+63>:	4d 11 ff	adc    r15,r15
+    // 15
+    (cf_15, r15_15) = adc r15_4 r15_4 cf_14
+
+// 0x000000000001b222 <+66>:	4d 11 c0	adc    r8,r8
+    // 16
+    (cf_16, r8_16) = adc r8_4 r8_4 cf_15
+
+// 0x000000000001b225 <+69>:	4d 11 c9	adc    r9,r9
+    // 17
+    (cf_17, r9_17) = adc r9_4 r9_4 cf_16
+
+// 0x000000000001b228 <+72>:	4d 11 d2	adc    r10,r10
+    // 18
+    (cf_18, r10_18) = adc r10_4 r10_4 cf_17
+
+// 0x000000000001b22b <+75>:	4d 11 db	adc    r11,r11
+    // 19
+    (cf_19, r11_19) = adc r11_4 r11_4 cf_18
+
+// 0x000000000001b22e <+78>:	48 83 d7 00	adc    rdi,0x0
+    // 20
+    (cf_20, rdi_20) = adc rdi_12 0 cf_19
+
+// 0x000000000001b232 <+82>:	4c 2b 23	sub    r12,QWORD PTR [rbx]
+    // 21
+    (cf_21, r12_21) = sub r12_14 (m @ 0)
+
+// 0x000000000001b235 <+85>:	4c 1b 7b 08	sbb    r15,QWORD PTR [rbx+0x8]
+    // 22
+    (cf_22, r15_22) = sbb r15_15 (m @ 1) cf_21
+
+// 0x000000000001b239 <+89>:	4c 1b 43 10	sbb    r8,QWORD PTR [rbx+0x10]
+    // 23
+    (cf_23, r8_23) = sbb r8_16 (m @ 2) cf_22
+
+// 0x000000000001b23d <+93>:	4c 1b 4b 18	sbb    r9,QWORD PTR [rbx+0x18]
+    // 24
+    (cf_24, r9_24) = sbb r9_17 (m @ 3) cf_23
+
+// 0x000000000001b241 <+97>:	4c 1b 53 20	sbb    r10,QWORD PTR [rbx+0x20]
+    // 25
+    (cf_25, r10_25) = sbb r10_18 (m @ 4) cf_24
+
+// 0x000000000001b245 <+101>:	4c 1b 5b 28	sbb    r11,QWORD PTR [rbx+0x28]
+    // 26
+    (cf_26, r11_26) = sbb r11_19 (m @ 5) cf_25
+
+// 0x000000000001b249 <+105>:	48 83 df 00	sbb    rdi,0x0
+    // 27
+    (cf_27, rdi_27) = sbb rdi_20 0 cf_26
+
+// 0x000000000001b24d <+109>:	4c 89 34 24	mov    QWORD PTR [rsp],r14
+    // 28: store r14 on stack
+    stack0 = r14_10
+
+// 0x000000000001b251 <+113>:	48 f7 d7	not    rdi
+    // 29
+    rdi_29 = ~rdi_27
+
+// 0x000000000001b254 <+116>:	49 83 e5 01	and    r13,0x1
+    // 30
+    r13_30 = r13_13 && zext 0x1
+
+// 0x000000000001b258 <+120>:	48 83 e7 02	and    rdi,0x2
+    // 31
+    rdi_31 = rdi_29 && zext 0x2
+
+// 0x000000000001b25c <+124>:	4c 09 ef	or     rdi,r13
+    // 32
+    rdi_32 = rdi_31 || r13_30
+
+// 0x000000000001b25f <+127>:	e8 3c fb ff ff	call   0x1ada0 <__mulx_by_1_mont_384>
+    // 33
+    [r8_33, r9_33, r10_33, r11_33, r12_33, r13_33, r14_33, r15_33] = __mulx_by_1_mont_384 (take a) m n0
+
+// 0x000000000001b264 <+132>:	4d 89 f4	mov    r12,r14
+    // 34
+    r12_34 = r14_33
+
+// 0x000000000001b267 <+135>:	4d 09 fe	or     r14,r15
+    // 35
+    r14_35 = r14_33 || r15_33
+
+// 0x000000000001b26a <+138>:	4d 09 c6	or     r14,r8
+    // 36
+    r14_36 = r14_35 || r8_33
+
+// 0x000000000001b26d <+141>:	4d 09 ce	or     r14,r9
+    // 37
+    r14_37 = r14_36 || r9_33
+
+// 0x000000000001b270 <+144>:	4d 09 d6	or     r14,r10
+    // 38
+    r14_38 = r14_37 || r10_33
+
+// 0x000000000001b273 <+147>:	4d 09 de	or     r14,r11
+    // 39
+    r14_39 = r14_38 || r11_33
+
+// 0x000000000001b276 <+150>:	48 31 c0	xor    rax,rax
+    // 40
+    rax_40 = 0
+
+// 0x000000000001b279 <+153>:	4d 89 e5	mov    r13,r12
+    // 41
+    r13_41 = r12_34
+
+// 0x000000000001b27c <+156>:	4d 01 e4	add    r12,r12
+    // 42
+    (cf_42, r12_42) = add r12_34 r12_34
+
+// 0x000000000001b27f <+159>:	4d 11 ff	adc    r15,r15
+    // 43
+    (cf_43, r15_43) = adc r15_33 r15_33 cf_42
+
+// 0x000000000001b282 <+162>:	4d 11 c0	adc    r8,r8
+    // 44
+    (cf_44, r8_44) = adc r8_33 r8_33 cf_43
+
+// 0x000000000001b285 <+165>:	4d 11 c9	adc    r9,r9
+    // 45
+    (cf_45, r9_45) = adc r9_33 r9_33 cf_44
+
+// 0x000000000001b288 <+168>:	4d 11 d2	adc    r10,r10
+    // 46
+    (cf_46, r10_46) = adc r10_33 r10_33 cf_45
+
+// 0x000000000001b28b <+171>:	4d 11 db	adc    r11,r11
+    // 47
+    (cf_47, r11_47) = adc r11_33 r11_33 cf_46
+
+// 0x000000000001b28e <+174>:	48 83 d0 00	adc    rax,0x0
+    // 48
+    (cf_48, rax_48) = adc rax_40 0 cf_47
+
+// 0x000000000001b292 <+178>:	4c 2b 23	sub    r12,QWORD PTR [rbx]
+    // 49
+    (cf_49, r12_49) = sub r12_42 (m @ 0)
+
+// 0x000000000001b295 <+181>:	4c 1b 7b 08	sbb    r15,QWORD PTR [rbx+0x8]
+    // 50
+    (cf_50, r15_50) = sbb r15_43 (m @ 1) cf_49
+
+// 0x000000000001b299 <+185>:	4c 1b 43 10	sbb    r8,QWORD PTR [rbx+0x10]
+    // 51
+    (cf_51, r8_51) = sbb r8_44 (m @ 2) cf_50
+
+// 0x000000000001b29d <+189>:	4c 1b 4b 18	sbb    r9,QWORD PTR [rbx+0x18]
+    // 52
+    (cf_52, r9_52) = sbb r9_45 (m @ 3) cf_51
+
+// 0x000000000001b2a1 <+193>:	4c 1b 53 20	sbb    r10,QWORD PTR [rbx+0x20]
+    // 53
+    (cf_53, r10_53) = sbb r10_46 (m @ 4) cf_52
+
+// 0x000000000001b2a5 <+197>:	4c 1b 5b 28	sbb    r11,QWORD PTR [rbx+0x28]
+    // 54
+    (cf_54, r11_54) = sbb r11_47 (m @ 5) cf_53
+
+// 0x000000000001b2a9 <+201>:	48 83 d8 00	sbb    rax,0x0
+    // 55
+    (cf_55, rax_55) = sbb rax_48 0 cf_54
+
+// 0x000000000001b2ad <+205>:	4c 8b 24 24	mov    r12,QWORD PTR [rsp]
+    // 56
+    r12_56 = stack0
+
+// 0x000000000001b2b1 <+209>:	48 f7 d0	not    rax
+    // 57
+    rax_57 = ~rax_55
+
+// 0x000000000001b2b4 <+212>:	4d 85 f6	test   r14,r14
+    // 58
+    zf_58 = r14_39 == 0
+
+// 0x000000000001b2b7 <+215>:	4c 0f 44 ef	cmove  r13,rdi
+    // 59
+    r13_59 = cmove r13_41 rdi_32 zf_58
+
+// 0x000000000001b2bb <+219>:	4d 85 e4	test   r12,r12
+    // 60
+    zf_60 = r12_56 == 0
+
+// 0x000000000001b2be <+222>:	48 0f 45 c7	cmovne rax,rdi
+    // 61
+    rax_61 = cmovne rax_57 rdi_32 zf_60
+
+// 0x000000000001b2c2 <+226>:	49 83 e5 01	and    r13,0x1
+    // 62
+    r13_62 = r13_59 && zext 0x1
+
+// 0x000000000001b2c6 <+230>:	48 83 e0 02	and    rax,0x2
+    // 63
+    rax_63 = rax_61 && zext 0x2
+
+// 0x000000000001b2ca <+234>:	4c 09 e8	or     rax,r13
+    // 64
+    rax_64 = rax_63 || r13_62
+
+    result = rax_64
 
 mulx_mont_384
   : Vec384 // a; passed in rsi
