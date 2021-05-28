@@ -19,7 +19,7 @@ mulx_mont_384x a b m n0 = result
   where
     t0 = __mulx_384 (take a) (take b)
     t1 = __mulx_384 (drop a) (drop b)
-    t2 = __mulx_384 (__add_mod_384 (take a) (drop a) m) (__add_mod_384 (take b) (drop b) m)
+    t2 = __mulx_384 (__add_mod_384 (take b) (drop b) m) (__add_mod_384 (take a) (drop a) m)
     t2' = __sub_mod_384x384 (__sub_mod_384x384 t2 t0 m) t1 m
     t0' = __sub_mod_384x384 t0 t1 m
     ret_re = redcx_mont_384 t0' m n0

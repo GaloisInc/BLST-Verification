@@ -65,55 +65,52 @@ let points_to_vec384x ptr r i = crucible_points_to ptr (crucible_term {{ [r, i] 
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
 
-// mulx_mont_384x - TODO
+// mulx_mont_384x
 let mulx_mont_384x_spec = do {
   ret_ptr <- crucible_alloc vec384x_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384x_type;
   p_ptr <- ptr_to_modulus;
   crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr, crucible_term modulus_neg_inv];
-  let new_ret = {{ take`{2} (split (mulx_mont_384x (join a) (join b) modulus modulus_neg_inv) : [2]Vec384) }};
-  crucible_points_to_untyped ret_ptr (crucible_term new_ret);
+  let new_ret = {{ split (mulx_mont_384x (join a) (join b) modulus modulus_neg_inv) : [2]Vec384 }};
+  crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
 let mulx_mont_384x_alias_ret_ret_spec = do {
-  (_, ret_ptr) <- ptr_to_fresh "ret" vec384x_type;
-  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384x_type;
-  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  n0 <- crucible_fresh_var "n0" limb_type;
-  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term n0];
-  new_mul_mont_384x_alias_ret <- crucible_fresh_var "new_mul_mont_384x_alias_ret" vec384x_type;
-  crucible_points_to ret_ptr (crucible_term new_mul_mont_384x_alias_ret);
+  (a, ret_ptr) <- ptr_to_fresh "ret" vec384x_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384x_type;
+  p_ptr <- ptr_to_modulus;
+  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term modulus_neg_inv];
+  let new_ret = {{ split (mulx_mont_384x (join a) (join b) modulus modulus_neg_inv) : [2]Vec384 }};
+  crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
 let mulx_mont_384x_alias_ret_a_ret_spec = do {
-  (_, ret_ptr) <- ptr_to_fresh "ret" vec384x_type;
-  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
-  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  n0 <- crucible_fresh_var "n0" limb_type;
-  crucible_execute_func [ret_ptr, a_ptr, ret_ptr, p_ptr, crucible_term n0];
-  new_mul_mont_384x_alias_ret <- crucible_fresh_var "new_mul_mont_384x_alias_ret" vec384x_type;
-  crucible_points_to ret_ptr (crucible_term new_mul_mont_384x_alias_ret);
+  (b, ret_ptr) <- ptr_to_fresh "ret" vec384x_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
+  p_ptr <- ptr_to_modulus;
+  crucible_execute_func [ret_ptr, a_ptr, ret_ptr, p_ptr, crucible_term modulus_neg_inv];
+  let new_ret = {{ split (mulx_mont_384x (join a) (join b) modulus modulus_neg_inv) : [2]Vec384 }};
+  crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
 
-// sqrx_mont_384x - TODO
+// sqrx_mont_384x
 let sqrx_mont_384x_spec = do {
   ret_ptr <- crucible_alloc vec384x_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
   p_ptr <- ptr_to_modulus;
   crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term modulus_neg_inv];
-  let new_ret = {{ (split (sqrx_mont_384x (join a) modulus modulus_neg_inv) : [2]Vec384) }};
+  let new_ret = {{ split (sqrx_mont_384x (join a) modulus modulus_neg_inv) : [2]Vec384 }};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
 let sqrx_mont_384x_alias_spec = do {
-  (_, ret_ptr) <- ptr_to_fresh "ret" vec384x_type;
-  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  n0 <- crucible_fresh_var "n0" limb_type;
-  crucible_execute_func [ret_ptr, ret_ptr, p_ptr, crucible_term n0];
-  new_sqr_mont_384x_alias_ret <- crucible_fresh_var "new_sqr_mont_384x_alias_ret" vec384x_type;
-  crucible_points_to ret_ptr (crucible_term new_sqr_mont_384x_alias_ret);
+  (a, ret_ptr) <- ptr_to_fresh "ret" vec384x_type;
+  p_ptr <- ptr_to_modulus;
+  crucible_execute_func [ret_ptr, ret_ptr, p_ptr, crucible_term modulus_neg_inv];
+  let new_ret = {{ split (sqrx_mont_384x (join a) modulus modulus_neg_inv) : [2]Vec384 }};
+  crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
 // mulx_382x
@@ -369,31 +366,28 @@ let mul_ss = addsimps
 
 
 // mulx_mont_384x
-// verify_x86 "mulx_mont_384x" mulx_mont_384x_spec do {
-//   goal_eval;
-//   simplify mul_ss;
-//   print_goal;
-//   w4;
-// };
-// verify_x86 "mulx_mont_384x" mulx_mont_384x_alias_ret_ret_spec do {
-//   w4;
-// };
-// verify_x86 "mulx_mont_384x" mulx_mont_384x_alias_ret_a_ret_spec do {
-//   w4;
-// };
+verify_x86 "mulx_mont_384x" mulx_mont_384x_spec do {
+  w4;
+};
+verify_x86 "mulx_mont_384x" mulx_mont_384x_alias_ret_ret_spec do {
+  w4;
+};
+verify_x86 "mulx_mont_384x" mulx_mont_384x_alias_ret_a_ret_spec do {
+  w4;
+};
 
 // sqrx_mont_384x
-// verify_x86 "sqrx_mont_384x" sqrx_mont_384x_spec do {
-//   w4;
-// };
-// verify_x86 "sqrx_mont_384x" sqrx_mont_384x_alias_spec do {
-//   w4;
-// };
+verify_x86 "sqrx_mont_384x" sqrx_mont_384x_spec do {
+  w4;
+};
+verify_x86 "sqrx_mont_384x" sqrx_mont_384x_alias_spec do {
+  w4;
+};
 
 // mulx_382x
-// verify_x86 "mulx_382x" mulx_382x_spec do {
-//   w4;
-// };
+verify_x86 "mulx_382x" mulx_382x_spec do {
+  w4;
+};
 
 // sqrx_382x
 verify_x86 "sqrx_382x" sqrx_382x_spec do {
