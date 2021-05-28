@@ -3,32 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-// include "helpers.saw";
-// include "list_utils.saw";
-// include "types.saw";
-
-// m <- llvm_load_module "../build/llvm/libblst.a.bc";
-
-// let do_prove = false;
-
-// enable_experimental;
-
-// include "proof-helpers.saw";
-// include "print_readably.saw";
-// include "blst_error.saw";
-// // include "hash_to_field.saw";
-// include "fp_overrides.saw";
-// include "vect.saw";
-// include "curve_operations.saw";
-// include "ec_mult.saw";
-// include "exp.saw";
-// include "sgn0.saw";
-// include "deserialize-p1.saw";
-// include "subgroup_check_g1.saw";
-// include "misc_rules.saw";
-
-// let do_prove = true;
-
 // NOTE: we only consider inputs that either have the infinity-bit set or compressed-bit set
 
 // aggregate_in_g1_error_precond describes the circumstances under which aggregate_in_g1 returns an error (assuming either the compressed bit is set of the infinity bit is set)
@@ -103,28 +77,6 @@ let blst_aggregate_in_g1_error_spec = do {
 };
 
 
-// TODO: old spec; keep?
-let _blst_aggregate_in_g1_in_null_spec = do {
-  //
-  out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
-  let inp_ptr = llvm_null;
-  //
-  (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
-  llvm_precond {{ ~(zwire@0)@1 }}; // infinity bit not set
-  llvm_precond {{ (zwire@0)@0 }}; // compressed
-  llvm_precond {{ uncompress_E1_imp zwire != nothing }}; // decompression succeeds (this does not check for zero)
-  llvm_precond {{ uncompress_E1_x_fp zwire != Fp.field_zero }}; // decompressed value is not zero
-  llvm_precond {{ is_in_g1_impl (uncompress_E1_OK zwire)  }}; // subgroup check succeeds
-  //
-  llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
-  //
-  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
-  llvm_points_to out_ptr (llvm_term new_out);
-  llvm_postcond {{ affinify E (POINTonE1_abs new_out) == uncompress_E1_OK zwire }};
-  //
-  llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
-};
-
 let overrides = foldr concat [vec_overrides,curve_operations_e1_ovs] [POINTonE1_Uncompress_OK_ov,POINTonE1_in_G1_ov];
 
 // Assumptions
@@ -132,10 +84,6 @@ let overrides = foldr concat [vec_overrides,curve_operations_e1_ovs] [POINTonE1_
 uncompress_not_point_O <- admit_cryptol {{ \x -> (is_point_O E (uncompress_E1_OK x)) == if uncompress_E1_x_fp x != Fp.field_zero then False else apply is_point_O E (uncompress_E1_OK x) }};
 
 uncompress_on_curve <- admit_cryptol {{ \x -> (is_point_affine E (uncompress_E1_OK x)) == True }};
-
-// TODO: prove?
-uncompress_is_val_1 <- admit_cryptol {{ \x -> (Fp.is_val a == True where (a,b) = (uncompress_E1_OK x)) }};
-uncompress_is_val_2 <- admit_cryptol {{ \x -> (Fp.is_val b == True where (a,b) = (uncompress_E1_OK x)) }};
 
 // Proofs
 
@@ -188,36 +136,3 @@ blst_aggregate_in_g1_null_ov <- custom_verify
       simplify remove_higher_order_function_simpset;
       w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
     });
-
-// TODO: old stuff; keep?
-_blst_aggregate_in_g1_in_null_ov <- custom_verify
-  "blst_aggregate_in_g1"
-  [POINTonE1_Uncompress_OK_ov,POINTonE1_in_G1_ov]
-  _blst_aggregate_in_g1_in_null_spec
-  (goal_num_ite 1 // preconditions of the subgroup check
-    do {
-      simplify (addsimps (concat POINTonE1_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
-      w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl"];
-    }
-    (goal_num_ite 5
-      do {
-        let unit_rewrite = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp_abs [ 8505329371266088957 , 17002214543764226050 , 6865905132761471162 , 8632934651105793861 , 6631298214892334189 , 1582556514881692819 ] == Fp.field_unit }}) w4);
-        let affinify_rewrite = run (custom_prove_cryptol {{ \x y -> affinify E (x,y,Fp.field_unit) == if Fp.is_val x /\ Fp.is_val y then (x,y) else apply affinify E (x,y,Fp.field_unit) }} w4);
-        // Here we affinify (x,y,unit) where (x,y) = uncompress_E1_OK
-        let r1 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \(x1:[64]) (x2:[64]) (x3:[64]) (x4:[64]) (x5:[64]) (x6:[64]) (y1:[64]) (y2:[64]) (y3:[64]) (y4:[64]) (y5:[64]) (y6:[64]) c -> [if c then x1 else y1, if c then x2 else y2, if c then x3 else y3, if c then x4 else y4, if c then x5 else y5, if c then x6 else y6] == if c then [x1,x2,x3,x4,x5,x6] else [y1,y2,y3,y4,y5,y6] }}) w4);
-        simplify (addsimps (concat POINTonE1_thms [r1]) empty_ss);
-        unfolding ["POINTonE1_abs"];
-        simplify (addsimp unit_rewrite empty_ss);
-        let r2 = run (admit_cryptol (rewrite (cryptol_ss ()) {{ \x y c -> affinify E (if c then x else y) == if c then affinify E x else affinify E y }})); // TODO: prove
-        simplify (addsimps [r2,affinify_rewrite] empty_ss);
-        unfolding ["POINTonE1_affine_rep"];
-        let r3 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[6][64]) -> ([x1,x2,x3,x4,x5,x6] == x where [x1,x2,x3,x4,x5,x6] = x) }}) w4);
-        simplify (addsimps [r3,uncompress_is_val_1,uncompress_is_val_2] fp_simpset);
-        simplify remove_higher_order_function_simpset;
-        w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
-      }
-      do {
-        simplify (addsimps POINTonE1_thms empty_ss);
-        simplify remove_higher_order_function_simpset;
-        w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
-      }));
