@@ -174,21 +174,20 @@ let sqrx_n_mul_mont_383_spec count = do {
   p_ptr <- ptr_to_modulus;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
   crucible_execute_func [ret_ptr, a_ptr, crucible_term {{ `count : [64] }}, p_ptr, crucible_term modulus_neg_inv, b_ptr];
-  let new_ret = {{ take`{1} (sqrx_n_mul_mont_383 a `count modulus modulus_neg_inv b) }};
+  let new_ret = {{ sqrx_n_mul_mont_383 a `count modulus modulus_neg_inv b }};
   crucible_points_to_untyped ret_ptr (crucible_term new_ret);
 };
 
 let sqrx_n_mul_mont_383_alias_1_2_spec count = do {
-  (_, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
-  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  n0 <- crucible_fresh_var "n0" limb_type;
-  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
-  crucible_execute_func [ret_ptr, ret_ptr, crucible_term {{ `count : [64] }}, p_ptr, crucible_term n0, b_ptr];
-  new_sqr_n_mul_mont_383_alias_1_2_ret <- crucible_fresh_var "new_sqr_n_mul_mont_383_alias_1_2_ret" vec384_type;
-  crucible_points_to ret_ptr (crucible_term new_sqr_n_mul_mont_383_alias_1_2_ret);
+  (a, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
+  p_ptr <- ptr_to_modulus;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
+  crucible_execute_func [ret_ptr, ret_ptr, crucible_term {{ `count : [64] }}, p_ptr, crucible_term modulus_neg_inv, b_ptr];
+  let new_ret = {{ sqrx_n_mul_mont_383 a `count modulus modulus_neg_inv b }};
+  crucible_points_to_untyped ret_ptr (crucible_term new_ret);
 };
 
-// sqrx_mont_382x - TODO
+// sqrx_mont_382x
 let sqrx_mont_382x_spec = do {
   ret_ptr <- crucible_alloc vec384x_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
@@ -221,6 +220,7 @@ bvAdd_65_commutes <- prove_folding_theorem {{ \(a : [65]) (b : [65]) -> a + b ==
 bvAdd_65_associates <- prove_folding_theorem {{ \(a : [65]) (b : [65]) (c : [65]) -> a + (b + c) == (a + b) + c }};
 bvAdd_65_associates_helper <- prove_folding_theorem {{ \(a : [65]) (b : [65]) (c : [65]) -> (a + b) + c == (a + c) + b }};
 bvMul_128_commutes <- prove_folding_theorem {{ \(a : [128]) (b : [128]) -> a * b == b * a }};
+
 let mul_ss = addsimps
   [ bvAdd_64_commutes
   , bvAdd_64_associates
@@ -231,151 +231,180 @@ let mul_ss = addsimps
   , bvMul_128_commutes
   ] basic_ss;
 
+let slice_448_64_0 = parse_core "\\(x : Vec 512 Bool) -> slice Bool 448 64 0 x";
+xmm_elim <- prove_folding_theorem {{
+  \(x : [512]) (junk : [512]) ->
+  slice_448_64_0 ((0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000 && junk) || x) == slice_448_64_0 x
+}};
+
+let xmm_ss = addsimps
+  [ xmm_elim
+  ] empty_ss;
 
 // mulx_mont_384x
-// verify_x86 "mulx_mont_384x" mulx_mont_384x_spec do {
-//   w4;
-// };
-// verify_x86 "mulx_mont_384x" mulx_mont_384x_alias_ret_ret_spec do {
-//   w4;
-// };
-// verify_x86 "mulx_mont_384x" mulx_mont_384x_alias_ret_a_ret_spec do {
-//   w4;
-// };
-// 
-// // sqrx_mont_384x
-// verify_x86 "sqrx_mont_384x" sqrx_mont_384x_spec do {
-//   w4;
-// };
-// verify_x86 "sqrx_mont_384x" sqrx_mont_384x_alias_spec do {
-//   w4;
-// };
-// 
-// // mulx_382x
-// verify_x86 "mulx_382x" mulx_382x_spec do {
-//   w4;
-// };
-// 
-// // sqrx_382x
-// verify_x86 "sqrx_382x" sqrx_382x_spec do {
-//   w4;
-// };
-// 
-// // redcx_mont_384
-// verify_x86 "redcx_mont_384" redcx_mont_384_spec do {
-//   w4;
-// };
-// 
-// // fromx_mont_384
-// verify_x86 "fromx_mont_384" fromx_mont_384_spec do {
-//   w4;
-// };
-// 
-// // sqn0x_pty_mont_384
-// verify_x86 "sgn0x_pty_mont_384" sgn0x_pty_mont_384_spec do {
-//   w4;
-// };
-// 
-// // sqn0x_pty_mont_384x
-// verify_x86 "sgn0x_pty_mont_384x" sgn0x_pty_mont_384x_spec do {
-//   w4;
-// };
-// 
-// // mulx_mont_384
-// verify_x86 "mulx_mont_384" mulx_mont_384_spec do {
-//   w4;
-// };
-// verify_x86 "mulx_mont_384" mulx_mont_384_ret_ret_spec do {
-//   w4;
-// };
-// verify_x86 "mulx_mont_384" mulx_mont_384_ret_a_ret_spec do {
-//   w4;
-// };
-// 
-// // sqrx_mont_384
-// verify_x86 "sqrx_mont_384" sqrx_mont_384_spec do {
-//   w4;
-// };
-// verify_x86 "sqrx_mont_384" sqrx_mont_384_alias_spec do {
-//   w4;
-// };
+verify_x86 "mulx_mont_384x" mulx_mont_384x_spec do {
+  w4;
+};
+verify_x86 "mulx_mont_384x" mulx_mont_384x_alias_ret_ret_spec do {
+  w4;
+};
+verify_x86 "mulx_mont_384x" mulx_mont_384x_alias_ret_a_ret_spec do {
+  w4;
+};
+
+// sqrx_mont_384x
+verify_x86 "sqrx_mont_384x" sqrx_mont_384x_spec do {
+  w4;
+};
+verify_x86 "sqrx_mont_384x" sqrx_mont_384x_alias_spec do {
+  w4;
+};
+
+// mulx_382x
+verify_x86 "mulx_382x" mulx_382x_spec do {
+  w4;
+};
+
+// sqrx_382x
+verify_x86 "sqrx_382x" sqrx_382x_spec do {
+  w4;
+};
+
+// redcx_mont_384
+verify_x86 "redcx_mont_384" redcx_mont_384_spec do {
+  w4;
+};
+
+// fromx_mont_384
+verify_x86 "fromx_mont_384" fromx_mont_384_spec do {
+  w4;
+};
+
+// sqn0x_pty_mont_384
+verify_x86 "sgn0x_pty_mont_384" sgn0x_pty_mont_384_spec do {
+  w4;
+};
+
+// sqn0x_pty_mont_384x
+verify_x86 "sgn0x_pty_mont_384x" sgn0x_pty_mont_384x_spec do {
+  w4;
+};
+
+// mulx_mont_384
+verify_x86 "mulx_mont_384" mulx_mont_384_spec do {
+  w4;
+};
+verify_x86 "mulx_mont_384" mulx_mont_384_ret_ret_spec do {
+  w4;
+};
+verify_x86 "mulx_mont_384" mulx_mont_384_ret_a_ret_spec do {
+  w4;
+};
+
+// sqrx_mont_384
+verify_x86 "sqrx_mont_384" sqrx_mont_384_spec do {
+  w4;
+};
+verify_x86 "sqrx_mont_384" sqrx_mont_384_alias_spec do {
+  w4;
+};
 
 // sqrx_n_mul_mont_383
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 1) do {
-  goal_eval_unint [];
-  simplify mul_ss;
-  goal_eval_unint [];
-  print_goal;
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 2) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 3) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 4) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 5) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 6) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 7) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 8) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 9) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 10) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 11) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_spec 12) do {
+  simplify xmm_ss;
   w4;
 };
 
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 1) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 2) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 3) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 4) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 5) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 6) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 7) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 8) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 9) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 10) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 11) do {
+  simplify xmm_ss;
   w4;
 };
 verify_x86 "sqrx_n_mul_mont_383" (sqrx_n_mul_mont_383_alias_1_2_spec 12) do {
+  simplify xmm_ss;
   w4;
 };
 
