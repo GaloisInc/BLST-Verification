@@ -8,7 +8,7 @@
 // That specification describes a number of "parameters" that are used in its
 // definitions, and later defines ciphersuites that instantiate those parameters.
 //
-// This module defines the specification in terms of the parameters, usig a Cryptol
+// This module defines the specification in terms of the parameters, using a Cryptol
 // parameterized module.  The instantiations are done in separate Cyytpol files,
 // as required by the language.
 
