@@ -123,12 +123,12 @@ let binop_alias_1_2_3_spec name llvm_type inv rep abs op = do {
 // .. theorems (useful rewrites)
 
 // abs and rep theorems
+
 fp_rep_thms <- for
   [ {{ \x -> fp_invariant (fp_rep x) == True }}
-  // , {{ \x -> fp_abs (fp_rep x) == x }}
   , {{ \x -> fp_rep (fp_abs x) == if fp_invariant x then x else fp_normalize x}}
+  //, {{ \x -> fp_rep (fp_abs x) == fp_normalize x}} // maybe consider this version of rep_abs?
   , {{ \x -> fp_abs (fp_rep x) == Fp.normalize x }}
-  //, {{ \x -> fp_rep (fp_abs x) == fp_normalize x}}
   ] admit_cryptol;
 
 // a conditional rewrite for normalization.  This uses "apply" to avoid having
@@ -138,6 +138,9 @@ fp_rep_thms <- for
 // This rule is not included in the main fp_simplification rules as it is seldom needed.
 fp_normalize_thm <- admit_cryptol
   {{ \x -> fp_normalize x == if fp_invariant x then x else apply fp_normalize x }};
+
+fp_abs_normalize_thm <- prove_cryptol
+  {{ \x -> Fp.normalize x == if Fp.is_val x then x else apply Fp.normalize x }} [];
 
 /*
 // we sometimes need to undo SAW's rip-and-restitching of vectors.  It is a bit tricky 
@@ -225,6 +228,9 @@ fp_rep_normalize_thm <- custom_prove_cryptol {{ \x -> fp_rep (Fp.normalize x) ==
 
 fp_is_equal_elim_thm <- prove_cryptol {{ \x y -> Fp.is_equal (x,y) == (x==y) }} [];
 
+fp_normalize_ite_thm <- hoist {{fp_normalize}} ["fp_normalize"] ;
+fp_abs_normalize_ite_thm <- hoist {{Fp.normalize}} ["Fp"] ;
+
 let fp_simpset = addsimps (concat_all
                            [ fp_rep_thms
                            , fp_is_val_thms
@@ -232,6 +238,7 @@ let fp_simpset = addsimps (concat_all
                            , [ fp_abs_ite_thm, fp_invariant_ite_thm, fp_rep_ite_thm
                              , fp_abstract_invariant_thm, fp_is_val_div_thm
                              , unrip_thm, seq_ite_thm, fp_rep_normalize_thm
+                             , fp_normalize_ite_thm, fp_abs_normalize_ite_thm
                              ]])   (add_prelude_eqs [ "ite_true"](cryptol_ss ()));
 
 let apply_fp_rewrites = simplify fp_simpset;
