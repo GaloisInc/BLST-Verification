@@ -582,3 +582,25 @@ sqrx_mont_382x a m n0 = result
     ret_re = __sub_mod_384 tmp_re t0_mask m
 
     result = ret_re # ret_im
+
+mulx_mont_sparse_256
+  : Vec256 // a; passed in rsi
+  -> Vec256 // b; passed in rdx
+  -> Vec256 // m; passed in rcx
+  -> [64] // n0; passed in r8
+  -> Vec256 // result
+mulx_mont_sparse_256 a b m n0 = result
+  where
+    (r11, rax) = mulx (a @ 0) (b @ 0)
+    acc =
+      [ undefined // r10
+      , r11 // r11
+      , undefined // r12
+      , undefined // r13
+      , a @ 0 // r14
+      , a @ 1 // r15
+      , rax // rax
+      ]
+    lo = a @ 2
+    hi = a @ 3
+    result = __mulx_mont_sparse_256 acc (b @ 0) n0 lo hi a b m

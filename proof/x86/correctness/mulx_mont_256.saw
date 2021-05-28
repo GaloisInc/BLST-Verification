@@ -1,0 +1,125 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+let r0 = {{ 0xfffffffeffffffff : [64] }};
+
+///////////////////////////////////////////////////////////////////////////////
+// Specifications
+///////////////////////////////////////////////////////////////////////////////
+
+// mulx_mont_sparse_256
+let mulx_mont_sparse_256_spec = do {
+  ret_ptr <- crucible_alloc vec256_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  p_ptr <- ptr_to_modulus256;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr, crucible_term r0];
+  let new_ret = {{ mulx_mont_sparse_256 a b modulus256 r0 }};
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+let mulx_mont_sparse_256_alias_ret_a_spec = do {
+  (a, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  p_ptr <- ptr_to_modulus256;
+  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term r0];
+  let new_ret = {{ mulx_mont_sparse_256 a b modulus256 r0 }};
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+// sqrx_mont_sparse_256
+let sqrx_mont_sparse_256_spec = do {
+  ret_ptr <- crucible_alloc vec256_type;
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  p_ptr <- ptr_to_modulus256;
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term r0];
+  let new_ret = {{ mulx_mont_sparse_256 a a modulus256 r0 }};
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+// fromx_mont_256
+let fromx_mont_256_spec = do {
+  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
+  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term n0];
+  new_from_mont_256_ret <- crucible_fresh_var "new_from_mont_256_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_from_mont_256_ret);
+};
+
+// redcx_mont_256
+let redcx_mont_256_spec = do {
+  ret_ptr <- crucible_alloc vec256_type;
+  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec512_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, crucible_term n0];
+  new_redc_mont_256_ret <- crucible_fresh_var "new_redc_mont_256_ret" vec256_type;
+  crucible_points_to ret_ptr (crucible_term new_redc_mont_256_ret);
+};
+
+let redcx_mont_256_alias_ret_a_spec = do {
+  (_, a_ptr) <- ptr_to_fresh "a" vec512_type;
+  (_, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
+  n0 <- crucible_fresh_var "n0" limb_type;
+  crucible_execute_func [a_ptr, a_ptr, b_ptr, crucible_term n0];
+  new_redc_mont_256_alias_1_2_a <- crucible_fresh_var "new_redc_mont_256_alias_1_2_a" vec512_type;
+  crucible_points_to a_ptr (crucible_term new_redc_mont_256_alias_1_2_a);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Proofs
+///////////////////////////////////////////////////////////////////////////////
+
+enable_what4_hash_consing;
+enable_x86_what4_hash_consing;
+
+let prove_folding_theorem t = prove_print w4 (rewrite (cryptol_ss ()) t);
+bvAdd_64_commutes <- prove_folding_theorem {{ \(a : [64]) (b : [64]) -> a + b == b + a }};
+bvAdd_64_associates <- prove_folding_theorem {{ \(a : [64]) (b : [64]) (c : [64]) -> a + (b + c) == (a + b) + c }};
+bvAdd_64_associates_helper <- prove_folding_theorem {{ \(a : [64]) (b : [64]) (c : [64]) -> (a + b) + c == (a + c) + b }};
+bvAdd_65_commutes <- prove_folding_theorem {{ \(a : [65]) (b : [65]) -> a + b == b + a }};
+bvAdd_65_associates <- prove_folding_theorem {{ \(a : [65]) (b : [65]) (c : [65]) -> a + (b + c) == (a + b) + c }};
+bvAdd_65_associates_helper <- prove_folding_theorem {{ \(a : [65]) (b : [65]) (c : [65]) -> (a + b) + c == (a + c) + b }};
+bvMul_128_commutes <- prove_folding_theorem {{ \(a : [128]) (b : [128]) -> a * b == b * a }};
+
+let mul_ss = addsimps
+  [ bvAdd_64_commutes
+  , bvAdd_64_associates
+  , bvAdd_64_associates_helper
+  , bvAdd_65_commutes
+  , bvAdd_65_associates
+  , bvAdd_65_associates_helper
+  , bvMul_128_commutes
+  ] basic_ss;
+
+// mulx_mont_sparse_256
+mulx_mont_sparse_256_ov <- verify_x86 "mulx_mont_sparse_256" mulx_mont_sparse_256_spec do {
+  w4;
+};
+verify_x86 "mulx_mont_sparse_256" mulx_mont_sparse_256_alias_ret_a_spec do {
+  w4;
+};
+
+// sqrx_mont_sparse_256
+verify_x86 "sqrx_mont_sparse_256" sqrx_mont_sparse_256_spec do {
+  w4;
+};
+
+// fromx_mont_256
+verify_x86 "fromx_mont_256" fromx_mont_256_spec do {
+  w4;
+};
+
+// redcx_mont_256
+verify_x86 "redcx_mont_256" redcx_mont_256_spec do {
+  w4;
+};
+verify_x86 "redcx_mont_256" redcx_mont_256_alias_ret_a_spec do {
+  w4;
+};
+
+exit 1;

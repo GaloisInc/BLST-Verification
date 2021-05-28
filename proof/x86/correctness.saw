@@ -23,6 +23,7 @@ let verify_x86_noadx_recent = verify_x86_helper "../../../build/x86_noadx_recent
 
 include "correctness/helpers.saw";
 // include "correctness/add_mod_256.saw";
-include "correctness/add_mod_384.saw";
+// include "correctness/add_mod_384.saw";
 // include "correctness/add_mod_384x384.saw";
+include "correctness/mulx_mont_256.saw";
 include "correctness/mulx_mont_384.saw";
