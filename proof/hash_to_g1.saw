@@ -597,8 +597,8 @@ final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst
   so the results are always proper field elements.
 */
 normalize_hash_lemmas <- for
- [ {{ \ (msg: [msg_len+aug_len][8]) (dst:[DST_len][8]) -> (Fp.normalize u == u where u = (hash_to_field`{count=2} msg dst)@0) }}
- , {{ \ (msg: [msg_len+aug_len][8]) (dst:[DST_len][8]) -> (Fp.normalize u == u where u = (hash_to_field`{count=2} msg dst)@1) }}
+ [ {{ \ (msg: [msg_len+aug_len][8]) (dst:[DST_len][8]) -> (Fp.normalize u == u where u = (HE1::hash_to_field`{count=2} msg dst)@0) }}
+ , {{ \ (msg: [msg_len+aug_len][8]) (dst:[DST_len][8]) -> (Fp.normalize u == u where u = (HE1::hash_to_field`{count=2} msg dst)@1) }}
  ] simp_then_admit;
  
 // And we're ready for the final overrides:
