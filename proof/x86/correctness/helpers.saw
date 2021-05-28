@@ -1,0 +1,44 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+import "../../../spec/Parameters.cry";
+import "../../../spec/implementation/Types.cry";
+import "../../../spec/implementation/Field.cry";
+import "../../../spec/implementation/x86.cry";
+import "../../../cryptol-specs/Common/bv.cry";
+
+let modulus = {{ [ 0xb9feffffffffaaab, 0x1eabfffeb153ffff, 0x6730d2a0f6b0f624, 0x64774b84f38512bf, 0x4b1ba7b6434bacd7, 0x1a0111ea397fe69a ] : [6][64] }};
+let modulus_neg_inv = {{ 0x89f3fffcfffcfffd : [64] }};
+
+let lt_modulus x = crucible_precond {{ vec384_abs x < vec384_abs modulus }};
+
+let ptr_to_modulus = do {
+  ptr <- crucible_alloc vec384_type;
+  crucible_points_to ptr (crucible_term modulus);
+  return ptr;
+};
+
+// BLS12_381_r
+let modulus256 = {{ [ 0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48 ] : [4][64] }};
+
+let lt_modulus256 x = crucible_precond {{ vec256_abs x < vec256_abs modulus256 }};
+
+let ptr_to_modulus256 = do {
+  ptr <- crucible_alloc vec256_type;
+  crucible_points_to ptr (crucible_term modulus256);
+  return ptr;
+};
+
+let ptr_to_fresh_vec384x_helper mutable nm = do {
+  ptr <- (if mutable then crucible_alloc else crucible_alloc_readonly) vec384x_type;
+  r <- crucible_fresh_var (str_concat nm "_r") vec384_type;
+  i <- crucible_fresh_var (str_concat nm "_i") vec384_type;
+  crucible_points_to ptr (crucible_term {{ [r, i] : [2]Vec384 }});
+  return (r, i, ptr);
+};
+let ptr_to_fresh_vec384x = ptr_to_fresh_vec384x_helper true;
+let ptr_to_fresh_vec384x_readonly = ptr_to_fresh_vec384x_helper false;
+
+let points_to_vec384x ptr r i = crucible_points_to ptr (crucible_term {{ [r, i] : [2]Vec384 }});
