@@ -36,7 +36,7 @@ sqrx_mont_384x a m n0 = result
     t0 = __add_mod_384 (take a) (drop a) m
     t1 = __sub_mod_384 (take a) (drop a) m
     tmp = mulx_mont_384 (take a) (drop a) m n0
-    ret_im = __add_mod_384 tmp tmp m // TODO
+    ret_im = __add_mod_384 tmp tmp m
     ret_re = mulx_mont_384 t0 t1 m n0
     result = ret_re # ret_im
 
@@ -520,3 +520,65 @@ mulx_mont_384 a b m n0 = result
     lo = a @ 4
     hi = a @ 5
     result = __mulx_mont_384 acc (b @ 0) n0 lo hi a b m
+
+sqrx_n_mul_mont_383
+  : Vec384 // a
+  -> Integer  // count
+  -> Vec384 // m
+  -> [64] // n0
+  -> Vec384 // b
+  -> Vec384 // result
+sqrx_n_mul_mont_383 a count m n0 b = result
+  where
+    mulx_mont_383_nonred x y = __mulx_mont_383_nonred [r8, r9, undefined, undefined, x @ 3, undefined, x @ 0, x @ 1, x @ 2] (y @ 0) n0 (x @ 4) (x @ 5) x y m
+      where (r9, r8) = mulx (x @ 0) (y @ 0)
+    loop counter acc =
+      if counter == 0
+      then acc
+      else loop (counter - 1) (mulx_mont_383_nonred acc acc)
+    result = mulx_mont_384 (loop count a) b m n0
+
+sqrx_mont_382x
+  : Vec768 // a; pointer in rsi
+  -> Vec384  // m; pointer in rdx
+  -> [64] // n0; passed in rcx
+  -> Vec768 // result
+sqrx_mont_382x a m n0 = result
+  where
+    mulx_mont_383_nonred x y = __mulx_mont_383_nonred [r8, r9, undefined, undefined, x @ 3, undefined, x @ 0, x @ 1, x @ 2] (y @ 0) n0 (x @ 4) (x @ 5) x y m
+      where (r9, r8) = mulx (x @ 0) (y @ 0)
+    a_re = take a
+    a_im = drop a
+    (t0_cf_0, t0_0) = add (a_re @ 0) (a_im @ 0)
+    (t0_cf_1, t0_1) = adc (a_re @ 1) (a_im @ 1) t0_cf_0
+    (t0_cf_2, t0_2) = adc (a_re @ 2) (a_im @ 2) t0_cf_1
+    (t0_cf_3, t0_3) = adc (a_re @ 3) (a_im @ 3) t0_cf_2
+    (t0_cf_4, t0_4) = adc (a_re @ 4) (a_im @ 4) t0_cf_3
+    (_, t0_5) = adc (a_re @ 5) (a_im @ 5) t0_cf_4
+    t0 = [t0_0, t0_1, t0_2, t0_3, t0_4, t0_5]
+
+    (t1_cf_0, t1_0) = sub (a_re @ 0) (a_im @ 0)
+    (t1_cf_1, t1_1) = msbb (a_re @ 1) (a_im @ 1) t1_cf_0
+    (t1_cf_2, t1_2) = msbb (a_re @ 2) (a_im @ 2) t1_cf_1
+    (t1_cf_3, t1_3) = msbb (a_re @ 3) (a_im @ 3) t1_cf_2
+    (t1_cf_4, t1_4) = msbb (a_re @ 4) (a_im @ 4) t1_cf_3
+    (gt, t1_5) = msbb (a_re @ 5) (a_im @ 5) t1_cf_4
+    t1 = [t1_0, t1_1, t1_2, t1_3, t1_4, t1_5]
+
+    tmp_im = mulx_mont_383_nonred a_re a_im
+
+    (ret_im_cf_0, ret_im_0) = add (tmp_im @ 0) (tmp_im @ 0)
+    (ret_im_cf_1, ret_im_1) = adc (tmp_im @ 1) (tmp_im @ 1) ret_im_cf_0
+    (ret_im_cf_2, ret_im_2) = adc (tmp_im @ 2) (tmp_im @ 2) ret_im_cf_1
+    (ret_im_cf_3, ret_im_3) = adc (tmp_im @ 3) (tmp_im @ 3) ret_im_cf_2
+    (ret_im_cf_4, ret_im_4) = adc (tmp_im @ 4) (tmp_im @ 4) ret_im_cf_3
+    (_, ret_im_5) = adc (tmp_im @ 5) (tmp_im @ 5) ret_im_cf_4
+    ret_im = [ret_im_0, ret_im_1, ret_im_2, ret_im_3, ret_im_4, ret_im_5]
+
+    tmp_re = mulx_mont_383_nonred t0 t1
+
+    mask = if gt then -1 else 0
+    t0_mask = [mask && (t0 @ 0), mask && (t0 @ 1), mask && (t0 @ 2), mask && (t0 @ 3), mask && (t0 @ 4), mask && (t0 @ 5)]
+    ret_re = __sub_mod_384 tmp_re t0_mask m
+
+    result = ret_re # ret_im
