@@ -642,34 +642,13 @@ POINTonE1_selection_ite_rev_thms <- for
         (if c then p1.2 else p2.2) == (if c then p1 else p2).2 }}
   ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
 
-// TODO: remove:
-let {{
-  projective_invariant_E1: ProjectivePoint t_Fp -> Bool
-  projective_invariant_E1 (x, y, z) = Fp.is_val x /\ Fp.is_val y /\ Fp.is_val z
-  }};
+POINTonE1_affine_selection_ite_thms <- for
+  [ {{ \ c (p1:(AffinePoint t_Fp)) p2 ->
+        (if c then p1 else p2).0 == if c then p1.0 else p2.0 }}
+  , {{ \ c (p1:(AffinePoint t_Fp)) p2 ->
+        (if c then p1 else p2).1 == if c then p1.1 else p2.1 }}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
 
-/*
-
-From the abs_rep rule we will be getting terms like
-  point_add Fp (normalize... (point_add Fp (normalize (point_double ...) (normalize (POINTonE1_rep p)) ...
-
-{{ \ p1 p2 -> normalize_point Fp (point_add Fp p1 p2) ==
-                  if projective_invariant_E1 p1 /\ projective_invariant_E1 p2
-                  then point_add Fp p1 p2
-                  else apply normalize_point Fp (point_add Fp p1 p2) }} ?
-*/
-/*
-  , {{ \ p1 p2 a4 is_null -> projective_invariant_E1 (point_dadd Fp p1 p2 a4 is_null) ==
-                  if projective_invariant_E1 p1 /\ projective_invariant_E1 p2
-                  then True
-                  else apply projective_invariant_E1 (point_add Fp p1 p2) }}
-
-  , {{ \ p1 -> projective_invariant_E1 (point_double Fp p1) == True }}
-  , {{ \ p1 -> projective_invariant_E1 (point_neg Fp p1) == 
-                   if projective_invariant_E1 p1
-                   then True
-                   else apply projective_invariant_E1 (point_neg Fp p1) }}
-*/
 
 // The "normalize_point" or "normalize_affine_point" calls that are
 // introduced by the abs_rep rule can usually be eliminated, as most
@@ -703,7 +682,42 @@ POINTonE1_normalization_thms <- for
   // do we need to eliminate normalization of arguments? (I think not.)
   ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
 
-let POINTonE1_thms = concat POINTonE1_base_thms POINTonE1_normalization_thms;
+normalize_affinify_thm <- custom_prove_cryptol
+  {{ \p -> normalize_affine_point Fp (affinify E p) == affinify E p }}
+  do { unfolding ["affinify", "normalize_affine_point", "point_O", "E"];
+       simplify (addsimps POINTonE1_affine_selection_ite_thms fp_simpset);
+       w4_unint_z3 fp_unints; };
+
+normalize_projectify_thm <- custom_prove_cryptol
+  {{ \p -> normalize_point Fp (projectify E p) == projectify E (normalize_affine_point Fp p) }}
+  do { unfolding ["projectify", "normalize_point", "normalize_affine_point", "E"];
+       simplify (addsimps POINTonE1_affine_selection_ite_thms fp_simpset);
+       w4_unint_z3 fp_unints; };
+
+/* unsuitable rules.
+normalize_projections_thms <- for
+  [ {{ \x -> Fp.normalize x.0 == (normalize_affine_point Fp x).0 }}
+  , {{ \x -> Fp.normalize x.1 == (normalize_affine_point Fp x).1 }}
+  , {{ \x -> Fp.normalize x.0 == (normalize_point Fp x).0 }}
+  , {{ \x -> Fp.normalize x.1 == (normalize_point Fp x).1 }}
+  , {{ \x -> Fp.normalize x.2 == (normalize_point Fp x).2 }}
+  ] (\ t -> prove_cryptol t []);
+*/
+
+normalize_affinify_projections_thms <- for
+  [ {{ \p -> (Fp.normalize x.0 == x.0 where x = affinify E p) }}
+  , {{ \p -> (Fp.normalize x.1 == x.1 where x = affinify E p) }}
+  ] (\ t -> custom_prove_cryptol t
+        do { unfolding ["affinify", "point_O", "E"];
+             simplify (addsimps POINTonE1_affine_selection_ite_thms fp_simpset);
+             w4_unint_z3 fp_unints; } );
+
+let POINTonE1_thms = concat_all
+  [ POINTonE1_base_thms
+  , POINTonE1_normalization_thms
+  , normalize_affinify_projections_thms
+  , [normalize_affinify_thm, normalize_projectify_thm]
+  ];
 
 // .. and these theorems, which are admitted for now rather than proven, that
 // assert that the operations in projective coordinates have the right effect in

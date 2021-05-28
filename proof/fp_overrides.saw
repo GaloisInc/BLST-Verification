@@ -231,6 +231,9 @@ fp_is_equal_elim_thm <- prove_cryptol {{ \x y -> Fp.is_equal (x,y) == (x==y) }} 
 fp_normalize_ite_thm <- hoist {{fp_normalize}} ["fp_normalize"] ;
 fp_abs_normalize_ite_thm <- hoist {{Fp.normalize}} ["Fp"] ;
 
+// Cannot write general rules for F_sum, F_prod, F_expt, and k_expt as they are length-polymorphic
+// so they will need to be done as needed in the later proofs.  All of them should absorb Fp.normalize
+
 let fp_simpset = addsimps (concat_all
                            [ fp_rep_thms
                            , fp_is_val_thms

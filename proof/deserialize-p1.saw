@@ -322,7 +322,7 @@ custom_prove_cryptol
                       True // may reject more
                       (\ P -> maybe_cases (uncompress_E1 s)
                                           False // may not reject less
-                                          (\ Q -> P == Q)) }} ;  // spec and impl deliver the same result
+                                          (\ Q -> P == Q)) }}   // spec and impl deliver the same result
   do { unfolding ["uncompress_E1", "uncompress_E1_imp", "uncompress_E1_x"
                  , "uncompress_E1_x_fp", "uncompress_E1_y2"];
        simplify (addsimp mul_to_fp_thm fp_simpset);
@@ -400,11 +400,19 @@ POINTonE1_Uncompress_BE_BAD1_ov <- custom_verify "POINTonE1_Uncompress_BE"
        simplify (addsimp add_rep_invariant_thm empty_ss); // only after applying fp_inv_RR_thm!
        w4_unint_z3 fp_unints;};
 
+
+normalize_sqrt_fp_thm <-custom_prove_cryptol
+  {{ \x -> Fp.normalize (sqrt_fp x) == sqrt_fp x }}
+  do { goal_eval_unint fp_unints;
+       simplify fp_simpset;
+       w4_unint_z3 fp_unints; };
+
 // The OK case, proper compressed input
 POINTonE1_Uncompress_BE_OK_ov <- custom_verify "POINTonE1_Uncompress_BE"
   overrides_for_POINTonE1_Uncompress_BE
   POINTonE1_Uncompress_BE_OK_spec
   do { apply_fp_rewrites;
+       rw_with_1 normalize_sqrt_fp_thm;
        simplify (addsimps [fp_abs_RR_thm, fp_inv_RR_thm, fp_abs_B_E1_thm, fp_invariant_B_E1_thm] empty_ss);
        simplify (addsimp add_rep_invariant_thm empty_ss); // only after applying fp_inv_RR_thm!
        w4_unint_z3 fp_unints;};
@@ -419,11 +427,18 @@ POINTonE1_Uncompress_inf_BAD_ov <- verify_unint "POINTonE1_Uncompress" [] fp_uni
 
 POINTonE1_Uncompress_inf_OK_ov <- verify "POINTonE1_Uncompress" [] POINTonE1_Uncompress_inf_OK_spec ;
 
+normalize_uncompress_fp_thm <- custom_prove_cryptol
+  {{ \x -> Fp.normalize (uncompress_E1_x_fp x) == uncompress_E1_x_fp x }}
+  do { unfolding ["uncompress_E1_x_fp"];
+       simplify fp_simpset;
+       w4_unint_z3 fp_unints; } ;
+
 POINTonE1_Uncompress_OK_ov <- custom_verify
   "POINTonE1_Uncompress"
   (foldr concat [fp_overrides, vec_overrides] POINTonE1_Uncompress_BE_overrides)
   POINTonE1_Uncompress_OK_spec
-  do {apply_fp_rewrites;
+  do {
+    simplify (addsimp normalize_uncompress_fp_thm fp_simpset);
     w4_unint_z3 (concat ["sign_F_p", "uncompress_E1_y2", "uncompress_E1_x_fp"
                         , "is_square_fp", "uncompress_E1_x"]
                         fp_unints);};
