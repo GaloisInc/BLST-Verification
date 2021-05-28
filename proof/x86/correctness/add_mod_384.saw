@@ -472,7 +472,6 @@ let sgn0_pty_mod_384x_spec = do {
     zero #
     [ if vec384_abs a_i == 0 then sgn_mod (vec384_abs a_r) else sgn_mod (vec384_abs a_i)
     , if vec384_abs a_r == 0 then pty_mod (vec384_abs a_i) else pty_mod (vec384_abs a_r)
-    , 0
     ] : [64]
   }};
   crucible_return (crucible_term return_value);
@@ -515,89 +514,83 @@ let vec_select_alias_1_2_spec bytes = do {
 ///////////////////////////////////////////////////////////////////////////////
 
 // add_mod_384
-add_mod_384_ov <- verify_x86 "add_mod_384" add_mod_384_spec w4;
-add_mod_384_alias_ret_a_ov <- verify_x86 "add_mod_384" add_mod_384_alias_ret_a_spec w4;
-add_mod_384_alias_ret_b_ov <- verify_x86 "add_mod_384" add_mod_384_alias_ret_b_spec w4;
-add_mod_384_alias_a_b_ov <- verify_x86 "add_mod_384" add_mod_384_alias_a_b_spec w4;
-add_mod_384_alias_ret_a_b_ov <- verify_x86 "add_mod_384" add_mod_384_alias_ret_a_b_spec w4;
+verify_x86 "add_mod_384" add_mod_384_spec w4;
+verify_x86 "add_mod_384" add_mod_384_alias_ret_a_spec w4;
+verify_x86 "add_mod_384" add_mod_384_alias_ret_b_spec w4;
+verify_x86 "add_mod_384" add_mod_384_alias_a_b_spec w4;
+verify_x86 "add_mod_384" add_mod_384_alias_ret_a_b_spec w4;
 
 // add_mod_384x
-add_mod_384x_ov <- verify_x86 "add_mod_384x" add_mod_384x_spec w4;
-add_mod_384x_alias_ret_a_ov <- verify_x86 "add_mod_384x" add_mod_384x_alias_ret_a_spec w4;
-add_mod_384x_alias_ret_b_ov <- verify_x86 "add_mod_384x" add_mod_384x_alias_ret_b_spec w4;
-add_mod_384x_alias_ret_a_b_ov <- verify_x86 "add_mod_384x" add_mod_384x_alias_ret_a_b_spec w4;
+verify_x86 "add_mod_384x" add_mod_384x_spec w4;
+verify_x86 "add_mod_384x" add_mod_384x_alias_ret_a_spec w4;
+verify_x86 "add_mod_384x" add_mod_384x_alias_ret_b_spec w4;
+verify_x86 "add_mod_384x" add_mod_384x_alias_ret_a_b_spec w4;
 
 // lshift_mod_384
 verify_x86 "lshift_mod_384" (lshift_mod_384_spec {{ 2 : [64] }}) w4;
-lshift_mod_384_5_ov <- verify_x86 "lshift_mod_384" (lshift_mod_384_spec {{ 5 : [64] }}) w4;
-lshift_mod_384_alias_ret_a_5_ov <- verify_x86 "lshift_mod_384" (lshift_mod_384_alias_ret_a_spec {{ 5 : [64] }}) w4;
-lshift_mod_384_alias_ret_a_2_ov <- verify_x86 "lshift_mod_384" (lshift_mod_384_alias_ret_a_spec {{ 2 : [64] }}) w4;
+verify_x86 "lshift_mod_384" (lshift_mod_384_spec {{ 5 : [64] }}) w4;
+verify_x86 "lshift_mod_384" (lshift_mod_384_alias_ret_a_spec {{ 5 : [64] }}) w4;
+verify_x86 "lshift_mod_384" (lshift_mod_384_alias_ret_a_spec {{ 2 : [64] }}) w4;
 
 // mul_by_3_mod_384
-mul_by_3_mod_384_ov <- verify_x86 "mul_by_3_mod_384" mul_by_3_mod_384_spec w4;
-mul_by_3_mod_384_alias_ret_a_ov <- verify_x86 "mul_by_3_mod_384" mul_by_3_mod_384_alias_ret_a_spec w4;
+verify_x86 "mul_by_3_mod_384" mul_by_3_mod_384_spec w4;
+verify_x86 "mul_by_3_mod_384" mul_by_3_mod_384_alias_ret_a_spec w4;
 
 // mul_by_8_mod_384
-mul_by_8_mod_384_ov <- verify_x86 "mul_by_8_mod_384" mul_by_8_mod_384_spec w4;
-mul_by_8_mod_384_alias_ret_a_ov <- verify_x86 "mul_by_8_mod_384" mul_by_8_mod_384_alias_ret_a_spec w4;
+verify_x86 "mul_by_8_mod_384" mul_by_8_mod_384_spec w4;
+verify_x86 "mul_by_8_mod_384" mul_by_8_mod_384_alias_ret_a_spec w4;
 
 // mul_by_b_onE1
-mul_by_b_onE1_ov <- verify_x86 "mul_by_b_onE1" mul_by_b_onE1_spec w4;
-mul_by_b_onE1_alias_out_in_ov <- verify_x86 "mul_by_b_onE1" mul_by_b_onE1_alias_out_in_spec w4;
+verify_x86 "mul_by_b_onE1" mul_by_b_onE1_spec w4;
+verify_x86 "mul_by_b_onE1" mul_by_b_onE1_alias_out_in_spec w4;
 
 // mul_by_3_mod_384x - these take ~30minutes each
-mul_by_3_mod_384x_ov <- verify_x86 "mul_by_3_mod_384x" mul_by_3_mod_384x_spec w4;
-mul_by_3_mod_384x_alias_ret_a_ov <- verify_x86 "mul_by_3_mod_384x" mul_by_3_mod_384x_alias_ret_a_spec w4;
+verify_x86 "mul_by_3_mod_384x" mul_by_3_mod_384x_spec w4;
+verify_x86 "mul_by_3_mod_384x" mul_by_3_mod_384x_alias_ret_a_spec w4;
 
 // mul_by_8_mod_384x
-mul_by_8_mod_384x_ov <- verify_x86 "mul_by_8_mod_384x" mul_by_8_mod_384x_spec w4;
-mul_by_8_mod_384x_alias_ret_a_ov <- verify_x86 "mul_by_8_mod_384x" mul_by_8_mod_384x_alias_ret_a_spec w4;
+verify_x86 "mul_by_8_mod_384x" mul_by_8_mod_384x_spec w4;
+verify_x86 "mul_by_8_mod_384x" mul_by_8_mod_384x_alias_ret_a_spec w4;
 
-// mul_by_b_onE2 - TODO
+// mul_by_b_onE2 - very bad solver performance
 // mul_by_b_onE2_ov <- verify_x86 "mul_by_b_onE2" mul_by_b_onE2_spec do {
 //   w4;
 // };
 // mul_by_b_onE2_alias_out_in_ov <- verify_x86 "mul_by_b_onE2" mul_by_b_onE2_alias_out_in_spec w4;
 
 // cneg_mod_384
-cneg_mod_384_ov <- verify_x86 "cneg_mod_384" cneg_mod_384_spec w4;
-cneg_mod_384_alias_ret_a_ov <- verify_x86 "cneg_mod_384" cneg_mod_384_alias_ret_a_spec w4;
+verify_x86 "cneg_mod_384" cneg_mod_384_spec w4;
+verify_x86 "cneg_mod_384" cneg_mod_384_alias_ret_a_spec w4;
 
 // sub_mod_384
-sub_mod_384_ov <- verify_x86 "sub_mod_384" sub_mod_384_spec w4;
-sub_mod_384_alias_ret_a_ov <- verify_x86 "sub_mod_384" sub_mod_384_alias_ret_a_spec w4;
-sub_mod_384_alias_ret_b_ov <- verify_x86 "sub_mod_384" sub_mod_384_alias_ret_b_spec w4;
-sub_mod_384_alias_a_b_ov <- verify_x86 "sub_mod_384" sub_mod_384_alias_a_b_spec w4;
-sub_mod_384_alias_ret_a_b_ov <- verify_x86 "sub_mod_384" sub_mod_384_alias_ret_a_b_spec w4;
+verify_x86 "sub_mod_384" sub_mod_384_spec w4;
+verify_x86 "sub_mod_384" sub_mod_384_alias_ret_a_spec w4;
+verify_x86 "sub_mod_384" sub_mod_384_alias_ret_b_spec w4;
+verify_x86 "sub_mod_384" sub_mod_384_alias_a_b_spec w4;
+verify_x86 "sub_mod_384" sub_mod_384_alias_ret_a_b_spec w4;
 
 // sub_mod_384x
-sub_mod_384x_ov <- verify_x86 "sub_mod_384x" sub_mod_384x_spec w4;
-sub_mod_384x_alias_ret_a_ov <- verify_x86 "sub_mod_384x" sub_mod_384x_alias_ret_a_spec w4;
-sub_mod_384x_alias_ret_b_ov <- verify_x86 "sub_mod_384x" sub_mod_384x_alias_ret_b_spec w4;
-sub_mod_384x_alias_a_b_ov <- verify_x86 "sub_mod_384x" sub_mod_384x_alias_a_b_spec w4;
-sub_mod_384x_alias_ret_a_b_ov <- verify_x86 "sub_mod_384x" sub_mod_384x_alias_ret_a_b_spec w4;
+verify_x86 "sub_mod_384x" sub_mod_384x_spec w4;
+verify_x86 "sub_mod_384x" sub_mod_384x_alias_ret_a_spec w4;
+verify_x86 "sub_mod_384x" sub_mod_384x_alias_ret_b_spec w4;
+verify_x86 "sub_mod_384x" sub_mod_384x_alias_a_b_spec w4;
+verify_x86 "sub_mod_384x" sub_mod_384x_alias_ret_a_b_spec w4;
 
 // mul_by_1_plus_i_mod_384x
-mul_by_1_plus_i_mod_384x_ov <- verify_x86 "mul_by_1_plus_i_mod_384x" mul_by_1_plus_i_mod_384x_spec w4;
-mul_by_1_plus_i_mod_384x_alias_ret_a_ov <- verify_x86 "mul_by_1_plus_i_mod_384x" mul_by_1_plus_i_mod_384x_alias_ret_a_spec w4;
+verify_x86 "mul_by_1_plus_i_mod_384x" mul_by_1_plus_i_mod_384x_spec w4;
+verify_x86 "mul_by_1_plus_i_mod_384x" mul_by_1_plus_i_mod_384x_alias_ret_a_spec w4;
 
 // sgn0_pty_mod_384
-sgn0_pty_mod_384_ov <- verify_x86 "sgn0_pty_mod_384" sgn0_pty_mod_384_spec w4;
+verify_x86 "sgn0_pty_mod_384" sgn0_pty_mod_384_spec w4;
 
-// doesn't match no_asm implementation - this is fixed in blst commit 668f17b664e285b02b8158ecb37adc36a8d553ff
-// sgn0_pty_mod_384x
-let do_prove_x86 = false;
-sgn0_pty_mod_384x_ov <- verify_x86 "sgn0_pty_mod_384x" sgn0_pty_mod_384x_spec w4;
-let do_prove_x86 = true;
+// sgn0_pty_mod_384x - fixed in blst commit 668f17b664e285b02b8158ecb37adc36a8d553ff
+verify_x86 "sgn0_pty_mod_384x" sgn0_pty_mod_384x_spec w4;
 
 // vec_select
 let mk_vec_select_ov bytes = verify_x86 (str_concat "vec_select_" (show bytes)) (vec_select_spec bytes) w4;
 let mk_vec_select_alias_1_2_ov bytes = verify_x86 (str_concat "vec_select_" (show bytes)) (vec_select_alias_1_2_spec bytes) w4;
 let mk_vec_select_alias_1_3_ov bytes = verify_x86 (str_concat "vec_select_" (show bytes)) (vec_select_alias_1_3_spec bytes) w4;
 let vec_select_sizes = [48, 96, 144, 192, 288];
-vec_select_ovs <- do {
-  ovs <- (for vec_select_sizes mk_vec_select_ov);
-  ovs_1_2  <- (for vec_select_sizes mk_vec_select_alias_1_2_ov);
-  ovs_1_3  <- (for vec_select_sizes mk_vec_select_alias_1_3_ov);
-  return (foldr concat [ovs, ovs_1_2] ovs_1_3);
-};
+for vec_select_sizes mk_vec_select_ov;
+for vec_select_sizes mk_vec_select_alias_1_2_ov;
+for vec_select_sizes mk_vec_select_alias_1_3_ov;
