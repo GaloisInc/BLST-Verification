@@ -3,11 +3,6 @@ module implementation::x86 where
 import implementation::Types
 import implementation::x86::helpers
 
-addmod = __add_mod_384
-submod = __sub_mod_384
-mul384 = __mulx_384
-
-
 // Top-level functions
 mulx_mont_384x
   : Vec768 // a
