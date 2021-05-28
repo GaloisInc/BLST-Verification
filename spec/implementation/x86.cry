@@ -90,7 +90,7 @@ sqrx_382x a m = result
 
     t1 = __sub_mod_384 a_re a_im m
 
-    ret_re = __mulx_384 [t0_0, t0_1, t0_2, t0_3, t0_4, t0_5] t1 
+    ret_re = __mulx_384 t1 [t0_0, t0_1, t0_2, t0_3, t0_4, t0_5]
     tmp_im = __mulx_384 a_re a_im
 
     (ret_im_cf_0, ret_im_0) = add (tmp_im @ 0) (tmp_im @ 0)

@@ -13,7 +13,7 @@ adcx : [64] -> [64] -> Bit -> (Bit, [64])
 adcx x y c = (overflows, x + (y + if c then 1 else 0))
   where
     total : [65]
-    total = zext x + (zext y + if c then 1 else 0)
+    total = (zext x + zext y) + if c then 1 else 0
     overflows = total <$ 0
 
 adox : [64] -> [64] -> Bit -> (Bit, [64])

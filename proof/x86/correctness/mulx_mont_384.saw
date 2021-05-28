@@ -127,13 +127,13 @@ let mulx_382x_spec = do {
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
-// sqrx_382x - TODO
+// sqrx_382x
 let sqrx_382x_spec = do {
   ret_ptr <- crucible_alloc vec768x_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
   p_ptr <- ptr_to_modulus;
   crucible_execute_func [ret_ptr, a_ptr, p_ptr];
-  let new_ret = {{ take`{3} ((sqrx_382x (join a) modulus : [2]Vec768) @ 0) }};
+  let new_ret = {{ sqrx_382x (join a) modulus : [2]Vec768 }};
   crucible_points_to_untyped ret_ptr (crucible_term new_ret);
 };
 
@@ -288,6 +288,7 @@ bvAdd_65_commutes <- prove_folding_theorem {{ \(a : [65]) (b : [65]) -> a + b ==
 bvAdd_65_associates <- prove_folding_theorem {{ \(a : [65]) (b : [65]) (c : [65]) -> a + (b + c) == (a + b) + c }};
 bvAdd_65_associates_helper <- prove_folding_theorem {{ \(a : [65]) (b : [65]) (c : [65]) -> (a + b) + c == (a + c) + b }};
 bvMul_128_commutes <- prove_folding_theorem {{ \(a : [128]) (b : [128]) -> a * b == b * a }};
+// bvAdd_64_65_zext <- prove_folding_theorem {{ \(a : [64]) (b : [64]) (c : [64]) -> ((zext`{65} (a + b) + zext`{65} c) <$ 0) == (zext`{65} (a + b + c) <$ 0) }};
 let mul_ss = addsimps
   [ bvAdd_64_commutes
   , bvAdd_64_associates
@@ -296,6 +297,7 @@ let mul_ss = addsimps
   , bvAdd_65_associates
   , bvAdd_65_associates_helper
   , bvMul_128_commutes
+  // , bvAdd_64_65_zext
   ] basic_ss;
 
 // let {{
@@ -395,13 +397,8 @@ let mul_ss = addsimps
 
 // sqrx_382x
 verify_x86 "sqrx_382x" sqrx_382x_spec do {
-  goal_eval_unint [];
-  simplify mul_ss;
-  goal_eval_unint [];
-  print_goal;
   w4;
 };
-exit 1;
 
 // redcx_mont_384
 verify_x86 "redcx_mont_384" redcx_mont_384_spec do {
