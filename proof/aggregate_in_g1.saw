@@ -31,7 +31,7 @@ let blst_aggregate_in_g1_OK_nonnull_spec = do {
   //
   new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
   llvm_points_to out_ptr (llvm_term new_out);
-  llvm_postcond {{ POINTonE1_abs new_out == if (zwire@0)@1 then POINTonE1_abs out else point_dadd_affine Fp (POINTonE1_abs inp) (uncompress_E1_OK zwire) }};
+  llvm_postcond {{ affinify E (POINTonE1_abs new_out) == if (zwire@0)@1 then affinify E (POINTonE1_abs out) else add E (affinify E (POINTonE1_abs inp)) (uncompress_E1_OK zwire) }};
   //
   llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
 };
@@ -52,9 +52,10 @@ let blst_aggregate_in_g1_null_spec = do {
   new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
   llvm_points_to out_ptr (llvm_term new_out);
   llvm_postcond {{ POINTonE1_abs new_out ==
+  llvm_postcond {{ affinify E (POINTonE1_abs new_out) ==
     if (zwire@0)@1
-    then zero
-    else projectify E (uncompress_E1_OK zwire)
+    then point_O E
+    else uncompress_E1_OK zwire
   }};
   //
   llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
