@@ -31,4 +31,11 @@ misc_rules <- for [
             [b1, b2, b3, b4, b5, b6] = b
         )
       }}
-] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
+, {{ \c (x1:[6][64]) (x2:[6][64]) (x3:[6][64]) y1 y2 y3 -> (if c then x1 else y1, if c then x2 else y2, if c then x3 else y3) == if c then (x1,x2,x3) else (y1,y2,y3) }}
+, {{ \c x y -> POINTonE1_abs (if c then x else y) == if c then POINTonE1_abs x else POINTonE1_abs y }}
+, {{ \c x y -> affinify E (if c then x else y) == if c then affinify E x else affinify E y }}
+] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq)
+  do {
+    simplify remove_higher_order_function_simpset;
+    w4_unint_z3 ["POINTonE1_abs","affinify_E"];
+  });

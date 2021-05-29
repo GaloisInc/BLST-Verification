@@ -51,7 +51,6 @@ let blst_aggregate_in_g1_null_spec = do {
   //
   new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
   llvm_points_to out_ptr (llvm_term new_out);
-  llvm_postcond {{ POINTonE1_abs new_out ==
   llvm_postcond {{ affinify E (POINTonE1_abs new_out) ==
     if (zwire@0)@1
     then point_O E
@@ -112,12 +111,21 @@ blst_aggregate_in_g1_OK_nonnull_ov <- custom_verify
       simplify (addsimps (concat POINTonE1_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
       w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl"];
     }
-    do {
-      simplify (addsimps misc_rules empty_ss);
-      simplify (addsimps POINTonE1_thms empty_ss);
-      simplify remove_higher_order_function_simpset;
-      w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
-    });
+    (goal_num_ite 6 // postcondition
+      do {
+        simplify (addsimps misc_rules empty_ss);
+        // hoist_ifs_in_goal;
+        simplify (addsimps POINTonE1_thms empty_ss);
+        simplify (addsimps e1_curve_op_thms empty_ss);
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E","affinify_E","add_E"];
+      }
+      do {
+        simplify (addsimps misc_rules empty_ss);
+        simplify (addsimps POINTonE1_thms empty_ss);
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
+      }));
 
 blst_aggregate_in_g1_null_ov <- custom_verify
   "blst_aggregate_in_g1"
@@ -125,15 +133,33 @@ blst_aggregate_in_g1_null_ov <- custom_verify
   blst_aggregate_in_g1_null_spec
   (goal_num_ite 1 // preconditions of the subgroup check
     do {
+      print_readably;
       simplify (addsimps (concat POINTonE1_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
       w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl"];
     }
-    do {
-      simplify (addsimps misc_rules empty_ss);
-      simplify (addsimps POINTonE1_thms empty_ss);
-      unfolding ["POINTonE1_abs","POINTonE1_affine_rep"];
-      let rewrite_unit = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp_abs [ 8505329371266088957 , 17002214543764226050 , 6865905132761471162 , 8632934651105793861 , 6631298214892334189 , 1582556514881692819 ] == Fp.field_unit }}) w4);
-      simplify (addsimp rewrite_unit fp_simpset);
-      simplify remove_higher_order_function_simpset;
-      w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
-    });
+    (goal_num_ite 5 // postcondition
+      do { // TODO
+        simplify (addsimps misc_rules empty_ss);
+        simplify (addsimps POINTonE1_thms empty_ss);
+        unfolding ["POINTonE1_abs","POINTonE1_affine_rep"];
+        let l1 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{affinify E (z,z,z) == point_O E where z = fp_abs [zero,zero,zero,zero,zero,zero]}}) w4);
+        let fp_unit_rep = run ( eval_term {{ fp_rep Fp.field_unit }} );
+        let rewrite_unit = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp_abs fp_unit_rep == Fp.field_unit }}) w4);
+        simplify (addsimps [rewrite_unit,l1] empty_ss);
+        let l2 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x y -> affinify E (fp_abs x, fp_abs y, Fp.field_unit) == (fp_abs x, fp_abs y) }}) w4);
+        print_readably;
+        simplify (addsimps [l2] fp_simpset);
+        unfolding ["apply"];
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E","affinify_E"];
+      }
+      do {
+        print_readably;
+        simplify (addsimps misc_rules empty_ss);
+        simplify (addsimps POINTonE1_thms empty_ss);
+        unfolding ["POINTonE1_abs","POINTonE1_affine_rep"];
+        let rewrite_unit = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp_abs [ 8505329371266088957 , 17002214543764226050 , 6865905132761471162 , 8632934651105793861 , 6631298214892334189 , 1582556514881692819 ] == Fp.field_unit }}) w4);
+        simplify (addsimp rewrite_unit fp_simpset);
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
+      }));
