@@ -83,6 +83,7 @@ let overrides = foldr concat [vec_overrides,curve_operations_e1_ovs] [POINTonE1_
 
 uncompress_not_point_O <- admit_cryptol {{ \x -> (is_point_O E (uncompress_E1_OK x)) == if uncompress_E1_x_fp x != Fp.field_zero then False else apply is_point_O E (uncompress_E1_OK x) }};
 
+// decompression yields a point on the curve
 uncompress_on_curve <- admit_cryptol {{ \x -> (is_point_affine E (uncompress_E1_OK x)) == True }};
 
 // Proofs
@@ -133,7 +134,6 @@ blst_aggregate_in_g1_null_ov <- custom_verify
   blst_aggregate_in_g1_null_spec
   (goal_num_ite 1 // preconditions of the subgroup check
     do {
-      print_readably;
       simplify (addsimps (concat POINTonE1_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
       w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl"];
     }
@@ -147,14 +147,12 @@ blst_aggregate_in_g1_null_ov <- custom_verify
         let rewrite_unit = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp_abs fp_unit_rep == Fp.field_unit }}) w4);
         simplify (addsimps [rewrite_unit,l1] empty_ss);
         let l2 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x y -> affinify E (fp_abs x, fp_abs y, Fp.field_unit) == (fp_abs x, fp_abs y) }}) w4);
-        print_readably;
-        simplify (addsimps [l2] fp_simpset);
-        unfolding ["apply"];
+        simplify (addsimp l2 empty_ss);
+        simplify fp_simpset;
         simplify remove_higher_order_function_simpset;
         w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E","affinify_E"];
       }
       do {
-        print_readably;
         simplify (addsimps misc_rules empty_ss);
         simplify (addsimps POINTonE1_thms empty_ss);
         unfolding ["POINTonE1_abs","POINTonE1_affine_rep"];
