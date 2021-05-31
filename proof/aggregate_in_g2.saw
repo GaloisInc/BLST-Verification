@@ -98,14 +98,14 @@ blst_aggregate_in_g2_OK_nonnull_ov <- custom_verify
     }
     (goal_num_ite 6 // postcondition
       do {
-        simplify (addsimps (concat misc_rules_E2 misc_rules) empty_ss);
+        simplify (addsimps (concat misc_rules_E2 misc_rules_E1) empty_ss);
         simplify (addsimps POINTonE2_thms empty_ss);
         simplify (addsimps e2_curve_op_thms empty_ss);
         simplify remove_higher_order_function_simpset;
         w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl","uncompress_E2_OK","is_point_affine_E'","affinify_E'","add_E'"];
       }
       do {
-        simplify (addsimps misc_rules empty_ss);
+        simplify (addsimps misc_rules_E1 empty_ss);
         simplify (addsimps POINTonE2_thms empty_ss);
         simplify remove_higher_order_function_simpset;
         w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl","uncompress_E2_OK","is_point_affine_E'"];
@@ -122,7 +122,7 @@ blst_aggregate_in_g2_null_ov <- custom_verify
     }
     (goal_num_ite 5 // postcondition
       do { // TODO
-        simplify (addsimps (concat misc_rules misc_rules_E2) empty_ss);
+        simplify (addsimps (concat misc_rules_E1 misc_rules_E2) empty_ss);
         simplify (addsimps POINTonE2_thms empty_ss);
         unfolding ["POINTonE2_abs","POINTonE2_affine_rep"];
         let l1 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{affinify E' (z,z,z) == point_O E' where z = fp2_abs [[zero,zero,zero,zero,zero,zero],[zero,zero,zero,zero,zero,zero]]}}) w4);
@@ -138,7 +138,7 @@ blst_aggregate_in_g2_null_ov <- custom_verify
         w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl","uncompress_E2_OK","is_point_affine_E'","affinify_E'"];
       }
       do {
-        simplify (addsimps misc_rules empty_ss);
+        simplify (addsimps misc_rules_E1 empty_ss);
         simplify (addsimps POINTonE2_thms empty_ss);
         unfolding ["POINTonE2_abs","POINTonE2_affine_rep"];
         simplify fp2_simpset;
@@ -158,7 +158,7 @@ blst_aggregate_in_g2_error_ov <- custom_verify
         w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl"];
       }
       do {
-        simplify (addsimps misc_rules empty_ss);
+        simplify (addsimps misc_rules_E1 empty_ss);
         simplify (addsimps POINTonE2_thms empty_ss);
         simplify remove_higher_order_function_simpset;
         w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl","uncompress_E2_OK","is_point_affine_E'"];
