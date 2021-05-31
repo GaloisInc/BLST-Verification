@@ -114,7 +114,7 @@ blst_aggregate_in_g1_OK_nonnull_ov <- custom_verify
     }
     (goal_num_ite 6 // postcondition
       do {
-        simplify (addsimps misc_rules empty_ss);
+        simplify (addsimps misc_rules_E1 empty_ss);
         // hoist_ifs_in_goal;
         simplify (addsimps POINTonE1_thms empty_ss);
         simplify (addsimps e1_curve_op_thms empty_ss);
@@ -122,7 +122,7 @@ blst_aggregate_in_g1_OK_nonnull_ov <- custom_verify
         w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E","affinify_E","add_E"];
       }
       do {
-        simplify (addsimps misc_rules empty_ss);
+        simplify (addsimps misc_rules_E1 empty_ss);
         simplify (addsimps POINTonE1_thms empty_ss);
         simplify remove_higher_order_function_simpset;
         w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
@@ -139,7 +139,7 @@ blst_aggregate_in_g1_null_ov <- custom_verify
     }
     (goal_num_ite 5 // postcondition
       do { // TODO
-        simplify (addsimps misc_rules empty_ss);
+        simplify (addsimps misc_rules_E1 empty_ss);
         simplify (addsimps POINTonE1_thms empty_ss);
         unfolding ["POINTonE1_abs","POINTonE1_affine_rep"];
         let l1 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{affinify E (z,z,z) == point_O E where z = fp_abs [zero,zero,zero,zero,zero,zero]}}) w4);
@@ -153,7 +153,7 @@ blst_aggregate_in_g1_null_ov <- custom_verify
         w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E","affinify_E"];
       }
       do {
-        simplify (addsimps misc_rules empty_ss);
+        simplify (addsimps misc_rules_E1 empty_ss);
         simplify (addsimps POINTonE1_thms empty_ss);
         unfolding ["POINTonE1_abs","POINTonE1_affine_rep"];
         let rewrite_unit = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp_abs [ 8505329371266088957 , 17002214543764226050 , 6865905132761471162 , 8632934651105793861 , 6631298214892334189 , 1582556514881692819 ] == Fp.field_unit }}) w4);
