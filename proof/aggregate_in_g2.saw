@@ -133,7 +133,6 @@ blst_aggregate_in_g2_null_ov <- custom_verify
         simplify (addsimp l2 empty_ss);
         simplify fp2_simpset;
         simplify remove_higher_order_function_simpset;
-        print_readably;
         print_goal_consts;
         w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl","uncompress_E2_OK","is_point_affine_E'","affinify_E'"];
       }
