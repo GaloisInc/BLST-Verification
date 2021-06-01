@@ -127,7 +127,7 @@ blst_aggregate_in_g2_null_ov <- custom_verify
         unfolding ["POINTonE2_abs","POINTonE2_affine_rep"];
         let l1 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{affinify E' (z,z,z) == point_O E' where z = fp2_abs [[zero,zero,zero,zero,zero,zero],[zero,zero,zero,zero,zero,zero]]}}) w4);
         let fp2_unit_rep = run ( eval_term {{ fp2_rep Fp_2.field_unit }} );
-        let rewrite_unit = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp2_abs fp2_unit_rep == Fp_2.field_unit }}) w4);
+        let rewrite_unit = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp2_abs (fp2_unit_rep.0) == Fp_2.field_unit }}) w4);
         simplify (addsimps [rewrite_unit,l1] empty_ss);
         let l2 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x y -> affinify E' (fp2_abs x, fp2_abs y, Fp_2.field_unit) == (fp2_abs x, fp2_abs y) }}) w4);
         simplify (addsimp l2 empty_ss);
