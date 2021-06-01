@@ -656,31 +656,35 @@ POINTonE1_affine_selection_ite_thms <- for
 // is not necessarily the case, such as `point_neg` or `projectify`,
 // we can push the normalization inside, where we hope it will
 // eventually meet a function that eliminates it.
-POINTonE1_normalization_thms <- for
-  [ {{ \ p1 p2 a4 is_null -> normalize_point Fp (point_dadd Fp p1 p2 a4 is_null) ==
-                               point_dadd Fp p1 p2 a4 is_null }}
+let generic_point_normalization_thms F abs affine_abs =
+  [ {{ \ p1 p2 a4 is_null -> normalize_point F (point_dadd F p1 p2 a4 is_null) ==
+                               point_dadd F p1 p2 a4 is_null }}
 
-  , {{ \ p1 p2 -> normalize_point Fp (point_dadd_affine Fp p1 p2) ==
-                                      point_dadd_affine Fp p1 p2 }}
+  , {{ \ p1 p2 -> normalize_point F (point_dadd_affine F p1 p2) ==
+                                      point_dadd_affine F p1 p2 }}
 
-  , {{ \ p1 p2 -> normalize_point Fp (point_add Fp p1 p2) == point_add Fp p1 p2 }}
+  , {{ \ p1 p2 -> normalize_point F (point_add F p1 p2) == point_add F p1 p2 }}
 
-  , {{ \ p1 p2 -> normalize_point Fp (point_add_affine Fp p1 p2) == point_add_affine Fp p1 p2 }}
+  , {{ \ p1 p2 -> normalize_point F (point_add_affine F p1 p2) == point_add_affine F p1 p2 }}
 
-  , {{ \ p1 -> normalize_point Fp (point_double Fp p1) == point_double Fp p1 }}
+  , {{ \ p1 -> normalize_point F (point_double F p1) == point_double F p1 }}
 
-  , {{ \ p1 -> normalize_point Fp (point_neg Fp p1) == point_neg Fp (normalize_point Fp p1) }}
+  , {{ \ p1 -> normalize_point F (point_neg F p1) == point_neg F (normalize_point F p1) }}
 
-  , {{ \ p -> normalize_point Fp (normalize_point Fp p) == normalize_point Fp p }}
+  , {{ \ p -> normalize_point F (normalize_point F p) == normalize_point F p }}
 
-  , {{ \ p ->  normalize_point Fp (POINTonE1_abs p) == POINTonE1_abs p }}
+  , {{ \ p ->  normalize_point F (abs p) == abs p }}
 
-  , {{ \ p -> normalize_affine_point Fp (normalize_affine_point Fp p) == normalize_affine_point Fp p }}
+  , {{ \ p -> normalize_affine_point F (normalize_affine_point F p) == normalize_affine_point F p }}
 
-  , {{ \ p ->  normalize_affine_point Fp (POINTonE1_affine_abs p) == POINTonE1_affine_abs p }}
+  , {{ \ p ->  normalize_affine_point F (affine_abs p) == affine_abs p }}
 
   // do we need to eliminate normalization of arguments? (I think not.)
-  ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
+  ];
+
+POINTonE1_normalization_thms <- for
+  (generic_point_normalization_thms {{ Fp }} {{ POINTonE1_abs }} {{ POINTonE1_affine_abs }})
+ (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
 
 normalize_affinify_thm <- custom_prove_cryptol
   {{ \p -> normalize_affine_point Fp (affinify E p) == affinify E p }}

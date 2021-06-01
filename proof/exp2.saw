@@ -27,12 +27,15 @@ fp2_invariant_alt_seq_thm <-
 
 // possibly move this to fp_overrides
 fp2_abs_fp_rep_thm <- custom_prove_cryptol
-  (rewrite (cryptol_ss ()) {{ \x y -> fp2_abs [fp_rep x, fp_rep y] == [y,x] }})
+  (rewrite (cryptol_ss ()) {{ \x y -> fp2_abs [fp_rep x, fp_rep y] ==
+                             [Fp.normalize y, Fp.normalize x] }})
   do { unfolding ["fp2_abs"]; apply_fp_rewrites; z3; } ;
 
 fp_abs_fp2_rep_thms <- for
-  [ {{ \x -> (fp_abs y0 == x@1 where [y0,y1] = fp2_rep x) }}
-  , {{ \x -> (fp_abs y1 == x@0 where [y0,y1] = fp2_rep x) }}
+  [ // {{ \x -> (fp_abs y0 == Fp.normalize (x@1) where [y0,y1] = fp2_rep x) }}
+  // , {{ \x -> (fp_abs y1 == Fp.normalize (x@0) where [y0,y1] = fp2_rep x) }}
+    {{ \x -> (fp_abs y0 == (Fp_2.normalize x)@1 where [y0,y1] = fp2_rep x) }}
+  , {{ \x -> (fp_abs y1 == (Fp_2.normalize x)@0 where [y0,y1] = fp2_rep x) }}
   ]
   (\ t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
             do {goal_eval_unint fp_unints; apply_fp_rewrites; w4_unint_z3 fp_unints; } ) ;
@@ -128,8 +131,11 @@ fp2_mult_exp_thm_4 <- admit_cryptol {{ \x n k -> Fp_2.mul (fp2_exp x n, fp2_exp 
 fp2_mult_exp_thm_5 <- admit_cryptol {{ \x n k -> fp2_exp (fp2_exp x n) k == fp2_exp x (k*n) }};
 fp2_mult_exp_thm_6 <- admit_cryptol {{ \n -> fp2_exp Fp_2.field_unit n == Fp_2.field_unit }};
 
+fp2_normalize_exp_thm <- admit_cryptol {{ \ b e -> Fp_2.normalize (fp2_exp b e) == fp2_exp b e }};
+
 fp2_exp_simps <- addsimps (concat [fp2_mult_exp_thm_1, fp2_mult_exp_thm_2, fp2_mult_exp_thm_3
-                                  , fp2_mult_exp_thm_4, fp2_mult_exp_thm_5, fp2_mult_exp_thm_6]
+                                  , fp2_mult_exp_thm_4, fp2_mult_exp_thm_5, fp2_mult_exp_thm_6
+                                  , fp2_normalize_exp_thm]
                                   fp2_alg_thms)
                            fp2_simpset;
 
@@ -528,7 +534,7 @@ reciprocal_fp2_ov <- custom_verify "reciprocal_fp2"
    do { // commute Fp.add BEFORE we unfold inverse_fp2; this flips the add used in the code
         // but not the add in the definition.  We need to commute one but not the other.
        simplify (addsimp add_commutes_fp_thm empty_ss);
-       unfolding ["inverse_fp2", "fp2_rep", "fp2_abs", "fp2_invariant"];
+       unfolding ["inverse_fp2", "fp2_rep", "fp2_abs", "fp2_invariant", "apply"];
        simplify (addsimps [mul_div_fp_thm, div_neg_fp_thm] (addsimps fp_alg_thms fp_simpset));
        w4_unint_z3 fp_unints;
        };

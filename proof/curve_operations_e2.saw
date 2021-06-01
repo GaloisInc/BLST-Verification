@@ -39,7 +39,31 @@ core_rewrites <- for
   //, "EqTrue (eq Bool (intLe (natToInt 0) (natToInt 1)) True)"
   ] (prove_core abc);
 
-let simpset = addsimps (concat core_rewrites [hoist_if_proj_int_0, hoist_if_proj_int_1, hoist_if_proj_int_2, hoist_if_proj_0, hoist_if_proj_1, hoist_if_proj_2]) fp2_simpset;
+normalize_point_fp2_abs_thm <- prove_cryptol
+  {{ \p -> normalize_point Fp_2 (POINTonE2_abs p) ==
+           if POINTonE2_invariant p
+           then (POINTonE2_abs p)
+           else apply normalize_point Fp_2 (POINTonE2_abs p) }} [];
+
+normalize_affine_point_fp2_abs_thm <- prove_cryptol
+  {{ \p -> normalize_affine_point Fp_2 (POINTonE2_affine_abs p) ==
+           if POINTonE2_affine_invariant p
+           then (POINTonE2_affine_abs p)
+           else apply normalize_affine_point Fp_2 (POINTonE2_affine_abs p) }} [];
+
+normalize_point_3fp_abs_thm <- prove_cryptol
+  {{ \ x y z -> normalize_point Fp_2 (fp2_abs x, fp2_abs y, fp2_abs z) == (fp2_abs x, fp2_abs y, fp2_abs z) }}
+  [];
+
+normalize_affine_point_fp_abs_thm <- prove_cryptol
+  {{ \ x y -> normalize_affine_point Fp_2 (fp2_abs x, fp2_abs y) == (fp2_abs x, fp2_abs y) }}
+  [];
+
+let simpset =
+// addsimps (concat core_rewrites [hoist_if_proj_int_0, hoist_if_proj_int_1, hoist_if_proj_int_2, hoist_if_proj_0, hoist_if_proj_1, hoist_if_proj_2]) fp2_simpset;
+
+// let extended_simpset =
+  addsimps (concat core_rewrites [hoist_if_proj_int_0, hoist_if_proj_int_1, hoist_if_proj_int_2, hoist_if_proj_0, hoist_if_proj_1, hoist_if_proj_2, normalize_point_fp2_abs_thm, normalize_affine_point_fp2_abs_thm, normalize_point_3fp_abs_thm, normalize_affine_point_fp_abs_thm]) extended_fp2_simpset;
 
 let POINTonE2_add_spec = do {
   out_ptr <- crucible_alloc POINTonE2_type;
@@ -382,8 +406,8 @@ let curve_operations_e2_ovs = [POINTonE2_add_alias_1_2_ov, POINTonE2_add_ov, POI
 //
 
 // ... abs_rep rules for points, and some structure rules
-POINTonE2_thms <- for
- [ {{ \p1 -> POINTonE2_abs (POINTonE2_rep p1) == p1 }}
+POINTonE2_base_thms <- for
+ [ {{ \p1 -> POINTonE2_abs (POINTonE2_rep p1) == normalize_point Fp_2 p1 }}
  , {{ \p1 -> POINTonE2_invariant (POINTonE2_rep p1) == True }}
  , {{ \p1 -> POINTonE2_rep (POINTonE2_abs p1) ==
              if POINTonE2_invariant p1
@@ -399,18 +423,79 @@ POINTonE2_thms <- for
  , {{ \c p1 p2 -> point_neg Fp_2 (if c then p1 else p2) ==
                   if c then point_neg Fp_2 p1 else point_neg Fp_2 p2 }}
 
- , {{ \(x:POINTonE2_t) -> (x.0, x.1, x.2) == x }}
- , {{ \(x:POINTonE2_affine_t) -> (x.0, x.1) == x }}
+ , {{ \ (x:POINTonE2_t) -> (x.0, x.1, x.2) == x }}
+ , {{ \ (x:POINTonE2_affine_t) -> (x.0, x.1) == x }}
  , {{ \ c (x1: [2]Vec384) (x2: [2]Vec384) (x3: [2]Vec384) y1 y2 y3 ->
         (if c then x1 else y1, if c then x2 else y2, if c then x3 else y3) ==
         if c then (x1,x2,x3) else (y1,y2,y3) }}
  ]
  (\t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
     do { unfolding ["POINTonE2_abs", "POINTonE2_rep", "POINTonE2_invariant", "POINTonE2_normalize"];
-         simplify fp2_simpset;
+         simplify simpset; // fp2_simpset;
          simplify (addsimp fp2_normalize_thm empty_ss); // for the rep_abs rule
          w4_unint_z3 fp2_unints; }) ;
 
+POINTonE2_selection_ite_thms <- for
+  [ {{ \ c (p1:(ProjectivePoint t_Fp_2)) p2 ->
+        (if c then p1 else p2).0 == if c then p1.0 else p2.0 }}
+  , {{ \ c (p1:(ProjectivePoint t_Fp_2)) p2 ->
+        (if c then p1 else p2).1 == if c then p1.1 else p2.1 }}
+  , {{ \ c (p1:(ProjectivePoint t_Fp_2)) p2 ->
+        (if c then p1 else p2).2 == if c then p1.2 else p2.2 }}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
+
+POINTonE2_selection_ite_rev_thms <- for
+  [ {{ \ c (p1:(ProjectivePoint t_Fp_2)) p2 ->
+        (if c then p1.0 else p2.0) == (if c then p1 else p2).0 }}
+  , {{ \ c (p1:(ProjectivePoint t_Fp_2)) p2 ->
+        (if c then p1.1 else p2.1) == (if c then p1 else p2).1 }}
+  , {{ \ c (p1:(ProjectivePoint t_Fp_2)) p2 ->
+        (if c then p1.2 else p2.2) == (if c then p1 else p2).2 }}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
+
+POINTonE2_affine_selection_ite_thms <- for
+  [ {{ \ c (p1:(AffinePoint t_Fp_2)) p2 ->
+        (if c then p1 else p2).0 == if c then p1.0 else p2.0 }}
+  , {{ \ c (p1:(AffinePoint t_Fp_2)) p2 ->
+        (if c then p1 else p2).1 == if c then p1.1 else p2.1 }}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
+
+
+POINTonE2_normalization_thms <- for
+ (generic_point_normalization_thms {{ Fp_2 }} {{ POINTonE2_abs }} {{ POINTonE2_affine_abs }})
+ (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
+
+
+normalize_affinify_fp2_thm <- custom_prove_cryptol
+  {{ \p -> normalize_affine_point Fp_2 (affinify E' p) == affinify E' p }}
+  do { unfolding ["affinify", "normalize_affine_point", "point_O", "E'"];
+       simplify (addsimps POINTonE2_affine_selection_ite_thms fp2_simpset);
+       w4_unint_z3 fp2_unints; };
+
+normalize_projectify_fp2_thm <- custom_prove_cryptol
+  {{ \p -> normalize_point Fp_2 (projectify E' p) == projectify E' (normalize_affine_point Fp_2 p) }}
+  do { unfolding ["projectify", "normalize_point", "normalize_affine_point", "E'"];
+       simplify (addsimps POINTonE2_affine_selection_ite_thms fp2_simpset);
+       w4_unint_z3 fp2_unints; };
+
+normalize_affinify_projections_fp2_thms <- for
+  [ {{ \p -> (Fp_2.normalize x.0 == x.0 where x = affinify E' p) }}
+  , {{ \p -> (Fp_2.normalize x.1 == x.1 where x = affinify E' p) }}
+  ] (\ t -> custom_prove_cryptol t
+        do { unfolding ["affinify", "point_O", "E'"];
+             simplify (addsimps POINTonE2_affine_selection_ite_thms fp2_simpset);
+             w4_unint_z3 fp2_unints; } );
+
+normalize_point_ite_thm <- hoist {{ normalize_point Fp_2 }} [];
+normalize_affine_point_ite_thm <- hoist {{ normalize_affine_point Fp_2 }} [];
+
+let POINTonE2_thms = concat_all
+  [ POINTonE2_base_thms
+  , POINTonE2_normalization_thms
+  , normalize_affinify_projections_fp2_thms
+  , [normalize_affinify_fp2_thm, normalize_projectify_fp2_thm]
+  , [normalize_point_ite_thm, normalize_affine_point_ite_thm]
+  ];
 
 // .. and these theorems, which are admitted for now rather than proven, that
 // assert that the operations in projective coordinates have the right effect in
