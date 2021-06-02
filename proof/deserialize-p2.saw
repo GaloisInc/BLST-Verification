@@ -224,34 +224,6 @@ let limbs_from_be_bytes_spec48 = do {
   crucible_points_to ret_p (crucible_term {{ vec384_rep (join inx) }});
   };
 
-/*
-let blst_p2_deserialize_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
-  (_, in_ptr) <- ptr_to_fresh_readonly "in" (llvm_array 192 (llvm_int 8));
-  crucible_execute_func [out_ptr, in_ptr];
-  new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE2_affine");
-  ret <- crucible_fresh_var "ret" (llvm_int 32);
-  crucible_conditional_points_to {{ ret == zero }} out_ptr (crucible_term new_out);
-  crucible_return (crucible_term ret);
-};
-*/
-
-// TODO: duplicated from deserialize_p1.saw
-let {{
-  add_rep a = if vec384_abs a < `p then a else vec384_rep ((vec384_abs a) - `p)
-  }};
-
-// TODO: duplicated from deserialize_p1.saw
-let add_fp_noabs_spec = do {
-  ret_ptr <- crucible_alloc vec384_type;
-  (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
-  crucible_precond {{ b == zero }}; // make sure this override is applied only where we want it.
-
-  crucible_execute_func [ret_ptr, a_ptr, b_ptr];
-  crucible_points_to ret_ptr (crucible_term {{ add_rep a }});
-  //  {{ if vec384_abs a < `p then a else vec384_rep ((vec384_abs a) - `p) }}) ;
-};
 
 let sgn0_pty_mont_384x_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
@@ -267,23 +239,12 @@ let sgn0_pty_mont_384x_spec = do {
 // Proofs
 ////////////////////////////////////////////////////////////////////////////////
 
-let deserialize_p2_unints = foldr concat  [fp_unints, fp2_unints, ef_unints]
+let deserialize_p2_unints = foldr concat  [fp_unints, fp2_unints]
                                   ["sqrt_fp2", "sign_F_p_2", "is_square_fp2"];
 
 // Starting with proofs that the as-implemented algorithm matches the reference specification
 // as-implemented has an additional check
 
-// We have a conditional property
-//  {{ \x -> fp_invariant x ==> Fp.mul (fp_abs x,  montgomery_factor_p) == to_Fp (vec384_abs x) }}
-// expressed as this conditional rewrite rule:
-
-// TODO: get this from the existing proof in deserialize-p1.saw
-mul_to_fp_thm <- admit_cryptol // prove_cryptol
-  {{ \x -> Fp.mul (fp_abs x, montgomery_factor_p) ==
-           if fp_invariant x
-           then to_Fp (vec384_abs x)
-           else apply Fp.mul (fp_abs x,  montgomery_factor_p) }}
-   ; // [] ;
 
 // "uncompress_OK" is the correct value in the non-infinity case
 
@@ -292,7 +253,6 @@ prove_cryptol
             \/ maybe_cases (uncompress_E2_imp s)
                            True // the input is rejected
                            (\ p -> p == (uncompress_E2_OK s) ) }} // or accepted, giving the OK values
-  // (concat ["sqrt_fp2", "sign_F_p_2", "is_square_fp2"] fp2_unints);
   deserialize_p2_unints;
 
 let {{ uncompress_E2 = deserialize_E2 }}; // TODO: update Serialization.cry ?
@@ -306,7 +266,7 @@ custom_prove_cryptol
        simplify (addsimp mul_to_fp_thm fp_simpset);
        simplify (addsimps (concat [fp2_invariant_alt_thm] fp2_alg_thms) empty_ss); // resolve mul(sq x, x) vs mul (x, sq x)
        unfolding ["fp_invariant"];
-       w4_unint_z3 deserialize_p2_unints; // (concat ["sqrt_fp2", "sign_F_p_2", "is_square_fp2"] (concat fp_unints fp2_unints));
+       w4_unint_z3 deserialize_p2_unints;
        };
 
 // The implementation may reject more strings, but otherwise agrees with the spec:
@@ -321,7 +281,7 @@ custom_prove_cryptol
        simplify (addsimp mul_to_fp_thm fp_simpset);
        simplify (addsimps (concat [fp2_invariant_alt_thm] fp2_alg_thms) empty_ss); // resolve mul(sq x, x) vs mul (x, sq x)
        unfolding ["fp_invariant"];
-       w4_unint_z3 deserialize_p2_unints; // (concat ["sqrt_fp2", "sign_F_p_2", "is_square_fp2"] fp_unints);
+       w4_unint_z3 deserialize_p2_unints;
        };
 
 // Now the code proofs
@@ -334,47 +294,21 @@ limbs_from_be_bytes_48_ov <- verify "limbs_from_be_bytes" [] limbs_from_be_bytes
 
 // blst_p2_deserialize_inf_ov <- verify "blst_p2_deserialize" [] blst_p2_deserialize_inf_spec;
 
-// TODO: duplicated
-add_rep_invariant_thm <- prove_cryptol
- {{ \ x -> fp_invariant x == (x == add_rep x) }}
- [];
-
 let overrides_for_POINTonE2_Uncompress_BE =
    foldr concat [ sqrt_fp2_ovs, fp_overrides, fp2_overrides]
          [sgn0_pty_mont_384x_ov, add_fp_noabs_ov, limbs_from_be_bytes_48_ov
          // , vec_is_equal_48_vec_ov // TODO: FIX
          ];
 
-// OK
 POINTonE2_Uncompress_BE_BAD0_ov <- custom_verify "POINTonE2_Uncompress_BE"
   overrides_for_POINTonE2_Uncompress_BE
   POINTonE2_Uncompress_BE_BAD0_spec
   do { apply_fp_rewrites;
        unfolding ["fp_invariant", "vec384_abs", "vec_abs"]; // evaluate this for BLS12_381_RR
-       w4_unint_z3 deserialize_p2_unints;}; // was fp_unints;};
+       w4_unint_z3 deserialize_p2_unints;};
 
 
-// Cryptol can evaluate:fp_rep (montgomery_factor_p)
-// [0xf4df1f341c341746, 0x0a76e6a609d104f1, 0x8de5476c4c95b6d5,
-//  0x67eb88a9939d83c0, 0x9a793e85b519952d, 0x11988fe592cae3aa]
-
-// TODO: duplicate
-fp_abs_RR_thm <- prove_cryptol
- (rewrite (cryptol_ss ())
-  {{ fp_abs [ 0xf4df1f341c341746, 0x0a76e6a609d104f1, 0x8de5476c4c95b6d5
-            , 0x67eb88a9939d83c0, 0x9a793e85b519952d, 0x11988fe592cae3aa]
-      == montgomery_factor_p }})
-  [] ;
-
-// TODO: duplicate
-fp_inv_RR_thm <- prove_cryptol
-  (rewrite (cryptol_ss ())
-   {{ fp_invariant [ 0xf4df1f341c341746, 0x0a76e6a609d104f1, 0x8de5476c4c95b6d5
-                   , 0x67eb88a9939d83c0, 0x9a793e85b519952d, 0x11988fe592cae3aa]
-       == True }})
-  [] ;
-
-// Cryptol also can produce the value of `B_E2`:
+// Cryptol can produce the value of `B_E2`:
 /*
 implementation::Field> fp2_rep [a,a] where a = to_Fp 0x4
 [[0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f,
@@ -399,7 +333,6 @@ fp2_invariant_B_E2_thm <- prove_cryptol
                       0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e]]
       == True }}) [];
 
-// OK
 POINTonE2_Uncompress_BE_BAD1_ov <- custom_verify "POINTonE2_Uncompress_BE"
   overrides_for_POINTonE2_Uncompress_BE
   POINTonE2_Uncompress_BE_BAD1_spec
@@ -412,13 +345,24 @@ POINTonE2_Uncompress_BE_BAD1_ov <- custom_verify "POINTonE2_Uncompress_BE"
 
 fp2_rep_seq_thm <- prove_cryptol {{ \x y -> fp2_rep [x, y] == [fp_rep y, fp_rep x] }} ["fp_rep"];
 
+unrip_seq2_thms <- for
+  [ {{\ c (x0:t_Fp) x1 y0 y1 -> [if c then x0 else y0, if c then x1 else  y1] == if c then [x0,x1] else [y0,y1] }}
+  , {{ \ (x:[2]Integer) -> ([x0,x1] == x where [x0,x1]=x) }}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
+
+normalize_sqrt_fp2_thm <- custom_prove_cryptol
+  {{ \ x -> Fp_2.normalize (sqrt_fp2 x) == sqrt_fp2 x }}
+  do { goal_eval_unint fp2_unints;
+       simplify (addsimps unrip_seq2_thms fp2_simpset);
+       w4_unint_z3 fp2_unints; };
+
 // The OK case, proper compressed input
 POINTonE2_Uncompress_BE_OK_ov <- custom_verify "POINTonE2_Uncompress_BE"
   overrides_for_POINTonE2_Uncompress_BE
   POINTonE2_Uncompress_BE_OK_spec
   do { unfolding ["uncompress_E2", "deserialize_E2", "uncompress_E2_imp", "uncompress_E2_x"
                  , "uncompress_E2_x_fp", "uncompress_E2_y2"]; // for proof debugging
-       apply_fp_rewrites;
+       simplify (addsimp normalize_sqrt_fp2_thm fp2_simpset);
        simplify (addsimps [fp2_rep_seq_thm, fp_abs_RR_thm, fp_inv_RR_thm, fp2_abs_B_E2_thm, fp2_invariant_B_E2_thm] empty_ss);
        simplify (addsimp add_rep_invariant_thm empty_ss); // only after applying fp_inv_RR_thm!
        simplify (addsimp fp2_abs_fp_rep_thm fp2_simpset);
