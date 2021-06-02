@@ -223,6 +223,10 @@ fp_normalization_thms <- for
 
 // not currently provable
 fp_is_val_div_thm <- admit_cryptol {{ \ x y -> Fp.is_val (Fp.div (x, y)) == True }};
+fp_elim_norm_div_thms <- for
+  [ {{ \ x y -> Fp.div (Fp.normalize x, y) == Fp.div (x, y) }}
+  , {{ \ x y -> Fp.div (x, Fp.normalize y) == Fp.div (x, y) }}
+  ] admit_cryptol;
 
 fp_rep_normalize_thm <- custom_prove_cryptol {{ \x -> fp_rep (Fp.normalize x) == fp_rep x }} z3;
 
@@ -238,6 +242,7 @@ let fp_simpset = addsimps (concat_all
                            [ fp_rep_thms
                            , fp_is_val_thms
                            , fp_normalization_thms
+                           , fp_elim_norm_div_thms
                            , [ fp_abs_ite_thm, fp_invariant_ite_thm, fp_rep_ite_thm
                              , fp_abstract_invariant_thm, fp_is_val_div_thm
                              , unrip_thm, seq_ite_thm, fp_rep_normalize_thm

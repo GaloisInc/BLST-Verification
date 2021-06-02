@@ -489,12 +489,34 @@ normalize_affinify_projections_fp2_thms <- for
 normalize_point_ite_thm <- hoist {{ normalize_point Fp_2 }} [];
 normalize_affine_point_ite_thm <- hoist {{ normalize_affine_point Fp_2 }} [];
 
+eliminate_normalized_args_curve_ops_e2_thms <- for
+  [ {{ \ p1 -> point_double Fp_2 (normalize_point Fp_2  p1) == point_double Fp_2 p1 }}
+  , {{ \ p1 p2 a4 is_null -> (point_dadd Fp_2 p1 (normalize_point Fp_2 p2) a4 is_null) ==
+                              point_dadd Fp_2 p1 p2 a4 is_null }}
+  , {{ \ p1 p2 a4 is_null -> (point_dadd Fp_2 (normalize_point Fp_2 p1) p2 a4 is_null) ==
+                              point_dadd Fp_2 p1 p2 a4 is_null }}
+  ] ( \t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
+
+// TODO: prove?  Needs other more elementary theorems, back to Fp.
+eliminate_normalized_arg_POINTonE2_abs_thm <- admit_cryptol
+  {{ \ p -> POINTonE2_abs (POINTonE2_normalize p) == POINTonE2_abs p }};
+
+// Not working - is this even true?
+//eliminate_normalized_args_affinify_thm <- custom_prove_cryptol
+//  {{ \ p -> affinify E' (normalize_point Fp_2 p) == affinify E' p }}
+//  do{ unfolding ["affinify", "E'", "normalize_point"];
+//      simplify fp2_simpset;
+//      w4_unint_z3 fp2_unints; };
+  
+
 let POINTonE2_thms = concat_all
   [ POINTonE2_base_thms
   , POINTonE2_normalization_thms
   , normalize_affinify_projections_fp2_thms
+  , eliminate_normalized_args_curve_ops_e2_thms
   , [normalize_affinify_fp2_thm, normalize_projectify_fp2_thm]
   , [normalize_point_ite_thm, normalize_affine_point_ite_thm]
+  , [eliminate_normalized_arg_POINTonE2_abs_thm]
   ];
 
 // .. and these theorems, which are admitted for now rather than proven, that

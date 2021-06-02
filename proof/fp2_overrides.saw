@@ -83,12 +83,36 @@ fp2_normalization_thms <- for
   , {{ \x    -> Fp_2.normalize (mul_by_8 Fp_2 x) == mul_by_8 Fp_2 x }}
  ] (\t -> prove_cryptol t []);
 
-// not currently provable
-fp2_is_val_div_thm <- admit_cryptol {{ \ x y -> Fp_2.is_val (Fp_2.div (x, y)) == True }};
+fp2_is_val_div_thm <- custom_prove_cryptol {{ \ x y -> Fp_2.is_val (Fp_2.div (x, y)) == True }}
+  do { goal_eval_unint fp_unints;
+       simplify fp_simpset;
+       w4_unint_z3 fp_unints; };
+
 fp2_normalize_div_thm <- custom_prove_cryptol
   {{ \ x y -> Fp_2.normalize (Fp_2.div (x, y)) == Fp_2.div (x, y) }}
   do { rw_with [fp2_is_val_div_thm, fp2_abs_normalize_thm];
        w4_unint_z3 ["Fp_2"]; };
+
+fp2_normalize_div_thm_2 <- custom_prove_cryptol
+  {{ \ x y -> Fp_2.div (Fp_2.normalize x, y) == Fp_2.div (x, y) }}
+  do { goal_eval_unint fp_unints;
+       simplify fp_simpset;
+       w4_unint_z3 fp_unints; };
+
+
+fp2_normalize_div_thm_3_lemma <- prove_cryptol
+  {{ \ c x y z -> Fp.div (x, if c then y else z) == if c then Fp.div (x, y) else Fp.div(x, z) }}
+  ["Fp"];
+
+// This appears to be true, but for non-obvious reasons.  TODO: change the definition to make it obvious
+fp2_normalize_div_thm_3 <- admit_cryptol
+  {{ \ x y -> Fp_2.div (x, Fp_2.normalize y) == Fp_2.div (x, y) }};
+/*
+  do { goal_eval_unint fp_unints;
+       simplify (addsimp fp2_normalize_div_thm_3_lemma extended_fp_simpset);
+       print_goal_nicely;
+       w4_unint_z3 fp_unints; };
+*/
 
 fp2_rep_normalize_thm <- custom_prove_cryptol {{ \x -> fp2_rep (Fp_2.normalize x) == fp2_rep x }} z3;
 
@@ -109,6 +133,8 @@ let fp2_simpset = addsimps (concat_all
                             , [ one_mont_fp2_rep_thm, fp2_abs_ite_thm, fp2_invariant_ite_thm
                               , fp2_normalize_div_thm, fp2_abstract_invariant_thm
                               , fp2_normalize_ite_thm, fp2_abs_normalize_ite_thm
+                              , fp2_normalize_div_thm, fp2_normalize_div_thm_2
+                              , fp2_normalize_div_thm_3
                               , fp2_rep_ite_thm, fp2_rep_normalize_thm]
                             ]) (cryptol_ss ());
 
