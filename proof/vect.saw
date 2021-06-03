@@ -140,15 +140,15 @@ let vec_is_zero_2fp_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 2 vec384_type);
   crucible_precond {{ fp_invariant (a@0) /\ fp_invariant (a@1) }};
   crucible_execute_func [a_ptr, crucible_term {{ (96:Size_t) }}]; // Non-portable
-  crucible_return (crucible_term {{ if fp_abs (a@0) == Fp.field_zero /\ fp_abs (a@1) == Fp.field_zero then 1 else (0:Limb) }});
+  crucible_return (crucible_term {{ if fp_abs a0 == Fp.field_zero /\ fp_abs a1 == Fp.field_zero then 1 else (0:Limb) where [a0,a1]=a }});
   };
 
 let vec_is_zero_2fp2_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 2 vec384x_type);
   crucible_precond {{ fp2_invariant (a@0) /\ fp2_invariant (a@1) }};
   crucible_execute_func [a_ptr, crucible_term {{ (192:Size_t) }}]; // Non-portable
-  crucible_return (crucible_term {{ if ((Fp_2.is_equal (fp2_abs (a@0), Fp_2.field_zero)) /\ (Fp_2.is_equal (fp2_abs (a@1), Fp_2.field_zero))) then 1 else (0:Limb) }});
-  }; // TODO: is this specification okay?
+  crucible_return (crucible_term {{ (if ((Fp_2.is_equal (fp2_abs a0, Fp_2.field_zero)) /\ (Fp_2.is_equal (fp2_abs a1, Fp_2.field_zero))) then 1 else (0:Limb)) where [a0,a1] = a }});
+  };
 
 let vec_is_zero_10fp_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 10 vec384_type);
@@ -216,8 +216,8 @@ let vec_is_equal_2fp_spec = do {
   crucible_precond {{     fp_invariant (a@0) /\ fp_invariant (a@1)
                       /\  fp_invariant (b@0) /\ fp_invariant (b@1) }};
   crucible_execute_func [a_ptr, b_ptr, crucible_term {{ (96:Size_t) }}]; // Non-portable
-  crucible_return (crucible_term {{ if fp_abs (a@0) ==  fp_abs (b@0) /\ fp_abs (a@1) ==  fp_abs (b@1)
-                                    then 1 else (0:Limb) }});
+  crucible_return (crucible_term {{ if fp_abs a0 ==  fp_abs b0 /\ fp_abs a1 ==  fp_abs b1
+                                    then 1 else (0:Limb) where [a0,a1]=a; [b0,b1]=b}});
   };
 
 let vec_is_equal_2fp2_spec = do {
@@ -226,8 +226,8 @@ let vec_is_equal_2fp2_spec = do {
   crucible_precond {{     fp2_invariant (a@0) /\ fp2_invariant (a@1)
                       /\  fp2_invariant (b@0) /\ fp2_invariant (b@1) }};
   crucible_execute_func [a_ptr, b_ptr, crucible_term {{ (192:Size_t) }}]; // Non-portable
-  crucible_return (crucible_term {{ if Fp_2.is_equal(fp2_abs (a@0), fp2_abs (b@0)) /\ Fp_2.is_equal(fp2_abs (a@1), fp2_abs (b@1))
-                                    then 1 else (0:Limb) }}); // TODO: is this specification okay?
+  crucible_return (crucible_term {{ if Fp_2.is_equal(fp2_abs a0, fp2_abs b0) /\ Fp_2.is_equal(fp2_abs a1, fp2_abs b1)
+                                    then 1 else (0:Limb)  where [a0,a1]=a; [b0,b1]=b }}); // TODO: is this specification okay?
   };
 
 // TODO: prove
