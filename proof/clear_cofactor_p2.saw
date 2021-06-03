@@ -29,25 +29,14 @@ times_minus_z_rev_thm <- custom_prove_cryptol
     w4_unint_z3 ["affinify_E'", "E'", "POINTonE2_abs", "e2_scalar_mult"];
   };
 
-// Prove times_minus_z is equivalent to e2_scalar_mult, for specific normalized parameters
 times_minus_z_thm <- custom_prove_cryptol
-  {{ \P -> affinify E' (times_minus_z (POINTonE2_abs P)) == e2_scalar_mult pos_c1 (affinify E' (POINTonE2_abs P)) }}
+  {{ \P -> affinify E' (times_minus_z P) == e2_scalar_mult pos_c1 (affinify E' P) }}
   do {
-    simplify (addsimps [times_minus_z_rev_thm, affinify_POINTonE2_times_minus_z_thm, affinify_E'_thm] empty_ss);
+    simplify (addsimps [times_minus_z_rev_thm, affinify_POINTonE2_times_minus_z_thm] empty_ss);
     simplify (addsimps POINTonE2_thms empty_ss);
+    rw_with_1 affinify_E'_thm;
     w4_unint_z3 ["e2_scalar_mult", "affinify_E'", "POINTonE2_abs"];
   };
-
-times_minus_z_thm_2 <- custom_prove_cryptol
-  {{ \P Q a b -> (affinify E' (times_minus_z R) == e2_scalar_mult pos_c1 (affinify E' R)
-                  where R = point_dadd Fp_2 P Q a b)}}
-  do {
-    simplify (addsimps [times_minus_z_rev_thm, affinify_POINTonE2_times_minus_z_thm]
-                       (addsimps POINTonE2_thms empty_ss));
-    simplify remove_higher_order_function_simpset;
-    w4_unint_z3 ec_mult_unints;
-    };
-
 
 // Algebraic theorems
 sub_to_add_neg_p2_thm <- prove_cryptol
@@ -98,17 +87,15 @@ e2_scalar_mult_inv_thm <- admit_cryptol
 
 // Prove clear_cofactor_bls12381_g2 (RFC spec) is equivalent to
 // clear_cofactor_E2_impl (spec based on C clear_cofactor_E2 function).
-// This applies only to points resulting from `POINTonE2_abs`, which is OK
-// as we only need this for an occurrence in a postcondition.
 clear_cofactor_E2_equiv_thm <- custom_prove_cryptol
-  {{ \Q -> (clear_cofactor_bls12381_g2 (affinify E' P) ==
+  {{ \P -> clear_cofactor_bls12381_g2 (affinify E' P) ==
       if AffinePoint_Fp_2_invariant (affinify E' P)
       then affinify E' (clear_cofactor_E2_impl P)
-      else apply clear_cofactor_bls12381_g2 (affinify E' P) where P = POINTonE2_abs Q) }}
-  do {
+      else apply clear_cofactor_bls12381_g2 (affinify E' P) }}
+ do {
     unfolding ["clear_cofactor_bls12381_g2", "clear_cofactor_E2_impl"];
     // Affinify goal
-    simplify (addsimps (concat [psi_psi_double_equiv_thm, times_minus_z_thm, times_minus_z_thm_2, psi_equiv_thm'] e2_curve_op_thms) (cryptol_ss()));
+    simplify (addsimps (concat [psi_psi_double_equiv_thm, times_minus_z_thm,  psi_equiv_thm'] e2_curve_op_thms) (cryptol_ss()));
 
     // Selectively remove polymorphic curve parameters from goal
     simplify (addsimps [affinify_E'_thm, e2_scalar_mult_thm] empty_ss);

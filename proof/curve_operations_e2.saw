@@ -498,16 +498,49 @@ eliminate_normalized_args_curve_ops_e2_thms <- for
   ] ( \t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
 
 // TODO: prove?  Needs other more elementary theorems, back to Fp.
-eliminate_normalized_arg_POINTonE2_abs_thm <- admit_cryptol
+eliminate_normalized_arg_POINTonE2_abs_thm <- test_cryptol
   {{ \ p -> POINTonE2_abs (POINTonE2_normalize p) == POINTonE2_abs p }};
 
-// Not working - is this even true?
-//eliminate_normalized_args_affinify_thm <- custom_prove_cryptol
-//  {{ \ p -> affinify E' (normalize_point Fp_2 p) == affinify E' p }}
-//  do{ unfolding ["affinify", "E'", "normalize_point"];
-//      simplify fp2_simpset;
-//      w4_unint_z3 fp2_unints; };
-  
+// The proof of eliminate_normalized_args_affinify_thm is a bit intricate:
+div_0_lemma_1 <- prove_cryptol {{ \x -> Fp_2.div(x, Fp_2.field_zero) == Fp_2.field_zero }} [];
+
+div_0_lemma_2 <- custom_prove_cryptol 
+  {{ \x y -> Fp_2.div(x,y) == if is_zero Fp_2 y then apply Fp_2.div(x, Fp_2.field_zero) else apply Fp_2.div(x,y)}}
+  do { unfolding ["is_zero", "apply"]; rw_with_1 fp2_is_equal_elim_thm; w4_unint_z3 ["Fp_2"]; };
+
+div_0_lemma <- custom_prove_cryptol
+  {{ \x y -> Fp_2.div(x,y) == if is_zero Fp_2 y then Fp_2.field_zero else apply Fp_2.div(x,y)}}
+  do { rw_with_1 div_0_lemma_2;
+       unfolding ["apply"];
+       rw_with_1 div_0_lemma_1;
+       w4_unint_z3 ["Fp_2"]; };
+
+hoist_fp2_mul_arg_thms <- for
+  [ {{ \ c x y z -> Fp_2.mul (if c then x else y, z) == if c then Fp_2.mul(x,z) else Fp_2.mul(y,z) }}
+  , {{ \ c x y z -> Fp_2.mul (x, if c then y else z) == if c then Fp_2.mul(x,y) else Fp_2.mul(x,z) }}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss()) t) ["Fp_2"]);
+
+affinify_needs_no_special_case_thm <- custom_prove_cryptol 
+  {{ \ p -> (affinify E' p == (Fp_2.mul(lambda2, x), Fp_2.mul(lambda3, y))
+    where
+        (x,y,z) = p
+        lambda = Fp_2.div (Fp_2.field_unit, z)
+        lambda2 = Fp_2.sq lambda
+        lambda3 = Fp_2.mul(lambda, lambda2)) }}
+  do { unfolding ["affinify", "E'", "is_point_O", "same_point_affine"/*, "is_zero"*/, "point_O"];
+      // simplify (addsimp fp2_is_equal_thm fp2_simpset);
+      rw_with_1 div_0_lemma;
+      unfolding ["apply"];
+      simplify (addsimps hoist_fp2_mul_arg_thms  (addsimps fp2_alg_thms fp2_simpset));
+      w4_unint_z3 fp2_unints; };
+
+eliminate_normalized_args_affinify_thm <- custom_prove_cryptol
+  {{ \ p -> affinify E' (normalize_point Fp_2 p) == affinify E' p }}
+  do{ rw_with_1 affinify_needs_no_special_case_thm;
+      unfolding ["E'", "normalize_point"];
+      simplify fp2_simpset;
+      w4_unint_z3 fp2_unints; };
+
 
 let POINTonE2_thms = concat_all
   [ POINTonE2_base_thms
@@ -516,7 +549,7 @@ let POINTonE2_thms = concat_all
   , eliminate_normalized_args_curve_ops_e2_thms
   , [normalize_affinify_fp2_thm, normalize_projectify_fp2_thm]
   , [normalize_point_ite_thm, normalize_affine_point_ite_thm]
-  , [eliminate_normalized_arg_POINTonE2_abs_thm]
+  , [eliminate_normalized_arg_POINTonE2_abs_thm, eliminate_normalized_args_affinify_thm]
   ];
 
 // .. and these theorems, which are admitted for now rather than proven, that
