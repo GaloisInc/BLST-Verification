@@ -197,42 +197,56 @@
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/aggregate_in_g1.saw:106:39",
+    "loc": "/workdir/proof/aggregate_in_g1.saw:100:34",
     "method": "blst_aggregate_in_g1",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/aggregate_in_g1.saw:131:33",
+    "loc": "/workdir/proof/aggregate_in_g1.saw:115:39",
     "method": "blst_aggregate_in_g1",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/aggregate_in_g1.saw:91:34",
+    "loc": "/workdir/proof/aggregate_in_g1.saw:130:39",
     "method": "blst_aggregate_in_g1",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/aggregate_in_g2.saw:114:33",
+    "loc": "/workdir/proof/aggregate_in_g1.saw:155:33",
+    "method": "blst_aggregate_in_g1",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/aggregate_in_g2.saw:104:39",
+    "method": "blst_aggregate_in_g2",
+    "type": "method",
+    "specification": "unknown"
+  },
+  {
+    "status": "verified",
+    "loc": "/workdir/proof/aggregate_in_g2.saw:128:33",
     "method": "blst_aggregate_in_g2",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/aggregate_in_g2.saw:148:34",
+    "loc": "/workdir/proof/aggregate_in_g2.saw:162:34",
     "method": "blst_aggregate_in_g2",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "verified",
-    "loc": "/workdir/proof/aggregate_in_g2.saw:90:39",
+    "status": "assumed",
+    "loc": "/workdir/proof/aggregate_in_g2.saw:180:34",
     "method": "blst_aggregate_in_g2",
     "type": "method",
     "specification": "unknown"
