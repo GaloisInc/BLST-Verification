@@ -76,6 +76,20 @@ let blst_aggregate_in_g2_error_spec = do {
   llvm_postcond {{ new_out == out }};
 };
 
+let blst_aggregate_in_g2_null_error_spec = do {
+  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g2_out" (llvm_struct "struct.POINTonE2");
+  let inp_ptr = llvm_null;
+  (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g2_zwire" (llvm_array 96 (llvm_int 8));
+  llvm_precond {{ (zwire@0)@0 }}; // compressed
+  llvm_precond {{ aggregate_in_g2_error_precond zwire }};
+  llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
+  ret <- llvm_fresh_var "blst_aggregate_in_g2_ret" (llvm_int 32);
+  llvm_return (llvm_term ret);
+  llvm_postcond {{ ret != `BLST_SUCCESS }};
+  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE2");
+  llvm_points_to out_ptr (llvm_term new_out);
+  llvm_postcond {{ new_out == out }};
+};
 
 let overrides = foldr concat [vec_overrides,curve_operations_e2_ovs] [POINTonE2_Uncompress_OK_ov,POINTonE2_in_g2_ov];
 
@@ -149,6 +163,24 @@ blst_aggregate_in_g2_error_ov <- custom_verify
   "blst_aggregate_in_g2"
   [POINTonE2_Uncompress_BAD_ov,POINTonE2_Uncompress_OK_ov,POINTonE2_in_g2_ov]
   blst_aggregate_in_g2_error_spec
+  (goal_num_ite 0
+    assume_unsat
+    (goal_num_ite 1 // preconditions of the subgroup check
+      do {
+        simplify (addsimps (concat POINTonE2_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
+        w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl"];
+      }
+      do {
+        simplify (addsimps misc_rules_E1 empty_ss);
+        simplify (addsimps POINTonE2_thms empty_ss);
+        simplify remove_higher_order_function_simpset;
+        w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl","uncompress_E2_OK","is_point_affine_E'"];
+      }));
+
+blst_aggregate_in_g2_error_ov <- custom_verify
+  "blst_aggregate_in_g2"
+  [POINTonE2_Uncompress_BAD_ov,POINTonE2_Uncompress_OK_ov,POINTonE2_in_g2_ov]
+  blst_aggregate_in_g2_null_error_spec
   (goal_num_ite 0
     assume_unsat
     (goal_num_ite 1 // preconditions of the subgroup check
