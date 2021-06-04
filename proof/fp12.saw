@@ -490,7 +490,7 @@ nest_fp6_thms <- for
   , {{ \ x -> nest fp6_frobenius x 3 == fp6_frobenius (fp6_frobenius (fp6_frobenius x)) }}
   ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
 
-// borrowed from exp2.saw:
+/* borrowed from exp2.saw:
 fp2_invariant_alt_thm <-
   prove_cryptol
   {{ \x -> fp2_invariant x == (fp_invariant (x@0) /\ fp_invariant (x@1)) }}
@@ -500,6 +500,7 @@ fp2_invariant_alt_seq_thm <-
   prove_cryptol
   {{ \x y -> fp2_invariant [x,y] == (fp_invariant x /\ fp_invariant y) }}
   ["fp_invariant"];
+*/
 
 // Assembler function overrides
 mul_by_1_plus_i_mod_384x_ov <- admit "mul_by_1_plus_i_mod_384x" mul_by_1_plus_i_mod_384x_spec;
@@ -686,7 +687,6 @@ redc_mont_mul_6x2_thm <- custom_prove_cryptol
                              , redc_Fpx2_zero_thm, redc_Fpx2_mul_thm2b
                              , toM_Fp_add_thm, toM_Fp_sub_thm, toM_Fp_zero_thm
                              ]]);
-       // print_goal_nicely;
        z3; };
 
 // NOW. need fp6_rep_nom X = fp6_rep (toM_6 x).  Start at Fp
@@ -741,7 +741,7 @@ let {{ fp2_reduce_mod_p [x1:Integer, x2] = [x1%`p, x2%`p]
     }};
 
 // algebraically true; assumed
-fp6x2_mul_equiv_thm <- admit_cryptol
+fp6x2_mul_equiv_thm <- test_cryptol
   {{ \x y -> fp6_reduce_mod_p (fp6x2_mul x y) == fp6_reduce_mod_p (Fp_6x2.mul (x, y)) }};
 
 // inserts a mod p reduction; `apply` prevents it from looping.
@@ -876,12 +876,6 @@ fp12_mul_lemma0 <- custom_prove_cryptol
        };
 
 fp6_unrip_thm <-
-/*
- let fp6_at0 = parse_core "\\ (x:(Vec 3 (Vec 2 Integer))) -> at 3 (Vec 2 Integer) x 0" in
-  let fp6_at1 = parse_core "\\ (x:(Vec 3 (Vec 2 Integer))) -> at 3 (Vec 2 Integer) x 1" in
-   let fp6_at2 = parse_core "\\ (x:(Vec 3 (Vec 2 Integer))) -> at 3 (Vec 2 Integer) x 2" in
-    prove_cryptol (rewrite (cryptol_ss ()) {{ \ (x:[3][2]Integer) -> [fp6_at0 x, fp6_at1 x, fp6_at2 x] == x }}) [];
-*/ // More compactly, without parse_core!
   prove_cryptol (rewrite (cryptol_ss ()) {{ \ (x:[3][2]Integer) -> ([x0,x1,x2] == x where [x0,x1,x2] = x)}}) [];
 
 
@@ -899,7 +893,7 @@ fp12_mul_lemma_rev <- custom_prove_cryptol
        rw_with [fp12_mul_lemma0, fp12_mul_lemma1];
        z3; };
 
-redc_Fp_mul_thm <- admit_cryptol  {{ \ x y -> redc_mont_384 (Fp.mul (x, y)) == toM (Fp.mul (redc_mont_384 x, redc_mont_384 y)) }};
+redc_Fp_mul_thm <- test_cryptol  {{ \ x y -> redc_mont_384 (Fp.mul (x, y)) == toM (Fp.mul (redc_mont_384 x, redc_mont_384 y)) }};
 
 redc_Fp_add_thm <- prove_cryptol  {{ \ x y -> redc_mont_384 (Fp.add (x, y)) == Fp.add (redc_mont_384 x, redc_mont_384 y) }} [];
 
@@ -945,6 +939,7 @@ toM_Fp_6_add_thm <- prove_cryptol {{ \x y -> toM_6 (Fp_6.add (x,y)) == Fp_6.add 
 redc_mont_mul_12_thm <- test_cryptol
   {{ \ x y -> redc_mont_fp12 (Fp_12.mul (fp12_abs_nom x, fp12_abs_nom y))
       == toM_12 (Fp_12.mul (fp12_abs x, fp12_abs y)) }};
+// failed proof attempt:
 //  do { //goal_eval_unint ["Fpx2", "Fp", "redc_mont_384", "fp_abs", "abs_384", "toM"];
        //rw_with (concat_all [ vec384x384_thms
        //                    , [toM_Fp_add_thm, toM_Fp_sub_thm, toM_Fp_zero_thm, redc_Fp_mul_thm
@@ -952,7 +947,6 @@ redc_mont_mul_12_thm <- test_cryptol
 //       goal_eval_unint ["Fp_6", "redc_mont_fp6", "fp6_abs", "fp6_abs_nom", "toM_6"];
 //       rw_with [fp2_unrip_thm, fp6_unrip_thm];
 //       rw_with [redc_Fp6_mul_thm, redc_Fp6_add_thm, toM_Fp_6_add_thm];
-//       print_goal_nicely;
 //       assume_unsat; };
 
 
@@ -1270,7 +1264,9 @@ frobenius_map_fp2_1_alias_ov <- custom_verify "frobenius_map_fp2"
          simplify fp_simpset;
          w4_unint_z3 fp_unints;};
 
-fp_rep_normalize_abs_thm <- admit_cryptol {{ \x -> fp_rep (Fp.normalize (fp_abs x)) == fp_normalize x }};
+fp_rep_normalize_abs_thm <- custom_prove_cryptol
+  {{ \x -> fp_rep (Fp.normalize (fp_abs x)) == fp_normalize x }}
+   do { rw_with [fp_normalize_thm, fp_rep_normalize_thm]; apply_fp_rewrites; w4_unint_z3 fp_unints; };
 
 frobenius_map_fp2_2_ov <- custom_verify "frobenius_map_fp2"
     (concat fp_overrides fp2_overrides)
@@ -1331,8 +1327,6 @@ frobenius_constant_thms <- for [
 
 
 fp2_mul_v_sq_thm <- prove_cryptol
-// {{ \ x y -> Fp_2.mul (v_frobenius_constant_sq, [x,y])
-//             == [Fp.mul (x, v_frobenius_constant_sq!0), Fp.mul (y, v_frobenius_constant_sq!0)] }}
  {{ \ x -> Fp_2.mul (v_frobenius_constant_sq, x)
              == [Fp.mul (x@0, v_frobenius_constant_sq!0), Fp.mul (x@1, v_frobenius_constant_sq!0)] }}
  [];
@@ -1388,9 +1382,7 @@ fp2_mul_v_sq_2_thm <- prove_cryptol
  [];
 
 frobenius_2_theorems <- for
-  [ // {{ \x -> fp2_frobenius (fp2_frobenius x) == [Fp.normalize (x@0), x@1] }}
-  // ,
-  {{ \x -> fp6_frobenius (fp6_frobenius x) == fp6_frobenius2 x }}
+  [ {{ \x -> fp6_frobenius (fp6_frobenius x) == fp6_frobenius2 x }}
   ] (\t -> prove_cryptol t []);
 
 frobenius_map_fp6_2_ov <- custom_verify "frobenius_map_fp6"
@@ -1680,6 +1672,32 @@ cyclotomic_sqr_fp12_ovs <- for [cyclotomic_sqr_fp12_spec, cyclotomic_sqr_fp12_al
 
 // ... squaring in fp_12
 
+// Probably not all of these are needed.
+fp6_normalization_thms <- for
+  // ... eliminate normalization in a argument position (maybe not needed?)
+  [ {{ \ x y -> Fp_6.mul (Fp_6.normalize x, y) == Fp_6.mul (x, y) }}
+  , {{ \ x y -> Fp_6.mul (x, Fp_6.normalize y) == Fp_6.mul (x, y) }}
+  , {{ \ x   -> Fp_6.sq (Fp_6.normalize x) == Fp_6.sq x }}
+  , {{ \ x y -> Fp_6.add (Fp_6.normalize x, y) == Fp_6.add (x, y) }}
+  , {{ \ x y -> Fp_6.sub (x, Fp_6.normalize y) == Fp_6.sub (x, y) }}
+  , {{ \ x y -> Fp_6.sub (Fp_6.normalize x, y) == Fp_6.sub (x, y) }}
+  , {{ \ x y -> Fp_6.add (x, Fp_6.normalize y) == Fp_6.add (x, y) }}
+  , {{ \ x   -> Fp_6.neg (Fp_6.normalize x) == Fp_6.neg x }}
+  , {{ \ x   -> Fp_6.normalize (Fp_6.normalize x) == Fp_6.normalize x }}
+  // ... results are normalized
+  , {{ \ x y -> Fp_6.normalize (Fp_6.mul (x, y)) == Fp_6.mul (x, y) }}
+  , {{ \ x   -> Fp_6.normalize (Fp_6.sq x) == Fp_6.sq x }}
+  , {{ \ x y -> Fp_6.normalize (Fp_6.add (x, y)) == Fp_6.add (x, y) }}
+  , {{ \ x y -> Fp_6.normalize (Fp_6.sub (x, y)) == Fp_6.sub (x, y) }}
+  , {{ \ x   -> Fp_6.normalize (Fp_6.neg x) == Fp_6.neg x }}
+  , {{          Fp_6.normalize Fp_6.field_zero == Fp_6.field_zero }}
+  , {{          Fp_6.normalize Fp_6.field_unit == Fp_6.field_unit }}
+ ] (\t -> prove_cryptol t []);
+
+collect_fp2_normalization_fp6_thm <- prove_cryptol
+  {{ \ x0 x1 x2 -> [Fp_2.normalize x0, Fp_2.normalize x1, Fp_2.normalize x2] == Fp_6.normalize [x0,x1,x2] }}
+  [] ;
+
 fp12_sqr_equiv_thm <-  prove_cryptol {{ \ x -> Fp_12.sq x == fp12_sqr x }} [];
 
 sqr_fp12_ovs <- for [sqr_fp12_spec, sqr_fp12_alias_spec]
@@ -1695,6 +1713,7 @@ sqr_fp12_ovs <- for [sqr_fp12_spec, sqr_fp12_alias_spec]
            // (unfolding fp6_abs and _rep because we do not have the abs_rep rules..)
            simplify fp2_simpset;
            rw_with_1 fp6_unrip_thm;
+           rw_with (concat [collect_fp2_normalization_fp6_thm] fp6_normalization_thms);
            };
        w4_unint_z3 ["Fp_6", "Fp_2", "u_plus_1"];
        });
@@ -1705,7 +1724,8 @@ sqr_fp12_ovs <- for [sqr_fp12_spec, sqr_fp12_alias_spec]
 
 vec384_abs_rep_thm <- prove_cryptol {{ \x -> vec384_abs (vec384_rep x) == x }} [];
 // bv_384_thms <- bv_int_axioms 384;
-to_from_384_thm <- admit_cryptol (rewrite (cryptol_ss())
+// Note: testing is limited as the range of integers used is too small
+to_from_384_thm <- test_cryptol (rewrite (cryptol_ss())
   {{ \ x -> toInteger (fromInteger`{[384]} x) == x % 2^^384 }});
 
 reabstracted_add_thm1 <- custom_prove_cryptol
@@ -1786,13 +1806,13 @@ inverse_fp2_ov <- custom_verify "inverse_fp2"
 // Proof: if a==b==0, then both sides are 0
 // otherwise, (a+bu)(a-bu) = a^2 - u^2 b^2 = a^2 + b^2 and simple algebra completes the proof.
 // Note that a^2 = -b^2 implies a==b==0, since -1 is not a quadratic residue.
-inverse_fp2_thm <- admit_cryptol
+inverse_fp2_thm <- test_cryptol
 {{ \x -> (Fp_2.div (Fp_2.field_unit, x) == [Fp.neg(Fp.div (c, m)), Fp.div (a, m)] where
             [c, a] = x
             m = Fp.add (Fp.sq a, Fp.sq c)) }};
 
 // Algebraic fact
-mul_div_fp_unit_thm <- admit_cryptol {{ \x z -> Fp.mul (x, Fp.div (Fp.field_unit,z)) == Fp.div (x, z) }};
+mul_div_fp_unit_thm <- test_cryptol {{ \x z -> Fp.mul (x, Fp.div (Fp.field_unit,z)) == Fp.div (x, z) }};
 
 inverse_fp2_thm' <- custom_prove_cryptol
   {{ \x -> inverse_fp2_imp x == Fp_2.div(Fp_2.field_unit, x) }}
@@ -1833,7 +1853,7 @@ custom_prove_cryptol
       z3; };
 
 // ... but assume the fact
-inverse_fp6_thm <- admit_cryptol
+inverse_fp6_thm <- test_cryptol
   {{ \x -> (Fp_6.div (Fp_6.field_unit, x) == [c2',c1',c0'] where
     [a2,a1,a0] = x
     c0 = Fp_2.sub (Fp_2.sq a0, Fp_2.mul (u_plus_1,Fp_2.mul (a1,a2)))
@@ -1940,8 +1960,10 @@ fp2_abs_at_thms <- for [0,1,2]
   (\ i -> custom_prove_cryptol (rewrite (cryptol_ss())
        {{ \ x -> fp2_abs ((fp6_rep x) @ (`i:[2])) ==
           if Fp_6.is_val x then x @ (((2-`i):[2])) else apply fp2_abs ((fp6_rep x) @ (`i:[2])) }})
-       do { unfolding ["fp6_rep", "apply"];
-            rw_with fp2_rep_thms;
+       do { goal_eval_unint fp2_unints;
+            simplify fp_simpset;
+            simplify (addsimps [fp2_unrip_thm, unrip_thm_2] fp2_simpset);
+            rw_with_1 fp2_abs_normalize_thm;
             w4_unint_z3 ["Fp_2"]; } );
 
 fp6_is_val_op_thms <- for [{{ Fp_6.mul }} , {{ Fp_6.add }}, {{ Fp_6.sub }}, {{ Fp_6.sq }}]
@@ -1953,7 +1975,9 @@ fp6_is_val_inverse_thm <- custom_prove_cryptol {{ \ x -> Fp_6.is_val (inverse_fp
            z3; };
 
 fp6_abs_seq_thm <- custom_prove_cryptol
-  {{ \ x y z -> fp6_abs [fp2_rep x, fp2_rep y, fp2_rep z] == [z,y,x] }}
+  // {{ \ x y z -> fp6_abs [fp2_rep x, fp2_rep y, fp2_rep z] == [z,y,x] }}
+  {{ \ x y z -> fp6_abs [fp2_rep x, fp2_rep y, fp2_rep z] ==
+                [Fp_2.normalize z, Fp_2.normalize y, Fp_2.normalize x] }}
   do { unfolding ["fp6_abs"]; simplify fp2_simpset; w4_unint_z3 fp2_unints; };
 
 // possibly looping, use with care
@@ -1995,7 +2019,7 @@ let fp12_unints = ["fp12_abs", "fp12_invariant", "fp12_rep", "fp12_normalize", "
 
 fp12_rep_thms <- for
   [ {{ \x -> fp12_invariant (fp12_rep x) == True }}
-  , {{ \x -> fp12_abs (fp12_rep x) == x }}
+  , {{ \x -> fp12_abs (fp12_rep x) == Fp_12.normalize x }}
   , {{ \x -> fp12_rep (fp12_abs x) == if fp12_invariant x then x else fp12_normalize x }}
   ] (\ t -> custom_prove_cryptol t
               do { unfolding ["fp12_invariant", "fp6_invariant", "fp12_rep", "fp6_rep"
@@ -2019,5 +2043,38 @@ fp12_abs_ite_thm <- hoist {{fp12_abs}} ["fp12_abs"] ;
 fp12_invariant_ite_thm <- hoist {{fp12_invariant}} [] ;
 fp12_rep_ite_thm <- hoist {{fp12_rep}} ["fp12_rep"] ;
 
-let fp12_simpset = addsimps (concat fp12_rep_thms [fp12_abs_ite_thm, fp12_invariant_ite_thm, fp12_rep_ite_thm])
-                            (cryptol_ss ());
+fp12_normalization_thms <- for
+  // ... eliminate normalization in a argument position (maybe not needed?)
+  [ {{ \ x y -> Fp_12.mul (Fp_12.normalize x, y) == Fp_12.mul (x, y) }}
+  , {{ \ x y -> Fp_12.mul (x, Fp_12.normalize y) == Fp_12.mul (x, y) }}
+  , {{ \ x   -> Fp_12.sq (Fp_12.normalize x) == Fp_12.sq x }}
+  , {{ \ x y -> Fp_12.add (Fp_12.normalize x, y) == Fp_12.add (x, y) }}
+  , {{ \ x y -> Fp_12.sub (x, Fp_12.normalize y) == Fp_12.sub (x, y) }}
+  , {{ \ x y -> Fp_12.sub (Fp_12.normalize x, y) == Fp_12.sub (x, y) }}
+  , {{ \ x y -> Fp_12.add (x, Fp_12.normalize y) == Fp_12.add (x, y) }}
+  , {{ \ x   -> Fp_12.neg (Fp_12.normalize x) == Fp_12.neg x }}
+  , {{ \ x   -> Fp_12.normalize (Fp_12.normalize x) == Fp_12.normalize x }}
+  // ... results are normalized
+  , {{ \ x y -> Fp_12.normalize (Fp_12.mul (x, y)) == Fp_12.mul (x, y) }}
+  , {{ \ x   -> Fp_12.normalize (Fp_12.sq x) == Fp_12.sq x }}
+  , {{ \ x y -> Fp_12.normalize (Fp_12.add (x, y)) == Fp_12.add (x, y) }}
+  , {{ \ x y -> Fp_12.normalize (Fp_12.sub (x, y)) == Fp_12.sub (x, y) }}
+  , {{ \ x   -> Fp_12.normalize (Fp_12.neg x) == Fp_12.neg x }}
+  , {{          Fp_12.normalize Fp_12.field_zero == Fp_12.field_zero }}
+  , {{          Fp_12.normalize Fp_12.field_unit == Fp_12.field_unit }}
+ ] (\t -> prove_cryptol t []);
+
+more_fp12_normalization_thms <- for
+  [ // {{ \ x -> Fp_12.normalize (fp12_conjugate x) == fp12_conjugate x }} // not true!
+    {{ \ x -> Fp_12.normalize (fp12_conjugate x) == fp12_conjugate (Fp_12.normalize x) }}
+  , {{ \ x -> Fp_12.normalize (fp12_frobenius x) == fp12_frobenius (Fp_12.normalize x) }}
+  , {{ \ x -> Fp_12.normalize (cyclotomic_sqr_fp12 x) == cyclotomic_sqr_fp12 x }}
+  , {{ \ x -> cyclotomic_sqr_fp12 (Fp_12.normalize x) == cyclotomic_sqr_fp12 x }}
+  ] (\t -> prove_cryptol t []);
+
+let fp12_simpset = addsimps (concat_all
+  [ fp12_rep_thms
+  , fp12_normalization_thms
+  , more_fp12_normalization_thms
+  , [fp12_abs_ite_thm, fp12_invariant_ite_thm, fp12_rep_ite_thm]
+  ]) (cryptol_ss ());
