@@ -71,11 +71,20 @@ let blst_aggregate_in_g1_error_spec = do {
   ret <- llvm_fresh_var "blst_aggregate_in_g1_ret" (llvm_int 32);
   llvm_return (llvm_term ret);
   llvm_postcond {{ ret != `BLST_SUCCESS }};
-  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
-  llvm_points_to out_ptr (llvm_term new_out);
-  llvm_postcond {{ new_out == out }};
 };
 
+// the behavior in the error case does not depend on whether the input is null or not:
+let blst_aggregate_in_g1_null_error_spec = do {
+  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g1_out" (llvm_struct "struct.POINTonE1");
+  let inp_ptr = llvm_null;
+  (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
+  llvm_precond {{ (zwire@0)@0 }}; // compressed
+  llvm_precond {{ aggregate_in_g1_error_precond zwire }};
+  llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
+  ret <- llvm_fresh_var "blst_aggregate_in_g1_ret" (llvm_int 32);
+  llvm_return (llvm_term ret);
+  llvm_postcond {{ ret != `BLST_SUCCESS }};
+};
 
 let overrides = foldr concat [vec_overrides,curve_operations_e1_ovs] [POINTonE1_Uncompress_OK_ov,POINTonE1_in_G1_ov];
 
@@ -92,6 +101,21 @@ blst_aggregate_in_g1_error_ov <- custom_verify
   "blst_aggregate_in_g1"
   [POINTonE1_Uncompress_BAD_ov,POINTonE1_Uncompress_OK_ov,POINTonE1_in_G1_ov]
   blst_aggregate_in_g1_error_spec
+  (goal_num_ite 1 // preconditions of the subgroup check
+    do {
+      simplify (addsimps (concat POINTonE1_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
+      w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl"];
+    }
+    do {
+      simplify (addsimps POINTonE1_thms empty_ss);
+      simplify remove_higher_order_function_simpset;
+      w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
+    });
+
+blst_aggregate_in_g1_null_error_ov <- custom_verify
+  "blst_aggregate_in_g1"
+  [POINTonE1_Uncompress_BAD_ov,POINTonE1_Uncompress_OK_ov,POINTonE1_in_G1_ov]
+  blst_aggregate_in_g1_null_error_spec
   (goal_num_ite 1 // preconditions of the subgroup check
     do {
       simplify (addsimps (concat POINTonE1_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
