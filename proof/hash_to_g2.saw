@@ -354,16 +354,15 @@ let prove_blst_hash_to_g2_concrete msg_len DST_len aug_len = do {
     (w4_unint_z3 ["hash_to_curve_E2_opt_impl"]);
 };
 
-let aug_len = 48; // aug_len should be 96 or 48
+let aug_len = 48; // in the message-augmentation scheme, this is a public key, hence 48 bytes
+let DST_len= 43; // "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_" in the chosen suite
 let msg_len = 32;
-let DST_len= 8;
 
 prove_blst_hash_to_g2_abstract_postcond msg_len DST_len aug_len ;
 prove_blst_hash_to_g2_concrete msg_len DST_len aug_len ;
 
-let aug_len = 96; // aug_len should be 96 or 48
+// another value of msg_len:
 let msg_len = 69;
-let DST_len= 32;
 
 prove_blst_hash_to_g2_abstract_postcond msg_len DST_len aug_len ;
 prove_blst_hash_to_g2_concrete msg_len DST_len aug_len;
