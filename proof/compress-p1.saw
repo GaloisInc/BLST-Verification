@@ -70,6 +70,24 @@ let POINTonE1_from_Jacobian_spec = do {
   crucible_points_to_untyped out_ptr (crucible_term out);
 };
 
+let POINTonE1_from_Jacobian_alias_spec = do {
+  (inp, inp_ptr) <- ptr_to_fresh "in" POINTonE1_type;
+
+  crucible_precond {{ POINTonE1_invariant inp }};
+  crucible_precond {{ is_point_projective E (POINTonE1_abs inp) }}; // on the curve
+  crucible_precond {{ ~(Fp.is_equal ((fp_abs (inp.2)), Fp.field_zero)) }};
+
+  crucible_execute_func [inp_ptr, inp_ptr];
+
+  let out = {{ POINTonE1_affine_rep (affinify E (POINTonE1_abs inp)) }};
+  crucible_postcond {{ POINTonE1_affine_invariant out }};
+
+  // Use points_to_untyped because out_ptr is a POINTonE1 that the caller
+  // immediately casts to a POINTonE1_affine.  Therefore, we can treat out_ptr
+  // as a POINTonE1_affine and ignore Z.
+  crucible_points_to_untyped inp_ptr (crucible_term out);
+};
+
 // commute mul once -- use with caution!
 mul_commutes_fp_thm <- prove_cryptol {{ \x y  -> Fp.mul (x, y) == apply Fp.mul (y,x) }} [];
 reciprocal_div_fp_thm <- admit_cryptol {{ \x -> inverse_fp x ==  Fp.div (Fp.field_unit, x) }};
@@ -77,6 +95,16 @@ reciprocal_div_fp_thm <- admit_cryptol {{ \x -> inverse_fp x ==  Fp.div (Fp.fiel
 POINTonE1_from_Jacobian_ov <- custom_verify "POINTonE1_from_Jacobian"
   (concat [reciprocal_fp_ov] (concat vec_select_asm_ovs fp_overrides))
   POINTonE1_from_Jacobian_spec
+  do {
+    (simplify (addsimps [mul_commutes_fp_thm, reciprocal_div_fp_thm] empty_ss));
+    unfolding ["POINTonE1_affine_invariant", "POINTonE1_affine_rep"];
+    (apply_fp_rewrites);
+    w4_unint_z3 fp_unints;
+  };
+
+POINTonE1_from_Jacobian_alias_ov <- custom_verify "POINTonE1_from_Jacobian"
+  (concat [reciprocal_fp_ov] (concat vec_select_asm_ovs fp_overrides))
+  POINTonE1_from_Jacobian_alias_spec
   do {
     (simplify (addsimps [mul_commutes_fp_thm, reciprocal_div_fp_thm] empty_ss));
     unfolding ["POINTonE1_affine_invariant", "POINTonE1_affine_rep"];
