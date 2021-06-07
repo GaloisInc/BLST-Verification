@@ -13,7 +13,6 @@ import Pairing (final_exponentiation_impl)
 import implementation::PairingImpl (miller_loop_opt_checked)
 import ExpandMessage
 import Frobenius (fp12_conjugate)
-import implementation::CurveOperation (POINTonE1_abs')
 
 core_verify_pk_in_g1_impl : {msg_len,dst_len,aug_len}
   (fin msg_len, fin dst_len, fin aug_len
@@ -23,6 +22,7 @@ core_verify_pk_in_g1_impl : {msg_len,dst_len,aug_len}
 
 core_verify_pk_in_g1_impl pk sig msg dst aug = Fp_12.is_equal(gt, Fp_12.field_unit) where
     Q = affinify E' (hash_to_curve_E2_opt_impl (aug#msg, dst))
+    /* TODO: Q = hash_to_curve_E2_opt (aug#msg, dst) */
     gtPQ = miller_loop_opt_checked pk Q
     gtSig = fp12_conjugate (miller_loop_opt_checked BP sig)
     gt = final_exponentiation_impl (Fp_12.mul (gtSig, gtPQ))
