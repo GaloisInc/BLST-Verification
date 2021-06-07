@@ -88,5 +88,3 @@ verify_x86 "fromx_mont_256" fromx_mont_256_spec do {
 verify_x86 "redcx_mont_256" redcx_mont_256_spec do {
   w4;
 };
-
-exit 1;
