@@ -12,48 +12,48 @@ let add_mod_384_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
-  lt_modulus b;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
+  lt_modulus384 b;
   crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
-  let new_ret = {{ vec384_rep ((vec384_abs a + vec384_abs b) % vec384_abs modulus) : Vec384}};
+  let new_ret = {{ vec384_rep ((vec384_abs a + vec384_abs b) % vec384_abs modulus384) : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 let add_mod_384_alias_ret_a_spec = do {
   (a, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
-  lt_modulus b;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
+  lt_modulus384 b;
   crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr];
-  let new_ret = {{ vec384_rep ((vec384_abs a + vec384_abs b) % vec384_abs modulus) : Vec384}};
+  let new_ret = {{ vec384_rep ((vec384_abs a + vec384_abs b) % vec384_abs modulus384) : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 let add_mod_384_alias_ret_b_spec = do {
   (b, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
-  lt_modulus b;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
+  lt_modulus384 b;
   crucible_execute_func [ret_ptr, a_ptr, ret_ptr, p_ptr];
-  let new_ret = {{ vec384_rep ((vec384_abs a + vec384_abs b) % vec384_abs modulus) : Vec384}};
+  let new_ret = {{ vec384_rep ((vec384_abs a + vec384_abs b) % vec384_abs modulus384) : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 let add_mod_384_alias_a_b_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
   (ab, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus ab;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 ab;
   crucible_execute_func [ret_ptr, a_ptr, a_ptr, p_ptr];
-  let new_ret = {{ vec384_rep ((vec384_abs ab + vec384_abs ab) % vec384_abs modulus) : Vec384}};
+  let new_ret = {{ vec384_rep ((vec384_abs ab + vec384_abs ab) % vec384_abs modulus384) : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 let add_mod_384_alias_ret_a_b_spec = do {
   (ab, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus ab;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 ab;
   crucible_execute_func [ret_ptr, ret_ptr, ret_ptr, p_ptr];
-  let new_ret = {{ vec384_rep ((vec384_abs ab + vec384_abs ab) % vec384_abs modulus) : Vec384}};
+  let new_ret = {{ vec384_rep ((vec384_abs ab + vec384_abs ab) % vec384_abs modulus384) : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
@@ -62,56 +62,56 @@ let add_mod_384x_spec = do {
   ret_ptr <- crucible_alloc vec384x_type;
   (a_r, a_i, a_ptr) <- ptr_to_fresh_vec384x_readonly "a";
   (b_r, b_i, b_ptr) <- ptr_to_fresh_vec384x_readonly "b";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a_r;
-  lt_modulus a_i;
-  lt_modulus b_r;
-  lt_modulus b_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a_r;
+  lt_modulus384 a_i;
+  lt_modulus384 b_r;
+  lt_modulus384 b_i;
   crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
-  let new_ret_r = {{ vec384_rep ((vec384_abs a_r + vec384_abs b_r) % vec384_abs modulus) : Vec384}};
-  let new_ret_i = {{ vec384_rep ((vec384_abs a_i + vec384_abs b_i) % vec384_abs modulus) : Vec384}};
+  let new_ret_r = {{ vec384_rep ((vec384_abs a_r + vec384_abs b_r) % vec384_abs modulus384) : Vec384}};
+  let new_ret_i = {{ vec384_rep ((vec384_abs a_i + vec384_abs b_i) % vec384_abs modulus384) : Vec384}};
   points_to_vec384x ret_ptr new_ret_r new_ret_i;
 };
 let add_mod_384x_alias_ret_a_spec = do {
   (a_r, a_i, ret_ptr) <- ptr_to_fresh_vec384x "a";
   (b_r, b_i, b_ptr) <- ptr_to_fresh_vec384x_readonly "b";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a_r;
-  lt_modulus a_i;
-  lt_modulus b_r;
-  lt_modulus b_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a_r;
+  lt_modulus384 a_i;
+  lt_modulus384 b_r;
+  lt_modulus384 b_i;
   crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr];
-  let new_ret_r = {{ vec384_rep ((vec384_abs a_r + vec384_abs b_r) % vec384_abs modulus) : Vec384}};
-  let new_ret_i = {{ vec384_rep ((vec384_abs a_i + vec384_abs b_i) % vec384_abs modulus) : Vec384}};
+  let new_ret_r = {{ vec384_rep ((vec384_abs a_r + vec384_abs b_r) % vec384_abs modulus384) : Vec384}};
+  let new_ret_i = {{ vec384_rep ((vec384_abs a_i + vec384_abs b_i) % vec384_abs modulus384) : Vec384}};
   points_to_vec384x ret_ptr new_ret_r new_ret_i;
 };
 let add_mod_384x_alias_ret_b_spec = do {
   (b_r, b_i, ret_ptr) <- ptr_to_fresh_vec384x "b";
   (a_r, a_i, a_ptr) <- ptr_to_fresh_vec384x_readonly "a";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a_r;
-  lt_modulus a_i;
-  lt_modulus b_r;
-  lt_modulus b_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a_r;
+  lt_modulus384 a_i;
+  lt_modulus384 b_r;
+  lt_modulus384 b_i;
   crucible_execute_func [ret_ptr, a_ptr, ret_ptr, p_ptr];
-  let new_ret_r = {{ vec384_rep ((vec384_abs a_r + vec384_abs b_r) % vec384_abs modulus) : Vec384}};
-  let new_ret_i = {{ vec384_rep ((vec384_abs a_i + vec384_abs b_i) % vec384_abs modulus) : Vec384}};
+  let new_ret_r = {{ vec384_rep ((vec384_abs a_r + vec384_abs b_r) % vec384_abs modulus384) : Vec384}};
+  let new_ret_i = {{ vec384_rep ((vec384_abs a_i + vec384_abs b_i) % vec384_abs modulus384) : Vec384}};
   points_to_vec384x ret_ptr new_ret_r new_ret_i;
 };
 
 let add_mod_384x_alias_ret_a_b_spec = do {
   (ab_r, ab_i, ret_ptr) <- ptr_to_fresh_vec384x "ab";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus ab_r;
-  lt_modulus ab_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 ab_r;
+  lt_modulus384 ab_i;
   crucible_execute_func [ret_ptr, ret_ptr, ret_ptr, p_ptr];
-  let new_ret_r = {{ vec384_rep ((vec384_abs ab_r + vec384_abs ab_r) % vec384_abs modulus) : Vec384}};
-  let new_ret_i = {{ vec384_rep ((vec384_abs ab_i + vec384_abs ab_i) % vec384_abs modulus) : Vec384}};
+  let new_ret_r = {{ vec384_rep ((vec384_abs ab_r + vec384_abs ab_r) % vec384_abs modulus384) : Vec384}};
+  let new_ret_i = {{ vec384_rep ((vec384_abs ab_i + vec384_abs ab_i) % vec384_abs modulus384) : Vec384}};
   points_to_vec384x ret_ptr new_ret_r new_ret_i;
 };
 
 let {{
-  double_mod x = (x + x) % vec384_abs modulus
+  double_mod x = (x + x) % vec384_abs modulus384
   repeat_double_mod n x = if n <= 0 then x else repeat_double_mod (n - 1) (double_mod x)
 }};
 
@@ -119,16 +119,16 @@ let {{
 let lshift_mod_384_spec count = do {
   ret_ptr <- crucible_alloc vec384_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
   crucible_execute_func [ret_ptr, a_ptr, crucible_term count, p_ptr];
   let new_ret = {{ vec384_rep (repeat_double_mod count (vec384_abs a)) : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 let lshift_mod_384_alias_ret_a_spec count = do {
   (a, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
   crucible_execute_func [ret_ptr, ret_ptr, crucible_term count, p_ptr];
   let new_ret = {{ vec384_rep (repeat_double_mod count (vec384_abs a)) : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
@@ -138,18 +138,18 @@ let lshift_mod_384_alias_ret_a_spec count = do {
 let mul_by_3_mod_384_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
   crucible_execute_func [ret_ptr, a_ptr, p_ptr];
-  let new_ret = {{ vec384_rep ((((vec384_abs a + vec384_abs a) % vec384_abs modulus) + vec384_abs a) % vec384_abs modulus) : Vec384}};
+  let new_ret = {{ vec384_rep ((((vec384_abs a + vec384_abs a) % vec384_abs modulus384) + vec384_abs a) % vec384_abs modulus384) : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 let mul_by_3_mod_384_alias_ret_a_spec = do {
   (a, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
   crucible_execute_func [ret_ptr, ret_ptr, p_ptr];
-  let new_ret = {{ vec384_rep ((((vec384_abs a + vec384_abs a) % vec384_abs modulus) + vec384_abs a) % vec384_abs modulus) : Vec384}};
+  let new_ret = {{ vec384_rep ((((vec384_abs a + vec384_abs a) % vec384_abs modulus384) + vec384_abs a) % vec384_abs modulus384) : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
@@ -157,16 +157,16 @@ let mul_by_3_mod_384_alias_ret_a_spec = do {
 let mul_by_8_mod_384_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
   crucible_execute_func [ret_ptr, a_ptr, p_ptr];
   let new_ret = {{ vec384_rep (repeat_double_mod 3 (vec384_abs a)) : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 let mul_by_8_mod_384_alias_ret_a_spec = do {
   (a, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
   crucible_execute_func [ret_ptr, ret_ptr, p_ptr];
   let new_ret = {{ vec384_rep (repeat_double_mod 3 (vec384_abs a)) : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
@@ -177,11 +177,11 @@ let mul_by_b_onE1_spec = do {
   crucible_alloc_global "BLS12_381_P";
   crucible_points_to
     (crucible_global "BLS12_381_P")
-    (crucible_term modulus);
+    (crucible_term modulus384);
 
   out_ptr <- crucible_alloc vec384_type;
   (in_, in_ptr) <- ptr_to_fresh_readonly "in" vec384_type;
-  lt_modulus in_;
+  lt_modulus384 in_;
   crucible_execute_func [out_ptr, in_ptr];
   let new_out = {{ vec384_rep (repeat_double_mod 2 (vec384_abs in_)) : Vec384}};
   crucible_points_to out_ptr (crucible_term new_out);
@@ -190,10 +190,10 @@ let mul_by_b_onE1_alias_out_in_spec = do {
   crucible_alloc_global "BLS12_381_P";
   crucible_points_to
     (crucible_global "BLS12_381_P")
-    (crucible_term modulus);
+    (crucible_term modulus384);
 
   (in_, out_ptr) <- ptr_to_fresh "out" vec384_type;
-  lt_modulus in_;
+  lt_modulus384 in_;
   crucible_execute_func [out_ptr, out_ptr];
   let new_out = {{ vec384_rep (repeat_double_mod 2 (vec384_abs in_)) : Vec384}};
   crucible_points_to out_ptr (crucible_term new_out);
@@ -203,22 +203,22 @@ let mul_by_b_onE1_alias_out_in_spec = do {
 let mul_by_3_mod_384x_spec = do {
   ret_ptr <- crucible_alloc vec384x_type;
   (a_r, a_i, a_ptr) <- ptr_to_fresh_vec384x_readonly "a";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a_r;
-  lt_modulus a_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a_r;
+  lt_modulus384 a_i;
   crucible_execute_func [ret_ptr, a_ptr, p_ptr];
-  let new_ret_r = {{ vec384_rep ((((vec384_abs a_r + vec384_abs a_r) % vec384_abs modulus) + vec384_abs a_r) % vec384_abs modulus) : Vec384}};
-  let new_ret_i = {{ vec384_rep ((((vec384_abs a_i + vec384_abs a_i) % vec384_abs modulus) + vec384_abs a_i) % vec384_abs modulus) : Vec384}};
+  let new_ret_r = {{ vec384_rep ((((vec384_abs a_r + vec384_abs a_r) % vec384_abs modulus384) + vec384_abs a_r) % vec384_abs modulus384) : Vec384}};
+  let new_ret_i = {{ vec384_rep ((((vec384_abs a_i + vec384_abs a_i) % vec384_abs modulus384) + vec384_abs a_i) % vec384_abs modulus384) : Vec384}};
   points_to_vec384x ret_ptr new_ret_r new_ret_i;
 };
 let mul_by_3_mod_384x_alias_ret_a_spec = do {
   (a_r, a_i, ret_ptr) <- ptr_to_fresh_vec384x "a";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a_r;
-  lt_modulus a_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a_r;
+  lt_modulus384 a_i;
   crucible_execute_func [ret_ptr, ret_ptr, p_ptr];
-  let new_ret_r = {{ vec384_rep ((((vec384_abs a_r + vec384_abs a_r) % vec384_abs modulus) + vec384_abs a_r) % vec384_abs modulus) : Vec384}};
-  let new_ret_i = {{ vec384_rep ((((vec384_abs a_i + vec384_abs a_i) % vec384_abs modulus) + vec384_abs a_i) % vec384_abs modulus) : Vec384}};
+  let new_ret_r = {{ vec384_rep ((((vec384_abs a_r + vec384_abs a_r) % vec384_abs modulus384) + vec384_abs a_r) % vec384_abs modulus384) : Vec384}};
+  let new_ret_i = {{ vec384_rep ((((vec384_abs a_i + vec384_abs a_i) % vec384_abs modulus384) + vec384_abs a_i) % vec384_abs modulus384) : Vec384}};
   points_to_vec384x ret_ptr new_ret_r new_ret_i;
 };
 
@@ -226,9 +226,9 @@ let mul_by_3_mod_384x_alias_ret_a_spec = do {
 let mul_by_8_mod_384x_spec = do {
   ret_ptr <- crucible_alloc vec384x_type;
   (a_r, a_i, a_ptr) <- ptr_to_fresh_vec384x_readonly "a";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a_r;
-  lt_modulus a_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a_r;
+  lt_modulus384 a_i;
   crucible_execute_func [ret_ptr, a_ptr, p_ptr];
   let new_ret_r = {{ vec384_rep (repeat_double_mod 3 (vec384_abs a_r)) : Vec384}};
   let new_ret_i = {{ vec384_rep (repeat_double_mod 3 (vec384_abs a_i)) : Vec384}};
@@ -236,9 +236,9 @@ let mul_by_8_mod_384x_spec = do {
 };
 let mul_by_8_mod_384x_alias_ret_a_spec = do {
   (a_r, a_i, ret_ptr) <- ptr_to_fresh_vec384x "a";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a_r;
-  lt_modulus a_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a_r;
+  lt_modulus384 a_i;
   crucible_execute_func [ret_ptr, ret_ptr, p_ptr];
   let new_ret_r = {{ vec384_rep (repeat_double_mod 3 (vec384_abs a_r)) : Vec384}};
   let new_ret_i = {{ vec384_rep (repeat_double_mod 3 (vec384_abs a_i)) : Vec384}};
@@ -246,7 +246,7 @@ let mul_by_8_mod_384x_alias_ret_a_spec = do {
 };
 
 let {{
-  sub_mod a b = if diff @ 0 then diff + vec384_abs modulus else diff
+  sub_mod a b = if diff @ 0 then diff + vec384_abs modulus384 else diff
     where diff = vec384_abs a - vec384_abs b
 }};
 
@@ -255,7 +255,7 @@ let mul_by_b_onE2_spec = do {
   crucible_alloc_global "BLS12_381_P";
   crucible_points_to
     (crucible_global "BLS12_381_P")
-    (crucible_term modulus);
+    (crucible_term modulus384);
 
   out_ptr <- crucible_alloc vec384x_type;
 
@@ -265,25 +265,25 @@ let mul_by_b_onE2_spec = do {
   // points_to_vec384x in_ptr in_r in_i;
 
   (in_r, in_i, in_ptr) <- ptr_to_fresh_vec384x_readonly "in";
-  lt_modulus in_r;
-  lt_modulus in_i;
+  lt_modulus384 in_r;
+  lt_modulus384 in_i;
   crucible_execute_func [out_ptr, in_ptr];
   let new_out_r = {{ vec384_rep (repeat_double_mod 2 (sub_mod in_r in_i)) : Vec384}};
-  let new_out_i = {{ vec384_rep (repeat_double_mod 2 ((vec384_abs in_r + vec384_abs in_i) % vec384_abs modulus)) : Vec384}};
+  let new_out_i = {{ vec384_rep (repeat_double_mod 2 ((vec384_abs in_r + vec384_abs in_i) % vec384_abs modulus384)) : Vec384}};
   points_to_vec384x out_ptr new_out_r new_out_i;
 };
 let mul_by_b_onE2_alias_out_in_spec = do {
   crucible_alloc_global "BLS12_381_P";
   crucible_points_to
     (crucible_global "BLS12_381_P")
-    (crucible_term modulus);
+    (crucible_term modulus384);
 
   (in_r, in_i, out_ptr) <- ptr_to_fresh_vec384x "in";
-  lt_modulus in_r;
-  lt_modulus in_i;
+  lt_modulus384 in_r;
+  lt_modulus384 in_i;
   crucible_execute_func [out_ptr, out_ptr];
   let new_out_r = {{ vec384_rep (repeat_double_mod 2 (sub_mod in_r in_i)) : Vec384}};
-  let new_out_i = {{ vec384_rep (repeat_double_mod 2 ((vec384_abs in_r + vec384_abs in_i) % vec384_abs modulus)) : Vec384}};
+  let new_out_i = {{ vec384_rep (repeat_double_mod 2 ((vec384_abs in_r + vec384_abs in_i) % vec384_abs modulus384)) : Vec384}};
   points_to_vec384x out_ptr new_out_r new_out_i;
 };
 
@@ -292,19 +292,19 @@ let cneg_mod_384_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
   flag <- crucible_fresh_var "flag" limb_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
   crucible_execute_func [ret_ptr, a_ptr, crucible_term flag, p_ptr];
-  let new_ret = {{ if (vec_abs a != 0) && (flag != 0) then vec384_rep (vec_abs modulus - vec_abs a) else a : Vec384 }};
+  let new_ret = {{ if (vec_abs a != 0) && (flag != 0) then vec384_rep (vec_abs modulus384 - vec_abs a) else a : Vec384 }};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 let cneg_mod_384_alias_ret_a_spec = do {
   (a, ret_ptr) <- ptr_to_fresh "a" vec384_type;
   flag <- crucible_fresh_var "flag" limb_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
   crucible_execute_func [ret_ptr, ret_ptr, crucible_term flag, p_ptr];
-  let new_ret = {{ if (vec_abs a != 0) && (flag != 0) then vec384_rep (vec_abs modulus - vec_abs a) else a : Vec384 }};
+  let new_ret = {{ if (vec_abs a != 0) && (flag != 0) then vec384_rep (vec_abs modulus384 - vec_abs a) else a : Vec384 }};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
@@ -313,9 +313,9 @@ let sub_mod_384_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
-  lt_modulus b;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
+  lt_modulus384 b;
   crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
   let new_ret = {{ vec384_rep (sub_mod a b) : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
@@ -323,9 +323,9 @@ let sub_mod_384_spec = do {
 let sub_mod_384_alias_ret_a_spec = do {
   (a, ret_ptr) <- ptr_to_fresh "a" vec384_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
-  lt_modulus b;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
+  lt_modulus384 b;
   crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr];
   let new_ret = {{ vec384_rep (sub_mod a b) : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
@@ -333,9 +333,9 @@ let sub_mod_384_alias_ret_a_spec = do {
 let sub_mod_384_alias_ret_b_spec = do {
   (b, ret_ptr) <- ptr_to_fresh "b" vec384_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
-  lt_modulus b;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
+  lt_modulus384 b;
   crucible_execute_func [ret_ptr, a_ptr, ret_ptr, p_ptr];
   let new_ret = {{ vec384_rep (sub_mod a b) : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
@@ -343,16 +343,16 @@ let sub_mod_384_alias_ret_b_spec = do {
 let sub_mod_384_alias_a_b_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
   (ab, a_ptr) <- ptr_to_fresh_readonly "ab" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus ab;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 ab;
   crucible_execute_func [ret_ptr, a_ptr, a_ptr, p_ptr];
   let new_ret = {{ vec384_rep 0 : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 let sub_mod_384_alias_ret_a_b_spec = do {
   (ab, ret_ptr) <- ptr_to_fresh "ab" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus ab;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 ab;
   crucible_execute_func [ret_ptr, ret_ptr, ret_ptr, p_ptr];
   let new_ret = {{ vec384_rep 0 : Vec384}};
   crucible_points_to ret_ptr (crucible_term new_ret);
@@ -363,11 +363,11 @@ let sub_mod_384x_spec = do {
   ret_ptr <- crucible_alloc vec384x_type;
   (a_r, a_i, a_ptr) <- ptr_to_fresh_vec384x_readonly "a";
   (b_r, b_i, b_ptr) <- ptr_to_fresh_vec384x_readonly "b";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a_r;
-  lt_modulus a_i;
-  lt_modulus b_r;
-  lt_modulus b_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a_r;
+  lt_modulus384 a_i;
+  lt_modulus384 b_r;
+  lt_modulus384 b_i;
   crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
   let new_ret_r = {{ vec384_rep (sub_mod a_r b_r) : Vec384}};
   let new_ret_i = {{ vec384_rep (sub_mod a_i b_i) : Vec384}};
@@ -376,11 +376,11 @@ let sub_mod_384x_spec = do {
 let sub_mod_384x_alias_ret_a_spec = do {
   (a_r, a_i, ret_ptr) <- ptr_to_fresh_vec384x "a";
   (b_r, b_i, b_ptr) <- ptr_to_fresh_vec384x_readonly "b";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a_r;
-  lt_modulus a_i;
-  lt_modulus b_r;
-  lt_modulus b_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a_r;
+  lt_modulus384 a_i;
+  lt_modulus384 b_r;
+  lt_modulus384 b_i;
   crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr];
   new_ret <- crucible_fresh_var "new_ret" vec384x_type;
   let new_ret_r = {{ vec384_rep (sub_mod a_r b_r) : Vec384}};
@@ -390,11 +390,11 @@ let sub_mod_384x_alias_ret_a_spec = do {
 let sub_mod_384x_alias_ret_b_spec = do {
   (b_r, b_i, ret_ptr) <- ptr_to_fresh_vec384x "b";
   (a_r, a_i, a_ptr) <- ptr_to_fresh_vec384x_readonly "a";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a_r;
-  lt_modulus a_i;
-  lt_modulus b_r;
-  lt_modulus b_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a_r;
+  lt_modulus384 a_i;
+  lt_modulus384 b_r;
+  lt_modulus384 b_i;
   crucible_execute_func [ret_ptr, a_ptr, ret_ptr, p_ptr];
   new_ret <- crucible_fresh_var "new_ret" vec384x_type;
   let new_ret_r = {{ vec384_rep (sub_mod a_r b_r) : Vec384}};
@@ -404,9 +404,9 @@ let sub_mod_384x_alias_ret_b_spec = do {
 let sub_mod_384x_alias_a_b_spec = do {
   ret_ptr <- crucible_alloc vec384x_type;
   (ab_r, ab_i, a_ptr) <- ptr_to_fresh_vec384x_readonly "ab";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus ab_r;
-  lt_modulus ab_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 ab_r;
+  lt_modulus384 ab_i;
   crucible_execute_func [ret_ptr, a_ptr, a_ptr, p_ptr];
   let new_ret_r = {{ vec384_rep 0 : Vec384}};
   let new_ret_i = {{ vec384_rep 0 : Vec384}};
@@ -414,9 +414,9 @@ let sub_mod_384x_alias_a_b_spec = do {
 };
 let sub_mod_384x_alias_ret_a_b_spec = do {
   (ab_r, ab_i, ret_ptr) <- ptr_to_fresh_vec384x "ab";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus ab_r;
-  lt_modulus ab_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 ab_r;
+  lt_modulus384 ab_i;
   crucible_execute_func [ret_ptr, ret_ptr, ret_ptr, p_ptr];
   let new_ret_r = {{ vec384_rep 0 : Vec384}};
   let new_ret_i = {{ vec384_rep 0 : Vec384}};
@@ -427,35 +427,35 @@ let sub_mod_384x_alias_ret_a_b_spec = do {
 let mul_by_1_plus_i_mod_384x_spec = do {
   ret_ptr <- crucible_alloc vec384x_type;
   (a_r, a_i, a_ptr) <- ptr_to_fresh_vec384x_readonly "a";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a_r;
-  lt_modulus a_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a_r;
+  lt_modulus384 a_i;
   crucible_execute_func [ret_ptr, a_ptr, p_ptr];
   let new_ret_r = {{ vec384_rep (sub_mod a_r a_i) : Vec384}};
-  let new_ret_i = {{ vec384_rep ((vec384_abs a_r + vec384_abs a_i) % vec384_abs modulus) : Vec384}};
+  let new_ret_i = {{ vec384_rep ((vec384_abs a_r + vec384_abs a_i) % vec384_abs modulus384) : Vec384}};
   points_to_vec384x ret_ptr new_ret_r new_ret_i;
 };
 let mul_by_1_plus_i_mod_384x_alias_ret_a_spec = do {
   (a_r, a_i, ret_ptr) <- ptr_to_fresh_vec384x "a";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a_r;
-  lt_modulus a_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a_r;
+  lt_modulus384 a_i;
   crucible_execute_func [ret_ptr, ret_ptr, p_ptr];
   let new_ret_r = {{ vec384_rep (sub_mod a_r a_i) : Vec384}};
-  let new_ret_i = {{ vec384_rep ((vec384_abs a_r + vec384_abs a_i) % vec384_abs modulus) : Vec384}};
+  let new_ret_i = {{ vec384_rep ((vec384_abs a_r + vec384_abs a_i) % vec384_abs modulus384) : Vec384}};
   points_to_vec384x ret_ptr new_ret_r new_ret_i;
 };
 
 let {{
   pty_mod a = a ! 0
-  sgn_mod a = a > ((vec384_abs modulus - 1) / 2)
+  sgn_mod a = a > ((vec384_abs modulus384 - 1) / 2)
 }};
 
 // sgn0_pty_mod_384
 let sgn0_pty_mod_384_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a;
   crucible_execute_func [a_ptr, p_ptr];
   let return_value = {{ zero # [sgn_mod (vec384_abs a), pty_mod (vec384_abs a)] : [64] }};
   crucible_return (crucible_term return_value);
@@ -464,9 +464,9 @@ let sgn0_pty_mod_384_spec = do {
 // sgn0_pty_mod_384x
 let sgn0_pty_mod_384x_spec = do {
   (a_r, a_i, a_ptr) <- ptr_to_fresh_vec384x_readonly "a";
-  p_ptr <- ptr_to_modulus;
-  lt_modulus a_r;
-  lt_modulus a_i;
+  p_ptr <- ptr_to_modulus384;
+  lt_modulus384 a_r;
+  lt_modulus384 a_i;
   crucible_execute_func [a_ptr, p_ptr];
   let return_value = {{
     zero #
