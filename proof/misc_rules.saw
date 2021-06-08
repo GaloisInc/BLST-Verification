@@ -8,6 +8,19 @@ import "../spec/implementation/Field.cry";
 import "../spec/ShortWeierstrassCurve.cry";
 import "../spec/implementation/CurveOperation.cry";
 
+let remove_ho_rules = concat
+  [ point_add_fp2_thm, point_dadd_fp2_thm, point_double_fp2_thm, point_neg_fp2_thm
+   , point_add_affine_fp2_thm, point_dadd_affine_fp2_thm
+   , add_E'_thm, add'_E'_thm, neg_E'_thm
+   , affinify_E'_thm, projectify_E'_thm
+   , is_point_affine_E'_thm, is_point_projective_E'_thm
+   , is_point_O_E'_thm ]
+  [ point_add_fp_thm, point_dadd_fp_thm, point_double_fp_thm, point_neg_fp_thm
+   , point_add_affine_fp_thm, point_dadd_affine_fp_thm
+   , add_E_thm, add'_E_thm, affinify_E_thm,  projectify_E_thm
+   , is_point_affine_E_thm, is_point_projective_E_thm, is_point_O_E_thm, point_O_E_thm
+   ];
+
 // a bunch of rules to move ite terms up
 hoist_ifs_rules_ <- for [
   {{ \(x1:[64]) x2 x3 x4 x5 x6 y1 y2 y3 y4 y5 y6 c -> [if c then x1 else y1, if c then x2 else y2, if c then x3 else y3, if c then x4 else y4, if c then x5 else y5, if c then x6 else y6] == if c then [x1,x2,x3,x4,x5,x6] else [y1,y2,y3,y4,y5,y6] }}
@@ -27,13 +40,17 @@ hoist_ifs_rules_ <- for [
       }}
 , {{ \c (x:[12][64]) y -> ([[a1,a2,a3,a4,a5,a6],[a7,a8,a9,a10,a11,a12]] == if c then [[x1,x2,x3,x4,x5,x6],[x7,x8,x9,x10,x11,x12]] else [[y1,y2,y3,y4,y5,y6],[y7,y8,y9,y10,y11,y12]] where [a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12] = (if c then x else y); [x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12] = x; [y1,y2,y3,y4,y5,y6,y7,y8,y9,y10,y11,y12] = y) }}
 , {{ \c (x:[2][6][64]) y (a:[2][6][64]) (b:[2][6][64]) -> (a,b,if c then x else y) == if c then (a,b,x) else (a,b,y) }}
+, {{ \c (x:[6][64]) y (a:[6][64]) (b:[6][64]) -> (a,b,if c then x else y) == if c then (a,b,x) else (a,b,y) }}
 , {{ \c x y -> POINTonE2_abs (if c then x else y) == if c then POINTonE2_abs x else POINTonE2_abs y }}
+, {{ \c x y -> POINTonE1_abs (if c then x else y) == if c then POINTonE1_abs x else POINTonE1_abs y }}
 , {{ \c x y -> is_point_projective E' (if c then x else y) == if c then is_point_projective E' x else is_point_projective E' y }}
+, {{ \c x y -> is_point_projective E (if c then x else y) == if c then is_point_projective E x else is_point_projective E y }}
 , {{ \c x y -> affinify E' (if c then x else y) == if c then affinify E' x else affinify E' y }}
+, {{ \c x y -> affinify E (if c then x else y) == if c then affinify E x else affinify E y }}
 ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq)
   do {
-    simplify remove_higher_order_function_simpset;
-    w4_unint_z3 ["POINTonE2_abs","affinify_E'"];
+    simplify (addsimps remove_ho_rules empty_ss);
+    w4_unint_z3 ["POINTonE1_abs","POINTonE2_abs","affinify_E'","affinify_E"];
   });
 // ] (\ eq -> custom_prove_cryptol eq w4);
 
@@ -56,16 +73,3 @@ restitching_rules <- for [
 ] (\ eq -> custom_prove_cryptol (rewrite (cryptol_ss ()) eq) w4);
 
 let misc_rules = concat hoist_ifs_rules restitching_rules;
-
-let remove_ho_rules = concat
-  [ point_add_fp2_thm, point_dadd_fp2_thm, point_double_fp2_thm, point_neg_fp2_thm
-   , point_add_affine_fp2_thm, point_dadd_affine_fp2_thm
-   , add_E'_thm, add'_E'_thm, neg_E'_thm
-   , affinify_E'_thm, projectify_E'_thm
-   , is_point_affine_E'_thm, is_point_projective_E'_thm
-   , is_point_O_E'_thm ]
-  [ point_add_fp_thm, point_dadd_fp_thm, point_double_fp_thm, point_neg_fp_thm
-   , point_add_affine_fp_thm, point_dadd_affine_fp_thm
-   , add_E_thm, add'_E_thm, affinify_E_thm,  projectify_E_thm
-   , is_point_affine_E_thm, is_point_projective_E_thm, is_point_O_E_thm, point_O_E_thm
-   ];

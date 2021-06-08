@@ -5,6 +5,7 @@
 
 include "print_readably.saw";
 import "../spec/implementation/CoreVerifyPKInG1.cry";
+import "../spec/HashToCurveE2.cry";
 
 // Specifications
 
@@ -25,6 +26,13 @@ let aug_len = 8;
 // separately before use).
 
 // TODO: null-pk case
+
+// TODO: related to high-level spec. At the very least, rewriting hash_to_curve_E2_opt_impl should be easy (we have the theorem in hash_to_g2.saw).
+
+let {{
+  to_fp12 : [12][380] -> t_Fp_12
+  to_fp12 x = split (split (map toInteger ((map zext x):[12][384])))
+}};
 
 let {{
   blst_core_verify_pk_in_g1_error_precond : POINTonE1_affine_t -> POINTonE2_affine_t -> Bool
@@ -240,7 +248,7 @@ blst_core_verify_pk_in_g1_null_pk_ov <- custom_verify
       // print_readably;
       // simplify (addsimps remove_ho_rules empty_ss);
       // w4_unint_z3 core_verify_pk_in_g1_unints;
-    }
+    };
 
 blst_core_verify_pk_in_g1_null_sig_ov <- custom_verify
   "blst_core_verify_pk_in_g1"
