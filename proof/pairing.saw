@@ -204,7 +204,7 @@ let miller_loop_n_values_proved = [1,2,3];
 // we only use this on E', over Fp_2.
 point_add_affine_alt_equiv_thm <- prove_cryptol
    {{ \ P Q -> point_add_affine_alt Fp_2 P Q ==
-                   if P.2 == Fp_2.field_zero
+                   if Fp_2.normalize P.2 == Fp_2.field_zero
                    then apply point_add_affine_alt Fp_2 P Q
                    else point_add_affine Fp_2 P Q }} [] ;
 
@@ -272,7 +272,8 @@ line_add_ovs <- for [line_add_spec, line_add_alias_spec]
                       spec
                       do {
                         unfolding [ "POINTonE2_rep","POINTonE2_abs","POINTonE2_affine_rep"
-                                  , "POINTonE2_affine_abs","point_add_affine", "select"];
+                                  , "POINTonE2_affine_abs","point_add_affine", "select"
+                                  , "point_add_affine_alt"];
                         simplify simpset;
                         w4_unint_z3 fp2_unints;
                         });
@@ -320,19 +321,48 @@ e2_unrip_thm <- prove_cryptol
   (rewrite (cryptol_ss ()) {{ \ (x:POINTonE2_t) -> ((x0,x1,x2) == x where (x0,x1,x2) = x) }})
   [];
 
-fp6_extra_abs_rep_thms <- for
-  [ {{ \ x y -> fp6_abs (fp6_rep (line_by_Px2 x y)) == line_by_Px2 x y }}
-  , {{ \ x y -> fp6_abs (fp6_rep (line_add_imp x y)) == line_add_imp x y }}
+fp2_normalize_seq_thm <-
+  prove_cryptol
+  {{ \x y -> Fp_2.normalize [x,y] == [Fp.normalize x, Fp.normalize y] }} [];
+
+fp2_normalize_elt_thms <- for
+  [ {{ \x -> (r0 == Fp.normalize (x@0) where [r0,r1] = Fp_2.normalize x) }}
+  , {{ \x -> (r1 == Fp.normalize (x@1) where [r0,r1] = Fp_2.normalize x) }}
+  ] (\ t -> prove_cryptol (rewrite (cryptol_ss ()) t) []);
+
+hoist_fp_mul_left_thm <- prove_cryptol
+
+{{ \c x y z -> Fp.mul (if c then x else y, z) == if c then Fp.mul(x,z) else Fp.mul(y,z) }}
+  ["Fp"];
+
+fp6_extra_abs_rep_thm_1 <- custom_prove_cryptol
+  {{ \ x y -> fp6_abs (fp6_rep (line_by_Px2 x y)) == line_by_Px2 (fp6_abs (fp6_rep x)) y }}
+            do { unfolding ["fp6_abs", "fp6_rep"
+                           , "line_by_Px2", "line_add_imp", "line_double_imp"];
+                 simplify (addsimps fp2_normalize_elt_thms fp2_simpset);
+                 simplify (addsimps [fp2_normalize_seq_thm, hoist_fp_mul_left_thm]
+                           fp_simpset);
+                 w4_unint_z3 fp_unints; };
+
+fp6_extra_abs_rep_thms_2 <- for
+  [{{ \ x y -> fp6_abs (fp6_rep (line_add_imp x y)) == line_add_imp x y }}
   , {{ \ x   -> fp6_abs (fp6_rep (line_double_imp x)) == line_double_imp x }}
   ] (\ t -> custom_prove_cryptol t
-            do { unfolding ["fp6_abs", "fp6_rep", "fp2_abs", "fp2_rep"];
-                 simplify fp_simpset;
+            do { unfolding ["fp6_abs", "fp6_rep"
+                           , "line_by_Px2", "line_add_imp", "line_double_imp"];
+                 simplify fp2_simpset;
                  w4_unint_z3 fp_unints; });
 
+fp6_unrip_abs_rep_thm <- custom_prove_cryptol (rewrite (cryptol_ss ())
+  {{ \x -> ([Fp_2.normalize x0, Fp_2.normalize x1, Fp_2.normalize x2] == fp6_abs (fp6_rep x)
+            where [x0,x1,x2] = x) }})
+  do { unfolding ["fp6_abs", "fp6_rep"]; simplify fp2_simpset; w4_unint_z3 fp2_unints; };
+
+let fp6_extra_abs_rep_thms = concat [fp6_extra_abs_rep_thm_1] fp6_extra_abs_rep_thms_2;
 
 let add_n_dbl_n_ss = addsimps (concat_all[ fp12_rep_thms, POINTonE2_thms, fp12_unrip_thms
                                          , fp6_extra_abs_rep_thms
-                                         , [ e2_unrip_thm
+                                         , [ e2_unrip_thm, fp6_unrip_abs_rep_thm
                                            , fp12_abs_ite_thm, fp12_invariant_ite_thm
                                            , fp12_rep_ite_thm]])
                               start_dbl_n_ss;
@@ -355,12 +385,39 @@ start_dbl_n_1_equiv_thm <- custom_prove_cryptol
        w4_unint_z3 start_dbl_n_unints;
        };
 
+let {{ half_normalize_fp12 [[x0,x1,x2],[y0,y1,y2]] =
+         [[x0,Fp_2.normalize x1,x2],[y0, Fp_2.normalize y1, Fp_2.normalize y2]]
+    }};
+
+fp12_mul_half_normalize_thms <- for
+   [ {{ \ x0 x1 x2 y0 y1 y2 u0 u1 u2 v0 v1 v2 ->
+       Fp_12.mul (half_normalize_fp12 [[x0,x1,x2],[y0,y1,y2]],
+                  half_normalize_fp12 [[u0,u1,u2],[v0,v1,v2]])
+       == Fp_12.mul ([[x0,x1,x2],[y0,y1,y2]], [[u0,u1,u2],[v0,v1,v2]]) }}
+    , {{ \ x u0 u1 u2 v0 v1 v2 ->
+       Fp_12.mul (Fp_12.normalize x,
+                  half_normalize_fp12 [[u0,u1,u2],[v0,v1,v2]])
+       == Fp_12.mul (x, [[u0,u1,u2],[v0,v1,v2]]) }}
+   ] (\t -> custom_prove_cryptol (rewrite (cryptol_ss()) (unfold_term ["half_normalize_fp12"] t))
+      do { goal_eval_unint fp2_unints;
+           simplify start_dbl_n_ss;
+           w4_unint_z3 fp2_unints; });
+
+
+fp2_abs_zero_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ fp2_abs [z,z] == [0,0] where z=[0,0,0,0,0,0] }}) [];
+
+
 start_dbl_n_ovs <- for miller_loop_n_values_proved
  (\ n -> custom_verify "start_dbl_n"
    (concat_all [[line_by_Px2_ov], line_dbl_line_ovs, mul_by_xy00z0_fp12_ovs])
    (start_dbl_n_spec n)
-   do { goal_eval_unint start_dbl_n_unints;
-        simplify start_dbl_n_ss;
+   do { goal_eval_unint (concat_all [fp_unints, fp2_unints, start_dbl_n_unints_small]);
+        simplify add_n_dbl_n_ss;
+        unfolding ["fp12_rep", "fp6_rep", "fp12_invariant", "fp6_invariant"];
+        simplify (addsimp fp2_invariant_zero_thm fp2_simpset);
+        rw_with_1 fp2_rep_zero_thm;
+        unfolding ["fp12_abs", "fp6_abs"];
+        simplify (addsimp fp2_abs_zero_thm (addsimps fp12_mul_half_normalize_thms fp2_simpset));
         w4_unint_z3 start_dbl_n_unints;
         });
 
@@ -369,13 +426,45 @@ start_dbl_n_ovs <- for miller_loop_n_values_proved
 // Just as for the proofs of scalar multiplication, we need a non-higher-order cover function
 // for point_add_affine_alt.
 
-let {{ point_add_affine_alt_fp2 = point_add_affine_alt Fp_2 }};
+let {{ point_add_affine_alt_fp2 = point_add_affine_alt Fp_2
+       normalize_point_fp2 = normalize_point Fp_2
+       normalize_affine_point_fp2 = normalize_affine_point Fp_2 }};
 
 point_add_affine_alt_fp2_thm <- prove_cryptol
   {{  \p1 p2 -> point_add_affine_alt Fp_2 p1 p2 == point_add_affine_alt_fp2 p1 p2 }} ["Fp_2"];
 
+normalize_point_fp2_thms <- for
+  [ {{ \x -> normalize_point Fp_2 x == normalize_point_fp2 x}}
+  , {{ \x -> normalize_affine_point Fp_2 x == normalize_affine_point_fp2 x}}
+  ] (\ t -> prove_cryptol t ["Fp_2"]) ;
+
 let remove_higher_order_function_simpset_alt =
-    addsimp point_add_affine_alt_fp2_thm  remove_higher_order_function_simpset;
+    addsimps normalize_point_fp2_thms
+             (addsimp point_add_affine_alt_fp2_thm  remove_higher_order_function_simpset);
+
+restore_point_add_affine_alt_fp2_thm <-  prove_cryptol
+  {{ \p1 p2 -> point_add_affine_alt_fp2 p1 p2 == point_add_affine_alt Fp_2 p1 p2  }} ["Fp_2"];
+
+restore_normalize_point_fp2_thms <- for
+  [ {{ \x -> normalize_point_fp2 x == normalize_point Fp_2 x}}
+  , {{ \x -> normalize_affine_point_fp2 x == normalize_affine_point Fp_2 x}}
+  ] (\ t -> prove_cryptol t ["Fp_2"]) ;
+
+let restore_higher_order_function_simpset_alt =
+  addsimps restore_normalize_point_fp2_thms
+           (addsimp restore_point_add_affine_alt_fp2_thm
+                    (addsimps restore_higher_order_function_fp2_thms empty_ss));
+
+line_double_imp_absorbs_normalization_thms <- for
+  [ //{{ \ x y z -> line_double_imp (Fp_2.normalize x, y, z) == line_double_imp (x, y, z) }}
+  //, {{ \ x y z -> line_double_imp (x, Fp_2.normalize y, z) == line_double_imp (x, y, z) }}
+  //, {{ \ x y z -> line_double_imp (x, y, Fp_2.normalize z) == line_double_imp (x, y, z) }}
+  {{ \ x y z -> line_double_imp (Fp_2.normalize x, Fp_2.normalize y, Fp_2.normalize z)
+                == line_double_imp (x, y, z) }}
+  ] (\ t -> custom_prove_cryptol t
+            do { unfolding ["line_double_imp"];
+                 simplify fp2_simpset;
+                 w4_unint_z3 fp2_unints; });
 
 let add_n_dbl_n_unints = (concat_all [ curve_unints, fp12_unints
                                      , fp2_unints, fp_unints
@@ -406,13 +495,22 @@ fp6_extra_inv_rep_thms <- for
 add_dbl_n_ovs <- for [(2,12), (3,16), (9, 40), (16, 68), (32, 132)] // (k, 4k+4)
  (\ (k, goal_n) -> custom_verify "add_n_dbl_n"
    (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
-   (add_n_dbl_n_1_spec k) // n=2
+   (add_n_dbl_n_1_spec k) // n=1
    do { goal_num_ite goal_n
         do {
           unfolding ["add_n_dbl_ret", "add_n_dbl_alt", "add_n_dbl_n_ret"];
+          // simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
+          simplify (addsimps fp6_extra_inv_rep_thms add_n_dbl_n_ss);
+          // now we need goal_eval_unint to expand out the comprehensions in the formula
           simplify remove_higher_order_function_simpset_alt;
           goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
-          simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
+          simplify restore_higher_order_function_simpset_alt;
+          // simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
+          simplify (addsimps line_double_imp_absorbs_normalization_thms
+                     (addsimp fp6_unrip_abs_rep_thm
+                        (addsimps fp12_ring_laws
+                          (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)))));
+          simplify remove_higher_order_function_simpset_alt;
           w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints'); }
         do {
           simplify (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss));
@@ -426,17 +524,43 @@ add_dbl_n_2_ovs <- for [2,3,9,16,32]
  (\ k -> custom_verify "add_n_dbl_n"
    (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
    (add_n_dbl_n_spec 2 k) // n=2
-   do { // rw_with (concat size_2_expander_thms add_n_dbl_n_2_expander_thms); // CHECK-may be needed
-        unfolding ["add_n_dbl_ret", "add_n_dbl_alt", "add_n_dbl_n_ret"];
-        simplify remove_higher_order_function_simpset_alt;
-        goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
-        simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
-        w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints'); });
+    do {
+      unfolding ["add_n_dbl_ret", "add_n_dbl_alt", "add_n_dbl_n_ret"];
+      // simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
+      simplify (addsimps fp6_extra_inv_rep_thms add_n_dbl_n_ss);
+      // now we need goal_eval_unint to expand out the comprehensions in the formula
+      simplify remove_higher_order_function_simpset_alt;
+      goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
+      simplify restore_higher_order_function_simpset_alt;
+      // simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
+      simplify (addsimps line_double_imp_absorbs_normalization_thms
+                 (addsimp fp6_unrip_abs_rep_thm
+                    (addsimps fp12_ring_laws
+                      (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)))));
+      simplify remove_higher_order_function_simpset_alt;
+      w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints'); });
 
 add_dbl_n_3_ovs <-for [2,3,9,16,32]
  (\ k -> custom_verify "add_n_dbl_n"
    (concat_all [[line_by_Px2_ov], line_add_ovs, line_dbl_line_ovs, fp12_overrides])
    (add_n_dbl_n_spec 3 k) // n=2
+    do {
+      unfolding ["add_n_dbl_ret", "add_n_dbl_alt", "add_n_dbl_n_ret"];
+      // simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
+      simplify (addsimps fp6_extra_inv_rep_thms add_n_dbl_n_ss);
+      // now we need goal_eval_unint to expand out the comprehensions in the formula
+      simplify remove_higher_order_function_simpset_alt;
+      goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
+      simplify restore_higher_order_function_simpset_alt;
+      // simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
+      simplify (addsimps line_double_imp_absorbs_normalization_thms
+                 (addsimp fp6_unrip_abs_rep_thm
+                    (addsimps fp12_ring_laws
+                      (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)))));
+      simplify remove_higher_order_function_simpset_alt;
+      w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints'); });
+
+
    do { unfolding ["add_n_dbl_ret", "add_n_dbl_alt", "add_n_dbl_n_ret"];
         simplify remove_higher_order_function_simpset_alt;
         goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
@@ -547,6 +671,50 @@ field_rewrites_for_miller_loop <- for
   , {{ \ x y -> Fp_2.is_equal (x,y) == (x==y) }}
   ] (\ t -> prove_cryptol t []);
 
+refold_normalize_point_fp2_thm <- prove_cryptol
+  {{ \ x y z -> (Fp_2.normalize x, Fp_2.normalize y, Fp_2.normalize z) == normalize_point Fp_2 (x,y,z) }}
+  ["Fp_2"];
+
+// unused?
+normalize_line_double_opt_thm <- custom_prove_cryptol
+  {{ \ T P -> Fp_12.normalize (line_double_opt T P) == line_double_opt T P }}
+  do { goal_eval_unint fp2_unints;
+       simplify add_n_dbl_n_ss;
+       z3;};
+
+normalize_start_n_dbl_thms <- for miller_loop_n_values_proved
+ (\ n -> custom_prove_cryptol
+     {{ \ Ts Px2s -> Fp_12.normalize (start_dbl_n_imp`{n} Ts Px2s) == start_dbl_n_imp`{n} Ts Px2s }}
+  do { goal_eval_unint fp2_unints;
+       simplify add_n_dbl_n_ss;
+       z3;});
+
+normalize_add_n_dbl_ret_thms <- for [2,3,9,16,32]
+  (\ k -> custom_prove_cryptol
+    {{ \ r T Q Px2 -> Fp_12.normalize (add_n_dbl_ret`{k} r T Q Px2) == add_n_dbl_ret`{k} r T Q Px2 }}
+    do { simplify remove_higher_order_function_simpset_alt;
+         let unints = concat_all [fp12_unints, fp2_unints, fp_unints, curve_unints];
+         goal_eval_unint unints;
+         simplify restore_higher_order_function_simpset_alt;
+         rw_with (concat fp12_unrip_thms
+                         (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
+         simplify add_n_dbl_n_ss;
+         simplify fp12_simpset;
+         w4_unint_z3 unints; });
+
+normalize_add_n_dbl_alt_thms <- for [2,3,9,16,32]
+  (\ k -> custom_prove_cryptol
+    {{ \ T Q -> normalize_point Fp_2 (add_n_dbl_alt`{k} T Q) == add_n_dbl_alt`{k} T Q }}
+    do { unfolding ["add_n_dbl_alt"];
+         simplify remove_higher_order_function_simpset_alt;
+         let unints = ["normalize_point_fp2", "point_double_fp2", "point_add_affine_alt_fp2"];
+         goal_eval_unint unints;
+         simplify restore_higher_order_function_simpset_alt;
+         rw_with (concat fp12_unrip_thms
+                         (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
+         rw_with POINTonE2_thms;
+         w4_unint_z3 unints; });
+
 miller_loop_n_1_ov <- custom_verify "miller_loop_n"
   (concat_all [ add_dbl_n_ovs, start_dbl_n_ovs, fp_overrides, fp12_overrides
               , [vec_is_zero_2fp_ov, vec_is_zero_2fp2_ov]
@@ -564,14 +732,21 @@ miller_loop_n_1_ov <- custom_verify "miller_loop_n"
        unfolding ["miller_loop_n_1_imp", "miller_loop_imp"];
        //  ... unfolding to expose the contained "point_double", for the next step
        simplify remove_higher_order_function_simpset_alt;
-       goal_eval_unint miller_loop_n_unints; // ... otherwise "point_double" is unfolded here!
+       // goal_eval_unint miller_loop_n_unints; // ... otherwise "point_double" is unfolded here!
+       goal_eval_unint (concat_all [["normalize_point_fp", "normalize_affine_point_fp"]
+                                    , miller_loop_n_unints]); // ... otherwise "point_double" is unfolded here!
        // the goal_eval was needed to deal with the `all` and `map` functions, now undo the damage:
+       simplify restore_higher_order_function_simpset_alt;
        rw_with (concat fp12_unrip_thms
-                       (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
+                       (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm, e2_unrip_thm]));
        simplify fp_simpset;
        simplify fp2_simpset;
        simplify (addsimps (concat_all [bls12_381_rx_thms, POINTonE2_thms, field_rewrites_for_miller_loop])
                           fp12_simpset);
+       rw_with (concat_all [[refold_normalize_point_fp2_thm], normalize_start_n_dbl_thms
+                           , normalize_add_n_dbl_ret_thms
+                           , normalize_add_n_dbl_alt_thms
+                           , POINTonE2_thms]);
        rw_with fp12_ring_laws;
        w4_unint_z3 miller_loop_n_unints;
        };
@@ -612,7 +787,21 @@ let miller_loop_n_2_unints =
   concat_all [ fp_unints, fp2_unints, fp12_unints
              , ["add_n_dbl_alt", "add_n_dbl_ret", "add_n_dbl_n_ret", "start_dbl_n_imp", "start_dbl_1"
                , "point_double_fp2", "point_add_affine_alt_fp2"
+               , "normalize_point_fp", "normalize_affine_point_fp"
                , "fp12_conjugate"]];
+
+normalize_add_n_dbl_n_ret_2_thms <- for [2,3,9,16,32]
+  (\ k -> custom_prove_cryptol
+    {{ \ r T Q Px2 -> Fp_12.normalize (add_n_dbl_n_ret`{2,k} r T Q Px2) == add_n_dbl_n_ret`{2,k} r T Q Px2 }}
+    do { unfolding ["add_n_dbl_n_ret"];
+         let unints = ["add_n_dbl_ret", "Fp_12"];
+         goal_eval_unint unints;
+         rw_with (concat fp12_unrip_thms
+                         (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
+         rw_with normalize_add_n_dbl_ret_thms;
+         simplify fp12_simpset;
+         w4_unint_z3 unints; });
+
 
 miller_loop_n_2_ov <- custom_verify "miller_loop_n"
   (concat_all [ add_dbl_n_2_ovs, start_dbl_n_ovs, fp_overrides, fp12_overrides
@@ -632,13 +821,17 @@ miller_loop_n_2_ov <- custom_verify "miller_loop_n"
        unfolding ["miller_loop_imp"]; //  to expose the contained "point_double", for the next step...
        simplify remove_higher_order_function_simpset_alt;
        goal_eval_unint miller_loop_n_2_unints; // ... otherwise "point_double" is unfolded here!
+       simplify restore_higher_order_function_simpset_alt;
        // the goal_eval was needed to deal with the `all` and `map` functions, now undo the damage:
        rw_with (concat fp12_unrip_thms
                        (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
        simplify fp_simpset;
        simplify fp2_simpset;
-       // simplify fp12_simpset;
        rw_with (concat fp12_ring_laws fp12_conjugate_thms);
+       rw_with (concat_all [[refold_normalize_point_fp2_thm], normalize_start_n_dbl_thms
+                           , normalize_add_n_dbl_n_ret_2_thms
+                           , normalize_add_n_dbl_alt_thms
+                           , POINTonE2_thms]);
        rw_with (concat_all [ bls12_381_rx_thms, POINTonE2_thms, field_rewrites_for_miller_loop
                            , add_n_dbl_n_ret_n2_thms]);
        rw_with (concat [start_dbl_n_1_equiv_thm] start_dbl_n_equiv_thms);
@@ -664,6 +857,17 @@ add_n_dbl_n_ret_n3_thms <- for [2,3,9,16,32] (\ k ->
        rw_with fp12_ring_laws;
        w4_unint_z3 unints; });
 
+normalize_add_n_dbl_n_ret_3_thms <- for [2,3,9,16,32]
+  (\ k -> custom_prove_cryptol
+    {{ \ r T Q Px2 -> Fp_12.normalize (add_n_dbl_n_ret`{3,k} r T Q Px2) == add_n_dbl_n_ret`{3,k} r T Q Px2 }}
+    do { unfolding ["add_n_dbl_n_ret"];
+         let unints = ["add_n_dbl_ret", "Fp_12"];
+         goal_eval_unint unints;
+         rw_with (concat fp12_unrip_thms
+                         (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
+         rw_with normalize_add_n_dbl_ret_thms;
+         simplify fp12_simpset;
+         w4_unint_z3 unints; });
 
 miller_loop_n_3_ov <- custom_verify "miller_loop_n"
   (concat_all [ add_dbl_n_3_ovs, fp_overrides, fp12_overrides, start_dbl_n_ovs
@@ -683,16 +887,20 @@ miller_loop_n_3_ov <- custom_verify "miller_loop_n"
        unfolding ["miller_loop_imp"]; //  to expose the contained "point_double", for the next step...
        simplify remove_higher_order_function_simpset_alt;
        goal_eval_unint miller_loop_n_2_unints; // ... otherwise "point_double" is unfolded here!
+       simplify restore_higher_order_function_simpset_alt;
        // the goal_eval was needed to deal with the `all` and `map` functions, now undo the damage:
        rw_with (concat fp12_unrip_thms
                        (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
        simplify fp_simpset;
        simplify fp2_simpset;
        rw_with (concat fp12_ring_laws fp12_conjugate_thms);
+       rw_with (concat_all [[refold_normalize_point_fp2_thm], normalize_start_n_dbl_thms
+                           , normalize_add_n_dbl_n_ret_3_thms
+                           , normalize_add_n_dbl_alt_thms
+                           , POINTonE2_thms]);
        rw_with (concat_all [ bls12_381_rx_thms, POINTonE2_thms, field_rewrites_for_miller_loop
                            , add_n_dbl_n_ret_n3_thms]);
        rw_with (concat [start_dbl_n_1_equiv_thm] start_dbl_n_equiv_thms);
        rw_with fp12_conjugate_thms; // Why do I need this again?
        w4_unint_z3 miller_loop_n_2_unints;
        };
-
