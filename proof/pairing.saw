@@ -169,7 +169,7 @@ let add_n_dbl_n_spec n k = do {
 
 let miller_loop_n_1_spec = do {
   ret_ptr <- crucible_alloc vec384fp12_type;
-  (Q, Q_ptr) <- ptr_to_fresh "Q" POINTonE2_affine_type; // array in general
+  (Q, Q_ptr) <- ptr_to_fresh_readonly "Q" POINTonE2_affine_type; // array in general
   (P, P_ptr) <- ptr_to_fresh_readonly "P" POINTonE1_affine_type; // array in general
   crucible_precond {{ POINTonE2_affine_invariant Q }};
   crucible_precond {{ POINTonE1_affine_invariant P }};
@@ -181,7 +181,7 @@ let miller_loop_n_1_spec = do {
 // In the general case, n >= 2, we get the product of several Miller loop results.
 let miller_loop_n_spec n = do {
   ret_ptr <- crucible_alloc vec384fp12_type;
-  (Qs, Q_ptr) <- ptr_to_fresh "Q" (llvm_array n POINTonE2_affine_type);
+  (Qs, Q_ptr) <- ptr_to_fresh_readonly"Q" (llvm_array n POINTonE2_affine_type);
   (Ps, P_ptr) <- ptr_to_fresh_readonly "P" (llvm_array n POINTonE1_affine_type);
   crucible_precond {{ all POINTonE2_affine_invariant Qs }};
   crucible_precond {{ all POINTonE1_affine_invariant Ps }};
