@@ -166,3 +166,10 @@ let print_clean_goal = do {
   print_goal;
   };
 
+// used to force a goal to fail quickly (to see the error message...):
+let rewrite_to_false = do {
+  let implies = parse_core "implies";
+  let rewrite_implies_to_false = run ( admit_cryptol (rewrite (cryptol_ss ()) {{ \x y -> (implies x y) == False}}) );
+  simplify (addsimp rewrite_implies_to_false empty_ss);
+};
+
