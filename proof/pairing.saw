@@ -560,14 +560,6 @@ add_dbl_n_3_ovs <-for [2,3,9,16,32]
       simplify remove_higher_order_function_simpset_alt;
       w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints'); });
 
-
-   do { unfolding ["add_n_dbl_ret", "add_n_dbl_alt", "add_n_dbl_n_ret"];
-        simplify remove_higher_order_function_simpset_alt;
-        goal_eval_unint (concat ["point_double_fp2"] add_n_dbl_n_unints');
-        simplify (addsimps fp12_ring_laws (addsimps fp6_extra_inv_rep_thms (addsimp xy00z0_expander_thm add_n_dbl_n_ss)));
-        w4_unint_z3 (concat ["point_double_fp2"] add_n_dbl_n_unints'); });
-
-
 // miller_loop_n, for n=1
 
 // for the optimization in `start_dbl_n`, avoiding squaring FP_12.field_unit and a multiplication by that.
@@ -766,7 +758,6 @@ fp12_conjugate_thms <- for
   ] (\ t -> prove_cryptol t []);
 
 
-// WORKS!
 add_n_dbl_n_ret_n2_thms <- for [2,3,9,16,32] (\ k ->
   custom_prove_cryptol
     {{ \ r0 r1 T0 T1 Q0 Q1 P0 P1 ->
@@ -904,3 +895,24 @@ miller_loop_n_3_ov <- custom_verify "miller_loop_n"
        rw_with fp12_conjugate_thms; // Why do I need this again?
        w4_unint_z3 miller_loop_n_2_unints;
        };
+
+// We also need normalization theorems for the miller_loop functions appearing in the specifications
+
+normalize_miller_loop_opt_thm <- custom_prove_cryptol
+  {{ \ P Q -> Fp_12.normalize (miller_loop_opt P Q) == miller_loop_opt P Q }}
+  do { unfolding ["miller_loop_opt", "miller_step_opt"];
+       simplify remove_higher_order_function_simpset_alt;
+       goal_eval_unint miller_loop_n_2_unints;
+       simplify restore_higher_order_function_simpset_alt;
+       rw_with (concat fp12_unrip_thms
+                       (concat seq_ite_thms [unrip_thm, fp2_unrip_thm, fp2_rep_unrip_thm, fp6_unrip_thm]));
+       simplify fp12_simpset;
+       w4_unint_z3 miller_loop_n_2_unints; };
+
+normalize_miller_loop_opt_checked_thm <- custom_prove_cryptol
+  {{ \ P Q -> Fp_12.normalize (miller_loop_opt_checked P Q) == miller_loop_opt_checked P Q }}
+  do {unfolding ["miller_loop_opt_checked"];
+      simplify (addsimp normalize_miller_loop_opt_thm fp12_simpset);
+      w4_unint_z3 (concat ["miller_loop_opt" ] fp12_unints); };
+
+let miller_loop_normalization_thms = [normalize_miller_loop_opt_thm, normalize_miller_loop_opt_checked_thm];

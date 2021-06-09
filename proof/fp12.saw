@@ -2042,6 +2042,9 @@ fp12_normalize_thm <- custom_prove_cryptol
 fp12_abs_ite_thm <- hoist {{fp12_abs}} ["fp12_abs"] ;
 fp12_invariant_ite_thm <- hoist {{fp12_invariant}} [] ;
 fp12_rep_ite_thm <- hoist {{fp12_rep}} ["fp12_rep"] ;
+fp12_normalize_ite_thm <- hoist {{fp12_normalize}} ["fp12_normalize"] ;
+fp12_abs_normalize_ite_thm <- hoist {{Fp_12.normalize}} ["Fp_12"] ;
+
 
 fp12_normalization_thms <- for
   // ... eliminate normalization in a argument position (maybe not needed?)
@@ -2072,9 +2075,18 @@ more_fp12_normalization_thms <- for
   , {{ \ x -> cyclotomic_sqr_fp12 (Fp_12.normalize x) == cyclotomic_sqr_fp12 x }}
   ] (\t -> prove_cryptol t []);
 
+fp12_normalize_abs_thm <- custom_prove_cryptol
+  {{ \x -> Fp_12.normalize (fp12_abs x) == fp12_abs x }}
+  do { goal_eval_unint fp2_unints;
+       simplify (addsimps [fp2_unrip_thm, unrip_thm] fp2_simpset);
+       simplify (addsimps [fp2_abs_normalize_thm, fp2_abstract_invariant_thm] fp2_simpset);
+       w4_unint_z3 fp2_unints; };
+
 let fp12_simpset = addsimps (concat_all
   [ fp12_rep_thms
   , fp12_normalization_thms
   , more_fp12_normalization_thms
-  , [fp12_abs_ite_thm, fp12_invariant_ite_thm, fp12_rep_ite_thm]
+  , [fp12_abs_ite_thm, fp12_invariant_ite_thm, fp12_rep_ite_thm
+    , fp12_normalize_ite_thm, fp12_abs_normalize_ite_thm
+    , fp12_normalize_abs_thm]
   ]) (cryptol_ss ());

@@ -231,19 +231,26 @@ let raise_to_z_div_by_2_spec = do {
   llvm_points_to ret_ptr (llvm_term ret);
 };
 
+// The expanded term here just gets too large and uses too much memory in SAW
+normalize_C_expt_thm <- admit_cryptol
+  {{ \ b e -> Fp_12.normalize (C_expt b e) == C_expt b e }};
+//  do { goal_eval_unint fp12_unints;
+//      simplify (addsimps fp12_unrip_thms fp12_simpset);
+//       w4_unint_z3 fp12_unints; };
+
 raise_to_z_div_by_2_ov <- custom_verify "raise_to_z_div_by_2"
   (concat mul_n_sqr_ovs fp12_overrides)
   raise_to_z_div_by_2_spec
   do {
     unfolding ["raise_to_z_div_by_2", "mul_n_sqr"];
-    simplify fp12_simpset;
     simplify (addsimps (concat chain_cyclotomic_sqr_fp12_C_expt_thms
                                [ cyclotomic_sqr_fp12_C_expt_thm
                                , hoist_if_mul_fp12_thm
                                , mul_C_expt_base_thm
                                , hoist_if_fp12_conjugate_thm
+                               , normalize_C_expt_thm
                                , fp12_conjugate_inverse_thm])
-                       empty_ss);
+                       fp12_simpset);
     w4_unint_z3 (concat ["C_expt", "is_cyclotomic", "fp12_conjugate", "chain_cyclotomic_sqr_fp12", "cyclotomic_sqr_fp12"] fp12_unints);
   };
 

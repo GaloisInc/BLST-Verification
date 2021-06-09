@@ -113,6 +113,7 @@ is_point_projective_E'_thm <- prove_cryptol {{  \p1 -> is_point_projective E' p1
 
 let e2_unints = ["POINTonE2_abs", "POINTonE2_affine_abs", "POINTonE2_invariant", "POINTonE2_affine_invariant", "POINTonE2_rep", "Fp_2", "E'", "is_point_affine_E'", "is_point_projective_E'", "projectify_E'", "affinify_E'", "is_point_O_E'", "neg_E'", "add_E'", "point_neg_fp2", "point_double_fp2", "point_dadd_affine_fp2", "point_dadd_fp2", "point_add_affine_fp2", "point_add_fp2"];
 
+// TODO: rename to avoid clobbering the simpset for Fp and E.
 let remove_higher_order_function_simpset =
   addsimps [ point_add_fp2_thm, point_dadd_fp2_thm, point_double_fp2_thm, point_neg_fp2_thm
            , point_add_affine_fp2_thm, point_dadd_affine_fp2_thm
@@ -121,6 +122,23 @@ let remove_higher_order_function_simpset =
            , is_point_affine_E'_thm, is_point_projective_E'_thm
            , is_point_O_E'_thm
            ] empty_ss;
+
+restore_higher_order_function_fp2_thms <- for
+  [ {{  \p1 p2 -> point_add_fp2 p1 p2 == point_add Fp_2 p1 p2  }}
+  , {{  \p1 p2 -> point_add_affine_fp2 p1 p2 == point_add_affine Fp_2 p1 p2  }}
+  , {{  \p1 p2 a4 c -> point_dadd_fp2 p1 p2 a4 c  == point_dadd Fp_2 p1 p2 a4 c }}
+  , {{  \p1 p2 -> point_dadd_affine_fp2 p1 p2 == point_dadd_affine Fp_2 p1 p2  }}
+  , {{  \p1 -> point_double_fp2 p1 == point_double Fp_2 p1  }}
+  , {{  \p1 -> point_neg_fp2 p1 == point_neg Fp_2 p1  }}
+  , {{  \p1 p2 -> add_E' p1 p2 == add E' p1 p2  }}
+  , {{  \p1 p2 -> add'_E' p1 p2 == add' E' p1 p2  }}
+  , {{  \p1 -> neg_E' p1 == neg E' p1  }}
+  , {{  \p1 -> is_point_O_E' p1 == is_point_O E' p1  }}
+  , {{  \p1 -> affinify_E' p1 == affinify E' p1  }}
+  , {{  \p1 -> projectify_E' p1 == projectify E' p1  }}
+  , {{  \p1 -> is_point_affine_E' p1 == is_point_affine E' p1  }}
+  , {{  \p1 -> is_point_projective_E' p1 == is_point_projective E' p1  }}
+  ] ( \ t -> prove_cryptol t ["Fp_2", "E'"]);
 
 // more rules to hoist `if`-terms
 
