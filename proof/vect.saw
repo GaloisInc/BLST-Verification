@@ -143,6 +143,14 @@ let vec_is_zero_2fp_spec = do {
   crucible_return (crucible_term {{ if fp_abs a0 == Fp.field_zero /\ fp_abs a1 == Fp.field_zero then 1 else (0:Limb) where [a0,a1]=a }});
   };
 
+// TODO: let's settle on whether we use is_equal or not...
+let vec_is_zero_2fp_is_equal_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 2 vec384_type);
+  crucible_precond {{ fp_invariant (a@0) /\ fp_invariant (a@1) }};
+  crucible_execute_func [a_ptr, crucible_term {{ (96:Size_t) }}]; // Non-portable
+  crucible_return (crucible_term {{ bool_to_limb (Fp.is_equal(fp_abs a0, Fp.field_zero) /\ Fp.is_equal(fp_abs a1, Fp.field_zero)) where [a0,a1]=a }});
+  };
+
 let vec_is_zero_2fp2_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 2 vec384x_type);
   crucible_precond {{ fp2_invariant (a@0) /\ fp2_invariant (a@1) }};
@@ -158,6 +166,7 @@ let vec_is_zero_10fp_spec = do {
 
 // TODO: prove
 vec_is_zero_2fp_ov <- test "vec_is_zero" []  vec_is_zero_2fp_spec;
+vec_is_zero_2fp_is_equal_ov <- test "vec_is_zero" []  vec_is_zero_2fp_is_equal_spec;
 vec_is_zero_2fp2_ov <- test "vec_is_zero" []  vec_is_zero_2fp2_spec;
 vec_is_zero_10fp_ov <- test "vec_is_zero" []  vec_is_zero_10fp_spec;
 
@@ -194,7 +203,7 @@ let vec_is_equal_fp2_spec = do {
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384x_type;
   crucible_precond {{ fp2_invariant a /\  fp2_invariant b }};
   crucible_execute_func [a_ptr, b_ptr, crucible_term {{ (96:Size_t) }}]; // Non-portable
-  crucible_return (crucible_term {{ if Fp_2.is_equal (fp2_abs a, fp2_abs b) then 1 else (0:Limb) }});
+  crucible_return (crucible_term {{ bool_to_limb (Fp_2.is_equal (fp2_abs a, fp2_abs b)) }});
   };
 
 // let vec_is_equal_fp2_spec_ = do {
