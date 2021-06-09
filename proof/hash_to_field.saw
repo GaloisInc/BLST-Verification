@@ -16,12 +16,20 @@ include "sha_overrides.saw";
 import "../spec/ExpandMessage.cry";
 
 let expand_message_spec len_in_bytes aug_len msg_len DST_len = do {
-  bytes_ptr <- crucible_alloc_aligned 8 (llvm_array len_in_bytes (llvm_int 8));
+  bytes_ptr <- llvm_alloc_aligned 8 (llvm_array len_in_bytes (llvm_int 8));
   (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
-  crucible_execute_func [bytes_ptr, crucible_term {{ `len_in_bytes : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}, msg_ptr, crucible_term {{ `msg_len : [64] }}, DST_ptr, crucible_term {{ `DST_len : [64] }}];
-  crucible_points_to bytes_ptr (crucible_term {{ expand_message_xmd`{len_in_bytes=len_in_bytes} (aug # msg) DST }});
+  llvm_execute_func [bytes_ptr, llvm_term {{ `len_in_bytes : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}];
+  llvm_points_to bytes_ptr (llvm_term {{ expand_message_xmd`{len_in_bytes=len_in_bytes} (aug # msg) DST }});
+};
+
+let expand_message_null_aug_spec len_in_bytes msg_len DST_len = do {
+  bytes_ptr <- llvm_alloc_aligned 8 (llvm_array len_in_bytes (llvm_int 8));
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
+  llvm_execute_func [bytes_ptr, llvm_term {{ `len_in_bytes : [64] }}, llvm_null, llvm_term {{ zero : [64] }}, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}];
+  llvm_points_to bytes_ptr (llvm_term {{ expand_message_xmd`{len_in_bytes=len_in_bytes} msg DST }});
 };
 
 HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
@@ -30,21 +38,37 @@ import "../spec/implementation/Types.cry";
 import "../spec/implementation/Field.cry";
 
 let hash_to_field_fp_spec nelems aug_len msg_len DST_len = do {
-  elems_ptr <- crucible_alloc (llvm_array nelems vec384_type);
+  elems_ptr <- llvm_alloc (llvm_array nelems vec384_type);
   (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
-  crucible_execute_func [elems_ptr, crucible_term {{ `nelems : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}, msg_ptr, crucible_term {{ `msg_len : [64] }}, DST_ptr, crucible_term {{ `DST_len : [64] }}];
-  crucible_points_to elems_ptr (crucible_term {{ map fp_rep (HE1::hash_to_field`{count=nelems} (aug#msg) DST) }});
+  llvm_execute_func [elems_ptr, llvm_term {{ `nelems : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}];
+  llvm_points_to elems_ptr (llvm_term {{ map fp_rep (HE1::hash_to_field`{count=nelems} (aug#msg) DST) }});
+};
+
+let hash_to_field_fp_null_aug_spec nelems msg_len DST_len = do {
+  elems_ptr <- llvm_alloc (llvm_array nelems vec384_type);
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
+  llvm_execute_func [elems_ptr, llvm_term {{ `nelems : [64] }}, llvm_null, llvm_term {{ zero : [64] }}, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}];
+  llvm_points_to elems_ptr (llvm_term {{ map fp_rep (HE1::hash_to_field`{count=nelems} msg DST) }});
 };
 
 let hash_to_field_fp2_spec nelems aug_len msg_len DST_len = do {
-  elems_ptr <- crucible_alloc (llvm_array (eval_int {{2*(`nelems:[64])}}) vec384_type);
+  elems_ptr <- llvm_alloc (llvm_array (eval_int {{2*(`nelems:[64])}}) vec384_type);
   (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
-  crucible_execute_func [elems_ptr, crucible_term {{ (2*`nelems) : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}, msg_ptr, crucible_term {{ `msg_len : [64] }}, DST_ptr, crucible_term {{ `DST_len : [64] }}];
-  crucible_points_to elems_ptr (crucible_term {{ join (map fp2_rep (HE2::hash_to_field`{count=nelems} (aug#msg) DST)) }});
+  llvm_execute_func [elems_ptr, llvm_term {{ (2*`nelems) : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}];
+  llvm_points_to elems_ptr (llvm_term {{ join (map fp2_rep (HE2::hash_to_field`{count=nelems} (aug#msg) DST)) }});
+};
+
+let hash_to_field_fp2_null_aug_spec nelems msg_len DST_len = do {
+  elems_ptr <- llvm_alloc (llvm_array (eval_int {{2*(`nelems:[64])}}) vec384_type);
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
+  llvm_execute_func [elems_ptr, llvm_term {{ (2*`nelems) : [64] }}, llvm_null, llvm_term {{ zero : [64] }}, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}];
+  llvm_points_to elems_ptr (llvm_term {{ join (map fp2_rep (HE2::hash_to_field`{count=nelems} (aug#msg) DST)) }});
 };
 
 import "../cryptol-specs/Common/bv.cry";
@@ -74,30 +98,30 @@ let {{ // TODO: this should probably be in a Cryptol file somewhere
 }};
 
 let redc_mont_384_spec = do {
-  ret_ptr <- crucible_alloc vec384_type;
+  ret_ptr <- llvm_alloc vec384_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
-  crucible_precond {{ b == vec384_rep (`p:[384]) }};
-  crucible_execute_func [ret_ptr, a_ptr, b_ptr, crucible_term {{bv_p0}}];
-  crucible_points_to ret_ptr (crucible_term {{ redc_rep a }});
+  llvm_precond {{ b == vec384_rep (`p:[384]) }};
+  llvm_execute_func [ret_ptr, a_ptr, b_ptr, llvm_term {{bv_p0}}];
+  llvm_points_to ret_ptr (llvm_term {{ redc_rep a }}); // TODO: shouldn't this be using `to_mont`? (defined in `implementation/Field.cry`)
 };
 
 let mul_mont_384_alias_spec = do {
   (ret, ret_ptr) <- ptr_to_fresh "ret" vec384_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  crucible_precond {{ b == RRR_rep }};
+  llvm_precond {{ b == RRR_rep }};
   (p, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  crucible_precond {{ p == vec384_rep (`p:[384]) }};
-  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term {{bv_p0}}];
-  crucible_points_to ret_ptr (crucible_term {{ mul_mont_rep ret b }});
+  llvm_precond {{ p == vec384_rep (`p:[384]) }};
+  llvm_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, llvm_term {{bv_p0}}];
+  llvm_points_to ret_ptr (llvm_term {{ mul_mont_rep ret b }}); // TODO: shouldn't this be using Fp.mul?
 };
 
 let limbs_from_be_bytes_spec nlimbs = do {
   let nbytes = eval_size {| nlimbs*8 |};
-  ret_p <- crucible_alloc (llvm_array nlimbs limb_type);
+  ret_p <- llvm_alloc (llvm_array nlimbs limb_type);
   (in_, in_ptr) <- ptr_to_fresh_readonly "limbs_from_be_bytes_in" (llvm_array nbytes (llvm_int 8)); // "in" is a keyword, thus we use "in_"
-  crucible_execute_func [ret_p, in_ptr, crucible_term {{`nbytes:[64]}}];
-  crucible_points_to ret_p (crucible_term {{reverse (split`{parts=nlimbs} (join`{each=8} in_))}});
+  llvm_execute_func [ret_p, in_ptr, llvm_term {{`nbytes:[64]}}];
+  llvm_points_to ret_p (llvm_term {{reverse (split`{parts=nlimbs} (join`{each=8} in_))}});
   };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -105,8 +129,8 @@ let limbs_from_be_bytes_spec nlimbs = do {
 ///////////////////////////////////////////////////////////////////////////////
 
 // we assume that those assembly functions are correct:
-mul_mont_384_ov <- crucible_llvm_unsafe_assume_spec m "mulx_mont_384" mul_mont_384_alias_spec;
-redc_mont_384_ov <- crucible_llvm_unsafe_assume_spec m "redcx_mont_384" redc_mont_384_spec;
+mul_mont_384_ov <- llvm_llvm_unsafe_assume_spec m "mulx_mont_384" mul_mont_384_alias_spec;
+redc_mont_384_ov <- llvm_llvm_unsafe_assume_spec m "redcx_mont_384" redc_mont_384_spec;
 
 // we verify limbs_from_be_bytes, which we'll use to produce a better looking extracted term:
 limbs_from_be_bytes_ov <- verify "limbs_from_be_bytes" [] (limbs_from_be_bytes_spec 8);
@@ -138,9 +162,30 @@ let verify_hash_to_field_for aug_len msg_len DST_len nelems = do {
   let len_in_bytes = eval_size {| L*nelems |};
   block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
   expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, but abc does better
+  // expand_message_ov <- admit "expand_message_xmd" (expand_message_spec len_in_bytes aug_len msg_len DST_len);
   let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov];
   r <- custom_verify "hash_to_field" overrides (hash_to_field_fp_spec nelems aug_len msg_len DST_len)
     (do {
+      // assume_unsat;});
+      unfolding ["redc_rep", "mul_mont_rep", "HE1::hash_to_field","expand_message"];
+      simplify (addsimps [vec_abs_rep_thm] empty_ss);
+      simplify (cryptol_ss ());
+      simplify (addsimps [main_lemma, eq_1_thm] empty_ss);
+      w4_unint_yices ["expand_message", "to_Fp", "fp_rep"];}); // TODO: still quite slow; z3 even slower. Probably not a stable proof.
+  return r;
+};
+
+let verify_hash_to_field_null_aug_for msg_len DST_len nelems = do {
+  let L = 64; // sizeof(vec384) + 128/8 = 48 + 16
+  let len_in_bytes = eval_size {| L*nelems |};
+  // TODO
+  block_data_order_ovs <- make_block_data_order_ovs [msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
+  expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_null_aug_spec len_in_bytes msg_len DST_len) abc; // z3 takes forever, but abc does better
+  // expand_message_ov <- admit "expand_message_xmd" (expand_message_spec len_in_bytes aug_len msg_len DST_len);
+  let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov];
+  r <- custom_verify "hash_to_field" overrides (hash_to_field_fp_null_aug_spec nelems msg_len DST_len)
+    (do {
+      // assume_unsat;});
       unfolding ["redc_rep", "mul_mont_rep", "HE1::hash_to_field","expand_message"];
       simplify (addsimps [vec_abs_rep_thm] empty_ss);
       simplify (cryptol_ss ());
@@ -156,6 +201,7 @@ let hash_to_field_nelems = [1,2]; // the values of nelems for which we prove has
 
 // Proof of hash-to-field for fp:
 hash_to_field_fp_ovs <- for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
+hash_to_field_fp_null_aug_ovs <- for hash_to_field_nelems (verify_hash_to_field_null_aug_for msg_len DST_len);
 
 // Now for fp2:
 
@@ -163,16 +209,39 @@ let verify_hash_to_field_fp2_for aug_len msg_len DST_len nelems = do {
   let L = 64; // sizeof(vec384) + 128/8 = 48 + 16
   let len_in_bytes = eval_size {| L*2*nelems |};
   block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
-  expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, but abc does better
+  expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_null_aug_spec len_in_bytes msg_len DST_len) abc; // z3 takes forever, but abc does better
+  // expand_message_ov <- admit "expand_message_xmd" (expand_message_spec len_in_bytes aug_len msg_len DST_len);
   let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov];
   r <- custom_verify "hash_to_field" overrides (hash_to_field_fp2_spec nelems aug_len msg_len DST_len)
-  (do {
-    unfolding ["redc_rep", "mul_mont_rep", "HashToCurveE2::hash_to_field","expand_message"];
-    simplify (addsimps [vec_abs_rep_thm] empty_ss);
-    simplify (cryptol_ss ());
-    simplify (addsimps [main_lemma, eq_1_thm] empty_ss);
-    w4_unint_yices ["expand_message", "to_Fp", "fp_rep"];});
+    do {
+      // assume_unsat;});
+      unfolding ["redc_rep", "mul_mont_rep", "HashToCurveE2::hash_to_field","expand_message"];
+      simplify (addsimps [vec_abs_rep_thm] empty_ss);
+      simplify (cryptol_ss ());
+      simplify (addsimps [main_lemma, eq_1_thm] empty_ss);
+      w4_unint_yices ["expand_message", "to_Fp", "fp_rep"];
+    };
+  return r;
+};
+
+let verify_hash_to_field_fp2_null_aug_for msg_len DST_len nelems = do {
+  let L = 64; // sizeof(vec384) + 128/8 = 48 + 16
+  let len_in_bytes = eval_size {| L*2*nelems |};
+  block_data_order_ovs <- make_block_data_order_ovs [msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
+  expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_null_aug_spec len_in_bytes msg_len DST_len) abc; // z3 takes forever, but abc does better
+  // expand_message_ov <- admit "expand_message_xmd" (expand_message_null_aug_spec len_in_bytes msg_len DST_len);
+  let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov];
+  r <- custom_verify "hash_to_field" overrides (hash_to_field_fp2_null_aug_spec nelems msg_len DST_len)
+    do {
+      // assume_unsat;});
+      unfolding ["redc_rep", "mul_mont_rep", "HashToCurveE2::hash_to_field","expand_message"];
+      simplify (addsimps [vec_abs_rep_thm] empty_ss);
+      simplify (cryptol_ss ());
+      simplify (addsimps [main_lemma, eq_1_thm] empty_ss);
+      w4_unint_yices ["expand_message", "to_Fp", "fp_rep"];
+    };
   return r;
 };
 
 hash_to_field_fp2_ovs <- for hash_to_field_nelems (verify_hash_to_field_fp2_for aug_len msg_len DST_len);
+hash_to_field_fp2_null_aug_ovs <- for hash_to_field_nelems (verify_hash_to_field_fp2_null_aug_for msg_len DST_len);
