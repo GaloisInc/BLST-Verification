@@ -68,7 +68,7 @@ let hash_to_field_fp2_null_aug_spec nelems msg_len DST_len = do {
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
   llvm_execute_func [elems_ptr, llvm_term {{ (2*`nelems) : [64] }}, llvm_null, llvm_term {{ zero : [64] }}, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}];
-  llvm_points_to elems_ptr (llvm_term {{ join (map fp2_rep (HE2::hash_to_field`{count=nelems} (aug#msg) DST)) }});
+  llvm_points_to elems_ptr (llvm_term {{ join (map fp2_rep (HE2::hash_to_field`{count=nelems} (msg) DST)) }});
 };
 
 import "../cryptol-specs/Common/bv.cry";
@@ -129,8 +129,8 @@ let limbs_from_be_bytes_spec nlimbs = do {
 ///////////////////////////////////////////////////////////////////////////////
 
 // we assume that those assembly functions are correct:
-mul_mont_384_ov <- llvm_llvm_unsafe_assume_spec m "mulx_mont_384" mul_mont_384_alias_spec;
-redc_mont_384_ov <- llvm_llvm_unsafe_assume_spec m "redcx_mont_384" redc_mont_384_spec;
+mul_mont_384_ov <- llvm_unsafe_assume_spec m "mulx_mont_384" mul_mont_384_alias_spec;
+redc_mont_384_ov <- llvm_unsafe_assume_spec m "redcx_mont_384" redc_mont_384_spec;
 
 // we verify limbs_from_be_bytes, which we'll use to produce a better looking extracted term:
 limbs_from_be_bytes_ov <- verify "limbs_from_be_bytes" [] (limbs_from_be_bytes_spec 8);
