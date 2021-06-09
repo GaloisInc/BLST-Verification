@@ -9,19 +9,25 @@ import "../../../spec/implementation/Field.cry";
 import "../../../spec/implementation/x86.cry";
 import "../../../cryptol-specs/Common/bv.cry";
 
-let modulus = {{ [ 0xb9feffffffffaaab, 0x1eabfffeb153ffff, 0x6730d2a0f6b0f624, 0x64774b84f38512bf, 0x4b1ba7b6434bacd7, 0x1a0111ea397fe69a ] : [6][64] }};
-let modulus_neg_inv = {{ 0x89f3fffcfffcfffd : [64] }};
+// BLS12_381_P
+let modulus384 = {{ [ 0xb9feffffffffaaab, 0x1eabfffeb153ffff, 0x6730d2a0f6b0f624, 0x64774b84f38512bf, 0x4b1ba7b6434bacd7, 0x1a0111ea397fe69a ] : [6][64] }};
 
-let lt_modulus x = crucible_precond {{ vec384_abs x < vec384_abs modulus }};
+// BLS12_381_p0
+let mont384_p0 = {{ 0x89f3fffcfffcfffd : [64] }};
 
-let ptr_to_modulus = do {
+let lt_modulus384 x = crucible_precond {{ vec384_abs x < vec384_abs modulus384 }};
+
+let ptr_to_modulus384 = do {
   ptr <- crucible_alloc vec384_type;
-  crucible_points_to ptr (crucible_term modulus);
+  crucible_points_to ptr (crucible_term modulus384);
   return ptr;
 };
 
 // BLS12_381_r
 let modulus256 = {{ [ 0xffffffff00000001, 0x53bda402fffe5bfe, 0x3339d80809a1d805, 0x73eda753299d7d48 ] : [4][64] }};
+
+// r0
+let mont256_r0 = {{ 0xfffffffeffffffff : [64] }};
 
 let lt_modulus256 x = crucible_precond {{ vec256_abs x < vec256_abs modulus256 }};
 
@@ -42,3 +48,22 @@ let ptr_to_fresh_vec384x = ptr_to_fresh_vec384x_helper true;
 let ptr_to_fresh_vec384x_readonly = ptr_to_fresh_vec384x_helper false;
 
 let points_to_vec384x ptr r i = crucible_points_to ptr (crucible_term {{ [r, i] : [2]Vec384 }});
+
+let prove_folding_theorem t = prove_print w4 (rewrite (cryptol_ss ()) t);
+bvAdd_64_commutes <- prove_folding_theorem {{ \(a : [64]) (b : [64]) -> a + b == b + a }};
+bvAdd_64_associates <- prove_folding_theorem {{ \(a : [64]) (b : [64]) (c : [64]) -> a + (b + c) == (a + b) + c }};
+bvAdd_64_associates_helper <- prove_folding_theorem {{ \(a : [64]) (b : [64]) (c : [64]) -> (a + b) + c == (a + c) + b }};
+bvAdd_65_commutes <- prove_folding_theorem {{ \(a : [65]) (b : [65]) -> a + b == b + a }};
+bvAdd_65_associates <- prove_folding_theorem {{ \(a : [65]) (b : [65]) (c : [65]) -> a + (b + c) == (a + b) + c }};
+bvAdd_65_associates_helper <- prove_folding_theorem {{ \(a : [65]) (b : [65]) (c : [65]) -> (a + b) + c == (a + c) + b }};
+bvMul_128_commutes <- prove_folding_theorem {{ \(a : [128]) (b : [128]) -> a * b == b * a }};
+
+let mul_ss = addsimps
+  [ bvAdd_64_commutes
+  , bvAdd_64_associates
+  , bvAdd_64_associates_helper
+  , bvAdd_65_commutes
+  , bvAdd_65_associates
+  , bvAdd_65_associates_helper
+  , bvMul_128_commutes
+  ] basic_ss;

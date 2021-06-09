@@ -37,11 +37,9 @@ let ct_inverse_mod_383_spec = do {
 //   a loss of some generality in the precondition describing the initial value
 //   of RSP.
 
-enable_x86_what4_hash_consing;
 set_x86_stack_base_align 512;
 
 // ctx_inverse_mod_383
 verify_x86_recent "ctx_inverse_mod_383" ct_inverse_mod_383_spec;
 
-disable_x86_what4_hash_consing;
 default_x86_stack_base_align;

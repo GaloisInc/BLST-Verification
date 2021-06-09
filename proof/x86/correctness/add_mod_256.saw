@@ -212,12 +212,11 @@ verify_x86 "mul_by_3_mod_256" mul_by_3_mod_256_alias_ret_a_spec w4;
 
 // lshift_mod_256
 verify_x86 "lshift_mod_256" (lshift_mod_256_spec {{ 5 : [64] }}) w4;
-let do_prove_x86 = true;
 verify_x86 "lshift_mod_256" (lshift_mod_256_alias_ret_a_spec {{ 5 : [64] }}) w4;
 
 // rshift_mod_256 - TODO
-// rshift_mod_256_ov <- verify_x86 "rshift_mod_256" (rshift_mod_256_spec {{ 5 : [64] }}) w4;
-// rshift_mod_256_alias_ret_a_ov <- verify_x86 "rshift_mod_256" (rshift_mod_256_alias_ret_a_spec {{ 5 : [64] }}) w4;
+// verify_x86 "rshift_mod_256" (rshift_mod_256_spec {{ 5 : [64] }}) w4;
+// verify_x86 "rshift_mod_256" (rshift_mod_256_alias_ret_a_spec {{ 5 : [64] }}) w4;
 
 // cneg_mod_256
 verify_x86 "cneg_mod_256" cneg_mod_256_spec w4;

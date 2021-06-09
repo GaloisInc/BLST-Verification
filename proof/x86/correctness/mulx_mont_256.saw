@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-let r0 = {{ 0xfffffffeffffffff : [64] }};
-
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
@@ -15,8 +13,8 @@ let mulx_mont_sparse_256_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
   p_ptr <- ptr_to_modulus256;
-  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr, crucible_term r0];
-  let new_ret = {{ mulx_mont_sparse_256 a b modulus256 r0 }};
+  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr, crucible_term mont256_r0];
+  let new_ret = {{ mulx_mont_sparse_256 a b modulus256 mont256_r0 }};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
@@ -24,8 +22,8 @@ let mulx_mont_sparse_256_alias_ret_a_spec = do {
   (a, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec256_type;
   p_ptr <- ptr_to_modulus256;
-  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term r0];
-  let new_ret = {{ mulx_mont_sparse_256 a b modulus256 r0 }};
+  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr, crucible_term mont256_r0];
+  let new_ret = {{ mulx_mont_sparse_256 a b modulus256 mont256_r0 }};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
@@ -34,8 +32,8 @@ let sqrx_mont_sparse_256_spec = do {
   ret_ptr <- crucible_alloc vec256_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
   p_ptr <- ptr_to_modulus256;
-  crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term r0];
-  let new_ret = {{ mulx_mont_sparse_256 a a modulus256 r0 }};
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term mont256_r0];
+  let new_ret = {{ mulx_mont_sparse_256 a a modulus256 mont256_r0 }};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
@@ -44,8 +42,8 @@ let fromx_mont_256_spec = do {
   ret_ptr <- crucible_alloc vec256_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
   p_ptr <- ptr_to_modulus256;
-  crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term r0];
-  let new_ret = {{ fromx_mont_256 a modulus256 r0 }};
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term mont256_r0];
+  let new_ret = {{ fromx_mont_256 a modulus256 mont256_r0 }};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
@@ -54,17 +52,14 @@ let redcx_mont_256_spec = do {
   ret_ptr <- crucible_alloc vec256_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec512_type;
   p_ptr <- ptr_to_modulus256;
-  crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term r0];
-  let new_ret = {{ redcx_mont_256 a modulus256 r0 }};
+  crucible_execute_func [ret_ptr, a_ptr, p_ptr, crucible_term mont256_r0];
+  let new_ret = {{ redcx_mont_256 a modulus256 mont256_r0 }};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 // Proofs
 ///////////////////////////////////////////////////////////////////////////////
-
-enable_what4_hash_consing;
-enable_x86_what4_hash_consing;
 
 // mulx_mont_sparse_256
 mulx_mont_sparse_256_ov <- verify_x86 "mulx_mont_sparse_256" mulx_mont_sparse_256_spec do {
