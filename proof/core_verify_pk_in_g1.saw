@@ -117,8 +117,8 @@ let overrides = concat mul_fp12_ovs // fp12.saw
 , vec_select_2Fp_ov
 , vec_is_zero_10fp_ov
 , vec_is_zero_2fp2_ov
-// , vec_is_zero_2fp_is_equal_ov
-, vec_is_zero_2fp_ov
+, vec_is_zero_2fp_is_equal_ov
+// , vec_is_zero_2fp_ov
 , vec_is_equal_fp2_ov
 , POINTonE2_in_g2_ov // subgroup_check_g2.saw
 ];
@@ -180,7 +180,6 @@ blst_core_verify_pk_in_g1_non_null_ov <- custom_verify
   };
 
 blst_core_verify_pk_in_g1_error_ov <- custom_verify_path_sat
-// here there should be only the zero tests and the subgroup tests that matter
   "blst_core_verify_pk_in_g1"
   overrides
   (blst_core_verify_pk_in_g1_error_spec msg_len dst_len aug_len)
@@ -196,7 +195,8 @@ blst_core_verify_pk_in_g1_error_ov <- custom_verify_path_sat
     print_readably;
     goal_num_ite 17 // post-condition
       do {
-        (unint_z3 (concat ["fp12_rep","POINTonE2_invariant","POINTonE1_invariant","fp_invariant","fp2_invariant"] core_verify_pk_in_g1_unints)); // w4_unint_z3 produces a problem on which Z3 does not return
+        // here there should be only the zero tests and the subgroup tests that matter, so we can leave Fp uninterpreted (as long as the is_zero overrides is Fp operations)
+        (unint_z3 (concat ["Fp","fp12_rep","POINTonE2_invariant","POINTonE1_invariant","fp_invariant","fp2_invariant"] core_verify_pk_in_g1_unints)); // w4_unint_z3 produces a problem on which Z3 does not return
       }
       (w4_unint_z3 core_verify_pk_in_g1_unints);
   };
