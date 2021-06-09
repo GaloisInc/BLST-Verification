@@ -40,6 +40,10 @@ let ct_inverse_mod_383_spec = do {
 set_x86_stack_base_align 512;
 
 // ctx_inverse_mod_383
-verify_x86_recent "ctx_inverse_mod_383" ct_inverse_mod_383_spec;
+verify_x86_recent "ctx_inverse_mod_383" ct_inverse_mod_383_spec do {
+  w4;
+};
 
 default_x86_stack_base_align;
+
+exit 1;
