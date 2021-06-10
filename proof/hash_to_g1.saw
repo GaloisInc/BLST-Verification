@@ -533,7 +533,7 @@ let prove_hash_to_curve_E1_opt_impl_equiv_thm' msg_len DST_len aug_len = custom_
 
 // Code override:
 
-let prove_Hash_to_G1_impl_ov msg_len DST_len aug_len = do {
+let prove_Hash_to_G1_impl_ov msg_len DST_len aug_len spec = do {
   hash_to_field_fp_ovs <- for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
   custom_verify
     "Hash_to_G1"
@@ -587,7 +587,6 @@ let prove_hash_to_g1_ov msg_len DST_len aug_len = do {
     do {
       let lemma = run ( prove_hash_to_curve_E1_opt_impl_equiv_thm' msg_len DST_len aug_len );
       simplify (addsimps (concat [lemma] POINTonE1_thms) empty_ss);
-      print_readably;
       w4_unint_z3 ["HashToCurveE1::hash_to_curve_opt"];
     };
 };
@@ -606,11 +605,10 @@ let prove_hash_to_g1_null_aug_ov msg_len DST_len = do {
   custom_verify
     "blst_hash_to_g1"
     [Hash_to_G1_ov]
-    (blst_hash_to_g1_null_aug_spec msg_len DST_len aug_len)
+    (blst_hash_to_g1_null_aug_spec msg_len DST_len)
     do {
       let lemma = run ( prove_hash_to_curve_E1_opt_impl_equiv_thm msg_len DST_len);
       simplify (addsimps (concat [lemma] POINTonE1_thms) empty_ss);
-      print_readably;
       w4_unint_z3 ["HashToCurveE1::hash_to_curve_opt"];
     };
 };
