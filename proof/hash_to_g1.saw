@@ -3,29 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
 
-// Imports
-
-// include "helpers.saw";
-// include "list_utils.saw";
-// include "types.saw";
-
-// m <- llvm_load_module "../build/llvm/libblst.a.bc";
-
-// enable_experimental;
-
-// let do_prove = false;
-
-// include "proof-helpers.saw";
-// include "hash_to_field.saw";
-// include "fp_overrides.saw";
-// include "vect.saw";
-// include "curve_operations.saw";
-// include "ec_mult.saw";
-// include "exp.saw";
-// include "sgn0.saw";
-
-// let do_prove = true;
-
 import "../spec/Parameters.cry";
 import "../spec/ShortWeierstrassCurve.cry";
 HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
@@ -39,20 +16,41 @@ let blst_hash_to_g1_spec msg_len DST_len aug_len = do {
   p_ptr <- llvm_alloc POINTonE1_type;
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
-  (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
+  (aug, aug_ptr) <- if (eval_bool {{ `aug_len == zero}})
+    then (return ({{undefined}}, llvm_null))
+    else (ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8)));
   llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
   new_p <- llvm_fresh_var "new_blst_hash_to_g1_p" POINTonE1_type;
   llvm_points_to p_ptr (llvm_term new_p);
-  llvm_postcond {{ affinify E (POINTonE1_abs new_p) == HE1::hash_to_curve_opt (aug#msg, DST) }};
+  if (eval_bool {{ `aug_len == zero}})
+    then llvm_postcond {{ affinify E (POINTonE1_abs new_p) == HE1::hash_to_curve_opt (msg, DST) }}
+    else llvm_postcond {{ affinify E (POINTonE1_abs new_p) == HE1::hash_to_curve_opt (aug#msg, DST) }};
 };
 
 let blst_hash_to_g1_impl_spec msg_len DST_len aug_len = do {
   p_ptr <- llvm_alloc POINTonE1_type;
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
-  (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
+  (aug, aug_ptr) <- if (eval_bool {{ `aug_len == zero}})
+    then (return ({{undefined}}, llvm_null))
+    else (ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8)));
   llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
-  llvm_points_to p_ptr (llvm_term {{ (POINTonE1_rep (hash_to_curve_opt_impl (aug#msg, DST))) }});
+  if (eval_bool {{ `aug_len == zero}})
+    then llvm_points_to p_ptr (llvm_term {{ (POINTonE1_rep (hash_to_curve_opt_impl (msg, DST))) }})
+    else llvm_points_to p_ptr (llvm_term {{ (POINTonE1_rep (hash_to_curve_opt_impl (aug#msg, DST))) }});
+};
+
+let Hash_to_G1_impl_spec msg_len DST_len aug_len = do {
+  p_ptr <- llvm_alloc POINTonE1_type;
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (DST, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
+  (aug, aug_ptr) <- if (eval_bool {{ `aug_len == zero}})
+    then (return ({{undefined}}, llvm_null))
+    else (ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8)));
+  llvm_execute_func [p_ptr, msg_ptr, llvm_term {{ `msg_len : [64] }}, DST_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
+  if (eval_bool {{ `aug_len == zero}})
+    then llvm_points_to p_ptr (llvm_term {{ (POINTonE1_rep (hash_to_curve_opt_impl (msg, DST))) }})
+    else llvm_points_to p_ptr (llvm_term {{ (POINTonE1_rep (hash_to_curve_opt_impl (aug#msg, DST))) }});
 };
 
 let isogeny_map_to_E1_impl_alias_spec = do {
@@ -110,37 +108,6 @@ recip_sqrt_fp_3mod4_ov <- custom_verify "recip_sqrt_fp_3mod4"
                       simplify fp_exp_simps;
                       w4_unint_z3 (concat ["fp_exp"] fp_unints);
                       };
-
-let simp_then_admit r = admit_cryptol (rewrite (cryptol_ss ()) r);
-
-// some rewrites for printing things readably:
-
-let {{
-  fp_mul = Fp.mul
-  fp_sq = Fp.sq
-  fp_add = Fp.add
-  fp_div = Fp.div
-  fp_zero = Fp.field_zero
-  fp_unit = Fp.field_unit
-  fp_is_equal = Fp.is_equal
-  fp_neg = Fp.neg
-}};
-
-readability_rewrites <- for [
-  {{ \p q -> Fp.mul (p,q) == fp_mul (p,q) }}
-, {{ \p q -> Fp.add (p,q) == fp_add (p,q) }}
-, {{ \p -> Fp.sq p == fp_sq p }}
-, {{ \p -> Fp.neg p == fp_neg p }}
-, {{ \p q -> Fp.div (p, q) == fp_div (p, q) }}
-, {{ Fp.field_zero == fp_zero }}
-, {{ Fp.field_unit == fp_unit }}
-, {{ \x y -> Fp.is_equal (x,y) == fp_is_equal (x,y) }}
-  ] simp_then_admit;
-
-let print_readably =  do {
-    simplify (addsimps readability_rewrites empty_ss); // NOTE this modifies the goal
-    print_goal;
-};
 
 // rewrite rules to get rid of the Aux version of some definitions
 
@@ -267,7 +234,12 @@ let verify_dbl_n_add n = custom_verify "POINTonE1_dbl_n_add" curve_operations_e1
       z3;
   });
 
-// normalization theorems
+dbl_n_add_ovs <- for dbl_n_add_ns verify_dbl_n_add;
+
+let overrides = foldr concat [curve_operations_e1_ovs, dbl_n_add_ovs] [map_to_isogenous_E1_impl_ov, isogeny_map_to_E1_impl_alias_ov];
+
+// Normalization theorems
+
 dbl_n_add_norm_thms <- for dbl_n_add_ns
   ( \ n -> custom_prove_cryptol
   (rewrite (cryptol_ss()) {{ \ p q -> normalize_point Fp (dbl_n_add p `n q) == dbl_n_add p `n q}})
@@ -310,13 +282,9 @@ let hash_to_g1_normalization_thms =
   concat_all [ [isogeny_map_norm_thm, map_to_curve_simple_swu_impl_norm_thm, map_to_g1_impl_norm_thm]
              , dbl_n_add_norm_thms];
 
-dbl_n_add_ovs <- for dbl_n_add_ns verify_dbl_n_add;
-
-let overrides = foldr concat [curve_operations_e1_ovs, dbl_n_add_ovs] [map_to_isogenous_E1_impl_ov, isogeny_map_to_E1_impl_alias_ov];
-
 map_to_g1_nonnull_ov <- custom_verify "map_to_g1" overrides map_to_g1_nonnull_spec
   (do {
-    simplify (addsimps (concat POINTonE1_thms hash_to_g1_normalization_thms)  (cryptol_ss ()));
+    simplify (addsimps (concat POINTonE1_thms hash_to_g1_normalization_thms) (cryptol_ss ()));
     goal_num_ite 11
       (do { // the main safety goal
         unfolding ["map_to_g1_impl","clear_cofactor_impl"];
@@ -503,7 +471,7 @@ let {{ // this is the "else" term in the definition of HE1::iso_map
     y = Fp.mul (y', Fp.div(y_num, y_den))
 }};
 
-// TODO
+// NOTE: we leave this as an assumption at this point
 iso_map_main_lemma <- simp_then_admit {{ \p -> iso_map_nz (affinify_nz p) == if ~Fp.is_equal(p.2, Fp.field_zero) then affinify_nz (isogeny_map_to_E1_impl p) else apply iso_map_nz (affinify_nz p) }};
 //_ <- custom_prove_cryptol {{ \(x:[2]) (y:[2]) (z:[2])-> (iso_map_nz (affinify_nz p) == if ~Fp.is_equal(p.2, Fp.field_zero) then affinify_nz (isogeny_map_to_E1_impl p) else apply iso_map_nz (affinify_nz p) where p = (toInteger x, toInteger y, toInteger z)) }} (quickcheck 64);
 
@@ -574,12 +542,7 @@ mult_by_doubling_thm <- custom_prove_cryptol {{ \p -> affinify E (clear_cofactor
 
 // Finally, we put all the pieces together to prove that the C code is equivalent to the high-level spec
 
-let aug_len = 48; // aug_len should be 96 or 48
-let msg_len = 32;
-let DST_len= 8;
-
-
-final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> affinify E (hash_to_curve_opt_impl (aug#msg,dst)) == HE1::hash_to_curve_opt (aug#msg, dst) }}
+let prove_hash_to_curve_E1_opt_impl_equiv_thm msg_len DST_len = custom_prove_cryptol {{ \(msg:[msg_len][8]) (dst:[DST_len][8]) -> affinify E (hash_to_curve_opt_impl (msg,dst)) == HE1::hash_to_curve_opt (msg, dst) }}
   do {
     unfolding ["hash_to_curve_opt_impl","map_to_g1_impl"];
     simplify (addsimps [mult_by_doubling_thm, isogeny_map_to_E1_impl_thm_z] (cryptol_ss ()));
@@ -589,62 +552,78 @@ final_thm <- custom_prove_cryptol {{ \(msg:[msg_len][8]) (aug:[aug_len][8]) (dst
     w4_unint_z3 (concat fp_unints ["HE1::iso_map","HE1::map_to_curve_simple_swu","HE1::clear_cofactor","HashToCurveE1::hash_to_field"]);
   };
 
-/* These lemmas are a bit delicate.  The term generated by the indexing operations contain
-  if-then-else, doing a bounds check on the index.  We need to apply this lemma before that
-  conditional is hoisted outside the `Fp.normalize`, as occurs when `fp_simpset` is used.
+// The final overrides:
 
-  The lemmas are true because `hash_to_field` explicitly does a modular reduction by `p`,
-  so the results are always proper field elements.
-*/
-normalize_hash_lemmas <- for
- [ {{ \ (msg: [msg_len+aug_len][8]) (dst:[DST_len][8]) -> (Fp.normalize u == u where u = (HE1::hash_to_field`{count=2} msg dst)@0) }}
- , {{ \ (msg: [msg_len+aug_len][8]) (dst:[DST_len][8]) -> (Fp.normalize u == u where u = (HE1::hash_to_field`{count=2} msg dst)@1) }}
- ] simp_then_admit;
- 
-// And we're ready for the final overrides:
-
-// TODO: factor out common pieces below
-
-// abstract version:
-hash_to_g1_ov <- custom_verify
-  "blst_hash_to_g1"
-  (concat [map_to_g1_nonnull_ov] hash_to_field_fp_ovs)
-  (blst_hash_to_g1_spec msg_len DST_len aug_len)
-  (do {
-    let to_impl = run (
-      custom_prove_cryptol {{ \ (msg:[msg_len][8]) (aug:[aug_len][8]) (dst:[DST_len][8]) -> HE1::hash_to_curve_opt (aug#msg, dst) == affinify E (hash_to_curve_opt_impl (aug#msg,dst)) }}
-      do {
-        simplify (addsimp final_thm empty_ss);
-        w4_unint_z3 ["HE1::hash_to_curve_opt"];
-      }
-    );
-    simplify (addsimp to_impl empty_ss);
-    unfolding ["hash_to_curve_opt_impl","map"];
-    simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
-    let map_size_2_term = parse_core "\\ (f : Integer -> Vec 6 (Vec 64 Bool)) -> \\ (y : Vec 2 Integer) -> map Integer (Vec 6 (Vec 64 Bool)) f 2 y";
-    let map_size_2_eq_term = beta_reduce_term {{ \x -> map_size_2_term (\ (y: Integer) -> fp_rep y) x == [fp_rep (x@0), fp_rep (x@1)]}};
-    let map_size_2_thm = run (prove_cryptol map_size_2_eq_term []);
-    simplify (addsimps [map_size_2_thm] empty_ss); // get rid of map
-    rw_with POINTonE1_thms;
-    rw_with (concat fp_rep_thms normalize_hash_lemmas);
-    simplify (addsimps (concat_all [hash_to_g1_normalization_thms, POINTonE1_thms]) fp_simpset);
-    simplify remove_higher_order_function_simpset;
-    w4_unint_z3 ["map_to_g1_impl","HashToCurveE1::hash_to_field","affinify_E"];
+let prove_Hash_to_G1_impl_ov msg_len DST_len aug_len = do {
+  hash_to_field_fp_ov <- verify_hash_to_field_for aug_len msg_len DST_len 2; // we need two fp elements
+  custom_verify
+    "Hash_to_G1"
+    [map_to_g1_nonnull_ov, hash_to_field_fp_ov]
+    (Hash_to_G1_impl_spec msg_len DST_len aug_len)
+    (do {
+      // The lemmas are true because `hash_to_field` explicitly does a modular reduction by `p`, so the results are always proper field elements:
+      let normalize_hash_lemmas = run ( for
+       [ {{ \ (msg: [msg_len+aug_len][8]) (dst:[DST_len][8]) -> (Fp.normalize u == u where [u,_] = HE1::hash_to_field`{count=2} msg dst) }}
+       , {{ \ (msg: [msg_len+aug_len][8]) (dst:[DST_len][8]) -> (Fp.normalize u == u where [_,u] = HE1::hash_to_field`{count=2} msg dst) }}
+       ] simp_then_admit );
+      unfolding ["hash_to_curve_opt_impl","map"];
+      simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
+      let map_size_2_term = parse_core "\\(f : Integer -> Vec 6 (Vec 64 Bool)) -> \\(y : Vec 2 Integer) -> map Integer (Vec 6 (Vec 64 Bool)) f 2 y";
+      let map_size_2_eq_term = beta_reduce_term {{ \x -> (map_size_2_term (\(y : Integer) -> fp_rep y) x == [fp_rep a, fp_rep b] where [a,b] = x) }};
+      let map_size_2_thm = run (prove_cryptol map_size_2_eq_term []);
+      rw_with [map_size_2_thm];
+      rw_with (concat fp_rep_thms normalize_hash_lemmas);
+      w4_unint_z3 ["map_to_g1_impl","HashToCurveE1::hash_to_field"];
   });
+};
 
-// concrete version:
-hash_to_g1_impl_ov <- custom_verify
-  "blst_hash_to_g1"
-  (concat [map_to_g1_nonnull_ov] hash_to_field_fp_ovs)
-  (blst_hash_to_g1_impl_spec msg_len DST_len aug_len)
-  (do {
-    unfolding ["hash_to_curve_opt_impl","map"];
-    simplify (cryptol_ss ()); // rewrite Cryptol map to SAW-core map
-    let map_size_2_term = parse_core "\\ (f : Integer -> Vec 6 (Vec 64 Bool)) -> \\ (y : Vec 2 Integer) -> map Integer (Vec 6 (Vec 64 Bool)) f 2 y";
-    let map_size_2_eq_term = beta_reduce_term {{ \x -> map_size_2_term (\ (y : Integer) -> fp_rep y) x == [fp_rep (x@0), fp_rep (x@1)]}};
-    let map_size_2_thm = run (prove_cryptol map_size_2_eq_term []);
-    simplify (addsimps [map_size_2_thm] empty_ss); // get rid of map
-    rw_with (concat fp_rep_thms normalize_hash_lemmas);
-    w4_unint_z3 ["map_to_g1_impl","HashToCurveE1::hash_to_field"];
-  });
+let prove_hash_to_g1_impl_ov msg_len DST_len aug_len = do {
+  Hash_to_G1_ov <- prove_Hash_to_G1_impl_ov msg_len DST_len aug_len;
+  custom_verify
+    "blst_hash_to_g1"
+    [Hash_to_G1_ov]
+    (blst_hash_to_g1_impl_spec msg_len DST_len aug_len)
+    (w4_unint_z3 ["hash_to_curve_opt_impl"]);
+};
 
+// TODO below
+
+let prove_hash_to_g1_ov msg_len DST_len aug_len = do {
+  Hash_to_G1_ov <- prove_Hash_to_G1_impl_ov msg_len DST_len aug_len;
+  custom_verify //test
+    "blst_hash_to_g1"
+    [Hash_to_G1_ov]
+    (blst_hash_to_g1_spec msg_len DST_len aug_len)
+    do {
+      rw_with POINTonE1_thms;
+      unfolding ["hash_to_curve_opt_impl"];
+      rw_with hash_to_g1_normalization_thms;
+      let lemma = run (prove_hash_to_curve_E1_opt_impl_equiv_thm (eval_size {| msg_len + aug_len |}) DST_len );
+      // we have to get back hash_to_curve_opt_impl in order to apply the lemma:
+      let r = run (do {
+        if (eval_bool {{ `aug_len == zero}})
+          then custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (dst:[DST_len][8]) -> map_to_g1_impl (HE1::hash_to_field`{count=2} msg dst) == hash_to_curve_opt_impl (msg,dst) }}) (w4_unint_z3 ["map_to_g1_impl","HE1::hash_to_field"])
+          else custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \(aug:[aug_len][8]) (msg:[msg_len][8]) (dst:[DST_len][8]) -> map_to_g1_impl (HE1::hash_to_field`{count=2} (aug#msg) dst) == hash_to_curve_opt_impl (aug#msg,dst) }}) (w4_unint_z3 ["map_to_g1_impl","HE1::hash_to_field"]);
+      });
+      rw_with [r];
+      simplify (addsimps (concat [lemma] POINTonE1_thms) empty_ss);
+      w4_unint_z3 ["HashToCurveE1::hash_to_curve_opt"];
+    };
+};
+
+let aug_len = 96; // in the message-augmentation scheme, this is a public key, hence 96 bytes
+let msg_len = 32;
+let DST_len= 43; // "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_" in the chosen suite
+
+prove_hash_to_g1_impl_ov msg_len DST_len aug_len;
+prove_hash_to_g1_ov msg_len DST_len aug_len;
+prove_hash_to_g1_impl_ov msg_len DST_len 0;
+prove_hash_to_g1_ov msg_len DST_len 0;
+
+// another value of msg_len:
+let msg_len = 27;
+
+prove_hash_to_g1_impl_ov msg_len DST_len aug_len;
+prove_hash_to_g1_ov msg_len DST_len aug_len;
+prove_hash_to_g1_impl_ov msg_len DST_len 0;
+prove_hash_to_g1_ov msg_len DST_len 0;
