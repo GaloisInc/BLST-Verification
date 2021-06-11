@@ -2031,84 +2031,84 @@
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:172:26",
+    "loc": "/workdir/proof/hash_to_field.saw:172:1",
     "method": "blst_sha256_block_data_order",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_field.saw:172:26",
+    "loc": "/workdir/proof/hash_to_field.saw:172:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_field.saw:172:26",
+    "loc": "/workdir/proof/hash_to_field.saw:172:1",
     "method": "hash_to_field",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:173:35",
+    "loc": "/workdir/proof/hash_to_field.saw:173:1",
     "method": "blst_sha256_block_data_order",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_field.saw:173:35",
+    "loc": "/workdir/proof/hash_to_field.saw:173:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_field.saw:173:35",
+    "loc": "/workdir/proof/hash_to_field.saw:173:1",
     "method": "hash_to_field",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:195:27",
+    "loc": "/workdir/proof/hash_to_field.saw:195:1",
     "method": "blst_sha256_block_data_order",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_field.saw:195:27",
+    "loc": "/workdir/proof/hash_to_field.saw:195:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_field.saw:195:27",
+    "loc": "/workdir/proof/hash_to_field.saw:195:1",
     "method": "hash_to_field",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:196:36",
+    "loc": "/workdir/proof/hash_to_field.saw:196:1",
     "method": "blst_sha256_block_data_order",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_field.saw:196:36",
+    "loc": "/workdir/proof/hash_to_field.saw:196:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "verified",
-    "loc": "/workdir/proof/hash_to_field.saw:196:36",
+    "loc": "/workdir/proof/hash_to_field.saw:196:1",
     "method": "hash_to_field",
     "type": "method",
     "specification": "unknown"
