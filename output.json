@@ -2031,84 +2031,84 @@
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:174:26",
+    "loc": "/workdir/proof/hash_to_field.saw:172:26",
     "method": "blst_sha256_block_data_order",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:174:26",
+    "status": "verified",
+    "loc": "/workdir/proof/hash_to_field.saw:172:26",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:174:26",
+    "status": "verified",
+    "loc": "/workdir/proof/hash_to_field.saw:172:26",
     "method": "hash_to_field",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:175:35",
+    "loc": "/workdir/proof/hash_to_field.saw:173:35",
     "method": "blst_sha256_block_data_order",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:175:35",
+    "status": "verified",
+    "loc": "/workdir/proof/hash_to_field.saw:173:35",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:175:35",
+    "status": "verified",
+    "loc": "/workdir/proof/hash_to_field.saw:173:35",
     "method": "hash_to_field",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:199:27",
+    "loc": "/workdir/proof/hash_to_field.saw:195:27",
     "method": "blst_sha256_block_data_order",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:199:27",
+    "status": "verified",
+    "loc": "/workdir/proof/hash_to_field.saw:195:27",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:199:27",
+    "status": "verified",
+    "loc": "/workdir/proof/hash_to_field.saw:195:27",
     "method": "hash_to_field",
     "type": "method",
     "specification": "unknown"
   },
   {
     "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:200:36",
+    "loc": "/workdir/proof/hash_to_field.saw:196:36",
     "method": "blst_sha256_block_data_order",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:200:36",
+    "status": "verified",
+    "loc": "/workdir/proof/hash_to_field.saw:196:36",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
-    "loc": "/workdir/proof/hash_to_field.saw:200:36",
+    "status": "verified",
+    "loc": "/workdir/proof/hash_to_field.saw:196:36",
     "method": "hash_to_field",
     "type": "method",
     "specification": "unknown"
@@ -2198,14 +2198,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:557:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:557:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2233,14 +2233,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:558:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:558:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2268,14 +2268,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:559:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:559:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2303,14 +2303,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:560:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:560:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2338,14 +2338,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:565:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:565:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2373,14 +2373,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:566:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:566:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2408,14 +2408,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:567:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:567:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2443,14 +2443,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:568:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g1.saw:568:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2492,14 +2492,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:365:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:365:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2527,14 +2527,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:366:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:366:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2562,14 +2562,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:368:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:368:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2597,14 +2597,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:369:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:369:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2632,14 +2632,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:374:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:374:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2667,14 +2667,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:375:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:375:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2702,14 +2702,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:377:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:377:1",
     "method": "hash_to_field",
     "type": "method",
@@ -2737,14 +2737,14 @@
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:378:1",
     "method": "expand_message_xmd",
     "type": "method",
     "specification": "unknown"
   },
   {
-    "status": "assumed",
+    "status": "verified",
     "loc": "/workdir/proof/hash_to_g2.saw:378:1",
     "method": "hash_to_field",
     "type": "method",
