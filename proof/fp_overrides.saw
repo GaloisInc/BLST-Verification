@@ -23,7 +23,7 @@ let use_concrete_method = true;
 
 import "../spec/Parameters.cry";
 import "../spec/PrimeField.cry";
-import "../spec/FieldExtras.cry" (mul_by_3  mul_by_8);
+import "../spec/FieldExtras.cry" (mul_by_2 mul_by_3 mul_by_4 mul_by_6 mul_by_8);
 import "../spec/implementation/Field.cry";
 import "../spec/implementation/CryptolHelpers.cry";
 
@@ -122,11 +122,13 @@ let binop_alias_1_2_3_spec name llvm_type inv rep abs op = do {
 
 // .. theorems (useful rewrites)
 
-// abs and rep theorems, good rewrites, will hold in the `prime_field` model but not the others
+// abs and rep theorems
+
 fp_rep_thms <- for
   [ {{ \x -> fp_invariant (fp_rep x) == True }}
-  , {{ \x -> fp_abs (fp_rep x) == x }}
   , {{ \x -> fp_rep (fp_abs x) == if fp_invariant x then x else fp_normalize x}}
+  //, {{ \x -> fp_rep (fp_abs x) == fp_normalize x}} // maybe consider this version of rep_abs?
+  , {{ \x -> fp_abs (fp_rep x) == Fp.normalize x }}
   ] admit_cryptol;
 
 // a conditional rewrite for normalization.  This uses "apply" to avoid having
@@ -137,6 +139,10 @@ fp_rep_thms <- for
 fp_normalize_thm <- admit_cryptol
   {{ \x -> fp_normalize x == if fp_invariant x then x else apply fp_normalize x }};
 
+fp_abs_normalize_thm <- prove_cryptol
+  {{ \x -> Fp.normalize x == if Fp.is_val x then x else apply Fp.normalize x }} [];
+
+/*
 // we sometimes need to undo SAW's rip-and-restitching of vectors.  It is a bit tricky 
 let at0 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 0";
 let at1 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 1";
@@ -144,8 +150,9 @@ let at2 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 2";
 let at3 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 3";
 let at4 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 4";
 let at5 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 5";
-
-unrip_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[6][64]) -> [at0 x, at1 x, at2 x, at3 x, at4 x, at5 x] == x }}) [];
+*/
+// unrip_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[6][64]) -> [at0 x, at1 x, at2 x, at3 x, at4 x, at5 x] == x }}) [];
+unrip_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[6][64]) -> ([x0,x1,x2,x3,x4,x5] == x where [x0,x1,x2,x3,x4,x5] = x)}}) [];
 
 // ... and sometimes the rip-and-restitch has if-then-else pushed inside, so here we hoist out
 seq_ite_thm <-
@@ -173,14 +180,79 @@ fp_rep_ite_thm <- hoist {{fp_rep}} ["fp_rep"] ;
 
 fp_abstract_invariant_thm <- prove_cryptol {{ \x -> Fp.is_val (fp_abs x) == True }} [];
 
-let fp_simpset = addsimps (concat fp_rep_thms
-                           [ fp_abs_ite_thm, fp_invariant_ite_thm, fp_rep_ite_thm
-                           , fp_abstract_invariant_thm
-                           , unrip_thm, seq_ite_thm
-                           ])  (cryptol_ss ());
+fp_is_val_thms <- for
+  [ {{ Fp.is_val Fp.field_zero == True }}
+  , {{ Fp.is_val Fp.field_unit == True }}
+  , {{ \ x y -> Fp.is_val (Fp.mul (x, y)) == True }}
+  , {{ \ x   -> Fp.is_val (Fp.sq x) == True }}
+  , {{ \ x y -> Fp.is_val (Fp.add (x, y)) == True }}
+  , {{ \ x   -> Fp.is_val (Fp.neg x) == True }}
+  , {{ \x -> Fp.is_val (Fp.normalize x) == True }}
+  ] (\ t -> prove_cryptol t []);
+
+fp_normalization_thms <- for
+  // ... eliminate normalization in a argument position
+  [ {{ \ x y -> Fp.mul (Fp.normalize x, y) == Fp.mul (x, y) }}
+  , {{ \ x y -> Fp.mul (x, Fp.normalize y) == Fp.mul (x, y) }}
+  , {{ \ x   -> Fp.sq (Fp.normalize x) == Fp.sq x }}
+  , {{ \ x y -> Fp.add (Fp.normalize x, y) == Fp.add (x, y) }}
+  , {{ \ x y -> Fp.sub (x, Fp.normalize y) == Fp.sub (x, y) }}
+  , {{ \ x y -> Fp.sub (Fp.normalize x, y) == Fp.sub (x, y) }}
+  , {{ \ x y -> Fp.add (x, Fp.normalize y) == Fp.add (x, y) }}
+  , {{ \ x   -> Fp.neg (Fp.normalize x) == Fp.neg x }}
+  , {{ \ x   -> Fp.normalize (Fp.normalize x) == Fp.normalize x }}
+  , {{ \x    -> mul_by_2 Fp (Fp.normalize x) == mul_by_2 Fp x }}
+  , {{ \x    -> mul_by_3 Fp (Fp.normalize x) == mul_by_3 Fp x }}
+  , {{ \x    -> mul_by_4 Fp (Fp.normalize x) == mul_by_4 Fp x }}
+  , {{ \x    -> mul_by_6 Fp (Fp.normalize x) == mul_by_6 Fp x }}
+  , {{ \x    -> mul_by_8 Fp (Fp.normalize x) == mul_by_8 Fp x }}
+  // ... results are normalized
+  , {{ \ x y -> Fp.normalize (Fp.mul (x, y)) == Fp.mul (x, y) }}
+  , {{ \ x   -> Fp.normalize (Fp.sq x) == Fp.sq x }}
+  , {{ \ x y -> Fp.normalize (Fp.add (x, y)) == Fp.add (x, y) }}
+  , {{ \ x y -> Fp.normalize (Fp.sub (x, y)) == Fp.sub (x, y) }}
+  , {{ \ x   -> Fp.normalize (Fp.neg x) == Fp.neg x }}
+  , {{          Fp.normalize Fp.field_zero == Fp.field_zero }}
+  , {{          Fp.normalize Fp.field_unit == Fp.field_unit }}
+  , {{ \x    -> Fp.normalize (mul_by_2 Fp x) == mul_by_2 Fp x }}
+  , {{ \x    -> Fp.normalize (mul_by_3 Fp x) == mul_by_3 Fp x }}
+  , {{ \x    -> Fp.normalize (mul_by_4 Fp x) == mul_by_4 Fp x }}
+  , {{ \x    -> Fp.normalize (mul_by_6 Fp x) == mul_by_6 Fp x }}
+  , {{ \x    -> Fp.normalize (mul_by_8 Fp x) == mul_by_8 Fp x }}
+  ] (\t -> prove_cryptol t []);
+
+// not currently provable
+fp_is_val_div_thm <- admit_cryptol {{ \ x y -> Fp.is_val (Fp.div (x, y)) == True }};
+fp_elim_norm_div_thms <- for
+  [ {{ \ x y -> Fp.div (Fp.normalize x, y) == Fp.div (x, y) }}
+  , {{ \ x y -> Fp.div (x, Fp.normalize y) == Fp.div (x, y) }}
+  ] admit_cryptol;
+
+fp_rep_normalize_thm <- custom_prove_cryptol {{ \x -> fp_rep (Fp.normalize x) == fp_rep x }} z3;
+
+fp_is_equal_elim_thm <- prove_cryptol {{ \x y -> Fp.is_equal (x,y) == (x==y) }} [];
+
+fp_normalize_ite_thm <- hoist {{fp_normalize}} ["fp_normalize"] ;
+fp_abs_normalize_ite_thm <- hoist {{Fp.normalize}} ["Fp"] ;
+
+// Cannot write general rules for F_sum, F_prod, F_expt, and k_expt as they are length-polymorphic
+// so they will need to be done as needed in the later proofs.  All of them should absorb Fp.normalize
+
+let fp_simpset = addsimps (concat_all
+                           [ fp_rep_thms
+                           , fp_is_val_thms
+                           , fp_normalization_thms
+                           , fp_elim_norm_div_thms
+                           , [ fp_abs_ite_thm, fp_invariant_ite_thm, fp_rep_ite_thm
+                             , fp_abstract_invariant_thm, fp_is_val_div_thm
+                             , unrip_thm, seq_ite_thm, fp_rep_normalize_thm
+                             , fp_normalize_ite_thm, fp_abs_normalize_ite_thm
+                             ]])   (add_prelude_eqs [ "ite_true"](cryptol_ss ()));
 
 let apply_fp_rewrites = simplify fp_simpset;
 
+let extended_fp_simpset = (addsimp fp_is_equal_elim_thm fp_simpset);
+let apply_extended_fp_rewrites = simplify extended_fp_simpset;
 
 // ... we also need some algebraic rewrites
 

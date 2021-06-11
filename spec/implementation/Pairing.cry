@@ -57,7 +57,7 @@ import Frobenius (fp12_conjugate)
 // import Pairing
 import implementation::Types (Size_t)
 import implementation::Fp12 (fp6_to_fp12_xy00z0)
-import implementation::CurveOperation (point_double, point_add_affine)
+import implementation::CurveOperation (point_double, point_add_affine, normalize_point, normalize_affine_point)
 
 // Step (1)
 
@@ -264,7 +264,9 @@ miller_loop_opt_checked P Q =
 // This version avoids the extra check for z1 == 0, relative to point_add_affine
 
 point_add_affine_alt: {t} FieldRep t -> EC::ProjectivePoint t -> EC::AffinePoint t -> EC::ProjectivePoint t
-point_add_affine_alt F (x1,y1,z1) (x2,y2) = p3 where
+point_add_affine_alt F p1 p2 = p3 where
+    (x1, y1, z1) = normalize_point F p1
+    (x2, y2) = normalize_affine_point F p2
     z1z1 = F.sq z1
     h = F.mul(x2,z1z1)
     r = F.mul(F.mul(y2,z1), z1z1)

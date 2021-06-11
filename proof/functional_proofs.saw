@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
+enable_experimental;
+
 include "helpers.saw";
 include "list_utils.saw";
 include "types.saw";

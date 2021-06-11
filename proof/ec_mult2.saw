@@ -7,15 +7,11 @@ import "../spec/ShortWeierstrassCurve.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/CurveOperation.cry";
 
-let at0_2 = parse_core "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6 (Vec 64 Bool)) x 0";
-let at1_2 = parse_core "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6 (Vec 64 Bool)) x 1";
+unrip_thm_2 <- prove_cryptol (rewrite (cryptol_ss ())
+   {{ \ (x:[2][6][64]) -> ([x0, x1] == x where [x0,x1] = x)}}) [];
 
-unrip_thm_2 <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[2][6][64]) -> [at0_2 x, at1_2 x] == x}}) [];
-
-let fp2_at0 = parse_core "\\ (x:(Vec 2 Integer)) -> at 2 Integer x 0";
-let fp2_at1 = parse_core "\\ (x:(Vec 2 Integer)) -> at 2 Integer x 1";
-
-fp2_unrip_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[2]Integer) -> [fp2_at0 x, fp2_at1 x] == x }}) [];
+fp2_unrip_thm <- prove_cryptol (rewrite (cryptol_ss ())
+  {{ \ (x:[2]Integer) -> ([x0, x1] == x where [x0,x1] = x)}}) [];
 
 seq_ite_2_thm <-
   prove_cryptol
@@ -117,6 +113,7 @@ is_point_projective_E'_thm <- prove_cryptol {{  \p1 -> is_point_projective E' p1
 
 let e2_unints = ["POINTonE2_abs", "POINTonE2_affine_abs", "POINTonE2_invariant", "POINTonE2_affine_invariant", "POINTonE2_rep", "Fp_2", "E'", "is_point_affine_E'", "is_point_projective_E'", "projectify_E'", "affinify_E'", "is_point_O_E'", "neg_E'", "add_E'", "point_neg_fp2", "point_double_fp2", "point_dadd_affine_fp2", "point_dadd_fp2", "point_add_affine_fp2", "point_add_fp2"];
 
+// TODO: rename to avoid clobbering the simpset for Fp and E.
 let remove_higher_order_function_simpset =
   addsimps [ point_add_fp2_thm, point_dadd_fp2_thm, point_double_fp2_thm, point_neg_fp2_thm
            , point_add_affine_fp2_thm, point_dadd_affine_fp2_thm
@@ -125,6 +122,23 @@ let remove_higher_order_function_simpset =
            , is_point_affine_E'_thm, is_point_projective_E'_thm
            , is_point_O_E'_thm
            ] empty_ss;
+
+restore_higher_order_function_fp2_thms <- for
+  [ {{  \p1 p2 -> point_add_fp2 p1 p2 == point_add Fp_2 p1 p2  }}
+  , {{  \p1 p2 -> point_add_affine_fp2 p1 p2 == point_add_affine Fp_2 p1 p2  }}
+  , {{  \p1 p2 a4 c -> point_dadd_fp2 p1 p2 a4 c  == point_dadd Fp_2 p1 p2 a4 c }}
+  , {{  \p1 p2 -> point_dadd_affine_fp2 p1 p2 == point_dadd_affine Fp_2 p1 p2  }}
+  , {{  \p1 -> point_double_fp2 p1 == point_double Fp_2 p1  }}
+  , {{  \p1 -> point_neg_fp2 p1 == point_neg Fp_2 p1  }}
+  , {{  \p1 p2 -> add_E' p1 p2 == add E' p1 p2  }}
+  , {{  \p1 p2 -> add'_E' p1 p2 == add' E' p1 p2  }}
+  , {{  \p1 -> neg_E' p1 == neg E' p1  }}
+  , {{  \p1 -> is_point_O_E' p1 == is_point_O E' p1  }}
+  , {{  \p1 -> affinify_E' p1 == affinify E' p1  }}
+  , {{  \p1 -> projectify_E' p1 == projectify E' p1  }}
+  , {{  \p1 -> is_point_affine_E' p1 == is_point_affine E' p1  }}
+  , {{  \p1 -> is_point_projective_E' p1 == is_point_projective E' p1  }}
+  ] ( \ t -> prove_cryptol t ["Fp_2", "E'"]);
 
 // more rules to hoist `if`-terms
 
@@ -196,7 +210,7 @@ let POINTonE2_precompute_w5_spec = do {
     crucible_points_to row_ptr (crucible_term {{ precomputed_table (POINTonE2_abs point) }} );
     };
 
- POINTonE2_precompute_w5_ov <-
+POINTonE2_precompute_w5_ov <-
    custom_verify "POINTonE2_precompute_w5" ec_mult_overrides POINTonE2_precompute_w5_spec
      do { unfolding ["precomputed_table"];
           simplify (addsimps POINTonE2_thms empty_ss);
@@ -298,15 +312,28 @@ bpt_lemma5 <- prove_cryptol
   (rewrite (cryptol_ss ()) {{\p -> point_neg_fp2 (small_nonnegative_mult 0 p) == small_nonnegative_mult 0 p }})
   [];
 
+hoist_fp2_triple_thm <- prove_cryptol (rewrite (cryptol_ss ())
+     {{ \ c (x:(t_Fp_2, t_Fp_2, t_Fp_2)) y -> ((if c then x0 else y0, if c then x1 else y1, if c then x2 else y2) ==
+                        if c then x else y where (x0,x1,x2) = x; (y0,y1,y2) = y) }}) [];
+
+
+normalize_small_nonnegative_mult2_thm <- admit_cryptol // testing gives way-too-large integers m.
+  {{ \ m p -> normalize_point Fp_2 (small_nonnegative_mult m p) ==
+              small_nonnegative_mult m (normalize_point Fp_2 p) }};
+
+
 booth'_precomputed_table_thm <- custom_prove_cryptol 
-  {{ \p1 booth_index -> POINTonE2_abs (booth' (precomputed_table p1) booth_index) ==
-                        small_mult (booth_exponent booth_index) p1 }}
+  {{ \p1 booth_index -> POINTonE2_abs (booth' (precomputed_table (POINTonE2_abs p1)) booth_index) ==
+                        small_mult (booth_exponent booth_index) (POINTonE2_abs p1) }}
   do { unfolding ["booth'", "booth_lookup"];
        simplify (addsimp bpt_lemma3 (cryptol_ss()));
        unfolding ["booth_exponent", "small_mult"];
+       rw_with POINTonE2_thms;
        simplify (addsimp point_neg_fp2_thm empty_ss);
        goal_eval_unint (concat ["small_nonnegative_mult"] ec_mult_unints);
-       simplify (addsimps (concat [bpt_lemma5, bpt_lemma4] POINTonE2_thms) fp2_simpset_x);
+       simplify (addsimps (concat [bpt_lemma5, bpt_lemma4, normalize_small_nonnegative_mult2_thm
+                                  , hoist_fp2_triple_thm]
+                          POINTonE2_thms) fp2_simpset_x);
        w4_unint_z3 (concat ["small_nonnegative_mult"] ec_mult_unints);};
 
 
@@ -414,10 +441,12 @@ let booth_lemma_2 n_bits = prove_cryptol
 
 // We will only be able to prove things for specific concrete sizes
 
+/*
 let {{
   scalar_value: {n_bits, n_bytes} (fin n_bytes, n_bits <= 8*n_bytes) => [n_bytes][8] -> Integer
   scalar_value bytes = toInt (drop`{back=n_bits} (join (reverse bytes)))
   }};
+*/
 
 let POINTonE2_mult_w5_spec n_bytes bits = do {
     ret_ptr <- crucible_alloc  POINTonE2_type;

@@ -79,8 +79,8 @@ POINTonE1_from_Jacobian_ov <- custom_verify "POINTonE1_from_Jacobian"
   POINTonE1_from_Jacobian_spec
   do {
     (simplify (addsimps [mul_commutes_fp_thm, reciprocal_div_fp_thm] empty_ss));
-    unfolding ["POINTonE1_affine_invariant", "POINTonE1_affine_rep"];
-    (apply_fp_rewrites);
+    unfolding ["POINTonE1_affine_invariant", "POINTonE1_affine_rep", "apply"];
+    apply_fp_rewrites;
     w4_unint_z3 fp_unints;
   };
 
@@ -122,7 +122,7 @@ let POINTonE1_Compress_BE_spec is_point_affine = do {
 let POINTonE1_Compress_BE_proof = do {
      // Unfolding needed for fp rewrites to apply
      unfolding ["POINTonE1_affine_abs", "POINTonE1_affine_rep", "POINTonE1_invariant"];
-     (apply_fp_rewrites);
+     simplify (addsimps POINTonE1_thms fp_simpset); // (apply_fp_rewrites);
      simplify (addsimp one_mont_p_abs_thm empty_ss);
      w4_unint_z3 ["POINTonE1_abs", "POINTonE1_invariant", "Fp", "fp_abs", "I2OSP48"];
   };

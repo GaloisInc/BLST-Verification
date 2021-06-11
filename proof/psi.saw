@@ -36,6 +36,9 @@ fp2_frobenius_rev_thm <- prove_cryptol {{ \ x y -> [Fp.neg x, y] == fp2_frobeniu
 // We define `qi_x_imp` here, which corresponds fairly closely to the code.
 // We will prove it equivalent to `qi_x_abs`, which is a more abstract and
 // compact description of the effect defined in Psi.cry
+let fp2_at0 = parse_core "\\ (x:(Vec 2 Integer)) -> at 2 Integer x 0";
+let fp2_at1 = parse_core "\\ (x:(Vec 2 Integer)) -> at 2 Integer x 1";
+
 let {{
   // qi_x_imp' x = [Fp.neg (Fp.mul (x@0, psi_c1@0)), Fp.mul (x@1, psi_c1@0)]
   qi_x_imp' x = [Fp.neg (Fp.mul (fp2_at0 x, psi_c1@0)), Fp.mul (fp2_at1 x, psi_c1@0)]
@@ -215,7 +218,8 @@ psi_equiv_thm <- admit_cryptol {{ \P -> psi (affinify E' P) == affinify E' (psi_
 psi_equiv_thm' <- admit_cryptol {{ \P -> affinify E' (psi_imp P) == psi (affinify E' P) }} ;
 
 POINT_on_E2_fp2_rep_thm <- custom_prove_cryptol
-  {{ \x y z -> POINTonE2_abs (fp2_rep x, fp2_rep y, fp2_rep z) == (x,y,z) }}
+  {{ \x y z -> POINTonE2_abs (fp2_rep x, fp2_rep y, fp2_rep z) ==
+               (n x, n y, n z) where n = Fp_2.normalize }}
   do { unfolding ["POINTonE2_abs"]; simplify fp2_simpset; w4_unint_z3 fp2_unints; } ;
 
 let psi_spec = do {
@@ -258,7 +262,8 @@ psi_ov <- custom_verify "psi"
     psi_spec
     do { simplify (addsimp psi_equiv_thm empty_ss);
          simplify (addsimps [fp2_invariant_k_cx_thm, fp2_invariant_k_cy_thm
-                            ,fp2_abs_k_cx_thm, fp2_abs_k_cy_thm, POINT_on_E2_fp2_rep_thm] fp2_simpset);
+                            ,fp2_abs_k_cx_thm, fp2_abs_k_cy_thm, POINT_on_E2_fp2_rep_thm]
+                            fp2_simpset);
          unfolding [ "psi_imp", "projective_pair_to_jacobian_imp"
                    , "psi_projective_imp", "jacobian_to_projective_pair"];
          simplify (addsimps fp2_alg_thms fp2_simpset);

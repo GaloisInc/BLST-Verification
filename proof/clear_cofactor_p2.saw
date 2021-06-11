@@ -29,13 +29,13 @@ times_minus_z_rev_thm <- custom_prove_cryptol
     w4_unint_z3 ["affinify_E'", "E'", "POINTonE2_abs", "e2_scalar_mult"];
   };
 
-// Prove times_minus_z is equivalent to e2_scalar_mult
 times_minus_z_thm <- custom_prove_cryptol
   {{ \P -> affinify E' (times_minus_z P) == e2_scalar_mult pos_c1 (affinify E' P) }}
   do {
-    simplify (addsimps [times_minus_z_rev_thm, affinify_POINTonE2_times_minus_z_thm, affinify_E'_thm] empty_ss);
+    simplify (addsimps [times_minus_z_rev_thm, affinify_POINTonE2_times_minus_z_thm] empty_ss);
     simplify (addsimps POINTonE2_thms empty_ss);
-    w4_unint_z3 ["e2_scalar_mult", "affinify_E'"];
+    rw_with_1 affinify_E'_thm;
+    w4_unint_z3 ["e2_scalar_mult", "affinify_E'", "POINTonE2_abs"];
   };
 
 // Algebraic theorems
@@ -87,16 +87,16 @@ e2_scalar_mult_inv_thm <- admit_cryptol
 
 // Prove clear_cofactor_bls12381_g2 (RFC spec) is equivalent to
 // clear_cofactor_E2_impl (spec based on C clear_cofactor_E2 function).
-
 clear_cofactor_E2_equiv_thm <- custom_prove_cryptol
   {{ \P -> clear_cofactor_bls12381_g2 (affinify E' P) ==
       if AffinePoint_Fp_2_invariant (affinify E' P)
       then affinify E' (clear_cofactor_E2_impl P)
       else apply clear_cofactor_bls12381_g2 (affinify E' P) }}
-  do {
+ do {
     unfolding ["clear_cofactor_bls12381_g2", "clear_cofactor_E2_impl"];
     // Affinify goal
-    simplify (addsimps (concat [psi_psi_double_equiv_thm, times_minus_z_thm, psi_equiv_thm'] e2_curve_op_thms) (cryptol_ss()));
+    simplify (addsimps (concat [psi_psi_double_equiv_thm, times_minus_z_thm,  psi_equiv_thm'] e2_curve_op_thms) (cryptol_ss()));
+
     // Selectively remove polymorphic curve parameters from goal
     simplify (addsimps [affinify_E'_thm, e2_scalar_mult_thm] empty_ss);
     // Algebraic goal manipulation
@@ -129,10 +129,19 @@ POINTonE2_add_n_dbl_ovs <- for [2, 3, 9, 32, 16]
     [POINTonE2_double_alias_1_2_ov, POINTonE2_dadd_null_alias_1_2_ov]
     (POINTonE2_add_n_dbl_spec x)
     do {
+      rw_with POINTonE2_thms;
       unfolding ["POINTonE2_abs", "POINTonE2_rep", "POINTonE2_invariant"];
       simplify fp2_simpset;
       w4_unint_z3 fp2_unints;
     });
+
+normalize_add_n_dbl_thms <- for [2,3,9,32,16]
+  ( \ n -> custom_prove_cryptol
+    {{ \ p1 p2 -> normalize_point Fp_2 (add_n_dbl`{n} p1 p2) == add_n_dbl`{n} p1 p2 }}
+    do { goal_eval_unint fp_unints;
+         simplify fp_simpset;
+         w4_unint_z3 fp_unints; });
+         
 
 // Prove POINTonE2_times_minus_z matches the times_minus_z spec
 let POINTonE2_times_minus_z_spec = do {
@@ -148,8 +157,9 @@ POINTonE2_times_minus_z_ov <- custom_verify "POINTonE2_times_minus_z"
   (concat [POINTonE2_double_ov] POINTonE2_add_n_dbl_ovs)
   POINTonE2_times_minus_z_spec
   do {
+    rw_with POINTonE2_thms;
     unfolding ["POINTonE2_abs", "POINTonE2_rep", "POINTonE2_invariant"];
-    simplify fp2_simpset;
+    simplify (addsimps normalize_add_n_dbl_thms fp2_simpset);
     w4_unint_z3 fp2_unints;
   };
 
@@ -197,10 +207,11 @@ clear_cofactor_ov <- custom_verify "clear_cofactor"
    POINTonE2_dadd_null_alias_1_2_ov]
   clear_cofactor_impl_spec
   do {
-    unfolding ["clear_cofactor_E2_impl",
+      rw_with POINTonE2_thms;
+      unfolding ["clear_cofactor_E2_impl",
                "POINTonE2_abs",
                "POINTonE2_rep",
                "POINTonE2_invariant"];
-    simplify fp2_simpset;
+    simplify (addsimp normalize_psi_imp_thm fp2_simpset);
     w4_unint_z3 fp2_unints;
   };
