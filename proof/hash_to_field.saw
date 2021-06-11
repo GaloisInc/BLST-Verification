@@ -171,8 +171,8 @@ let DST_len= 8;
 let hash_to_field_nelems = [1,2]; // the values of nelems for which we prove hash_to_field
 
 // Proof of hash-to-field for fp:
-hash_to_field_fp_ovs_ <- for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
-hash_to_field_null_aug_fp_ovs_ <- for hash_to_field_nelems (verify_hash_to_field_for 0 msg_len DST_len);
+for hash_to_field_nelems (verify_hash_to_field_for aug_len msg_len DST_len);
+for hash_to_field_nelems (verify_hash_to_field_for 0 msg_len DST_len);
 
 // Now for fp2:
 
@@ -196,5 +196,5 @@ let verify_hash_to_field_fp2_for aug_len msg_len DST_len nelems = do {
   return r;
 };
 
-hash_to_field_fp2_ovs_ <- for hash_to_field_nelems (verify_hash_to_field_fp2_for aug_len msg_len DST_len);
-hash_to_field_fp2_null_aug_ovs_ <- for hash_to_field_nelems (verify_hash_to_field_fp2_for 0 msg_len DST_len);
+for hash_to_field_nelems (verify_hash_to_field_fp2_for aug_len msg_len DST_len);
+for hash_to_field_nelems (verify_hash_to_field_fp2_for 0 msg_len DST_len);
