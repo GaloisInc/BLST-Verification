@@ -1,0 +1,3924 @@
+module implementation::x86::inverse where
+
+import implementation::Types
+import implementation::x86::helpers
+
+__smulx_383_n_shift_by_31
+  : Vec384 // a, stored at low offsets of rsi
+  -> Vec384 // b, stored at high offsets of rsi
+  -> [64] // f0
+  -> [64] // g0
+  -> (Vec384, [64], [64])
+__smulx_383_n_shift_by_31 a b f0 g0 = result
+  where
+
+// 0x0000000000018d04 <+4>:	48 89 d3	mov    rbx,rdx
+// 0x0000000000018d07 <+7>:	4d 31 f6	xor    r14,r14
+// 0x0000000000018d0a <+10>:	4c 8b 06	mov    r8,QWORD PTR [rsi]
+// 0x0000000000018d0d <+13>:	4c 8b 4e 08	mov    r9,QWORD PTR [rsi+0x8]
+// 0x0000000000018d11 <+17>:	4c 8b 56 10	mov    r10,QWORD PTR [rsi+0x10]
+// 0x0000000000018d15 <+21>:	4c 8b 5e 18	mov    r11,QWORD PTR [rsi+0x18]
+// 0x0000000000018d19 <+25>:	4c 8b 66 20	mov    r12,QWORD PTR [rsi+0x20]
+// 0x0000000000018d1d <+29>:	4c 8b 6e 28	mov    r13,QWORD PTR [rsi+0x28]
+    // 0
+    [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0] = a
+    r14_0 = 0
+    rdx_0 = f0
+    rcx_0 = g0
+    rbx_0 = rdx_0
+
+
+// 0x0000000000018d21 <+33>:	48 89 d0	mov    rax,rdx
+    // 1
+    rax_1 = rdx_0
+
+
+// 0x0000000000018d24 <+36>:	48 c1 f8 3f	sar    rax,0x3f
+    // 2
+    rax_2 = rax_1 >>$ 0x3f
+
+
+// 0x0000000000018d28 <+40>:	48 31 ed	xor    rbp,rbp
+    // 3
+    rbp_3 = 0
+
+
+// 0x0000000000018d2b <+43>:	48 29 c5	sub    rbp,rax
+    // 4
+    (cf_4, rbp_4) = sub rbp_3 rax_2
+
+
+// 0x0000000000018d2e <+46>:	48 31 c2	xor    rdx,rax
+    // 5
+    rdx_5 = rdx_0 ^ rax_2
+
+
+// 0x0000000000018d31 <+49>:	48 01 ea	add    rdx,rbp
+    // 6
+    (cf_6, rdx_6) = add rdx_5 rbp_4
+
+
+// 0x0000000000018d34 <+52>:	49 31 c0	xor    r8,rax
+    // 7
+    r8_7 = r8_0 ^ rax_2
+
+
+// 0x0000000000018d37 <+55>:	49 31 c1	xor    r9,rax
+    // 8
+    r9_8 = r9_0 ^ rax_2
+
+
+// 0x0000000000018d3a <+58>:	49 31 c2	xor    r10,rax
+    // 9
+    r10_9 = r10_0 ^ rax_2
+
+
+// 0x0000000000018d3d <+61>:	49 31 c3	xor    r11,rax
+    // 10
+    r11_10 = r11_0 ^ rax_2
+
+
+// 0x0000000000018d40 <+64>:	49 31 c4	xor    r12,rax
+    // 11
+    r12_11 = r12_0 ^ rax_2
+
+
+// 0x0000000000018d43 <+67>:	4c 31 e8	xor    rax,r13
+    // 12
+    rax_12 = rax_2 ^ r13_0
+
+
+// 0x0000000000018d46 <+70>:	49 01 e8	add    r8,rbp
+    // 13
+    (cf_13, r8_13) = add r8_7 rbp_4
+
+
+// 0x0000000000018d49 <+73>:	49 83 d1 00	adc    r9,0x0
+    // 14
+    (cf_14, r9_14) = adc r9_8 0 cf_13
+
+
+// 0x0000000000018d4d <+77>:	49 83 d2 00	adc    r10,0x0
+    // 15
+    (cf_15, r10_15) = adc r10_9 0 cf_14
+
+
+// 0x0000000000018d51 <+81>:	49 83 d3 00	adc    r11,0x0
+    // 16
+    (cf_16, r11_16) = adc r11_10 0 cf_15
+
+
+// 0x0000000000018d55 <+85>:	49 83 d4 00	adc    r12,0x0
+    // 17
+    (cf_17, r12_17) = adc r12_11 0 cf_16
+
+
+// 0x0000000000018d59 <+89>:	48 83 d0 00	adc    rax,0x0
+    // 18
+    (cf_18, rax_18) = adc rax_12 0 cf_17
+
+
+
+// 0x0000000000018d5d <+93>:	c4 c2 bb f6 e8	mulx   rbp,r8,r8
+    // 19: Multiply r8 and rdx (implicit) and store the high bits in rbp and low bits in r8
+    (rbp_19, r8_19) = mulx r8_13 rdx_6
+    // 19
+
+
+// 0x0000000000018d62 <+98>:	c4 42 b3 f6 e9	mulx   r13,r9,r9
+    // 20: Multiply r9 and rdx (implicit) and store the high bits in r13 and low bits in r9
+    (r13_20, r9_20) = mulx r9_14 rdx_6
+    // 20
+
+
+// 0x0000000000018d67 <+103>:	49 01 e9	add    r9,rbp
+    // 21
+    (cf_21, r9_21) = add r9_20 rbp_19
+
+
+// 0x0000000000018d6a <+106>:	c4 c2 ab f6 ea	mulx   rbp,r10,r10
+    // 22: Multiply r10 and rdx (implicit) and store the high bits in rbp and low bits in r10
+    (rbp_22, r10_22) = mulx r10_15 rdx_6
+    // 22
+
+
+// 0x0000000000018d6f <+111>:	4d 11 ea	adc    r10,r13
+    // 23: Add r10, r13, and cf and store the result in r10
+    (cf_23, r10_23) = adc r10_22 r13_20 cf_21
+    // 23
+
+
+// 0x0000000000018d72 <+114>:	c4 42 a3 f6 eb	mulx   r13,r11,r11
+    // 24: Multiply r11 and rdx (implicit) and store the high bits in r13 and low bits in r11
+    (r13_24, r11_24) = mulx r11_16 rdx_6
+    // 24
+
+
+// 0x0000000000018d77 <+119>:	49 11 eb	adc    r11,rbp
+    // 25: Add r11, rbp, and cf and store the result in r11
+    (cf_25, r11_25) = adc r11_24 rbp_22 cf_23
+    // 25
+
+
+// 0x0000000000018d7a <+122>:	c4 c2 9b f6 ec	mulx   rbp,r12,r12
+    // 26: Multiply r12 and rdx (implicit) and store the high bits in rbp and low bits in r12
+    (rbp_26, r12_26) = mulx r12_17 rdx_6
+    // 26
+
+
+// 0x0000000000018d7f <+127>:	4d 11 ec	adc    r12,r13
+    // 27: Add r12, r13, and cf and store the result in r12
+    (cf_27, r12_27) = adc r12_26 r13_24 cf_25
+    // 27
+
+
+// 0x0000000000018d82 <+130>:	48 83 d5 00	adc    rbp,0x0
+    // 28: Add rbp, 0x0, and cf and store the result in rbp
+    (cf_28, rbp_28) = adc rbp_26 0 cf_27
+    // 28
+
+
+// 0x0000000000018d86 <+134>:	48 f7 ea	imul   rdx
+    // 29
+    (rdx_29, rax_29) = imul1 rdx_6 rax_18
+
+
+// 0x0000000000018d89 <+137>:	48 01 e8	add    rax,rbp
+    // 30
+    (cf_30, rax_30) = add rax_29 rbp_28
+
+
+// 0x0000000000018d8c <+140>:	49 11 d6	adc    r14,rdx
+    // 31: Add r14, rdx, and cf and store the result in r14
+    (cf_31, r14_31) = adc r14_0 rdx_29 cf_30
+    // 31
+
+
+
+// 0x0000000000018d8f <+143>:	48 89 ca	mov    rdx,rcx
+    // 32
+    rdx_32 = rcx_0
+
+
+// 0x0000000000018d92 <+146>:	4c 89 07	mov    QWORD PTR [rdi],r8
+    // 33
+    offload0 = r8_19
+
+
+// 0x0000000000018d95 <+149>:	4c 89 4f 08	mov    QWORD PTR [rdi+0x8],r9
+    // 34
+    offload1 = r9_21
+
+
+// 0x0000000000018d99 <+153>:	4c 89 57 10	mov    QWORD PTR [rdi+0x10],r10
+    // 35
+    offload2 = r10_23
+
+
+// 0x0000000000018d9d <+157>:	4c 89 5f 18	mov    QWORD PTR [rdi+0x18],r11
+    // 36
+    offload3 = r11_25
+
+
+// 0x0000000000018da1 <+161>:	4c 89 67 20	mov    QWORD PTR [rdi+0x20],r12
+    // 37
+    offload4 = r12_27
+
+
+// 0x0000000000018da5 <+165>:	48 89 47 28	mov    QWORD PTR [rdi+0x28],rax
+    // 38
+    offload5 = rax_30
+
+
+// 0x0000000000018da9 <+169>:	4c 8b 46 30	mov    r8,QWORD PTR [rsi+0x30]
+    // 39
+    r8_39 = b @ 0
+
+
+// 0x0000000000018dad <+173>:	4c 8b 4e 38	mov    r9,QWORD PTR [rsi+0x38]
+    // 40
+    r9_40 = b @ 1
+
+
+// 0x0000000000018db1 <+177>:	4c 8b 56 40	mov    r10,QWORD PTR [rsi+0x40]
+    // 41
+    r10_41 = b @ 2
+
+
+// 0x0000000000018db5 <+181>:	4c 8b 5e 48	mov    r11,QWORD PTR [rsi+0x48]
+    // 42
+    r11_42 = b @ 3
+
+
+// 0x0000000000018db9 <+185>:	4c 8b 66 50	mov    r12,QWORD PTR [rsi+0x50]
+    // 43
+    r12_43 = b @ 4
+
+
+// 0x0000000000018dbd <+189>:	4c 8b 6e 58	mov    r13,QWORD PTR [rsi+0x58]
+    // 44
+    r13_44 = b @ 5
+
+
+// 0x0000000000018dc1 <+193>:	48 89 d0	mov    rax,rdx
+    // 45
+    rax_45 = rdx_32
+
+
+// 0x0000000000018dc4 <+196>:	48 c1 f8 3f	sar    rax,0x3f
+    // 46
+    rax_46 = rax_45 >>$ 0x3f
+
+
+// 0x0000000000018dc8 <+200>:	48 31 ed	xor    rbp,rbp
+    // 47
+    rbp_47 = 0
+
+
+// 0x0000000000018dcb <+203>:	48 29 c5	sub    rbp,rax
+    // 48
+    (cf_48, rbp_48) = sub rbp_47 rax_46
+
+
+
+// 0x0000000000018dce <+206>:	48 31 c2	xor    rdx,rax
+    // 49
+    rdx_49 = rdx_32 ^ rax_46
+
+
+// 0x0000000000018dd1 <+209>:	48 01 ea	add    rdx,rbp
+    // 50
+    (cf_50, rdx_50) = add rdx_49 rbp_48
+
+
+// 0x0000000000018dd4 <+212>:	49 31 c0	xor    r8,rax
+    // 51
+    r8_51 = r8_39 ^ rax_46
+
+
+// 0x0000000000018dd7 <+215>:	49 31 c1	xor    r9,rax
+    // 52
+    r9_52 = r9_40 ^ rax_46
+
+
+// 0x0000000000018dda <+218>:	49 31 c2	xor    r10,rax
+    // 53
+    r10_53 = r10_41 ^ rax_46
+
+
+// 0x0000000000018ddd <+221>:	49 31 c3	xor    r11,rax
+    // 54
+    r11_54 = r11_42 ^ rax_46
+
+
+// 0x0000000000018de0 <+224>:	49 31 c4	xor    r12,rax
+    // 55
+    r12_55 = r12_43 ^ rax_46
+
+
+// 0x0000000000018de3 <+227>:	4c 31 e8	xor    rax,r13
+    // 56
+    r13_56 = rax_46 ^ r13_44
+
+
+// 0x0000000000018de6 <+230>:	49 01 e8	add    r8,rbp
+    // 57
+    (cf_57, r8_57) = add r8_51 rbp_48
+
+
+// 0x0000000000018de9 <+233>:	49 83 d1 00	adc    r9,0x0
+    // 58: Add r9, 0x0, and cf and store the result in r9
+    (cf_58, r9_58) = adc r9_52 0 cf_57
+    // 58
+
+
+// 0x0000000000018ded <+237>:	49 83 d2 00	adc    r10,0x0
+    // 59: Add r10, 0x0, and cf and store the result in r10
+    (cf_59, r10_59) = adc r10_53 0 cf_58
+    // 59
+
+
+// 0x0000000000018df1 <+241>:	49 83 d3 00	adc    r11,0x0
+    // 60: Add r11, 0x0, and cf and store the result in r11
+    (cf_60, r11_60) = adc r11_54 0 cf_59
+    // 60
+
+
+// 0x0000000000018df5 <+245>:	49 83 d4 00	adc    r12,0x0
+    // 61: Add r12, 0x0, and cf and store the result in r12
+    (cf_61, r12_61) = adc r12_55 0 cf_60
+    // 61
+
+
+// 0x0000000000018df9 <+249>:	48 83 d0 00	adc    rax,0x0
+    // 62: Add rax, 0x0, and cf and store the result in rax
+    (cf_62, rax_62) = adc rax_46 0 cf_61
+    // 62
+
+
+
+// 0x0000000000018dfd <+253>:	c4 c2 bb f6 e8	mulx   rbp,r8,r8
+    // 63: Multiply r8 and rdx (implicit) and store the high bits in rbp and low bits in r8
+    (rbp_63, r8_63) = mulx r8_57 rdx_50
+    // 63
+
+
+// 0x0000000000018e02 <+258>:	c4 42 b3 f6 e9	mulx   r13,r9,r9
+    // 64: Multiply r9 and rdx (implicit) and store the high bits in r13 and low bits in r9
+    (r13_64, r9_64) = mulx r9_58 rdx_50
+    // 64
+
+
+// 0x0000000000018e07 <+263>:	49 01 e9	add    r9,rbp
+    // 65
+    (cf_65, r9_65) = add r9_64 rbp_63
+
+
+// 0x0000000000018e0a <+266>:	c4 c2 ab f6 ea	mulx   rbp,r10,r10
+    // 66: Multiply r10 and rdx (implicit) and store the high bits in rbp and low bits in r10
+    (rbp_66, r10_66) = mulx r10_59 rdx_50
+    // 66
+
+
+// 0x0000000000018e0f <+271>:	4d 11 ea	adc    r10,r13
+    // 67: Add r10, r13, and cf and store the result in r10
+    (cf_67, r10_67) = adc r10_66 r13_64 cf_65
+    // 67
+
+
+// 0x0000000000018e12 <+274>:	c4 42 a3 f6 eb	mulx   r13,r11,r11
+    // 68: Multiply r11 and rdx (implicit) and store the high bits in r13 and low bits in r11
+    (r13_68, r11_68) = mulx r11_60 rdx_50
+    // 68
+
+
+// 0x0000000000018e17 <+279>:	49 11 eb	adc    r11,rbp
+    // 69: Add r11, rbp, and cf and store the result in r11
+    (cf_69, r11_69) = adc r11_68 rbp_66 cf_67
+    // 69
+
+
+// 0x0000000000018e1a <+282>:	c4 c2 9b f6 ec	mulx   rbp,r12,r12
+    // 70: Multiply r12 and rdx (implicit) and store the high bits in rbp and low bits in r12
+    (rbp_70, r12_70) = mulx r12_61 rdx_50
+    // 70
+
+
+// 0x0000000000018e1f <+287>:	4d 11 ec	adc    r12,r13
+    // 71: Add r12, r13, and cf and store the result in r12
+    (cf_71, r12_71) = adc r12_70 r13_68 cf_69
+    // 71
+
+
+// 0x0000000000018e22 <+290>:	48 83 d5 00	adc    rbp,0x0
+    // 72: Add rbp, 0x0, and cf and store the result in rbp
+    (cf_72, rbp_72) = adc rbp_70 0 cf_71
+    // 72
+
+
+// 0x0000000000018e26 <+294>:	48 f7 ea	imul   rdx
+    // 73
+    (rdx_73, rax_73) = imul1 rdx_50 rax_62
+
+
+// 0x0000000000018e29 <+297>:	48 01 e8	add    rax,rbp
+    // 74
+    (cf_74, rax_74) = add rax_73 rbp_72
+
+
+// 0x0000000000018e2c <+300>:	48 83 d2 00	adc    rdx,0x0
+    // 75: Add rdx, 0x0, and cf and store the result in rdx
+    (cf_75, rdx_75) = adc rdx_73 0 cf_74
+    // 75
+
+
+
+// 0x0000000000018e30 <+304>:	4c 03 07	add    r8,QWORD PTR [rdi]
+    // 76
+    (cf_76, r8_76) = add r8_63 offload0
+
+
+// 0x0000000000018e33 <+307>:	4c 13 4f 08	adc    r9,QWORD PTR [rdi+0x8]
+    // 77
+    (cf_77, r9_77) = adc r9_65 offload1 cf_76
+
+
+// 0x0000000000018e37 <+311>:	4c 13 57 10	adc    r10,QWORD PTR [rdi+0x10]
+    // 78
+    (cf_78, r10_78) = adc r10_67 offload2 cf_77
+
+
+// 0x0000000000018e3b <+315>:	4c 13 5f 18	adc    r11,QWORD PTR [rdi+0x18]
+    // 79
+    (cf_79, r11_79) = adc r11_69 offload3 cf_78
+
+
+// 0x0000000000018e3f <+319>:	4c 13 67 20	adc    r12,QWORD PTR [rdi+0x20]
+    // 80
+    (cf_80, r12_80) = adc r12_71 offload4 cf_79
+
+
+// 0x0000000000018e43 <+323>:	48 13 47 28	adc    rax,QWORD PTR [rdi+0x28]
+    // 81
+    (cf_81, rax_81) = adc rax_74 offload5 cf_80
+
+
+// 0x0000000000018e47 <+327>:	49 11 d6	adc    r14,rdx
+    // 82: Add r14, rdx, and cf and store the result in r14
+    (cf_82, r14_82) = adc r14_31 rdx_75 cf_81
+    // 82
+
+
+// 0x0000000000018e4a <+330>:	48 89 da	mov    rdx,rbx
+    // 83
+    rdx_83 = rbx_0
+
+
+// 0x0000000000018e4d <+333>:	4d 0f ac c8 1f	shrd   r8,r9,0x1f
+    // 84
+    r8_84 = shrd r8_76 r9_77 (zext 0x1f)
+
+
+// 0x0000000000018e52 <+338>:	4d 0f ac d1 1f	shrd   r9,r10,0x1f
+    // 85
+    r9_85 = shrd r9_77 r10_78 (zext 0x1f)
+
+
+// 0x0000000000018e57 <+343>:	4d 0f ac da 1f	shrd   r10,r11,0x1f
+    // 86
+    r10_86 = shrd r10_78 r11_79 (zext 0x1f)
+
+
+// 0x0000000000018e5c <+348>:	4d 0f ac e3 1f	shrd   r11,r12,0x1f
+    // 87
+    r11_87 = shrd r11_79 r12_80 (zext 0x1f)
+
+
+// 0x0000000000018e61 <+353>:	49 0f ac c4 1f	shrd   r12,rax,0x1f
+    // 88
+    r12_88 = shrd r12_80 rax_81 (zext 0x1f)
+
+
+// 0x0000000000018e66 <+358>:	4c 0f ac f0 1f	shrd   rax,r14,0x1f
+    // 89
+    rax_89 = shrd rax_81 r14_82 (zext 0x1f)
+
+
+// 0x0000000000018e6b <+363>:	49 c1 fe 3f	sar    r14,0x3f
+    // 90
+    r14_90 = r14_82 >>$ 0x3f
+
+
+// 0x0000000000018e6f <+367>:	48 31 ed	xor    rbp,rbp
+    // 91
+    rbp_91 = 0
+
+
+// 0x0000000000018e72 <+370>:	4c 29 f5	sub    rbp,r14
+    // 92
+    (cf_92, rbp_92) = sub rbp_91 r14_90
+
+
+
+// 0x0000000000018e75 <+373>:	4d 31 f0	xor    r8,r14
+    // 93
+    r8_93 = r8_84 ^ r14_90
+
+
+// 0x0000000000018e78 <+376>:	4d 31 f1	xor    r9,r14
+    // 94
+    r9_94 = r9_85 ^ r14_90
+
+
+// 0x0000000000018e7b <+379>:	4d 31 f2	xor    r10,r14
+    // 95
+    r10_95 = r10_86 ^ r14_90
+
+
+// 0x0000000000018e7e <+382>:	4d 31 f3	xor    r11,r14
+    // 96
+    r11_96 = r11_87 ^ r14_90
+
+
+// 0x0000000000018e81 <+385>:	4d 31 f4	xor    r12,r14
+    // 97
+    r12_97 = r12_88 ^ r14_90
+
+
+// 0x0000000000018e84 <+388>:	4c 31 f0	xor    rax,r14
+    // 98
+    rax_98 = rax_89 ^ r14_90
+
+
+// 0x0000000000018e87 <+391>:	49 01 e8	add    r8,rbp
+    // 99
+    (cf_99, r8_99) = add r8_93 rbp_92
+
+
+// 0x0000000000018e8a <+394>:	49 83 d1 00	adc    r9,0x0
+    // 100: Add r9, 0x0, and cf and store the result in r9
+    (cf_100, r9_100) = adc r9_94 0 cf_99
+    // 100
+
+
+// 0x0000000000018e8e <+398>:	49 83 d2 00	adc    r10,0x0
+    // 101: Add r10, 0x0, and cf and store the result in r10
+    (cf_101, r10_101) = adc r10_95 0 cf_100
+    // 101
+
+
+// 0x0000000000018e92 <+402>:	49 83 d3 00	adc    r11,0x0
+    // 102: Add r11, 0x0, and cf and store the result in r11
+    (cf_102, r11_102) = adc r11_96 0 cf_101
+    // 102
+
+
+// 0x0000000000018e96 <+406>:	49 83 d4 00	adc    r12,0x0
+    // 103: Add r12, 0x0, and cf and store the result in r12
+    (cf_103, r12_103) = adc r12_97 0 cf_102
+    // 103
+
+
+// 0x0000000000018e9a <+410>:	48 83 d0 00	adc    rax,0x0
+    // 104: Add rax, 0x0, and cf and store the result in rax
+    (cf_104, rax_104) = adc rax_98 0 cf_103
+    // 104
+
+
+
+// 0x0000000000018e9e <+414>:	4c 89 07	mov    QWORD PTR [rdi],r8
+    // 105
+    result0 = r8_99
+
+
+// 0x0000000000018ea1 <+417>:	4c 89 4f 08	mov    QWORD PTR [rdi+0x8],r9
+    // 106
+    result1 = r9_100
+
+
+// 0x0000000000018ea5 <+421>:	4c 89 57 10	mov    QWORD PTR [rdi+0x10],r10
+    // 107
+    result2 = r10_101
+
+
+// 0x0000000000018ea9 <+425>:	4c 89 5f 18	mov    QWORD PTR [rdi+0x18],r11
+    // 108
+    result3 = r11_102
+
+
+// 0x0000000000018ead <+429>:	4c 89 67 20	mov    QWORD PTR [rdi+0x20],r12
+    // 109
+    result4 = r12_103
+
+
+// 0x0000000000018eb1 <+433>:	48 89 47 28	mov    QWORD PTR [rdi+0x28],rax
+    // 110
+    result5 = rax_104
+
+
+
+// 0x0000000000018eb5 <+437>:	4c 31 f2	xor    rdx,r14
+    // 111
+    rdx_111 = rdx_83 ^ r14_90
+
+
+// 0x0000000000018eb8 <+440>:	4c 31 f1	xor    rcx,r14
+    // 112
+    rcx_111 = rcx_0 ^ r14_90
+
+
+// 0x0000000000018ebb <+443>:	48 01 ea	add    rdx,rbp
+    // 113
+    (cf_113, rdx_113) = add rdx_111 rbp_92
+
+
+// 0x0000000000018ebe <+446>:	48 01 e9	add    rcx,rbp
+    // 114
+    (cf_114, rcx_114) = add rcx_111 rbp_92
+
+// 0x0000000000018ec1 <+449>:	f3 c3	repz ret 
+    // 115
+    result = ([result0, result1, result2, result3, result4, result5], rdx_113, rcx_114)
+
+__smulx_191_n_shift_by_31
+  : [3][64] // a, stored at low offsets of rsi
+  -> [3][64] // b, stored at high offsets of rsi
+  -> [64] // f0
+  -> [64] // g0
+  -> ([3][64], [64], [64])
+__smulx_191_n_shift_by_31 a b f0 g0 = result
+  where
+// 0x0000000000018ee4 <+4>:	48 89 d3	mov    rbx,rdx
+// 0x0000000000018ee7 <+7>:	4c 8b 06	mov    r8,QWORD PTR [rsi]
+// 0x0000000000018eea <+10>:	4c 8b 4e 08	mov    r9,QWORD PTR [rsi+0x8]
+// 0x0000000000018eee <+14>:	4c 8b 56 10	mov    r10,QWORD PTR [rsi+0x10]
+    // 0
+    [r8_0, r9_0, r10_0] = a
+    rdx_0 = f0
+    rcx_0 = g0
+    rbx_0 = rdx_0
+
+
+// 0x0000000000018ef2 <+18>:	48 89 d0	mov    rax,rdx
+    // 1
+    rax_1 = rdx_0
+
+
+// 0x0000000000018ef5 <+21>:	48 c1 f8 3f	sar    rax,0x3f
+    // 2
+    rax_2 = rax_1 >>$ 0x3f
+
+
+// 0x0000000000018ef9 <+25>:	48 31 ed	xor    rbp,rbp
+    // 3
+    rbp_3 = 0
+
+
+// 0x0000000000018efc <+28>:	48 29 c5	sub    rbp,rax
+    // 4
+    (cf_4, rbp_4) = sub rbp_3 rax_2
+
+
+
+// 0x0000000000018eff <+31>:	48 31 c2	xor    rdx,rax
+    // 5
+    rdx_5 = rdx_0 ^ rax_2
+
+
+// 0x0000000000018f02 <+34>:	48 01 ea	add    rdx,rbp
+    // 6
+    (cf_6, rdx_6) = add rdx_5 rbp_4
+
+
+
+// 0x0000000000018f05 <+37>:	49 31 c0	xor    r8,rax
+    // 7
+    r8_7 = r8_0 ^ rax_2
+
+
+// 0x0000000000018f08 <+40>:	49 31 c1	xor    r9,rax
+    // 8
+    r9_8 = r9_0 ^ rax_2
+
+
+// 0x0000000000018f0b <+43>:	4c 31 d0	xor    rax,r10
+    // 9
+    r10_9 = r10_0 ^ rax_2
+
+
+// 0x0000000000018f0e <+46>:	49 01 e8	add    r8,rbp
+    // 10
+    (cf_10, r8_10) = add r8_7 rbp_4
+
+
+// 0x0000000000018f11 <+49>:	49 83 d1 00	adc    r9,0x0
+    // 11
+    (cf_11, r9_11) = adc r9_8 0 cf_10
+
+
+// 0x0000000000018f15 <+53>:	48 83 d0 00	adc    rax,0x0
+    // 12
+    (cf_12, rax_12) = adc rax_2 0 cf_11
+
+
+
+// 0x0000000000018f19 <+57>:	c4 c2 bb f6 e8	mulx   rbp,r8,r8
+    // 13: Multiply r8 and rdx (implicit) and store the high bits in rbp and low bits in r8
+    (rbp_13, r8_13) = mulx r8_10 rdx_6
+    // 13
+
+
+// 0x0000000000018f1e <+62>:	c4 42 b3 f6 d1	mulx   r10,r9,r9
+    // 14: Multiply r9 and rdx (implicit) and store the high bits in r10 and low bits in r9
+    (r10_14, r9_14) = mulx r9_11 rdx_6
+    // 14
+
+
+// 0x0000000000018f23 <+67>:	49 01 e9	add    r9,rbp
+    // 15
+    (cf_15, r9_15) = add r9_14 rbp_13
+
+
+// 0x0000000000018f26 <+70>:	49 83 d2 00	adc    r10,0x0
+    // 16
+    (cf_16, r10_16) = adc r10_14 0 cf_15
+
+
+// 0x0000000000018f2a <+74>:	48 f7 ea	imul   rdx
+    // 17
+    (rdx_17, rax_17) = imul1 rdx_6 rax_12
+
+
+
+// 0x0000000000018f2d <+77>:	49 01 c2	add    r10,rax
+    // 18
+    (cf_18, r10_18) = add r10_16 rax_17
+
+
+// 0x0000000000018f30 <+80>:	48 83 d2 00	adc    rdx,0x0
+    // 19
+    (cf_19, rdx_19) = adc rdx_17 0 cf_18
+
+
+// 0x0000000000018f34 <+84>:	49 89 d6	mov    r14,rdx
+    // 20
+    r14_20 = rdx_19
+
+
+// 0x0000000000018f37 <+87>:	48 89 ca	mov    rdx,rcx
+    // 21
+    rdx_21 = rcx_0
+
+
+// 0x0000000000018f3a <+90>:	4c 8b 5e 30	mov    r11,QWORD PTR [rsi+0x30]
+    // 22
+    r11_22 = b @ 0
+
+
+// 0x0000000000018f3e <+94>:	4c 8b 66 38	mov    r12,QWORD PTR [rsi+0x38]
+    // 23
+    r12_23 = b @ 1
+
+
+// 0x0000000000018f42 <+98>:	4c 8b 6e 40	mov    r13,QWORD PTR [rsi+0x40]
+    // 24
+    r13_24 = b @ 2
+
+
+
+// 0x0000000000018f46 <+102>:	48 89 d0	mov    rax,rdx
+    // 25
+    rax_25 = rdx_21
+
+
+// 0x0000000000018f49 <+105>:	48 c1 f8 3f	sar    rax,0x3f
+    // 26
+    rax_26 = rax_25 >>$ 0x3f
+
+
+// 0x0000000000018f4d <+109>:	48 31 ed	xor    rbp,rbp
+    // 27
+    rbp_27 = 0
+
+
+// 0x0000000000018f50 <+112>:	48 29 c5	sub    rbp,rax
+    // 28
+    (cf_28, rbp_28) = sub rbp_27 rax_26
+
+
+
+// 0x0000000000018f53 <+115>:	48 31 c2	xor    rdx,rax
+    // 29
+    rdx_29 = rdx_21 ^ rax_26
+
+
+// 0x0000000000018f56 <+118>:	48 01 ea	add    rdx,rbp
+    // 30
+    (cf_30, rdx_30) = add rdx_29 rbp_28
+
+
+
+// 0x0000000000018f59 <+121>:	49 31 c3	xor    r11,rax
+    // 31
+    r11_31 = r11_22 ^ rax_26
+
+
+// 0x0000000000018f5c <+124>:	49 31 c4	xor    r12,rax
+    // 32
+    r12_32 = r12_23 ^ rax_26
+
+
+// 0x0000000000018f5f <+127>:	4c 31 e8	xor    rax,r13
+    // 33
+    rax_33 = rax_26 ^ r13_24
+
+
+// 0x0000000000018f62 <+130>:	49 01 eb	add    r11,rbp
+    // 34
+    (cf_34, r11_34) = add r11_31 rbp_28
+
+
+// 0x0000000000018f65 <+133>:	49 83 d4 00	adc    r12,0x0
+    // 35
+    (cf_35, r12_35) = adc r12_32 0 cf_34
+
+
+// 0x0000000000018f69 <+137>:	48 83 d0 00	adc    rax,0x0
+    // 36
+    (cf_36, rax_36) = adc rax_33 0 cf_35
+
+
+
+// 0x0000000000018f6d <+141>:	c4 c2 a3 f6 eb	mulx   rbp,r11,r11
+    // 37: Multiply r11 and rdx (implicit) and store the high bits in rbp and low bits in r11
+    (rbp_37, r11_37) = mulx r11_34 rdx_30
+    // 37
+
+
+// 0x0000000000018f72 <+146>:	c4 42 9b f6 ec	mulx   r13,r12,r12
+    // 38: Multiply r12 and rdx (implicit) and store the high bits in r13 and low bits in r12
+    (r13_38, r12_38) = mulx r12_35 rdx_30
+    // 38
+
+
+// 0x0000000000018f77 <+151>:	49 01 ec	add    r12,rbp
+    // 39
+    (cf_39, r12_39) = add r12_38 rbp_37
+
+
+// 0x0000000000018f7a <+154>:	49 83 d5 00	adc    r13,0x0
+    // 40
+    (cf_40, r13_40) = adc r13_38 0 cf_39
+
+
+// 0x0000000000018f7e <+158>:	48 f7 ea	imul   rdx
+    // 41
+    (rdx_41, rax_41) = imul1 rdx_30 rax_36
+
+
+// 0x0000000000018f81 <+161>:	49 01 c5	add    r13,rax
+    // 42
+    (cf_42, r13_42) = add r13_40 rax_41
+
+
+// 0x0000000000018f84 <+164>:	48 83 d2 00	adc    rdx,0x0
+    // 43
+    (cf_43, rdx_43) = adc rdx_41 0 cf_42
+
+
+// 0x0000000000018f88 <+168>:	4d 01 c3	add    r11,r8
+    // 44
+    (cf_44, r11_44) = add r11_37 r8_13
+
+
+// 0x0000000000018f8b <+171>:	4d 11 cc	adc    r12,r9
+    // 45
+    (cf_45, r12_45) = adc r12_39 r9_15 cf_44
+
+
+// 0x0000000000018f8e <+174>:	4d 11 d5	adc    r13,r10
+    // 46
+    (cf_46, r13_46) = adc r13_42 r10_18 cf_45
+
+
+// 0x0000000000018f91 <+177>:	49 11 d6	adc    r14,rdx
+    // 47
+    (cf_47, r14_47) = adc r14_20 rdx_43 cf_46
+
+
+// 0x0000000000018f94 <+180>:	48 89 da	mov    rdx,rbx
+    // 48
+    rdx_48 = rbx_0
+
+
+// 0x0000000000018f97 <+183>:	4d 0f ac e3 1f	shrd   r11,r12,0x1f
+    // 49
+    r11_49 = shrd r11_44 r12_45 (zext 0x1f)
+
+
+// 0x0000000000018f9c <+188>:	4d 0f ac ec 1f	shrd   r12,r13,0x1f
+    // 50
+    r12_50 = shrd r12_45 r13_46 (zext 0x1f)
+
+
+// 0x0000000000018fa1 <+193>:	4d 0f ac f5 1f	shrd   r13,r14,0x1f
+    // 51
+    r13_51 = shrd r13_46 r14_47 (zext 0x1f)
+
+
+// 0x0000000000018fa6 <+198>:	49 c1 fe 3f	sar    r14,0x3f
+    // 52
+    r14_52 = r14_47 >>$ 0x3f
+
+
+// 0x0000000000018faa <+202>:	48 31 ed	xor    rbp,rbp
+    // 53
+    rbp_53 = 0
+
+
+// 0x0000000000018fad <+205>:	4c 29 f5	sub    rbp,r14
+    // 54
+    (cf_54, rbp_54) = sub rbp_53 r14_52
+
+
+// 0x0000000000018fb0 <+208>:	4d 31 f3	xor    r11,r14
+    // 55
+    r11_55 = r11_49 ^ r14_52
+
+
+// 0x0000000000018fb3 <+211>:	4d 31 f4	xor    r12,r14
+    // 56
+    r12_56 = r12_50 ^ r14_52
+
+
+// 0x0000000000018fb6 <+214>:	4d 31 f5	xor    r13,r14
+    // 57
+    r13_57 = r13_51 ^ r14_52
+
+
+// 0x0000000000018fb9 <+217>:	49 01 eb	add    r11,rbp
+    // 58
+    (cf_58, r11_58) = add r11_55 rbp_54
+
+
+// 0x0000000000018fbc <+220>:	49 83 d4 00	adc    r12,0x0
+    // 59
+    (cf_59, r12_59) = adc r12_56 0 cf_58
+
+
+// 0x0000000000018fc0 <+224>:	49 83 d5 00	adc    r13,0x0
+    // 60
+    (cf_60, r13_60) = adc r13_57 0 cf_59
+
+
+
+// 0x0000000000018fc4 <+228>:	4c 89 1f	mov    QWORD PTR [rdi],r11
+    // 61
+    result0 = r11_58
+
+
+// 0x0000000000018fc7 <+231>:	4c 89 67 08	mov    QWORD PTR [rdi+0x8],r12
+    // 62
+    result1 = r12_59
+
+
+// 0x0000000000018fcb <+235>:	4c 89 6f 10	mov    QWORD PTR [rdi+0x10],r13
+    // 63
+    result2 = r13_60
+
+
+
+// 0x0000000000018fcf <+239>:	4c 31 f2	xor    rdx,r14
+    // 64
+    rdx_64 = rdx_48 ^ r14_52
+
+
+// 0x0000000000018fd2 <+242>:	4c 31 f1	xor    rcx,r14
+    // 65
+    rcx_65 = rcx_0 ^ r14_52
+
+
+// 0x0000000000018fd5 <+245>:	48 01 ea	add    rdx,rbp
+    // 66
+    (cf_66, rdx_66) = add rdx_64 rbp_54
+
+
+// 0x0000000000018fd8 <+248>:	48 01 e9	add    rcx,rbp
+    // 67
+    (cf_67, rcx_67) = add rcx_65 rbp_54
+
+// 0x0000000000018fdb <+251>:	f3 c3	repz ret 
+    // 68
+    result = ([result0, result1, result2], rdx_66, rcx_67)
+
+__smulx_383x63
+  : Vec384 // u, stored at low offsets of rsi
+  -> Vec384 // v, stored at high offsets of rsi
+  -> [64] // f0
+  -> [64] // g0
+  -> Vec384
+__smulx_383x63 u v f0 g0 = result
+  where
+
+// 0x0000000000018ba4 <+4>:	4c 8b 06	mov    r8,QWORD PTR [rsi]
+// 0x0000000000018ba7 <+7>:	4c 8b 4e 08	mov    r9,QWORD PTR [rsi+0x8]
+// 0x0000000000018bab <+11>:	4c 8b 56 10	mov    r10,QWORD PTR [rsi+0x10]
+// 0x0000000000018baf <+15>:	4c 8b 5e 18	mov    r11,QWORD PTR [rsi+0x18]
+// 0x0000000000018bb3 <+19>:	4c 8b 66 20	mov    r12,QWORD PTR [rsi+0x20]
+// 0x0000000000018bb7 <+23>:	4c 8b 6e 28	mov    r13,QWORD PTR [rsi+0x28]
+    [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0] = u
+    rdx_0 = f0
+    rcx_0 = g0
+
+
+// 0x0000000000018bbb <+27>:	48 89 d5	mov    rbp,rdx
+    // 1
+    rbp_1 = rdx_0
+
+
+// 0x0000000000018bbe <+30>:	48 c1 fd 3f	sar    rbp,0x3f
+    // 2
+    rbp_2 = rbp_1 >>$ 0x3f
+
+
+// 0x0000000000018bc2 <+34>:	48 31 c0	xor    rax,rax
+    // 3
+    rax_3 = 0
+
+
+// 0x0000000000018bc5 <+37>:	48 29 e8	sub    rax,rbp
+    // 4
+    (cf_4, rax_4) = sub rax_3 rbp_2
+
+
+
+// 0x0000000000018bc8 <+40>:	48 31 ea	xor    rdx,rbp
+    // 5
+    rdx_5 = rdx_0 ^ rbp_2
+
+
+// 0x0000000000018bcb <+43>:	48 01 c2	add    rdx,rax
+    // 6
+    (cf_6, rdx_6) = add rdx_5 rax_4
+
+
+
+// 0x0000000000018bce <+46>:	49 31 e8	xor    r8,rbp
+    // 7
+    r8_7 = r8_0 ^ rbp_2
+
+
+// 0x0000000000018bd1 <+49>:	49 31 e9	xor    r9,rbp
+    // 8
+    r9_8 = r9_0 ^ rbp_2
+
+
+// 0x0000000000018bd4 <+52>:	49 31 ea	xor    r10,rbp
+    // 9
+    r10_9 = r10_0 ^ rbp_2
+
+
+// 0x0000000000018bd7 <+55>:	49 31 eb	xor    r11,rbp
+    // 10
+    r11_10 = r11_0 ^ rbp_2
+
+
+// 0x0000000000018bda <+58>:	49 31 ec	xor    r12,rbp
+    // 11
+    r12_11 = r12_0 ^ rbp_2
+
+
+// 0x0000000000018bdd <+61>:	49 31 ed	xor    r13,rbp
+    // 12
+    r13_2 = r13_0 ^ rbp_2
+
+
+// 0x0000000000018be0 <+64>:	49 01 c0	add    r8,rax
+    // 13
+    (cf_13, r8_13) = add r8_7 rax_4
+
+
+// 0x0000000000018be3 <+67>:	49 83 d1 00	adc    r9,0x0
+    // 14
+    (cf_14, r9_14) = adc r9_8 0 cf_13
+
+
+// 0x0000000000018be7 <+71>:	49 83 d2 00	adc    r10,0x0
+    // 15
+    (cf_15, r10_15) = adc r10_9 0 cf_14
+
+
+// 0x0000000000018beb <+75>:	49 83 d3 00	adc    r11,0x0
+    // 16
+    (cf_16, r11_16) = adc r11_10 0 cf_15
+
+
+// 0x0000000000018bef <+79>:	49 83 d4 00	adc    r12,0x0
+    // 17
+    (cf_17, r12_17) = adc r12_11 0 cf_16
+
+
+// 0x0000000000018bf3 <+83>:	49 83 d5 00	adc    r13,0x0
+    // 18
+    (cf_18, r13_18) = adc r13_2 0 cf_17
+
+
+
+// 0x0000000000018bf7 <+87>:	c4 c2 bb f6 e8	mulx   rbp,r8,r8
+    // 19: Multiply r8 and rdx (implicit) and store the high bits in rbp and low bits in r8
+    (rbp_19, r8_19) = mulx r8_13 rdx_6
+    // 19
+
+
+// 0x0000000000018bfc <+92>:	c4 c2 b3 f6 c1	mulx   rax,r9,r9
+    // 20: Multiply r9 and rdx (implicit) and store the high bits in rax and low bits in r9
+    (rax_20, r9_20) = mulx r9_14 rdx_6
+    // 20
+
+
+// 0x0000000000018c01 <+97>:	49 01 e9	add    r9,rbp
+    // 21
+    (cf_21, r9_21) = add r9_20 rbp_19
+
+
+// 0x0000000000018c04 <+100>:	c4 c2 ab f6 ea	mulx   rbp,r10,r10
+    // 22: Multiply r10 and rdx (implicit) and store the high bits in rbp and low bits in r10
+    (rbp_22, r10_22) = mulx r10_15 rdx_6
+    // 22
+
+
+// 0x0000000000018c09 <+105>:	49 11 c2	adc    r10,rax
+    // 23: Add r10, rax, and cf and store the result in r10
+    (cf_23, r10_23) = adc r10_22 rax_20 cf_21
+    // 23
+
+
+// 0x0000000000018c0c <+108>:	c4 c2 a3 f6 c3	mulx   rax,r11,r11
+    // 24: Multiply r11 and rdx (implicit) and store the high bits in rax and low bits in r11
+    (rax_24, r11_24) = mulx r11_16 rdx_6
+    // 24
+
+
+// 0x0000000000018c11 <+113>:	49 11 eb	adc    r11,rbp
+    // 25: Add r11, rbp, and cf and store the result in r11
+    (cf_25, r11_25) = adc r11_24 rbp_22 cf_23
+    // 25
+
+
+// 0x0000000000018c14 <+116>:	c4 c2 9b f6 ec	mulx   rbp,r12,r12
+    // 26: Multiply r12 and rdx (implicit) and store the high bits in rbp and low bits in r12
+    (rbp_26, r12_26) = mulx r12_17 rdx_6
+    // 26
+
+
+// 0x0000000000018c19 <+121>:	49 11 c4	adc    r12,rax
+    // 27: Add r12, rax, and cf and store the result in r12
+    (cf_27, r12_27) = adc r12_26 rax_24 cf_25
+    // 27
+
+
+// 0x0000000000018c1c <+124>:	c4 c2 93 f6 c5	mulx   rax,r13,r13
+    // 28: Multiply r13 and rdx (implicit) and store the high bits in rax and low bits in r13
+    (rax_28, r13_28) = mulx r13_18 rdx_6
+    // 28
+
+
+// 0x0000000000018c21 <+129>:	48 89 ca	mov    rdx,rcx
+    // 29
+    rdx_29 = rcx_0
+
+
+// 0x0000000000018c24 <+132>:	49 11 ed	adc    r13,rbp
+    // 30: Add r13, rbp, and cf and store the result in r13
+    (cf_30, r13_30) = adc r13_28 rbp_26 cf_27
+    // 30
+
+
+
+// 0x0000000000018c27 <+135>:	4c 89 07	mov    QWORD PTR [rdi],r8
+    // 31
+    offload0 = r8_19
+
+
+// 0x0000000000018c2a <+138>:	4c 89 4f 08	mov    QWORD PTR [rdi+0x8],r9
+    // 32
+    offload1 = r9_21
+
+
+// 0x0000000000018c2e <+142>:	4c 89 57 10	mov    QWORD PTR [rdi+0x10],r10
+    // 33
+    offload2 = r10_23
+
+
+// 0x0000000000018c32 <+146>:	4c 89 5f 18	mov    QWORD PTR [rdi+0x18],r11
+    // 34
+    offload3 = r11_25
+
+
+// 0x0000000000018c36 <+150>:	4c 89 67 20	mov    QWORD PTR [rdi+0x20],r12
+    // 35
+    offload4 = r12_27
+
+
+// 0x0000000000018c3a <+154>:	4c 89 6f 28	mov    QWORD PTR [rdi+0x28],r13
+    // 36
+    offload5 = r13_30
+
+
+// 0x0000000000018c3e <+158>:	4c 8b 46 30	mov    r8,QWORD PTR [rsi+0x30]
+    // 37
+    r8_37 = v @ 0
+
+
+// 0x0000000000018c42 <+162>:	4c 8b 4e 38	mov    r9,QWORD PTR [rsi+0x38]
+    // 38
+    r9_38 = v @ 1
+
+
+// 0x0000000000018c46 <+166>:	4c 8b 56 40	mov    r10,QWORD PTR [rsi+0x40]
+    // 39
+    r10_39 = v @ 2
+
+
+// 0x0000000000018c4a <+170>:	4c 8b 5e 48	mov    r11,QWORD PTR [rsi+0x48]
+    // 40
+    r11_40 = v @ 3
+
+
+// 0x0000000000018c4e <+174>:	4c 8b 66 50	mov    r12,QWORD PTR [rsi+0x50]
+    // 41
+    r12_41 = v @ 4
+
+
+// 0x0000000000018c52 <+178>:	4c 8b 6e 58	mov    r13,QWORD PTR [rsi+0x58]
+    // 42
+    r13_42 = v @ 5
+
+
+// 0x0000000000018c56 <+182>:	48 89 d5	mov    rbp,rdx
+    // 43
+    rbp_43 = rdx_29
+
+
+// 0x0000000000018c59 <+185>:	48 c1 fd 3f	sar    rbp,0x3f
+    // 44
+    rbp_44 = rbp_43 >>$ 0x3f
+
+
+// 0x0000000000018c5d <+189>:	48 31 c0	xor    rax,rax
+    // 45
+    rax_45 = 0
+
+
+// 0x0000000000018c60 <+192>:	48 29 e8	sub    rax,rbp
+    // 46
+    (cf_46, rax_46) = sub rax_45 rbp_44
+
+
+
+// 0x0000000000018c63 <+195>:	48 31 ea	xor    rdx,rbp
+    // 47
+    rdx_47 = rdx_29 ^ rbp_44
+
+
+// 0x0000000000018c66 <+198>:	48 01 c2	add    rdx,rax
+    // 48
+    (cf_48, rdx_48) = add rdx_47 rax_46
+
+
+
+// 0x0000000000018c69 <+201>:	49 31 e8	xor    r8,rbp
+    // 49
+    r8_49 = r8_37 ^ rbp_44
+
+
+// 0x0000000000018c6c <+204>:	49 31 e9	xor    r9,rbp
+    // 50
+    r9_50 = r9_38 ^ rbp_44
+
+
+// 0x0000000000018c6f <+207>:	49 31 ea	xor    r10,rbp
+    // 51
+    r10_51 = r10_39 ^ rbp_44
+
+
+// 0x0000000000018c72 <+210>:	49 31 eb	xor    r11,rbp
+    // 52
+    r11_52 = r11_40 ^ rbp_44
+
+
+// 0x0000000000018c75 <+213>:	49 31 ec	xor    r12,rbp
+    // 53
+    r12_53 = r12_41 ^ rbp_44
+
+
+// 0x0000000000018c78 <+216>:	49 31 ed	xor    r13,rbp
+    // 54
+    r13_54 = r13_42 ^ rbp_44
+
+
+// 0x0000000000018c7b <+219>:	49 01 c0	add    r8,rax
+    // 55
+    (cf_55, r8_55) = add r8_49 rax_46
+
+
+
+// 0x0000000000018c7e <+222>:	49 83 d1 00	adc    r9,0x0
+    // 56
+    (cf_56, r9_56) = adc r9_50 0 cf_55
+
+
+// 0x0000000000018c82 <+226>:	49 83 d2 00	adc    r10,0x0
+    // 57
+    (cf_57, r10_57) = adc r10_51 0 cf_56
+
+
+// 0x0000000000018c86 <+230>:	49 83 d3 00	adc    r11,0x0
+    // 58
+    (cf_58, r11_58) = adc r11_52 0 cf_57
+
+
+// 0x0000000000018c8a <+234>:	49 83 d4 00	adc    r12,0x0
+    // 59
+    (cf_59, r12_59) = adc r12_53 0 cf_58
+
+
+// 0x0000000000018c8e <+238>:	49 83 d5 00	adc    r13,0x0
+    // 60
+    (cf_60, r13_60) = adc r13_54 0 cf_59
+
+
+// 0x0000000000018c92 <+242>:	c4 c2 bb f6 e8	mulx   rbp,r8,r8
+    // 61: Multiply r8 and rdx (implicit) and store the high bits in rbp and low bits in r8
+    (rbp_61, r8_61) = mulx r8_55 rdx_48
+    // 61
+
+
+// 0x0000000000018c97 <+247>:	c4 c2 b3 f6 c1	mulx   rax,r9,r9
+    // 62: Multiply r9 and rdx (implicit) and store the high bits in rax and low bits in r9
+    (rax_62, r9_62) = mulx r9_56 rdx_48
+    // 62
+
+
+// 0x0000000000018c9c <+252>:	49 01 e9	add    r9,rbp
+    // 63
+    (cf_63, r9_63) = add r9_62 rbp_61
+
+
+// 0x0000000000018c9f <+255>:	c4 c2 ab f6 ea	mulx   rbp,r10,r10
+    // 64: Multiply r10 and rdx (implicit) and store the high bits in rbp and low bits in r10
+    (rbp_64, r10_64) = mulx r10_57 rdx_48
+    // 64
+
+
+// 0x0000000000018ca4 <+260>:	49 11 c2	adc    r10,rax
+    // 65
+    (cf_65, r10_65) = adc r10_64 rax_62 cf_63
+
+
+// 0x0000000000018ca7 <+263>:	c4 c2 a3 f6 c3	mulx   rax,r11,r11
+    // 66: Multiply r11 and rdx (implicit) and store the high bits in rax and low bits in r11
+    (rax_66, r11_66) = mulx r11_58 rdx_48
+    // 66
+
+
+// 0x0000000000018cac <+268>:	49 11 eb	adc    r11,rbp
+    // 67: Add r11, rbp, and cf and store the result in r11
+    (cf_67, r11_67) = adc r11_66 rbp_64 cf_65
+    // 67
+
+
+// 0x0000000000018caf <+271>:	c4 c2 9b f6 ec	mulx   rbp,r12,r12
+    // 68: Multiply r12 and rdx (implicit) and store the high bits in rbp and low bits in r12
+    (rbp_68, r12_68) = mulx r12_59 rdx_48
+    // 68
+
+
+// 0x0000000000018cb4 <+276>:	49 11 c4	adc    r12,rax
+    // 69: Add r12, rax, and cf and store the result in r12
+    (cf_69, r12_69) = adc r12_68 rax_66 cf_67
+    // 69
+
+
+// 0x0000000000018cb7 <+279>:	c4 c2 93 f6 c5	mulx   rax,r13,r13
+    // 70: Multiply r13 and rdx (implicit) and store the high bits in rax and low bits in r13
+    (rax_70, r13_70) = mulx r13_60 rdx_48
+    // 70
+
+
+// 0x0000000000018cbc <+284>:	49 11 ed	adc    r13,rbp
+    // 71: Add r13, rbp, and cf and store the result in r13
+    (cf_71, r13_71) = adc r13_70 rbp_68 cf_69
+    // 71
+
+
+
+// 0x0000000000018cbf <+287>:	4c 03 07	add    r8,QWORD PTR [rdi]
+    // 72
+    (cf_72, r8_72) = add r8_61 offload0
+
+
+// 0x0000000000018cc2 <+290>:	4c 13 4f 08	adc    r9,QWORD PTR [rdi+0x8]
+    // 73
+    (cf_73, r9_73) = adc r9_63 offload1 cf_72
+
+
+// 0x0000000000018cc6 <+294>:	4c 13 57 10	adc    r10,QWORD PTR [rdi+0x10]
+    // 74
+    (cf_74, r10_74) = adc r10_65 offload2 cf_73
+
+
+// 0x0000000000018cca <+298>:	4c 13 5f 18	adc    r11,QWORD PTR [rdi+0x18]
+    // 75
+    (cf_75, r11_75) = adc r11_67 offload3 cf_74
+
+
+// 0x0000000000018cce <+302>:	4c 13 67 20	adc    r12,QWORD PTR [rdi+0x20]
+    // 76
+    (cf_76, r12_76) = adc r12_69 offload4 cf_75
+
+
+// 0x0000000000018cd2 <+306>:	4c 13 6f 28	adc    r13,QWORD PTR [rdi+0x28]
+    // 77
+    (cf_77, r13_77) = adc r13_71 offload5 cf_76
+
+
+// 0x0000000000018cd6 <+310>:	4c 89 07	mov    QWORD PTR [rdi],r8
+    // 78
+    result0 = r8_72
+
+
+// 0x0000000000018cd9 <+313>:	4c 89 4f 08	mov    QWORD PTR [rdi+0x8],r9
+    // 79
+    result1 = r9_73
+
+
+// 0x0000000000018cdd <+317>:	4c 89 57 10	mov    QWORD PTR [rdi+0x10],r10
+    // 80
+    result2 = r10_74
+
+
+// 0x0000000000018ce1 <+321>:	4c 89 5f 18	mov    QWORD PTR [rdi+0x18],r11
+    // 81
+    result3 = r11_75
+
+
+// 0x0000000000018ce5 <+325>:	4c 89 67 20	mov    QWORD PTR [rdi+0x20],r12
+    // 82
+    result4 = r12_76
+
+
+// 0x0000000000018ce9 <+329>:	4c 89 6f 28	mov    QWORD PTR [rdi+0x28],r13
+    // 83
+    result5 = r13_77
+// 0x0000000000018ced <+333>:	f3 c3	repz ret 
+    // 84
+    result = [result0, result1, result2, result3, result4, result5]
+
+__smulx_767x63
+  : Vec384 // u, stored at low offsets of rsi
+  -> Vec768 // v, stored at high offsets of rsi
+  -> [64] // f0
+  -> [64] // g0
+  -> Vec768
+__smulx_767x63 u v f0 g0 = result
+  where
+// 0x0000000000018984 <+4>:	4c 8b 06	mov    r8,QWORD PTR [rsi]
+// 0x0000000000018987 <+7>:	4c 8b 4e 08	mov    r9,QWORD PTR [rsi+0x8]
+// 0x000000000001898b <+11>:	4c 8b 56 10	mov    r10,QWORD PTR [rsi+0x10]
+// 0x000000000001898f <+15>:	4c 8b 5e 18	mov    r11,QWORD PTR [rsi+0x18]
+// 0x0000000000018993 <+19>:	4c 8b 66 20	mov    r12,QWORD PTR [rsi+0x20]
+// 0x0000000000018997 <+23>:	4c 8b 6e 28	mov    r13,QWORD PTR [rsi+0x28]
+    // 0
+    [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0] = u
+    rdx_0 = f0
+    rcx_0 = g0
+
+
+// 0x000000000001899b <+27>:	48 89 d0	mov    rax,rdx
+    // 7
+    rax_7 = rdx_0
+
+
+// 0x000000000001899e <+30>:	48 c1 f8 3f	sar    rax,0x3f
+    // 8
+    rax_8 = rax_7 >>$ 0x3f
+
+// 0x00000000000189a2 <+34>:	48 31 ed	xor    rbp,rbp
+    // 9
+    rbp_9 = 0
+
+
+// 0x00000000000189a5 <+37>:	48 29 c5	sub    rbp,rax
+    // 10
+    (cf_10, rbp_10) = sub rbp_9 rax_8
+
+
+// 0x00000000000189a8 <+40>:	48 89 7c 24 08	mov    QWORD PTR [rsp+0x8],rdi
+// 0x00000000000189ad <+45>:	48 89 74 24 10	mov    QWORD PTR [rsp+0x10],rsi
+// 0x00000000000189b2 <+50>:	48 8d 76 30	lea    rsi,[rsi+0x30]
+
+
+// 0x00000000000189b6 <+54>:	48 31 c2	xor    rdx,rax
+    // 14
+    rdx_14 = rdx_0 ^ rax_8
+
+
+// 0x00000000000189b9 <+57>:	48 01 ea	add    rdx,rbp
+    // 15
+    (cf_15, rdx_15) = add rdx_14 rbp_10
+
+
+
+// 0x00000000000189bc <+60>:	49 31 c0	xor    r8,rax
+    // 16
+    r8_16 = r8_0 ^ rax_8
+
+
+// 0x00000000000189bf <+63>:	49 31 c1	xor    r9,rax
+    // 17
+    r9_17 = r9_0 ^ rax_8
+
+
+// 0x00000000000189c2 <+66>:	49 31 c2	xor    r10,rax
+    // 18
+    r10_18 = r10_0 ^ rax_8
+
+
+// 0x00000000000189c5 <+69>:	49 31 c3	xor    r11,rax
+    // 19
+    r11_19 = r11_0 ^ rax_8
+
+
+// 0x00000000000189c8 <+72>:	49 31 c4	xor    r12,rax
+    // 20
+    r12_20 = r12_0 ^ rax_8
+
+
+// 0x00000000000189cb <+75>:	4c 31 e8	xor    rax,r13
+    // 21
+    rax_21 = rax_8 ^ r13_0
+
+
+// 0x00000000000189ce <+78>:	49 01 e8	add    r8,rbp
+    // 22
+    (cf_22, r8_22) = add r8_16 rbp_10
+
+
+// 0x00000000000189d1 <+81>:	49 83 d1 00	adc    r9,0x0
+    // 23
+    (cf_23, r9_23) = adc r9_17 0 cf_22
+
+
+// 0x00000000000189d5 <+85>:	49 83 d2 00	adc    r10,0x0
+    // 24
+    (cf_24, r10_24) = adc r10_18 0 cf_23
+
+
+// 0x00000000000189d9 <+89>:	49 83 d3 00	adc    r11,0x0
+    // 25
+    (cf_25, r11_25) = adc r11_19 0 cf_24
+
+
+// 0x00000000000189dd <+93>:	49 83 d4 00	adc    r12,0x0
+    // 26
+    (cf_26, r12_26) = adc r12_20 0 cf_25
+
+
+// 0x00000000000189e1 <+97>:	48 83 d0 00	adc    rax,0x0
+    // 27
+    (cf_27, rax_27) = adc rax_21 0 cf_26
+
+
+
+// 0x00000000000189e5 <+101>:	c4 c2 bb f6 e8	mulx   rbp,r8,r8
+    // 28: Multiply r8 and rdx (implicit) and store the high bits in rbp and low bits in r8
+    (rbp_28, r8_28) = mulx r8_22 rdx_15
+    // 28
+
+
+// 0x00000000000189ea <+106>:	c4 42 b3 f6 e9	mulx   r13,r9,r9
+    // 29: Multiply r9 and rdx (implicit) and store the high bits in r13 and low bits in r9
+    (r13_29, r9_29) = mulx r9_23 rdx_15
+    // 29
+
+
+// 0x00000000000189ef <+111>:	49 01 e9	add    r9,rbp
+    // 30
+    (cf_30, r9_30) = add r9_29 rbp_28
+
+
+// 0x00000000000189f2 <+114>:	c4 c2 ab f6 ea	mulx   rbp,r10,r10
+    // 31: Multiply r10 and rdx (implicit) and store the high bits in rbp and low bits in r10
+    (rbp_31, r10_31) = mulx r10_24 rdx_15
+    // 31
+
+
+// 0x00000000000189f7 <+119>:	4d 11 ea	adc    r10,r13
+    // 32
+    (cf_32, r10_32) = adc r10_31 r13_29 cf_30
+
+
+// 0x00000000000189fa <+122>:	c4 42 a3 f6 eb	mulx   r13,r11,r11
+    // 33: Multiply r11 and rdx (implicit) and store the high bits in r13 and low bits in r11
+    (r13_33, r11_33) = mulx r11_25 rdx_15
+    // 33
+
+
+// 0x00000000000189ff <+127>:	49 11 eb	adc    r11,rbp
+    // 34
+    (cf_34, r11_34) = adc r11_33 rbp_31 cf_32
+
+
+// 0x0000000000018a02 <+130>:	c4 c2 9b f6 ec	mulx   rbp,r12,r12
+    // 35: Multiply r12 and rdx (implicit) and store the high bits in rbp and low bits in r12
+    (rbp_35, r12_35) = mulx r12_26 rdx_15
+    // 35
+
+
+// 0x0000000000018a07 <+135>:	4d 11 ec	adc    r12,r13
+    // 36
+    (cf_36, r12_36) = adc r12_35 r13_33 cf_34
+
+
+// 0x0000000000018a0a <+138>:	48 83 d5 00	adc    rbp,0x0
+    // 37
+    (cf_37, rbp_37) = adc rbp_35 0 cf_36
+
+
+// 0x0000000000018a0e <+142>:	48 f7 ea	imul   rdx
+    // 38
+    (rdx_38, rax_38) = imul1 rdx_15 rax_27
+
+
+
+// 0x0000000000018a11 <+145>:	48 01 e8	add    rax,rbp
+    // 39
+    (cf_39, rax_39) = add rax_38 rbp_37
+
+
+// 0x0000000000018a14 <+148>:	48 83 d2 00	adc    rdx,0x0
+    // 40
+    (cf_40, rdx_40) = adc rdx_38 0 cf_39
+
+
+
+// 0x0000000000018a18 <+152>:	4c 89 07	mov    QWORD PTR [rdi],r8
+    // 41
+    offload0 = r8_28
+
+
+// 0x0000000000018a1b <+155>:	4c 89 4f 08	mov    QWORD PTR [rdi+0x8],r9
+    // 42
+    offload1 = r9_30
+
+
+// 0x0000000000018a1f <+159>:	4c 89 57 10	mov    QWORD PTR [rdi+0x10],r10
+    // 43
+    offload2 = r10_32
+
+
+// 0x0000000000018a23 <+163>:	4c 89 5f 18	mov    QWORD PTR [rdi+0x18],r11
+    // 44
+    offload3 = r11_34
+
+
+// 0x0000000000018a27 <+167>:	4c 89 67 20	mov    QWORD PTR [rdi+0x20],r12
+    // 45
+    offload4 = r12_36
+
+
+// 0x0000000000018a2b <+171>:	48 89 47 28	mov    QWORD PTR [rdi+0x28],rax
+    // 46
+    offload5 = rax_39
+
+
+// 0x0000000000018a2f <+175>:	48 89 57 30	mov    QWORD PTR [rdi+0x30],rdx
+    // 47
+    offload6 = rdx_40
+
+
+// 0x0000000000018a33 <+179>:	48 c1 fa 3f	sar    rdx,0x3f
+    // 48
+    rdx_48 = rdx_40 >>$ 0x3f
+
+
+// 0x0000000000018a37 <+183>:	48 89 57 38	mov    QWORD PTR [rdi+0x38],rdx
+    // 49
+    offload7 = rdx_48
+
+
+// 0x0000000000018a3b <+187>:	48 89 ca	mov    rdx,rcx
+    // 50
+    rdx_50 = rcx_0
+
+
+// 0x0000000000018a3e <+190>:	48 89 c8	mov    rax,rcx
+    // 51
+    rax_51 = rcx_0
+
+
+
+// 0x0000000000018a41 <+193>:	4c 8b 06	mov    r8,QWORD PTR [rsi]
+    // 52
+    r8_52 = v @ 0
+
+
+// 0x0000000000018a44 <+196>:	4c 8b 4e 08	mov    r9,QWORD PTR [rsi+0x8]
+    // 53
+    r9_53 = v @ 1
+
+
+// 0x0000000000018a48 <+200>:	4c 8b 56 10	mov    r10,QWORD PTR [rsi+0x10]
+    // 54
+    r10_54 = v @ 2
+
+
+// 0x0000000000018a4c <+204>:	4c 8b 5e 18	mov    r11,QWORD PTR [rsi+0x18]
+    // 55
+    r11_55 = v @ 3
+
+
+// 0x0000000000018a50 <+208>:	4c 8b 66 20	mov    r12,QWORD PTR [rsi+0x20]
+    // 56
+    r12_56 = v @ 4
+
+
+// 0x0000000000018a54 <+212>:	4c 8b 6e 28	mov    r13,QWORD PTR [rsi+0x28]
+    // 57
+    r13_57 = v @ 5
+
+
+// 0x0000000000018a58 <+216>:	4c 8b 76 30	mov    r14,QWORD PTR [rsi+0x30]
+    // 58
+    r14_58 = v @ 6
+
+
+// 0x0000000000018a5c <+220>:	4c 8b 7e 38	mov    r15,QWORD PTR [rsi+0x38]
+    // 59
+    r15_59 = v @ 7
+
+
+// 0x0000000000018a60 <+224>:	48 8b 5e 40	mov    rbx,QWORD PTR [rsi+0x40]
+    // 60
+    rbx_60 = v @ 8
+
+
+// 0x0000000000018a64 <+228>:	48 8b 6e 48	mov    rbp,QWORD PTR [rsi+0x48]
+    // 61
+    rbp_61 = v @ 9
+
+
+// 0x0000000000018a68 <+232>:	48 8b 4e 50	mov    rcx,QWORD PTR [rsi+0x50]
+    // 62
+    rcx_62 = v @ 10
+
+
+// 0x0000000000018a6c <+236>:	48 8b 7e 58	mov    rdi,QWORD PTR [rsi+0x58]
+    // 63
+    rdi_63 = v @ 11
+
+
+
+// 0x0000000000018a70 <+240>:	48 c1 f8 3f	sar    rax,0x3f
+    // 64
+    rax_64 = rax_51 >>$ 0x3f
+
+
+// 0x0000000000018a74 <+244>:	48 31 f6	xor    rsi,rsi
+    // 65
+    rsi_65 = 0
+
+
+// 0x0000000000018a77 <+247>:	48 29 c6	sub    rsi,rax
+    // 66
+    (cf_66, rsi_66) = sub rsi_65 rax_64
+
+
+
+// 0x0000000000018a7a <+250>:	48 31 c2	xor    rdx,rax
+    // 67
+    rdx_67 = rdx_50 ^ rax_64
+
+
+// 0x0000000000018a7d <+253>:	48 01 f2	add    rdx,rsi
+    // 68
+    (cf_68, rdx_68) = add rdx_67 rsi_66
+
+
+// 0x0000000000018a80 <+256>:	49 31 c0	xor    r8,rax
+    // 69
+    r8_69 = r8_52 ^ rax_64
+
+
+// 0x0000000000018a83 <+259>:	49 31 c1	xor    r9,rax
+    // 70
+    r9_70 = r9_53 ^ rax_64
+
+
+// 0x0000000000018a86 <+262>:	49 31 c2	xor    r10,rax
+    // 71
+    r10_71 = r10_54 ^ rax_64
+
+
+// 0x0000000000018a89 <+265>:	49 31 c3	xor    r11,rax
+    // 72
+    r11_72 = r11_55 ^ rax_64
+
+
+// 0x0000000000018a8c <+268>:	49 31 c4	xor    r12,rax
+    // 73
+    r12_73 = r12_56 ^ rax_64
+
+
+// 0x0000000000018a8f <+271>:	49 31 c5	xor    r13,rax
+    // 74
+    r13_74 = r13_57 ^ rax_64
+
+
+// 0x0000000000018a92 <+274>:	49 31 c6	xor    r14,rax
+    // 75
+    r14_75 = r14_58 ^ rax_64
+
+
+// 0x0000000000018a95 <+277>:	49 31 c7	xor    r15,rax
+    // 76
+    r15_76 = r15_59 ^ rax_64
+
+
+// 0x0000000000018a98 <+280>:	48 31 c3	xor    rbx,rax
+    // 77
+    rbx_77 = rbx_60 ^ rax_64
+
+
+// 0x0000000000018a9b <+283>:	48 31 c5	xor    rbp,rax
+    // 78
+    rbp_78 = rbp_61 ^ rax_64
+
+
+// 0x0000000000018a9e <+286>:	48 31 c1	xor    rcx,rax
+    // 79
+    rcx_79 = rcx_62 ^ rax_64
+
+
+// 0x0000000000018aa1 <+289>:	48 31 c7	xor    rdi,rax
+    // 80
+    rdi_80 = rdi_63 ^ rax_64
+
+
+// 0x0000000000018aa4 <+292>:	49 01 f0	add    r8,rsi
+    // 81
+    (cf_81, r8_81) = add r8_69 rsi_66
+
+
+// 0x0000000000018aa7 <+295>:	49 83 d1 00	adc    r9,0x0
+    // 82
+    (cf_82, r9_82) = adc r9_70 0 cf_81
+
+
+// 0x0000000000018aab <+299>:	49 83 d2 00	adc    r10,0x0
+    // 83
+    (cf_83, r10_83) = adc r10_71 0 cf_82
+
+
+// 0x0000000000018aaf <+303>:	49 83 d3 00	adc    r11,0x0
+    // 84
+    (cf_84, r11_84) = adc r11_72 0 cf_83
+
+
+// 0x0000000000018ab3 <+307>:	49 83 d4 00	adc    r12,0x0
+    // 85
+    (cf_85, r12_85) = adc r12_73 0 cf_84
+
+
+// 0x0000000000018ab7 <+311>:	49 83 d5 00	adc    r13,0x0
+    // 86
+    (cf_86, r13_86) = adc r13_74 0 cf_85
+
+
+// 0x0000000000018abb <+315>:	49 83 d6 00	adc    r14,0x0
+    // 87
+    (cf_87, r14_87) = adc r14_75 0 cf_86
+
+
+// 0x0000000000018abf <+319>:	49 83 d7 00	adc    r15,0x0
+    // 88
+    (cf_88, r15_88) = adc r15_76 0 cf_87
+
+
+// 0x0000000000018ac3 <+323>:	48 83 d3 00	adc    rbx,0x0
+    // 89
+    (cf_89, rbx_89) = adc rbx_77 0 cf_88
+
+
+// 0x0000000000018ac7 <+327>:	48 83 d5 00	adc    rbp,0x0
+    // 90
+    (cf_90, rbx_90) = adc rbp_78 0 cf_89
+
+
+// 0x0000000000018acb <+331>:	48 83 d1 00	adc    rcx,0x0
+    // 91
+    (cf_91, rcx_91) = adc rcx_79 0 cf_90
+
+
+// 0x0000000000018acf <+335>:	48 83 d7 00	adc    rdi,0x0
+    // 92
+    (cf_92, rdi_92) = adc rdi_80 0 cf_91
+
+
+
+// 0x0000000000018ad3 <+339>:	c4 c2 bb f6 c0	mulx   rax,r8,r8
+    // 93: Multiply r8 and rdx (implicit) and store the high bits in rax and low bits in r8
+    (rax_93, r8_93) = mulx r8_81 rdx_68
+    // 93
+
+
+// 0x0000000000018ad8 <+344>:	c4 c2 b3 f6 f1	mulx   rsi,r9,r9
+    // 94: Multiply r9 and rdx (implicit) and store the high bits in rsi and low bits in r9
+    (rsi_94, r9_94) = mulx r9_82 rdx_68
+    // 94
+
+
+// 0x0000000000018add <+349>:	49 01 c1	add    r9,rax
+    // 95
+    (cf_95, r9_95) = add r9_94 rax_93
+
+
+// 0x0000000000018ae0 <+352>:	c4 c2 ab f6 c2	mulx   rax,r10,r10
+    // 96: Multiply r10 and rdx (implicit) and store the high bits in rax and low bits in r10
+    (rax_96, r10_96) = mulx r10_83 rdx_68
+    // 96
+
+
+// 0x0000000000018ae5 <+357>:	49 11 f2	adc    r10,rsi
+    // 97
+    (cf_97, r10_97) = adc r10_96 rsi_94 cf_95
+
+
+// 0x0000000000018ae8 <+360>:	c4 c2 a3 f6 f3	mulx   rsi,r11,r11
+    // 98: Multiply r11 and rdx (implicit) and store the high bits in rsi and low bits in r11
+    (rsi_98, r11_98) = mulx r11_84 rdx_68
+    // 98
+
+
+// 0x0000000000018aed <+365>:	49 11 c3	adc    r11,rax
+    // 99
+    (cf_99, r11_99) = adc r11_98 rax_96 cf_97
+
+
+// 0x0000000000018af0 <+368>:	c4 c2 9b f6 c4	mulx   rax,r12,r12
+    // 100: Multiply r12 and rdx (implicit) and store the high bits in rax and low bits in r12
+    (rax_100, r12_100) = mulx r12_85 rdx_68
+    // 100
+
+
+// 0x0000000000018af5 <+373>:	49 11 f4	adc    r12,rsi
+    // 101
+    (cf_101, r12_101) = adc r12_100 rsi_98 cf_99
+
+
+// 0x0000000000018af8 <+376>:	c4 c2 93 f6 f5	mulx   rsi,r13,r13
+    // 102: Multiply r13 and rdx (implicit) and store the high bits in rsi and low bits in r13
+    (rsi_102, r13_102) = mulx r13_86 rdx_68
+    // 102
+
+
+// 0x0000000000018afd <+381>:	49 11 c5	adc    r13,rax
+    // 103
+    (cf_103, r13_103) = adc r13_102 rax_100 cf_101
+
+
+// 0x0000000000018b00 <+384>:	c4 c2 8b f6 c6	mulx   rax,r14,r14
+    // 104: Multiply r14 and rdx (implicit) and store the high bits in rax and low bits in r14
+    (rax_104, r14_104) = mulx r14_87 rdx_68
+    // 104
+
+
+// 0x0000000000018b05 <+389>:	49 11 f6	adc    r14,rsi
+    // 105
+    (cf_105, r14_105) = adc r14_104 rsi_102 cf_103
+
+
+// 0x0000000000018b08 <+392>:	c4 c2 83 f6 f7	mulx   rsi,r15,r15
+    // 106: Multiply r15 and rdx (implicit) and store the high bits in rsi and low bits in r15
+    (rsi_106, r15_106) = mulx r15_88 rdx_68
+    // 106
+
+
+// 0x0000000000018b0d <+397>:	49 11 c7	adc    r15,rax
+    // 107
+    (cf_107, r15_107) = adc r15_106 rax_104 cf_105
+
+
+// 0x0000000000018b10 <+400>:	c4 e2 e3 f6 c3	mulx   rax,rbx,rbx
+    // 108: Multiply rbx and rdx (implicit) and store the high bits in rax and low bits in rbx
+    (rax_108, rbx_108) = mulx rbx_90 rdx_68
+    // 108
+
+
+// 0x0000000000018b15 <+405>:	48 11 f3	adc    rbx,rsi
+    // 109
+    (cf_109, rbx_109) = adc rbx_108 rsi_106 cf_107
+
+
+// 0x0000000000018b18 <+408>:	c4 e2 d3 f6 f5	mulx   rsi,rbp,rbp
+    // 110: Multiply rbp and rdx (implicit) and store the high bits in rsi and low bits in rbp
+    (rsi_110, rbp_110) = mulx rbp_78 rdx_68
+    // 110
+
+
+// 0x0000000000018b1d <+413>:	48 11 c5	adc    rbp,rax
+    // 111
+    (cf_111, rbp_111) = adc rbp_110 rax_108 cf_109
+
+
+// 0x0000000000018b20 <+416>:	c4 e2 f3 f6 c1	mulx   rax,rcx,rcx
+    // 112: Multiply rcx and rdx (implicit) and store the high bits in rax and low bits in rcx
+    (rax_112, rcx_112) = mulx rcx_91 rdx_68
+    // 112
+
+
+// 0x0000000000018b25 <+421>:	48 11 f1	adc    rcx,rsi
+    // 113
+    (cf_113, rcx_113) = adc rcx_112 rsi_110 cf_111
+
+
+// 0x0000000000018b28 <+424>:	c4 e2 c3 f6 f7	mulx   rsi,rdi,rdi
+    // 114: Multiply rdi and rdx (implicit) and store the high bits in rsi and low bits in rdi
+    (rsi_114, rdi_114) = mulx rdi_92 rdx_68
+    // 114
+
+
+// 0x0000000000018b2d <+429>:	48 8b 54 24 08	mov    rdx,QWORD PTR [rsp+0x8]
+// 0x0000000000018b32 <+434>:	48 8b 74 24 10	mov    rsi,QWORD PTR [rsp+0x10]
+
+
+// 0x0000000000018b37 <+439>:	48 11 f8	adc    rax,rdi
+    // 117
+    (cf_117, rax_117) = adc rax_112 rdi_114 cf_113
+
+
+
+// 0x0000000000018b3a <+442>:	4c 03 02	add    r8,QWORD PTR [rdx]
+    // 118
+    r8_118 = offload0
+
+
+// 0x0000000000018b3d <+445>:	4c 13 4a 08	adc    r9,QWORD PTR [rdx+0x8]
+    // 119
+    r9_119 = offload1
+
+
+// 0x0000000000018b41 <+449>:	4c 13 52 10	adc    r10,QWORD PTR [rdx+0x10]
+    // 120
+    r10_120 = offload2
+
+
+// 0x0000000000018b45 <+453>:	4c 13 5a 18	adc    r11,QWORD PTR [rdx+0x18]
+    // 121
+    r11_121 = offload3
+
+
+// 0x0000000000018b49 <+457>:	4c 13 62 20	adc    r12,QWORD PTR [rdx+0x20]
+    // 122
+    r12_122 = offload4
+
+
+// 0x0000000000018b4d <+461>:	4c 13 6a 28	adc    r13,QWORD PTR [rdx+0x28]
+    // 123
+    r13_123 = offload5
+
+
+// 0x0000000000018b51 <+465>:	4c 13 72 30	adc    r14,QWORD PTR [rdx+0x30]
+    // 124
+    r14_124 = offload6
+
+
+// 0x0000000000018b55 <+469>:	48 8b 7a 38	mov    rdi,QWORD PTR [rdx+0x38]
+    // 125
+    rdi_125 = offload7
+
+
+// 0x0000000000018b59 <+473>:	49 11 ff	adc    r15,rdi
+    // 126
+    (cf_126, r15_126) = adc r15_107 rdi_125 cf_117
+
+
+// 0x0000000000018b5c <+476>:	48 11 fb	adc    rbx,rdi
+    // 127
+    (cf_127, rbx_127) = adc rbx_109 rdi_125 cf_126
+
+
+// 0x0000000000018b5f <+479>:	48 11 fd	adc    rbp,rdi
+    // 128
+    (cf_128, rbp_128) = adc rbp_111 rdi_125 cf_127
+
+
+// 0x0000000000018b62 <+482>:	48 11 f9	adc    rcx,rdi
+    // 129
+    (cf_129, rcx_129) = adc rcx_113 rdi_125 cf_128
+
+
+// 0x0000000000018b65 <+485>:	48 11 f8	adc    rax,rdi
+    // 130
+    (cf_130, rcx_130) = adc rax_117 rdi_125 cf_129
+
+
+
+// 0x0000000000018b68 <+488>:	48 89 d7	mov    rdi,rdx
+
+
+// 0x0000000000018b6b <+491>:	4c 89 02	mov    QWORD PTR [rdx],r8
+    // 132
+    result0 = r8_118
+
+
+// 0x0000000000018b6e <+494>:	4c 89 4a 08	mov    QWORD PTR [rdx+0x8],r9
+    // 133
+    result1 = r9_119
+
+
+// 0x0000000000018b72 <+498>:	4c 89 52 10	mov    QWORD PTR [rdx+0x10],r10
+    // 134
+    result2 = r10_120
+
+
+// 0x0000000000018b76 <+502>:	4c 89 5a 18	mov    QWORD PTR [rdx+0x18],r11
+    // 135
+    result3 = r11_121
+
+
+// 0x0000000000018b7a <+506>:	4c 89 62 20	mov    QWORD PTR [rdx+0x20],r12
+    // 136
+    result4 = r12_122
+
+
+// 0x0000000000018b7e <+510>:	4c 89 6a 28	mov    QWORD PTR [rdx+0x28],r13
+    // 137
+    result5 = r13_123
+
+
+// 0x0000000000018b82 <+514>:	4c 89 72 30	mov    QWORD PTR [rdx+0x30],r14
+    // 138
+    result6 = r14_124
+
+
+// 0x0000000000018b86 <+518>:	4c 89 7a 38	mov    QWORD PTR [rdx+0x38],r15
+    // 139
+    result7 = r15_126
+
+
+// 0x0000000000018b8a <+522>:	48 89 5a 40	mov    QWORD PTR [rdx+0x40],rbx
+    // 140
+    result8 = rbx_127
+
+
+// 0x0000000000018b8e <+526>:	48 89 6a 48	mov    QWORD PTR [rdx+0x48],rbp
+    // 141
+    result9 = rbp_128
+
+
+// 0x0000000000018b92 <+530>:	48 89 4a 50	mov    QWORD PTR [rdx+0x50],rcx
+    // 142
+    result10 = rcx_130
+
+
+// 0x0000000000018b96 <+534>:	48 89 42 58	mov    QWORD PTR [rdx+0x58],rax
+    // 143
+    result11 = rax_117
+
+// 0x0000000000018b9a <+538>:	f3 c3	repz ret 
+    // 144
+    result =
+      [ result0, result1, result2, result3, result4, result5
+      , result6, result7, result8, result9, result10, result11
+      ]
+
+__ab_approximation_31
+  : Integer // number of iterations
+  -> Vec384 // a
+  -> Vec384 // b
+  -> [6][64] // result; a, b, f0, g0, f1, g1
+__ab_approximation_31 iters a b = result
+  where
+// 0x0000000000018fe4 <+4>:	4c 8b 4e 28	mov    r9,QWORD PTR [rsi+0x28]
+// 0x0000000000018fe8 <+8>:	4c 8b 5e 58	mov    r11,QWORD PTR [rsi+0x58]
+// 0x0000000000018fec <+12>:	48 8b 5e 20	mov    rbx,QWORD PTR [rsi+0x20]
+// 0x0000000000018ff0 <+16>:	48 8b 6e 50	mov    rbp,QWORD PTR [rsi+0x50]
+// 0x0000000000018ff4 <+20>:	4c 8b 46 18	mov    r8,QWORD PTR [rsi+0x18]
+// 0x0000000000018ff8 <+24>:	4c 8b 56 48	mov    r10,QWORD PTR [rsi+0x48]
+    // 0
+    r9_0 = a @ 5
+    r11_0 = b @ 5
+    rbx_0 = a @ 4
+    rbp_0 = b @ 4
+    r8_0 = a @ 3
+    r10_0 = b @ 3
+
+// 0x0000000000018ffc <+28>:	4c 89 c8	mov    rax,r9
+    // 1
+    rax_1 = r9_0
+
+// 0x0000000000018fff <+31>:	4c 09 d8	or     rax,r11
+    // 2
+    rax_2 = rax_1 || r11_0
+    zf_2 = rax_2 == 0
+
+// 0x0000000000019002 <+34>:	4c 0f 44 cb	cmove  r9,rbx
+    // 3
+    r9_3 = cmove r9_0 rbx_0 zf_2
+
+// 0x0000000000019006 <+38>:	4c 0f 44 dd	cmove  r11,rbp
+    // 4
+    r11_4 = cmove r11_0 rbp_0 zf_2
+
+// 0x000000000001900a <+42>:	49 0f 44 d8	cmove  rbx,r8
+    // 5
+    rbx_5 = cmove rbx_0 r8_0 zf_2
+
+// 0x000000000001900e <+46>:	4c 8b 46 10	mov    r8,QWORD PTR [rsi+0x10]
+    // 6
+    r8_6 = a @ 2
+
+// 0x0000000000019012 <+50>:	49 0f 44 ea	cmove  rbp,r10
+    // 7
+    rbp_7 = cmove rbp_0 r10_0 zf_2
+
+// 0x0000000000019016 <+54>:	4c 8b 56 40	mov    r10,QWORD PTR [rsi+0x40]
+    // 8
+    r10_8 = b @ 2
+
+// 0x000000000001901a <+58>:	4c 89 c8	mov    rax,r9
+    // 9
+    rax_9 = r9_3
+
+// 0x000000000001901d <+61>:	4c 09 d8	or     rax,r11
+    // 10
+    rax_10 = rax_9 || r11_4
+    zf_10 = rax_10 == 0
+
+// 0x0000000000019020 <+64>:	4c 0f 44 cb	cmove  r9,rbx
+    // 11
+    r9_11 = cmove r9_3 rbx_5 zf_10
+
+// 0x0000000000019024 <+68>:	4c 0f 44 dd	cmove  r11,rbp
+    // 12
+    r11_12 = cmove r11_4 rbp_7 zf_10
+
+// 0x0000000000019028 <+72>:	49 0f 44 d8	cmove  rbx,r8
+    // 13
+    rbx_13 = cmove rbx_5 r8_6 zf_10
+
+// 0x000000000001902c <+76>:	4c 8b 46 08	mov    r8,QWORD PTR [rsi+0x8]
+    // 14
+    r8_14 = a @ 1
+
+// 0x0000000000019030 <+80>:	49 0f 44 ea	cmove  rbp,r10
+    // 15
+    rbp_15 = cmove rbp_7 r10_8 zf_10
+
+// 0x0000000000019034 <+84>:	4c 8b 56 38	mov    r10,QWORD PTR [rsi+0x38]
+    // 16
+    r10_16 = b @ 1
+
+// 0x0000000000019038 <+88>:	4c 89 c8	mov    rax,r9
+    // 17
+    rax_17 = r9_11
+
+// 0x000000000001903b <+91>:	4c 09 d8	or     rax,r11
+    // 18
+    rax_18 = rax_17 || r11_12
+    zf_18 = rax_18 == 0
+
+// 0x000000000001903e <+94>:	4c 0f 44 cb	cmove  r9,rbx
+    // 19
+    r9_19 = cmove r9_11 rbx_13 zf_18
+
+// 0x0000000000019042 <+98>:	4c 0f 44 dd	cmove  r11,rbp
+    // 20
+    r11_20 = cmove r11_12 rbp_15 zf_18
+
+// 0x0000000000019046 <+102>:	49 0f 44 d8	cmove  rbx,r8
+    // 21
+    rbx_21 = cmove rbx_13 r8_14 zf_18
+
+// 0x000000000001904a <+106>:	4c 8b 06	mov    r8,QWORD PTR [rsi]
+    // 22
+    r8_22 = a @ 0
+
+// 0x000000000001904d <+109>:	49 0f 44 ea	cmove  rbp,r10
+    // 23
+    rbp_23 = cmove rbp_15 r10_16 zf_18
+
+// 0x0000000000019051 <+113>:	4c 8b 56 30	mov    r10,QWORD PTR [rsi+0x30]
+    // 24
+    r10_24 = b @ 0
+
+// 0x0000000000019055 <+117>:	4c 89 c8	mov    rax,r9
+    // 25
+    rax_25 = r9_19
+
+// 0x0000000000019058 <+120>:	4c 09 d8	or     rax,r11
+    // 26
+    rax_26 = rax_25 || r11_20
+    zf_26 = rax_26 == 0
+
+// 0x000000000001905b <+123>:	4c 0f 44 cb	cmove  r9,rbx
+    // 27
+    r9_27 = cmove r9_19 rbx_21 zf_26
+
+// 0x000000000001905f <+127>:	4c 0f 44 dd	cmove  r11,rbp
+    // 28
+    r11_28 = cmove r11_20 rbp_23 zf_26
+
+// 0x0000000000019063 <+131>:	49 0f 44 d8	cmove  rbx,r8
+    // 29
+    rbx_29 = cmove rbx_21 r8_22 zf_26
+
+// 0x0000000000019067 <+135>:	49 0f 44 ea	cmove  rbp,r10
+    // 30
+    rbp_30 = cmove rbp_23 r10_24 zf_26
+
+// 0x000000000001906b <+139>:	4c 89 c8	mov    rax,r9
+    // 31
+    rax_31 = r9_27
+
+// 0x000000000001906e <+142>:	4c 09 d8	or     rax,r11
+    // 32
+    rax_32 = rax_31 || r11_28
+
+// 0x0000000000019071 <+145>:	48 0f bd c8	bsr    rcx,rax
+    // 33
+    zf_33 = rax_32 == 0
+    rcx_33 = bsr rax_32
+
+// 0x0000000000019075 <+149>:	48 8d 49 01	lea    rcx,[rcx+0x1]
+    // 34
+    rcx_34 = rcx_33 + 1
+
+// 0x0000000000019079 <+153>:	4c 0f 44 cb	cmove  r9,rbx
+    // 35
+    r9_35 = cmove r9_27 rbx_29 zf_33
+
+// 0x000000000001907d <+157>:	4c 0f 44 dd	cmove  r11,rbp
+    // 36
+    r11_36 = cmove r11_28 rbp_30 zf_33
+
+// 0x0000000000019081 <+161>:	48 0f 44 c8	cmove  rcx,rax
+    // 37
+    rcx_37 = cmove rcx_34 rax_32 zf_33
+
+// 0x0000000000019085 <+165>:	48 f7 d9	neg    rcx
+    // 38
+    rcx_38 = 0 - rcx_37
+
+// 0x0000000000019088 <+168>:	49 0f a5 d9	shld   r9,rbx,cl
+    // 39
+    r9_39 = shld r9_35 rbx_29 rcx_38
+
+// 0x000000000001908c <+172>:	49 0f a5 eb	shld   r11,rbp,cl
+    // 40
+    r11_40 = shld r11_36 rbp_30 rcx_38
+
+// 0x0000000000019090 <+176>:	4c 89 c9	mov    rcx,r9
+    // 41
+    rcx_41 = r9_39
+
+// 0x0000000000019093 <+179>:	4c 09 d9	or     rcx,r11
+    // 42
+    rcx_42 = rcx_41 || r11_40
+
+// 0x0000000000019096 <+182>:	48 c1 f9 3f	sar    rcx,0x3f
+    // 43
+    rcx_43 = rcx_42 >>$ 0x3f
+
+// 0x000000000001909a <+186>:	83 e1 21	and    ecx,0x21
+    // 44
+    rcx_44 = rcx_43 && zext 0x21
+
+// 0x000000000001909d <+189>:	49 d3 e9	shr    r9,cl
+    // 45
+    r9_45 = r9_39 >> rcx_44
+
+// 0x00000000000190a0 <+192>:	49 d3 eb	shr    r11,cl
+    // 46
+    r11_46 = r11_40 >> rcx_44
+
+// 0x00000000000190a3 <+195>:	49 d3 e0	shl    r8,cl
+    // 47
+    r8_47 = r8_22 << rcx_44
+
+// 0x00000000000190a6 <+198>:	49 d3 e2	shl    r10,cl
+    // 48
+    r10_48 = r10_24 << rcx_44
+
+// 0x00000000000190a9 <+201>:	4d 0f ad c8	shrd   r8,r9,cl
+    // 49
+    r8_49 = shrd r8_47 r9_45 rcx_44
+
+// 0x00000000000190ad <+205>:	4d 0f ad da	shrd   r10,r11,cl
+    // 50
+    r10_50 = shrd r10_48 r11_46 rcx_44
+
+// 0x00000000000190b1 <+209>:	eb 0d	jmp    0x190c0 <__inner_loop_31>
+    // 51
+    result = __inner_loop_31 iters r8_49 r10_50
+
+__inner_loop_31
+  : Integer // number of iterations
+  -> [64] // a
+  -> [64] // b
+  -> [6][64] // result; a, b, f0, g0, f1, g1
+__inner_loop_31 iters a_init b_init = result
+  where
+    [post_a, post_b, post_fg0, post_fg1, post_bias] = loop iters [a_init, b_init, 0x7FFFFFFF80000000, 0x800000007FFFFFFF, 0x7FFFFFFF7FFFFFFF]
+    [tmp_f0, tmp_g0] = split post_fg0
+    [tmp_f1, tmp_g1] = split post_fg1
+    result = [post_a, post_b, zext tmp_f0 - post_bias, zext tmp_g0 - post_bias, zext tmp_f1 - post_bias, zext tmp_g1 - post_bias]
+
+    loop : Integer -> [5][64] -> [5][64]
+    loop counter [a, b, fg0, fg1, bias] = loopresult
+      where
+        // 0
+        r8_0 = a
+        r10_0 = b
+        rcx_0 = fg0
+        r13_0 = fg1
+        r15_0 = bias
+
+    // 0x00000000000190e2 <+34>:	4d 39 d0	cmp    r8,r10
+        // 1
+        (cf_1, _) = sub r8_0 r10_0
+    
+    
+    // 0x00000000000190e5 <+37>:	4c 89 c0	mov    rax,r8
+        // 2
+        rax_2 = r8_0
+    
+    
+    // 0x00000000000190e8 <+40>:	4c 89 d3	mov    rbx,r10
+        // 3
+        rbx_3 = r10_0
+    
+    
+    // 0x00000000000190eb <+43>:	48 89 cd	mov    rbp,rcx
+        // 4
+        rbp_4 = rcx_0
+    
+    
+    // 0x00000000000190ee <+46>:	4d 89 ee	mov    r14,r13
+        // 5
+        r14_5 = r13_0
+    
+    
+    // 0x00000000000190f1 <+49>:	4d 0f 42 c2	cmovb  r8,r10
+        // 6
+        r8_6 = cmovb r8_0 r10_0 cf_1
+    
+    
+    // 0x00000000000190f5 <+53>:	4c 0f 42 d0	cmovb  r10,rax
+        // 7
+        r10_7 = rax_2
+    
+    
+    // 0x00000000000190f9 <+57>:	49 0f 42 cd	cmovb  rcx,r13
+        // 8
+        rcx_8 = cmovb rcx_0 r13_0 cf_1
+    
+    
+    // 0x00000000000190fd <+61>:	4c 0f 42 ed	cmovb  r13,rbp
+        // 9
+        r13_9 = cmovb r13_0 rbp_4 cf_1
+    
+    
+    // 0x0000000000019101 <+65>:	4d 29 d0	sub    r8,r10
+        // 10
+        (cf_10, r8_10) = sub r8_6 r10_7
+    
+    
+    // 0x0000000000019104 <+68>:	4c 29 e9	sub    rcx,r13
+        // 11
+        (cf_11, rcx_11) = sub rcx_8 r13_9
+    
+    
+    // 0x0000000000019107 <+71>:	4c 01 f9	add    rcx,r15
+        // 12
+        (cf_12, rcx_12) = add rcx_11 r15_0
+    
+    
+    // 0x000000000001910a <+74>:	48 a9 01 00 00 00	test   rax,0x1
+        // 13
+        zf_13 = (rax_2 && zext 0x1) == 0
+    
+    
+    // 0x0000000000019110 <+80>:	4c 0f 44 c0	cmove  r8,rax
+        // 14
+        r8_14 = cmove r8_10 rax_2 zf_13
+    
+    
+    // 0x0000000000019114 <+84>:	4c 0f 44 d3	cmove  r10,rbx
+        // 15
+        r10_15 = cmove r10_7 rbx_3 zf_13
+    
+    
+    // 0x0000000000019118 <+88>:	48 0f 44 cd	cmove  rcx,rbp
+        // 16
+        rcx_16 = cmove rcx_12 rbp_4 zf_13
+    
+    
+    // 0x000000000001911c <+92>:	4d 0f 44 ee	cmove  r13,r14
+        // 17
+        r13_17 = cmove r13_9 r14_5 zf_13
+    
+    
+    
+    // 0x0000000000019120 <+96>:	49 d1 e8	shr    r8,1
+        // 18
+        r8_18 = r8_14 >> 1
+    
+    
+    // 0x0000000000019123 <+99>:	4d 01 ed	add    r13,r13
+        // 19
+        (cf_19, r13_19) = add r13_17 r13_17
+    
+    
+    // 0x0000000000019126 <+102>:	4d 29 fd	sub    r13,r15
+        // 20
+        (cf_20, r13_20) = sub r13_19 r15_0
+    
+    
+    // 0x0000000000019129 <+105>:	83 ef 01	sub    edi,0x1
+        // 21
+        curcounter = counter - 1
+
+    // 0x000000000001912c <+108>:	75 b4	jne    0x190e2 <__inner_loop_31+34>
+        // 22
+        curresult = [r8_18, r10_15, rcx_16, r13_20, r15_0]
+        loopresult = if curcounter == 0 then curresult else loop curcounter curresult
+
+__inner_loop_62
+  : Integer // number of iterations
+  -> [64] // a
+  -> [64] // b
+  -> [6][64] // result; a, b, f0, g0, f1, g1
+__inner_loop_62 iters a_init b_init = result
+  where
+    result = loop iters [a_init, b_init, 1, 0, 0, 1]
+    loop : Integer -> [6][64] -> [6][64]
+    loop counter [a, b, f0, g0, f1, g1] = loopresult
+      where
+        // 0
+        r8_0 = a
+        r10_0 = b
+        rdx_0 = f0
+        rcx_0 = g0
+        r12_0 = f1
+        r13_0 = g1
+    // 0x0000000000019178 <+24>:	48 31 c0	xor    rax,rax
+        // 1
+        rax_0 = 0
+    
+    
+    // 0x000000000001917b <+27>:	49 f7 c0 01 00 00 00	test   r8,0x1
+        // 2
+        zf_2 = (r8_0 && zext 0x1) == 0
+    
+    
+    // 0x0000000000019182 <+34>:	4c 89 d3	mov    rbx,r10
+        // 3
+        rbx_3 = r10_0
+    
+    
+    // 0x0000000000019185 <+37>:	49 0f 45 c2	cmovne rax,r10
+        // 4
+        rax_4 = cmovne rax_0 r10_0 zf_2
+    
+    
+    // 0x0000000000019189 <+41>:	4c 29 c3	sub    rbx,r8
+        // 5
+        (cf_5, rbx_5) = sub rbx_3 r8_0
+    
+    
+    // 0x000000000001918c <+44>:	4c 89 c5	mov    rbp,r8
+        // 6
+        rbp_6 = r8_0
+    
+    
+    // 0x000000000001918f <+47>:	49 29 c0	sub    r8,rax
+        // 7
+        (cf_7, r8_7) = sub r8_0 rax_4
+    
+    
+    // 0x0000000000019192 <+50>:	4c 0f 42 c3	cmovb  r8,rbx
+        // 8
+        r8_8 = cmovb r8_7 rbx_5 cf_7
+    
+    
+    // 0x0000000000019196 <+54>:	4c 0f 42 d5	cmovb  r10,rbp
+        // 9
+        r10_9 = cmovb r10_0 rbp_6 cf_7
+    
+    
+    // 0x000000000001919a <+58>:	48 89 d0	mov    rax,rdx
+        // 10
+        rax_10 = rdx_0
+    
+    
+    // 0x000000000001919d <+61>:	49 0f 42 d4	cmovb  rdx,r12
+        // 11
+        rdx_11 = cmovb rdx_0 r12_0 cf_7
+    
+    
+    // 0x00000000000191a1 <+65>:	4c 0f 42 e0	cmovb  r12,rax
+        // 12
+        r12_12 = cmovb r12_0 rax_10 cf_7
+    
+    
+    // 0x00000000000191a5 <+69>:	48 89 cb	mov    rbx,rcx
+        // 13
+        rbx_13 = rcx_0
+    
+    
+    // 0x00000000000191a8 <+72>:	49 0f 42 cd	cmovb  rcx,r13
+        // 14
+        rcx_14 = cmovb rcx_0 r13_0 cf_7
+    
+    
+    // 0x00000000000191ac <+76>:	4c 0f 42 eb	cmovb  r13,rbx
+        // 15
+        r13_15 = cmovb r13_0 rbx_13 cf_7
+    
+    
+    // 0x00000000000191b0 <+80>:	48 31 c0	xor    rax,rax
+        // 16
+        rax_16 = 0
+    
+    
+    // 0x00000000000191b3 <+83>:	48 31 db	xor    rbx,rbx
+        // 17
+        rbx_17 = 0
+    
+    
+    // 0x00000000000191b6 <+86>:	49 d1 e8	shr    r8,1
+        // 18
+        r8_18 = r8_8 >> 1
+    
+    
+    // 0x00000000000191b9 <+89>:	48 f7 c5 01 00 00 00	test   rbp,0x1
+        // 19
+        rbp_19 = (rbp_6 && zext 0x1) == 0
+    
+    
+    // 0x00000000000191c0 <+96>:	49 0f 45 c4	cmovne rax,r12
+        // 20
+        rax_20 = cmovne rax_16 r12_12 zf_2
+    
+    
+    // 0x00000000000191c4 <+100>:	49 0f 45 dd	cmovne rbx,r13
+        // 21
+        rbx_21 = cmovne rbx_17 r13_15 zf_2
+    
+    
+    // 0x00000000000191c8 <+104>:	4d 01 e4	add    r12,r12
+        // 22
+        (cf_22, r12_22) = add r12_12 r12_12
+    
+    
+    // 0x00000000000191cb <+107>:	4d 01 ed	add    r13,r13
+        // 23
+        (cf_23, r13_23) = add r13_15 r13_15
+    
+    
+    // 0x00000000000191ce <+110>:	48 29 c2	sub    rdx,rax
+        // 24
+        (cf_24, rdx_24) = sub rdx_11 rax_20
+    
+    
+    // 0x00000000000191d1 <+113>:	48 29 d9	sub    rcx,rbx
+        // 25
+        (cf_25, rcx_25) = sub rcx_14 rbx_21
+    
+    
+    // 0x00000000000191d4 <+116>:	83 ef 01	sub    edi,0x1
+        // 26
+        curcounter = counter - 1
+    
+    
+    // 0x00000000000191d7 <+119>:	75 9f	jne    0x19178 <__inner_loop_62+24>
+        // 27
+        curresult = [r8_18, r10_9, rdx_24, rcx_25, r12_22, r13_23]
+        loopresult = if curcounter == 0 then curresult else loop curcounter curresult
+
+ctx_inverse_mod_383
+  : Vec384 // a; pointer in rsi
+  -> Vec384 // m; pointer in rdx
+  -> Vec384 // ret
+ctx_inverse_mod_383 a m = result
+  where
+// 0x0000000000017d23 <+35>:	48 89 7c 24 20	mov    QWORD PTR [rsp+0x20],rdi
+// 0x0000000000017d28 <+40>:	48 89 54 24 28	mov    QWORD PTR [rsp+0x28],rdx
+    // 1
+
+
+// 0x0000000000017d2d <+45>:	4c 8b 06	mov    r8,QWORD PTR [rsi]
+// 0x0000000000017d30 <+48>:	4c 8b 4e 08	mov    r9,QWORD PTR [rsi+0x8]
+// 0x0000000000017d34 <+52>:	4c 8b 56 10	mov    r10,QWORD PTR [rsi+0x10]
+// 0x0000000000017d38 <+56>:	4c 8b 5e 18	mov    r11,QWORD PTR [rsi+0x18]
+// 0x0000000000017d3c <+60>:	4c 8b 66 20	mov    r12,QWORD PTR [rsi+0x20]
+// 0x0000000000017d40 <+64>:	4c 8b 6e 28	mov    r13,QWORD PTR [rsi+0x28]
+    // 2: Load a into registers
+    a_2 = a
+
+// 0x0000000000017d44 <+68>:	4c 8b 32	mov    r14,QWORD PTR [rdx]
+// 0x0000000000017d47 <+71>:	4c 8b 7a 08	mov    r15,QWORD PTR [rdx+0x8]
+// 0x0000000000017d4b <+75>:	48 8b 5a 10	mov    rbx,QWORD PTR [rdx+0x10]
+// 0x0000000000017d4f <+79>:	48 8b 6a 18	mov    rbp,QWORD PTR [rdx+0x18]
+// 0x0000000000017d53 <+83>:	48 8b 72 20	mov    rsi,QWORD PTR [rdx+0x20]
+// 0x0000000000017d57 <+87>:	48 8b 7a 28	mov    rdi,QWORD PTR [rdx+0x28]
+    // 3: Load m into registers
+    b_3 = m
+
+// 0x0000000000017d5b <+91>:	4c 89 00	mov    QWORD PTR [rax],r8
+// 0x0000000000017d5e <+94>:	4c 89 48 08	mov    QWORD PTR [rax+0x8],r9
+// 0x0000000000017d62 <+98>:	4c 89 50 10	mov    QWORD PTR [rax+0x10],r10
+// 0x0000000000017d66 <+102>:	4c 89 58 18	mov    QWORD PTR [rax+0x18],r11
+// 0x0000000000017d6a <+106>:	4c 89 60 20	mov    QWORD PTR [rax+0x20],r12
+// 0x0000000000017d6e <+110>:	4c 89 68 28	mov    QWORD PTR [rax+0x28],r13
+    // 4: Store a at the low offsets of stack (rax)
+
+// 0x0000000000017d72 <+114>:	4c 89 70 30	mov    QWORD PTR [rax+0x30],r14
+// 0x0000000000017d76 <+118>:	4c 89 78 38	mov    QWORD PTR [rax+0x38],r15
+// 0x0000000000017d7a <+122>:	48 89 58 40	mov    QWORD PTR [rax+0x40],rbx
+// 0x0000000000017d7e <+126>:	48 89 68 48	mov    QWORD PTR [rax+0x48],rbp
+// 0x0000000000017d82 <+130>:	48 89 70 50	mov    QWORD PTR [rax+0x50],rsi
+// 0x0000000000017d86 <+134>:	48 89 c6	mov    rsi,rax
+// 0x0000000000017d89 <+137>:	48 89 78 58	mov    QWORD PTR [rax+0x58],rdi
+    // 5: Store m at the high offsets of stack, set rsi to stack pointer
+
+
+
+
+// 0x0000000000017d8d <+141>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x0000000000017d92 <+146>:	e8 49 12 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x0000000000017d97 <+151>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000017d9c <+156>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 6: rdi lo, rsi lo: Call __ab_approximation_31(31, a, b), and offload f1 and g1
+    [loa_6, lob_6, f0_6, g0_6, f1_6, g1_6] = __ab_approximation_31 31 a_?? b_??
+
+
+// 0x0000000000017da1 <+161>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x0000000000017da8 <+168>:	48 31 f7	xor    rdi,rsi
+// 0x0000000000017dab <+171>:	e8 50 0f 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000017db0 <+176>:	48 89 57 60	mov    QWORD PTR [rdi+0x60],rdx
+    // 7: rdi hi, rsi lo: Swap rdi to high offsets, and store result of __smulx_383_n_shift_by_31(a, b, f0, g0) there, offloading f0
+    (hia_7, f0_7, g0_7) = __smulx_383_n_shift_by_31 loa_?? lob_?? f0_?? g0_??
+    offloadu_7 = f0_7
+
+// 0x0000000000017db4 <+180>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000017db9 <+185>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000017dbe <+190>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000017dc2 <+194>:	e8 39 0f 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000017dc7 <+199>:	48 89 57 60	mov    QWORD PTR [rdi+0x60],rdx
+    // 8: rdi hi, rsi lo: Increment high offset, and store result of __smulx_383_n_shift_by_31(a, b, f1, g1) there, offloading f1
+    (hib_8, f1_8, g1_8) = __smulx_383_n_shift_by_31 loa_?? lob_?? f1_?? g1_??
+    offloadv_8 = f1_8
+
+
+
+// 0x0000000000017dcb <+203>:	48 81 f6 00 01 00 00	xor    rsi,0x100
+// 0x0000000000017dd2 <+210>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x0000000000017dd7 <+215>:	e8 04 12 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x0000000000017ddc <+220>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000017de1 <+225>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 9: rdi hi, rsi hi: Swap rsi to high offsets and call __ab_approximation_31(31, a, b), offloading f1 and g1
+    [hia_9, hib_9, f0_9, g0_9, f1_9, g1_9] = __ab_approximation_31 31 hia_?? hib_??
+
+
+// 0x0000000000017de6 <+230>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x0000000000017ded <+237>:	48 31 f7	xor    rdi,rsi
+// 0x0000000000017df0 <+240>:	e8 0b 0f 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000017df5 <+245>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x0000000000017dfa <+250>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 10: rdi lo, rsi hi: Swap rdi to low offsets, and store result of __smulx_383_n_shift_by_31(a, b, f0, g0) there, offloading f0 and g0
+    (loa_10, f0_10, g0_10) = __smulx_383_n_shift_by_31 hia_?? hib_?? f0_?? g0_??
+
+
+
+// 0x0000000000017dff <+255>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000017e04 <+260>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000017e09 <+265>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000017e0d <+269>:	e8 ee 0e 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+    // 11: rdi lo, rsi hi
+    (lob_11, f1_11, g1_11) = __smulx_383_n_shift_by_31 hia_?? hib_?? f1_?? g1_??
+
+
+
+// 0x0000000000017e12 <+274>:	48 8b 46 60	mov    rax,QWORD PTR [rsi+0x60]
+// 0x0000000000017e16 <+278>:	4c 8b 9e 90 00 00 00	mov    r11,QWORD PTR [rsi+0x90]
+// 0x0000000000017e1d <+285>:	48 89 d3	mov    rbx,rdx
+// 0x0000000000017e20 <+288>:	49 89 c2	mov    r10,rax
+// 0x0000000000017e23 <+291>:	48 f7 6c 24 38	imul   QWORD PTR [rsp+0x38]
+// 0x0000000000017e28 <+296>:	49 89 c0	mov    r8,rax
+// 0x0000000000017e2b <+299>:	4c 89 d8	mov    rax,r11
+// 0x0000000000017e2e <+302>:	49 89 d1	mov    r9,rdx
+// 0x0000000000017e31 <+305>:	48 f7 6c 24 40	imul   QWORD PTR [rsp+0x40]
+// 0x0000000000017e36 <+310>:	49 01 c0	add    r8,rax
+// 0x0000000000017e39 <+313>:	49 11 d1	adc    r9,rdx
+// 0x0000000000017e3c <+316>:	4c 89 47 30	mov    QWORD PTR [rdi+0x30],r8
+// 0x0000000000017e40 <+320>:	4c 89 4f 38	mov    QWORD PTR [rdi+0x38],r9
+// 0x0000000000017e44 <+324>:	49 c1 f9 3f	sar    r9,0x3f
+// 0x0000000000017e48 <+328>:	4c 89 4f 40	mov    QWORD PTR [rdi+0x40],r9
+// 0x0000000000017e4c <+332>:	4c 89 4f 48	mov    QWORD PTR [rdi+0x48],r9
+// 0x0000000000017e50 <+336>:	4c 89 4f 50	mov    QWORD PTR [rdi+0x50],r9
+// 0x0000000000017e54 <+340>:	4c 89 4f 58	mov    QWORD PTR [rdi+0x58],r9
+// 0x0000000000017e58 <+344>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x0000000000017e5c <+348>:	4c 89 d0	mov    rax,r10
+// 0x0000000000017e5f <+351>:	48 f7 eb	imul   rbx
+// 0x0000000000017e62 <+354>:	49 89 c0	mov    r8,rax
+// 0x0000000000017e65 <+357>:	4c 89 d8	mov    rax,r11
+// 0x0000000000017e68 <+360>:	49 89 d1	mov    r9,rdx
+// 0x0000000000017e6b <+363>:	48 f7 e9	imul   rcx
+// 0x0000000000017e6e <+366>:	49 01 c0	add    r8,rax
+// 0x0000000000017e71 <+369>:	49 11 d1	adc    r9,rdx
+// 0x0000000000017e74 <+372>:	4c 89 47 60	mov    QWORD PTR [rdi+0x60],r8
+// 0x0000000000017e78 <+376>:	4c 89 4f 68	mov    QWORD PTR [rdi+0x68],r9
+// 0x0000000000017e7c <+380>:	49 c1 f9 3f	sar    r9,0x3f
+// 0x0000000000017e80 <+384>:	4c 89 4f 70	mov    QWORD PTR [rdi+0x70],r9
+// 0x0000000000017e84 <+388>:	4c 89 4f 78	mov    QWORD PTR [rdi+0x78],r9
+// 0x0000000000017e88 <+392>:	4c 89 8f 80 00 00 00	mov    QWORD PTR [rdi+0x80],r9
+// 0x0000000000017e8f <+399>:	4c 89 8f 88 00 00 00	mov    QWORD PTR [rdi+0x88],r9
+    // 12: rdi lo, rsi hi
+    tmp12_rax_0 = offloadu_7
+    tmp12_r11_0 = offloadv_8
+    tmp12_rbx_0 = f1_11
+    tmp12_r10_0 = tmp12_rax_0
+
+    (tmp12_rdx_1, tmp12_rax_1) = imul1 f0_10
+    tmp12_r8_1 = tmp12_rax_1
+    tmp12_rax_1 = tmp12_r11_0
+    tmp12_r9_1 = tmp12_rdx_1
+
+    (tmp12_rdx_2, tmp12_rax_2) = imul1 g0_10
+
+    (tmp12_cf_3, tmp12_r8_3) = add tmp12_r8_1 tmp12_rax_2
+    (tmp12_cf_4, tmp12_r9_4) = adc tmp12_r9_1 tmp12_rdx_2 tmp12_cf_3
+
+    tmp12_ret0 = tmp12_r8_3
+    tmp12_ret1 = tmp12_r9_4
+    tmp12_r9_5 = tmp12_r9_4 >>$ 0x3f
+    tmp12_ret2 = tmp12_r9_5
+    tmp12_ret3 = tmp12_r9_5
+    tmp12_ret4 = tmp12_r9_5
+    tmp12_ret5 = tmp12_r9_5
+
+    tmp12_rax_6 = tmp12_r10_0
+    (tmp12_rdx_6, tmp12_rax_6) = imul1 tmp12_rbx_0
+    tmp12_r8_6 = tmp12_rax_6
+
+    tmp12_rax_7 = tmp12_r11_0
+    tmp12_r9_7 = tmp12_rdx_6
+
+    (tmp12_rdx_8, tmp12_rax_8) = imul1 g1_11
+
+    (tmp12_cf_9, tmp12_r8_9) = add tmp12_r8_6 tmp12_rax_8
+    (tmp12_cf_10, tmp12_r9_10) = adc tmp12_r9_7 tmp12_rdx_8 tmp12_cf_9
+
+    tmp12_ret6 = tmp12_r8_9
+    tmp12_ret7 = tmp12_r9_10
+    tmp12_r9_11 = tmp12_r9_10 >>$ 0x3f
+    tmp12_ret8 = tmp12_r9_11
+    tmp12_ret9 = tmp12_r9_11
+    tmp12_ret10 = tmp12_r9_11
+    tmp12_ret11 = tmp12_r9_11
+
+    lou_12 = [tmp12_ret0, tmp12_ret1, temp12_ret2, temp12_ret3, tmp12_ret4, tmp12_ret5]
+    lov_12 = [tmp12_ret6, tmp12_ret7, temp12_ret8, temp12_ret9, tmp12_ret10, tmp12_ret11]
+
+
+// 0x0000000000017e96 <+406>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x0000000000017e9d <+413>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x0000000000017ea2 <+418>:	e8 39 11 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x0000000000017ea7 <+423>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000017eac <+428>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 14: rdi lo, rsi lo: Reset rsi to low offsets
+    [loa_14, lob_14, f0_14, g0_14, f1_14, g1_14] = __ab_approximation_31 31 loa_?? lob_??
+    
+
+
+// 0x0000000000017eb1 <+433>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x0000000000017eb8 <+440>:	48 31 f7	xor    rdi,rsi
+// 0x0000000000017ebb <+443>:	e8 40 0e 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000017ec0 <+448>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x0000000000017ec5 <+453>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 15: rdi hi, rsi lo: Swap rdi to high offsets
+    (hia_15, f0_15, g0_15) = __smulx_383_n_shift_by_31 loa_?? lob_?? f0_?? g0_??
+
+
+
+// 0x0000000000017eca <+458>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000017ecf <+463>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000017ed4 <+468>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000017ed8 <+472>:	e8 23 0e 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000017edd <+477>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x0000000000017ee2 <+482>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 16
+    (hib_16, f1_16, g1_16) = __smulx_383_n_shift_by_31 loa_?? lob_?? f1_?? g1_??
+
+
+
+// 0x0000000000017ee7 <+487>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x0000000000017eec <+492>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x0000000000017ef1 <+497>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x0000000000017ef5 <+501>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000017ef9 <+505>:	e8 a2 0c 00 00	call   0x18ba0 <__smulx_383x63>
+    // 17
+   lou_17 = __smulx_383x63 hiu_12 hiv_12 f0_?? g0_??
+
+
+// 0x0000000000017efe <+510>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000017f03 <+515>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000017f08 <+520>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000017f0c <+524>:	e8 8f 0c 00 00	call   0x18ba0 <__smulx_383x63>
+    // 18
+   lov_18 = __smulx_383x63 hiu_12 hiv_12 f1_?? g1_??
+
+
+// 0x0000000000017f11 <+529>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x0000000000017f18 <+536>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x0000000000017f1d <+541>:	e8 be 10 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x0000000000017f22 <+546>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000017f27 <+551>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 19: swap rsi to high offsets
+    [hia_19, hib_19, f0_19, g0_19, f1_19, g1_19] = __ab_approximation_31 31 hia_?? hib_??
+
+
+
+// 0x0000000000017f2c <+556>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x0000000000017f33 <+563>:	48 31 f7	xor    rdi,rsi
+// 0x0000000000017f36 <+566>:	e8 c5 0d 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000017f3b <+571>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x0000000000017f40 <+576>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 20
+
+
+// 0x0000000000017f45 <+581>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000017f4a <+586>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000017f4f <+591>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000017f53 <+595>:	e8 a8 0d 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000017f58 <+600>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x0000000000017f5d <+605>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 21
+
+
+
+// 0x0000000000017f62 <+610>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x0000000000017f67 <+615>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x0000000000017f6c <+620>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x0000000000017f70 <+624>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000017f74 <+628>:	e8 27 0c 00 00	call   0x18ba0 <__smulx_383x63>
+    // 22
+
+// 0x0000000000017f79 <+633>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000017f7e <+638>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000017f83 <+643>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000017f87 <+647>:	e8 14 0c 00 00	call   0x18ba0 <__smulx_383x63>
+    // 23
+
+
+// 0x0000000000017f8c <+652>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x0000000000017f93 <+659>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x0000000000017f98 <+664>:	e8 43 10 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x0000000000017f9d <+669>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000017fa2 <+674>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 24
+    [loa_24, lob_24, f0_24, g0_24, f1_24, g1_24] = __ab_approximation_31 31 loa_?? lob_??
+
+
+// 0x0000000000017fa7 <+679>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x0000000000017fae <+686>:	48 31 f7	xor    rdi,rsi
+// 0x0000000000017fb1 <+689>:	e8 4a 0d 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000017fb6 <+694>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x0000000000017fbb <+699>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 25
+
+
+
+// 0x0000000000017fc0 <+704>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000017fc5 <+709>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000017fca <+714>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000017fce <+718>:	e8 2d 0d 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000017fd3 <+723>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x0000000000017fd8 <+728>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 26
+
+
+
+// 0x0000000000017fdd <+733>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x0000000000017fe2 <+738>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x0000000000017fe7 <+743>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x0000000000017feb <+747>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000017fef <+751>:	e8 ac 0b 00 00	call   0x18ba0 <__smulx_383x63>
+    // 27
+
+
+
+// 0x0000000000017ff4 <+756>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000017ff9 <+761>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000017ffe <+766>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018002 <+770>:	e8 99 0b 00 00	call   0x18ba0 <__smulx_383x63>
+    // 28
+
+
+// 0x0000000000018007 <+775>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x000000000001800e <+782>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x0000000000018013 <+787>:	e8 c8 0f 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x0000000000018018 <+792>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x000000000001801d <+797>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 29
+    [hia_29, hib_29, f0_29, g0_29, f1_29, g1_29] = __ab_approximation_31 31 hia_?? hib_??
+
+
+
+// 0x0000000000018022 <+802>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x0000000000018029 <+809>:	48 31 f7	xor    rdi,rsi
+// 0x000000000001802c <+812>:	e8 cf 0c 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000018031 <+817>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x0000000000018036 <+822>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 30
+
+
+
+// 0x000000000001803b <+827>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000018040 <+832>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000018045 <+837>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018049 <+841>:	e8 b2 0c 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x000000000001804e <+846>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x0000000000018053 <+851>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 31
+
+
+
+// 0x0000000000018058 <+856>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x000000000001805d <+861>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x0000000000018062 <+866>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x0000000000018066 <+870>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x000000000001806a <+874>:	e8 31 0b 00 00	call   0x18ba0 <__smulx_383x63>
+    // 32
+
+
+
+// 0x000000000001806f <+879>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000018074 <+884>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000018079 <+889>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x000000000001807d <+893>:	e8 1e 0b 00 00	call   0x18ba0 <__smulx_383x63>
+    // 33
+
+
+// 0x0000000000018082 <+898>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x0000000000018089 <+905>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x000000000001808e <+910>:	e8 4d 0f 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x0000000000018093 <+915>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000018098 <+920>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 34
+    [loa_34, lob_34, f0_34, g0_34, f1_34, g1_34] = __ab_approximation_31 31 loa_?? lob_??
+
+
+
+// 0x000000000001809d <+925>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x00000000000180a4 <+932>:	48 31 f7	xor    rdi,rsi
+// 0x00000000000180a7 <+935>:	e8 54 0c 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x00000000000180ac <+940>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x00000000000180b1 <+945>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 35
+
+
+
+// 0x00000000000180b6 <+950>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000180bb <+955>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000180c0 <+960>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000180c4 <+964>:	e8 37 0c 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x00000000000180c9 <+969>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x00000000000180ce <+974>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 36
+
+
+
+// 0x00000000000180d3 <+979>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x00000000000180d8 <+984>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x00000000000180dd <+989>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x00000000000180e1 <+993>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000180e5 <+997>:	e8 b6 0a 00 00	call   0x18ba0 <__smulx_383x63>
+    // 37
+
+
+
+// 0x00000000000180ea <+1002>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000180ef <+1007>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000180f4 <+1012>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000180f8 <+1016>:	e8 a3 0a 00 00	call   0x18ba0 <__smulx_383x63>
+    // 38
+
+
+// 0x00000000000180fd <+1021>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x0000000000018104 <+1028>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x0000000000018109 <+1033>:	e8 d2 0e 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x000000000001810e <+1038>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000018113 <+1043>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 39
+    [hia_39, hib_39, f0_39, g0_39, f1_39, g1_39] = __ab_approximation_31 31 hia_?? hib_??
+
+
+
+// 0x0000000000018118 <+1048>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x000000000001811f <+1055>:	48 31 f7	xor    rdi,rsi
+// 0x0000000000018122 <+1058>:	e8 d9 0b 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000018127 <+1063>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x000000000001812c <+1068>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 40
+
+
+
+// 0x0000000000018131 <+1073>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000018136 <+1078>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x000000000001813b <+1083>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x000000000001813f <+1087>:	e8 bc 0b 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000018144 <+1092>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x0000000000018149 <+1097>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 41
+
+
+
+// 0x000000000001814e <+1102>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x0000000000018153 <+1107>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x0000000000018158 <+1112>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x000000000001815c <+1116>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018160 <+1120>:	e8 3b 0a 00 00	call   0x18ba0 <__smulx_383x63>
+    // 42
+
+
+
+// 0x0000000000018165 <+1125>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x000000000001816a <+1130>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x000000000001816f <+1135>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018173 <+1139>:	e8 28 0a 00 00	call   0x18ba0 <__smulx_383x63>
+    // 43
+
+
+// 0x0000000000018178 <+1144>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x000000000001817f <+1151>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x0000000000018184 <+1156>:	e8 57 0e 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x0000000000018189 <+1161>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x000000000001818e <+1166>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 44
+    [loa_44, lob_44, f0_44, g0_44, f1_44, g1_44] = __ab_approximation_31 31 loa_?? lob_??
+
+
+
+// 0x0000000000018193 <+1171>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x000000000001819a <+1178>:	48 31 f7	xor    rdi,rsi
+// 0x000000000001819d <+1181>:	e8 5e 0b 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x00000000000181a2 <+1186>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x00000000000181a7 <+1191>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 45
+
+
+
+// 0x00000000000181ac <+1196>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000181b1 <+1201>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000181b6 <+1206>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000181ba <+1210>:	e8 41 0b 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x00000000000181bf <+1215>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x00000000000181c4 <+1220>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 46
+
+
+
+// 0x00000000000181c9 <+1225>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x00000000000181ce <+1230>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x00000000000181d3 <+1235>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x00000000000181d7 <+1239>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000181db <+1243>:	e8 c0 09 00 00	call   0x18ba0 <__smulx_383x63>
+    // 47
+
+
+
+// 0x00000000000181e0 <+1248>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000181e5 <+1253>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000181ea <+1258>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000181ee <+1262>:	e8 ad 09 00 00	call   0x18ba0 <__smulx_383x63>
+    // 48
+
+
+// 0x00000000000181f3 <+1267>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x00000000000181fa <+1274>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x00000000000181ff <+1279>:	e8 dc 0d 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x0000000000018204 <+1284>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000018209 <+1289>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 49
+    [hia_49, hib_49, f0_49, g0_49, f1_49, g1_49] = __ab_approximation_31 31 hia_?? hib_??
+
+
+
+// 0x000000000001820e <+1294>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x0000000000018215 <+1301>:	48 31 f7	xor    rdi,rsi
+// 0x0000000000018218 <+1304>:	e8 e3 0a 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x000000000001821d <+1309>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x0000000000018222 <+1314>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 50
+
+
+
+// 0x0000000000018227 <+1319>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x000000000001822c <+1324>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000018231 <+1329>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018235 <+1333>:	e8 c6 0a 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x000000000001823a <+1338>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x000000000001823f <+1343>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 51
+
+
+
+// 0x0000000000018244 <+1348>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x0000000000018249 <+1353>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x000000000001824e <+1358>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x0000000000018252 <+1362>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018256 <+1366>:	e8 45 09 00 00	call   0x18ba0 <__smulx_383x63>
+    // 52
+
+
+
+// 0x000000000001825b <+1371>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000018260 <+1376>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000018265 <+1381>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018269 <+1385>:	e8 32 09 00 00	call   0x18ba0 <__smulx_383x63>
+    // 53
+
+
+// 0x000000000001826e <+1390>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x0000000000018275 <+1397>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x000000000001827a <+1402>:	e8 61 0d 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x000000000001827f <+1407>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000018284 <+1412>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 54
+    [loa_54, lob_54, f0_54, g0_54, f1_54, g1_54] = __ab_approximation_31 31 loa_?? lob_??
+
+
+
+// 0x0000000000018289 <+1417>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x0000000000018290 <+1424>:	48 31 f7	xor    rdi,rsi
+// 0x0000000000018293 <+1427>:	e8 68 0a 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000018298 <+1432>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x000000000001829d <+1437>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 55
+
+
+
+// 0x00000000000182a2 <+1442>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000182a7 <+1447>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000182ac <+1452>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000182b0 <+1456>:	e8 4b 0a 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x00000000000182b5 <+1461>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x00000000000182ba <+1466>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 56
+
+
+
+// 0x00000000000182bf <+1471>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x00000000000182c4 <+1476>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x00000000000182c9 <+1481>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x00000000000182cd <+1485>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000182d1 <+1489>:	e8 ca 08 00 00	call   0x18ba0 <__smulx_383x63>
+    // 57
+
+
+
+// 0x00000000000182d6 <+1494>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000182db <+1499>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000182e0 <+1504>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000182e4 <+1508>:	e8 b7 08 00 00	call   0x18ba0 <__smulx_383x63>
+    // 58
+
+
+// 0x00000000000182e9 <+1513>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x00000000000182f0 <+1520>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x00000000000182f5 <+1525>:	e8 e6 0c 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x00000000000182fa <+1530>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x00000000000182ff <+1535>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 59
+    [hia_59, hib_59, f0_59, g0_59, f1_59, g1_59] = __ab_approximation_31 31 hia_?? hib_??
+
+
+
+// 0x0000000000018304 <+1540>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x000000000001830b <+1547>:	48 31 f7	xor    rdi,rsi
+// 0x000000000001830e <+1550>:	e8 ed 09 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000018313 <+1555>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x0000000000018318 <+1560>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 60
+
+
+
+// 0x000000000001831d <+1565>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000018322 <+1570>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000018327 <+1575>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x000000000001832b <+1579>:	e8 d0 09 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000018330 <+1584>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x0000000000018335 <+1589>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 61
+
+
+
+// 0x000000000001833a <+1594>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x000000000001833f <+1599>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x0000000000018344 <+1604>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x0000000000018348 <+1608>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x000000000001834c <+1612>:	e8 4f 08 00 00	call   0x18ba0 <__smulx_383x63>
+    // 62
+
+
+
+// 0x0000000000018351 <+1617>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000018356 <+1622>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x000000000001835b <+1627>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x000000000001835f <+1631>:	e8 3c 08 00 00	call   0x18ba0 <__smulx_383x63>
+    // 63
+
+
+// 0x0000000000018364 <+1636>:	49 c1 fd 3f	sar    r13,0x3f
+// 0x0000000000018368 <+1640>:	4c 89 6f 30	mov    QWORD PTR [rdi+0x30],r13
+// 0x000000000001836c <+1644>:	4c 89 6f 38	mov    QWORD PTR [rdi+0x38],r13
+// 0x0000000000018370 <+1648>:	4c 89 6f 40	mov    QWORD PTR [rdi+0x40],r13
+// 0x0000000000018374 <+1652>:	4c 89 6f 48	mov    QWORD PTR [rdi+0x48],r13
+// 0x0000000000018378 <+1656>:	4c 89 6f 50	mov    QWORD PTR [rdi+0x50],r13
+// 0x000000000001837c <+1660>:	4c 89 6f 58	mov    QWORD PTR [rdi+0x58],r13
+    // 64
+
+
+// 0x0000000000018380 <+1664>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x0000000000018387 <+1671>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x000000000001838c <+1676>:	e8 4f 0c 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x0000000000018391 <+1681>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000018396 <+1686>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 65
+    [loa_65, lob_65, f0_65, g0_65, f1_65, g1_65] = __ab_approximation_31 31 loa_?? lob_??
+
+
+
+// 0x000000000001839b <+1691>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x00000000000183a2 <+1698>:	48 31 f7	xor    rdi,rsi
+// 0x00000000000183a5 <+1701>:	e8 56 09 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x00000000000183aa <+1706>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x00000000000183af <+1711>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 66
+
+
+
+// 0x00000000000183b4 <+1716>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000183b9 <+1721>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000183be <+1726>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000183c2 <+1730>:	e8 39 09 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x00000000000183c7 <+1735>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x00000000000183cc <+1740>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 67
+
+
+
+// 0x00000000000183d1 <+1745>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x00000000000183d6 <+1750>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x00000000000183db <+1755>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x00000000000183df <+1759>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000183e3 <+1763>:	e8 b8 07 00 00	call   0x18ba0 <__smulx_383x63>
+    // 68
+
+
+
+// 0x00000000000183e8 <+1768>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000183ed <+1773>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000183f2 <+1778>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000183f6 <+1782>:	e8 85 05 00 00	call   0x18980 <__smulx_767x63>
+    // 69
+
+
+// 0x00000000000183fb <+1787>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x0000000000018402 <+1794>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x0000000000018407 <+1799>:	e8 d4 0b 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x000000000001840c <+1804>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000018411 <+1809>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 70
+    [hia_70, hib_70, f0_70, g0_70, f1_70, g1_70] = __ab_approximation_31 31 hia_?? hib_??
+
+
+
+// 0x0000000000018416 <+1814>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x000000000001841d <+1821>:	48 31 f7	xor    rdi,rsi
+// 0x0000000000018420 <+1824>:	e8 db 08 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000018425 <+1829>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x000000000001842a <+1834>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 71
+
+
+
+// 0x000000000001842f <+1839>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000018434 <+1844>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000018439 <+1849>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x000000000001843d <+1853>:	e8 be 08 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000018442 <+1858>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x0000000000018447 <+1863>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 72
+
+
+
+// 0x000000000001844c <+1868>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x0000000000018451 <+1873>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x0000000000018456 <+1878>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x000000000001845a <+1882>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x000000000001845e <+1886>:	e8 3d 07 00 00	call   0x18ba0 <__smulx_383x63>
+    // 73
+
+
+
+// 0x0000000000018463 <+1891>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000018468 <+1896>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x000000000001846d <+1901>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018471 <+1905>:	e8 0a 05 00 00	call   0x18980 <__smulx_767x63>
+    // 74
+
+
+// 0x0000000000018476 <+1910>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x000000000001847d <+1917>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x0000000000018482 <+1922>:	e8 59 0b 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x0000000000018487 <+1927>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x000000000001848c <+1932>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 75
+    [loa_75, lob_75, f0_75, g0_75, f1_75, g1_75] = __ab_approximation_31 31 loa_?? lob_??
+
+
+
+// 0x0000000000018491 <+1937>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x0000000000018498 <+1944>:	48 31 f7	xor    rdi,rsi
+// 0x000000000001849b <+1947>:	e8 60 08 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x00000000000184a0 <+1952>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x00000000000184a5 <+1957>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 76
+
+
+
+// 0x00000000000184aa <+1962>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000184af <+1967>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000184b4 <+1972>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000184b8 <+1976>:	e8 43 08 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x00000000000184bd <+1981>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x00000000000184c2 <+1986>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 77
+
+
+
+// 0x00000000000184c7 <+1991>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x00000000000184cc <+1996>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x00000000000184d1 <+2001>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x00000000000184d5 <+2005>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000184d9 <+2009>:	e8 c2 06 00 00	call   0x18ba0 <__smulx_383x63>
+    // 78
+
+
+
+// 0x00000000000184de <+2014>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000184e3 <+2019>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000184e8 <+2024>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000184ec <+2028>:	e8 8f 04 00 00	call   0x18980 <__smulx_767x63>
+    // 79
+
+
+// 0x00000000000184f1 <+2033>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x00000000000184f8 <+2040>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x00000000000184fd <+2045>:	e8 de 0a 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x0000000000018502 <+2050>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000018507 <+2055>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 80
+    [hia_80, hib_80, f0_80, g0_80, f1_80, g1_80] = __ab_approximation_31 31 hia_?? hib_??
+
+
+
+// 0x000000000001850c <+2060>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x0000000000018513 <+2067>:	48 31 f7	xor    rdi,rsi
+// 0x0000000000018516 <+2070>:	e8 e5 07 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x000000000001851b <+2075>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x0000000000018520 <+2080>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 81
+
+
+
+// 0x0000000000018525 <+2085>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x000000000001852a <+2090>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x000000000001852f <+2095>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018533 <+2099>:	e8 c8 07 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000018538 <+2104>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x000000000001853d <+2109>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 82
+
+
+
+// 0x0000000000018542 <+2114>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x0000000000018547 <+2119>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x000000000001854c <+2124>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x0000000000018550 <+2128>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018554 <+2132>:	e8 47 06 00 00	call   0x18ba0 <__smulx_383x63>
+    // 83
+
+
+
+// 0x0000000000018559 <+2137>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x000000000001855e <+2142>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000018563 <+2147>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018567 <+2151>:	e8 14 04 00 00	call   0x18980 <__smulx_767x63>
+    // 84
+
+
+// 0x000000000001856c <+2156>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x0000000000018573 <+2163>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x0000000000018578 <+2168>:	e8 63 0a 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x000000000001857d <+2173>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000018582 <+2178>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 85
+    [loa_85, lob_85, f0_85, g0_85, f1_85, g1_85] = __ab_approximation_31 31 loa_?? lob_??
+
+
+
+// 0x0000000000018587 <+2183>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x000000000001858e <+2190>:	48 31 f7	xor    rdi,rsi
+// 0x0000000000018591 <+2193>:	e8 6a 07 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000018596 <+2198>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x000000000001859b <+2203>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 86
+
+
+
+// 0x00000000000185a0 <+2208>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000185a5 <+2213>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000185aa <+2218>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000185ae <+2222>:	e8 4d 07 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x00000000000185b3 <+2227>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x00000000000185b8 <+2232>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 87
+
+
+
+// 0x00000000000185bd <+2237>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x00000000000185c2 <+2242>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x00000000000185c7 <+2247>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x00000000000185cb <+2251>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000185cf <+2255>:	e8 cc 05 00 00	call   0x18ba0 <__smulx_383x63>
+    // 88
+
+
+
+// 0x00000000000185d4 <+2260>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000185d9 <+2265>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000185de <+2270>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000185e2 <+2274>:	e8 99 03 00 00	call   0x18980 <__smulx_767x63>
+    // 89
+
+
+// 0x00000000000185e7 <+2279>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x00000000000185ee <+2286>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x00000000000185f3 <+2291>:	e8 e8 09 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x00000000000185f8 <+2296>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x00000000000185fd <+2301>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 90
+    [hia_90, hib_90, f0_90, g0_90, f1_90, g1_90] = __ab_approximation_31 31 hia_?? hib_??
+
+
+
+// 0x0000000000018602 <+2306>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x0000000000018609 <+2313>:	48 31 f7	xor    rdi,rsi
+// 0x000000000001860c <+2316>:	e8 ef 06 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x0000000000018611 <+2321>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x0000000000018616 <+2326>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 92
+
+
+
+// 0x000000000001861b <+2331>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000018620 <+2336>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000018625 <+2341>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018629 <+2345>:	e8 d2 06 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x000000000001862e <+2350>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x0000000000018633 <+2355>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 93
+
+
+
+// 0x0000000000018638 <+2360>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x000000000001863d <+2365>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x0000000000018642 <+2370>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x0000000000018646 <+2374>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x000000000001864a <+2378>:	e8 51 05 00 00	call   0x18ba0 <__smulx_383x63>
+    // 94
+
+
+
+// 0x000000000001864f <+2383>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000018654 <+2388>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000018659 <+2393>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x000000000001865d <+2397>:	e8 1e 03 00 00	call   0x18980 <__smulx_767x63>
+    // 95
+
+
+// 0x0000000000018662 <+2402>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x0000000000018669 <+2409>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x000000000001866e <+2414>:	e8 6d 09 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x0000000000018673 <+2419>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000018678 <+2424>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 96
+    [loa_96, lob_96, f0_96, g0_96, f1_96, g1_96] = __ab_approximation_31 31 loa_?? lob_??
+
+
+
+// 0x000000000001867d <+2429>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x0000000000018684 <+2436>:	48 31 f7	xor    rdi,rsi
+// 0x0000000000018687 <+2439>:	e8 74 06 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x000000000001868c <+2444>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x0000000000018691 <+2449>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 97
+
+
+
+// 0x0000000000018696 <+2454>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x000000000001869b <+2459>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000186a0 <+2464>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000186a4 <+2468>:	e8 57 06 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
+// 0x00000000000186a9 <+2473>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x00000000000186ae <+2478>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 98
+
+
+
+// 0x00000000000186b3 <+2483>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x00000000000186b8 <+2488>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x00000000000186bd <+2493>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x00000000000186c1 <+2497>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000186c5 <+2501>:	e8 d6 04 00 00	call   0x18ba0 <__smulx_383x63>
+    // 99
+
+
+
+// 0x00000000000186ca <+2506>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000186cf <+2511>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000186d4 <+2516>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000186d8 <+2520>:	e8 a3 02 00 00	call   0x18980 <__smulx_767x63>
+    // 100
+
+
+// 0x00000000000186dd <+2525>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x00000000000186e4 <+2532>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x00000000000186e9 <+2537>:	e8 f2 08 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x00000000000186ee <+2542>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x00000000000186f3 <+2547>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 101
+    [hia_101, hib_101, f0_101, g0_101, f1_101, g1_101] = __ab_approximation_31 31 hia_?? hib_??
+
+
+
+// 0x00000000000186f8 <+2552>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x00000000000186ff <+2559>:	48 31 f7	xor    rdi,rsi
+// 0x0000000000018702 <+2562>:	e8 d9 07 00 00	call   0x18ee0 <__smulx_191_n_shift_by_31>
+// 0x0000000000018707 <+2567>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x000000000001870c <+2572>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 102
+
+
+
+// 0x0000000000018711 <+2577>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000018716 <+2582>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x000000000001871b <+2587>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x000000000001871f <+2591>:	e8 bc 07 00 00	call   0x18ee0 <__smulx_191_n_shift_by_31>
+// 0x0000000000018724 <+2596>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x0000000000018729 <+2601>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 103
+
+
+
+// 0x000000000001872e <+2606>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x0000000000018733 <+2611>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x0000000000018738 <+2616>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x000000000001873c <+2620>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018740 <+2624>:	e8 5b 04 00 00	call   0x18ba0 <__smulx_383x63>
+    // 104
+
+
+
+// 0x0000000000018745 <+2629>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x000000000001874a <+2634>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x000000000001874f <+2639>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018753 <+2643>:	e8 28 02 00 00	call   0x18980 <__smulx_767x63>
+    // 105
+
+
+// 0x0000000000018758 <+2648>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x000000000001875f <+2655>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x0000000000018764 <+2660>:	e8 77 08 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x0000000000018769 <+2665>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x000000000001876e <+2670>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 106
+    [loa_106, lob_106, f0_106, g0_106, f1_106, g1_106] = __ab_approximation_31 31 loa_?? lob_??
+
+
+
+// 0x0000000000018773 <+2675>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x000000000001877a <+2682>:	48 31 f7	xor    rdi,rsi
+// 0x000000000001877d <+2685>:	e8 5e 07 00 00	call   0x18ee0 <__smulx_191_n_shift_by_31>
+// 0x0000000000018782 <+2690>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x0000000000018787 <+2695>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 107
+
+
+
+// 0x000000000001878c <+2700>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000018791 <+2705>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000018796 <+2710>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x000000000001879a <+2714>:	e8 41 07 00 00	call   0x18ee0 <__smulx_191_n_shift_by_31>
+// 0x000000000001879f <+2719>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x00000000000187a4 <+2724>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 108
+
+
+
+// 0x00000000000187a9 <+2729>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x00000000000187ae <+2734>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x00000000000187b3 <+2739>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x00000000000187b7 <+2743>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000187bb <+2747>:	e8 e0 03 00 00	call   0x18ba0 <__smulx_383x63>
+    // 109
+
+
+
+// 0x00000000000187c0 <+2752>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000187c5 <+2757>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000187ca <+2762>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000187ce <+2766>:	e8 ad 01 00 00	call   0x18980 <__smulx_767x63>
+    // 110
+
+
+// 0x00000000000187d3 <+2771>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x00000000000187da <+2778>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x00000000000187df <+2783>:	e8 fc 07 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x00000000000187e4 <+2788>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x00000000000187e9 <+2793>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 111
+    [hia_111, hib_111, f0_111, g0_111, f1_111, g1_111] = __ab_approximation_31 31 hia_?? hib_??
+
+
+
+// 0x00000000000187ee <+2798>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x00000000000187f5 <+2805>:	48 31 f7	xor    rdi,rsi
+// 0x00000000000187f8 <+2808>:	e8 e3 06 00 00	call   0x18ee0 <__smulx_191_n_shift_by_31>
+// 0x00000000000187fd <+2813>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x0000000000018802 <+2818>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 112
+
+
+
+// 0x0000000000018807 <+2823>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x000000000001880c <+2828>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000018811 <+2833>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018815 <+2837>:	e8 c6 06 00 00	call   0x18ee0 <__smulx_191_n_shift_by_31>
+// 0x000000000001881a <+2842>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x000000000001881f <+2847>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 113
+
+
+
+// 0x0000000000018824 <+2852>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x0000000000018829 <+2857>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x000000000001882e <+2862>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x0000000000018832 <+2866>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018836 <+2870>:	e8 65 03 00 00	call   0x18ba0 <__smulx_383x63>
+    // 114
+
+
+
+// 0x000000000001883b <+2875>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000018840 <+2880>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x0000000000018845 <+2885>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018849 <+2889>:	e8 32 01 00 00	call   0x18980 <__smulx_767x63>
+    // 115
+
+
+// 0x000000000001884e <+2894>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x0000000000018855 <+2901>:	bf 1f 00 00 00	mov    edi,0x1f
+// 0x000000000001885a <+2906>:	e8 81 07 00 00	call   0x18fe0 <__ab_approximation_31>
+// 0x000000000001885f <+2911>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
+// 0x0000000000018864 <+2916>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
+    // 116
+    [loa_116, lob_116, f0_116, g0_116, f1_116, g1_116] = __ab_approximation_31 31 loa_?? lob_??
+
+
+
+// 0x0000000000018869 <+2921>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
+// 0x0000000000018870 <+2928>:	48 31 f7	xor    rdi,rsi
+// 0x0000000000018873 <+2931>:	e8 68 06 00 00	call   0x18ee0 <__smulx_191_n_shift_by_31>
+// 0x0000000000018878 <+2936>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
+// 0x000000000001887d <+2941>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
+    // 117
+
+
+
+// 0x0000000000018882 <+2946>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x0000000000018887 <+2951>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x000000000001888c <+2956>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x0000000000018890 <+2960>:	e8 4b 06 00 00	call   0x18ee0 <__smulx_191_n_shift_by_31>
+// 0x0000000000018895 <+2965>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
+// 0x000000000001889a <+2970>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
+    // 118
+
+
+
+// 0x000000000001889f <+2975>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
+// 0x00000000000188a4 <+2980>:	48 8b 4c 24 40	mov    rcx,QWORD PTR [rsp+0x40]
+// 0x00000000000188a9 <+2985>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x00000000000188ad <+2989>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000188b1 <+2993>:	e8 ea 02 00 00	call   0x18ba0 <__smulx_383x63>
+    // 119
+
+
+
+// 0x00000000000188b6 <+2998>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
+// 0x00000000000188bb <+3003>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
+// 0x00000000000188c0 <+3008>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
+// 0x00000000000188c4 <+3012>:	e8 b7 00 00 00	call   0x18980 <__smulx_767x63>
+    // 120
+
+
+
+// 0x00000000000188c9 <+3017>:	48 81 f6 60 01 00 00	xor    rsi,0x160
+// 0x00000000000188d0 <+3024>:	bf 37 00 00 00	mov    edi,0x37
+// 0x00000000000188d5 <+3029>:	4c 8b 06	mov    r8,QWORD PTR [rsi]
+// 0x00000000000188d8 <+3032>:	4c 8b 56 30	mov    r10,QWORD PTR [rsi+0x30]
+// 0x00000000000188dc <+3036>:	e8 7f 08 00 00	call   0x19160 <__inner_loop_62>
+    // 121
+
+
+
+
+
+
+
+
+
+// 0x00000000000188e1 <+3041>:	48 8d 76 60	lea    rsi,[rsi+0x60]
+// 0x00000000000188e5 <+3045>:	4c 89 e2	mov    rdx,r12
+// 0x00000000000188e8 <+3048>:	4c 89 e9	mov    rcx,r13
+// 0x00000000000188eb <+3051>:	48 8b 7c 24 20	mov    rdi,QWORD PTR [rsp+0x20]
+// 0x00000000000188f0 <+3056>:	e8 8b 00 00 00	call   0x18980 <__smulx_767x63>
+    // 122
+
+
+
+// 0x00000000000188f5 <+3061>:	48 8b 74 24 28	mov    rsi,QWORD PTR [rsp+0x28]
+// 0x00000000000188fa <+3066>:	48 89 c2	mov    rdx,rax
+// 0x00000000000188fd <+3069>:	48 c1 f8 3f	sar    rax,0x3f
+// 0x0000000000018901 <+3073>:	49 89 c0	mov    r8,rax
+// 0x0000000000018904 <+3076>:	49 89 c1	mov    r9,rax
+// 0x0000000000018907 <+3079>:	49 89 c2	mov    r10,rax
+// 0x000000000001890a <+3082>:	4c 23 06	and    r8,QWORD PTR [rsi]
+// 0x000000000001890d <+3085>:	4c 23 4e 08	and    r9,QWORD PTR [rsi+0x8]
+// 0x0000000000018911 <+3089>:	49 89 c3	mov    r11,rax
+// 0x0000000000018914 <+3092>:	4c 23 56 10	and    r10,QWORD PTR [rsi+0x10]
+// 0x0000000000018918 <+3096>:	4c 23 5e 18	and    r11,QWORD PTR [rsi+0x18]
+// 0x000000000001891c <+3100>:	49 89 c4	mov    r12,rax
+// 0x000000000001891f <+3103>:	4c 23 66 20	and    r12,QWORD PTR [rsi+0x20]
+// 0x0000000000018923 <+3107>:	48 23 46 28	and    rax,QWORD PTR [rsi+0x28]
+    // 123
+
+
+
+// 0x0000000000018927 <+3111>:	4d 01 c6	add    r14,r8
+// 0x000000000001892a <+3114>:	4d 11 cf	adc    r15,r9
+// 0x000000000001892d <+3117>:	4c 11 d3	adc    rbx,r10
+// 0x0000000000018930 <+3120>:	4c 11 dd	adc    rbp,r11
+// 0x0000000000018933 <+3123>:	4c 11 e1	adc    rcx,r12
+// 0x0000000000018936 <+3126>:	48 11 c2	adc    rdx,rax
+    // 124
+
+
+
+// 0x0000000000018939 <+3129>:	4c 89 77 30	mov    QWORD PTR [rdi+0x30],r14
+// 0x000000000001893d <+3133>:	4c 89 7f 38	mov    QWORD PTR [rdi+0x38],r15
+// 0x0000000000018941 <+3137>:	48 89 5f 40	mov    QWORD PTR [rdi+0x40],rbx
+// 0x0000000000018945 <+3141>:	48 89 6f 48	mov    QWORD PTR [rdi+0x48],rbp
+// 0x0000000000018949 <+3145>:	48 89 4f 50	mov    QWORD PTR [rdi+0x50],rcx
+// 0x000000000001894d <+3149>:	48 89 57 58	mov    QWORD PTR [rdi+0x58],rdx
+    // 125
+
+
+
+// 0x0000000000018951 <+3153>:	4c 8d 84 24 58 04 00 00	lea    r8,[rsp+0x458]
+// 0x0000000000018959 <+3161>:	4d 8b 38	mov    r15,QWORD PTR [r8]
+// 0x000000000001895c <+3164>:	4d 8b 70 08	mov    r14,QWORD PTR [r8+0x8]
+// 0x0000000000018960 <+3168>:	4d 8b 68 10	mov    r13,QWORD PTR [r8+0x10]
+// 0x0000000000018964 <+3172>:	4d 8b 60 18	mov    r12,QWORD PTR [r8+0x18]
+// 0x0000000000018968 <+3176>:	49 8b 58 20	mov    rbx,QWORD PTR [r8+0x20]
+// 0x000000000001896c <+3180>:	49 8b 68 28	mov    rbp,QWORD PTR [r8+0x28]
+// 0x0000000000018970 <+3184>:	49 8d 60 30	lea    rsp,[r8+0x30]
+// 0x0000000000018974 <+3188>:	f3 c3	repz ret 
+    // 126
