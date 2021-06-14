@@ -103,11 +103,13 @@ blst_aggregate_in_g1_error_ov <- custom_verify
   blst_aggregate_in_g1_error_spec
   (goal_num_ite 1 // preconditions of the subgroup check
     do {
-      simplify (addsimps (concat POINTonE1_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
+      simplify (addsimps (concat POINTonE1_thms [normalize_uncompress_OK_thm, uncompress_not_point_O, uncompress_on_curve]) empty_ss);
+      print_readably;
       w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl"];
     }
     do {
-      simplify (addsimps POINTonE1_thms empty_ss);
+      print_readably;
+      simplify (addsimps (concat [normalize_uncompress_OK_thm] POINTonE1_thms) empty_ss);
       simplify remove_higher_order_function_simpset;
       w4_unint_z3 ["sqrt_fp","uncompress_E1_x_fp","uncompress_E1_x","uncompress_E1_y2","is_square_fp","is_in_g1_impl","uncompress_E1_OK","is_point_affine_E"];
     });

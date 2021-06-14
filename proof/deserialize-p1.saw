@@ -422,6 +422,21 @@ normalize_uncompress_fp_thm <- custom_prove_cryptol
        simplify fp_simpset;
        w4_unint_z3 fp_unints; } ;
 
+normalize_uncompress_E1_y_thm <- custom_prove_cryptol
+  {{ \x -> Fp.normalize (uncompress_E1_y x) == uncompress_E1_y x }}
+  do { unfolding ["uncompress_E1_y"];
+       rw_with_1 normalize_sqrt_fp_thm;
+       simplify fp_simpset;
+       w4_unint_z3 fp_unints; } ;
+
+normalize_uncompress_OK_thm <- custom_prove_cryptol
+  {{ \x -> normalize_affine_point Fp (uncompress_E1_OK x) == uncompress_E1_OK x }}
+  do { unfolding ["uncompress_E1_OK","normalize_affine_point"];
+       hoist_ifs_in_goal;
+       rw_with [normalize_uncompress_fp_thm,normalize_uncompress_E1_y_thm];
+       simplify fp_simpset;
+       w4_unint_z3 fp_unints; } ;
+
 POINTonE1_Uncompress_OK_ov <- custom_verify
   "POINTonE1_Uncompress"
   (foldr concat [fp_overrides, vec_overrides] POINTonE1_Uncompress_BE_overrides)
