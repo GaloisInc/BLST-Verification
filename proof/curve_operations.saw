@@ -7,14 +7,6 @@ import "../spec/ShortWeierstrassCurve.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/CurveOperation.cry";
 
-/*
-let print_goal_readably_fp = do {
-    unfolding ["Fp", "prime_field_bv", "prime_field_integer", "prime_field"];
-    simplify cleanup_simpset;
-    print_goal;
-    };
-*/
-
 // In order to get the necessary rewrites to happen, there are some "administrative" type
 // rewrites that help bring the terms we need together.    We start with them:
 

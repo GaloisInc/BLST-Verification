@@ -101,96 +101,53 @@ uncompress_on_curve <- admit_cryptol {{ \x -> (is_point_affine E' (uncompress_E2
 
 // Proofs
 
+let simps = (concat_all [e2_curve_op_thms, POINTonE2_thms, unrip_thms_E2, [normalize_uncompress_OK_thm, uncompress_not_point_O, uncompress_on_curve]]); // uncompress_not_point_O and uncompress_on_curve are there to satisfy the preconditions of the subgroup check
+
+let fp2_unit_rep = run ( eval_term {{ (fp2_rep Fp_2.field_unit):[2][6][64] }} ); // NOTE: this results in type `([6][64])` (a one-tuple?) instead of `[6][64]`, but not in newer versions of SAW.
+
+normalize_uncompress_OK_thm' <- custom_prove_cryptol {{ \x -> (affinify E' (POINTonE2_abs (x'.0, x'.1, fp2_unit_rep)) == uncompress_E2_OK x where x' = POINTonE2_affine_rep (uncompress_E2_OK x)) }}
+  do {
+    let l1 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x y -> affinify E' (POINTonE2_abs (x, y, fp2_unit_rep)) == (fp2_abs x, fp2_abs y) }}) w4);
+    let l2 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x -> (Fp_2.normalize x.0, Fp_2.normalize x.1) == normalize_affine_point Fp_2 x }}) w4);
+    rw_with_1 l1;
+    unfolding ["POINTonE2_affine_rep"];
+    simplify fp2_simpset;
+    rw_with [l2, normalize_uncompress_OK_thm];
+    w4;
+  };
+
+affinify_abs_zero_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{affinify E' (POINTonE2_abs (z,z,z)) == point_O E' where z = [[zero,zero,zero,zero,zero,zero],[zero,zero,zero,zero,zero,zero]]}}) w4;
+
+let proof_script =
+  do {
+    hoist_ifs_in_goal;
+    simplify (addsimps simps fp_simpset);
+    simplify (addsimps simps fp2_simpset);
+    rw_with [affinify_abs_zero_thm,normalize_uncompress_OK_thm'];
+    simplify remove_higher_order_function_simpset;
+    w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl","uncompress_E2_OK","is_point_affine_E'","affinify_E'","add_E'"];
+  };
+
 blst_aggregate_in_g2_OK_nonnull_ov <- custom_verify
   "blst_aggregate_in_g2"
   (foldr concat [vec_overrides,curve_operations_e2_ovs] [POINTonE2_Uncompress_OK_ov,POINTonE2_in_g2_ov])
   blst_aggregate_in_g2_OK_nonnull_spec
-  (goal_num_ite 1 // preconditions of the subgroup check
-    do {
-      simplify (addsimps (concat POINTonE2_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
-      w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl"];
-    }
-    (goal_num_ite 6 // postcondition
-      do {
-        simplify (addsimps (concat misc_rules_E2 misc_rules_E1) empty_ss);
-        simplify (addsimps POINTonE2_thms empty_ss);
-        simplify (addsimps e2_curve_op_thms empty_ss);
-        simplify remove_higher_order_function_simpset;
-        w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl","uncompress_E2_OK","is_point_affine_E'","affinify_E'","add_E'"];
-      }
-      do {
-        simplify (addsimps misc_rules_E1 empty_ss);
-        simplify (addsimps POINTonE2_thms empty_ss);
-        simplify remove_higher_order_function_simpset;
-        w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl","uncompress_E2_OK","is_point_affine_E'"];
-      }));
+  proof_script;
 
 blst_aggregate_in_g2_null_ov <- custom_verify
   "blst_aggregate_in_g2"
   (foldr concat [vec_overrides,curve_operations_e2_ovs] [vec_copy_2fp_ov,POINTonE2_Uncompress_OK_ov,POINTonE2_in_g2_ov])
   blst_aggregate_in_g2_null_spec
-  (goal_num_ite 1 // preconditions of the subgroup check
-    do {
-      simplify (addsimps (concat POINTonE2_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
-      w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl"];
-    }
-    (goal_num_ite 5 // postcondition
-      do { // TODO
-        simplify (addsimps (concat misc_rules_E1 misc_rules_E2) empty_ss);
-        simplify (addsimps POINTonE2_thms empty_ss);
-        unfolding ["POINTonE2_abs","POINTonE2_affine_rep"];
-        let l1 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{affinify E' (z,z,z) == point_O E' where z = fp2_abs [[zero,zero,zero,zero,zero,zero],[zero,zero,zero,zero,zero,zero]]}}) w4);
-        let fp2_unit_rep = run ( eval_term {{ fp2_rep Fp_2.field_unit }} );
-        let rewrite_unit = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp2_abs (fp2_unit_rep.0) == Fp_2.field_unit }}) w4);
-        simplify (addsimps [rewrite_unit,l1] empty_ss);
-        let l2 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x y -> affinify E' (fp2_abs x, fp2_abs y, Fp_2.field_unit) == (fp2_abs x, fp2_abs y) }}) w4);
-        simplify (addsimp l2 empty_ss);
-        simplify fp2_simpset;
-        simplify remove_higher_order_function_simpset;
-        print_goal_consts;
-        w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl","uncompress_E2_OK","is_point_affine_E'","affinify_E'"];
-      }
-      do {
-        simplify (addsimps misc_rules_E1 empty_ss);
-        simplify (addsimps POINTonE2_thms empty_ss);
-        unfolding ["POINTonE2_abs","POINTonE2_affine_rep"];
-        simplify fp2_simpset;
-        simplify remove_higher_order_function_simpset;
-        w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl","uncompress_E2_OK","is_point_affine_E'"];
-      }));
+  proof_script;
 
 blst_aggregate_in_g2_error_ov <- custom_verify
   "blst_aggregate_in_g2"
   [POINTonE2_Uncompress_BAD_ov,POINTonE2_Uncompress_OK_ov,POINTonE2_in_g2_ov]
   blst_aggregate_in_g2_error_spec
-  (goal_num_ite 0
-    assume_unsat
-    (goal_num_ite 1 // preconditions of the subgroup check
-      do {
-        simplify (addsimps (concat POINTonE2_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
-        w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl"];
-      }
-      do {
-        simplify (addsimps misc_rules_E1 empty_ss);
-        simplify (addsimps POINTonE2_thms empty_ss);
-        simplify remove_higher_order_function_simpset;
-        w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl","uncompress_E2_OK","is_point_affine_E'"];
-      }));
+  proof_script;
 
-blst_aggregate_in_g2_error_ov <- custom_verify
+blst_aggregate_in_g2_null_error_ov <- custom_verify
   "blst_aggregate_in_g2"
   [POINTonE2_Uncompress_BAD_ov,POINTonE2_Uncompress_OK_ov,POINTonE2_in_g2_ov]
   blst_aggregate_in_g2_null_error_spec
-  (goal_num_ite 0
-    assume_unsat
-    (goal_num_ite 1 // preconditions of the subgroup check
-      do {
-        simplify (addsimps (concat POINTonE2_thms [uncompress_not_point_O, uncompress_on_curve]) empty_ss);
-        w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl"];
-      }
-      do {
-        simplify (addsimps misc_rules_E1 empty_ss);
-        simplify (addsimps POINTonE2_thms empty_ss);
-        simplify remove_higher_order_function_simpset;
-        w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl","uncompress_E2_OK","is_point_affine_E'"];
-      }));
+  proof_script;

@@ -30,6 +30,11 @@ core_rewrites <- for
   //, "EqTrue (eq Bool (intLe (natToInt 0) (natToInt 1)) True)"
   ] (prove_core abc);
 
+unrip_thms_E2 <- for
+  [ {{ \x -> ((([a1,a2],[b1,b2],[c1,c2]):POINTonE2_t) == x where [a1,a2] = x.0; [b1,b2] = x.1; [c1,c2] = x.2) }}
+  , {{ \x -> (([x1,x2]:[2][6][64]) == x where [x1,x2] = x) }}
+  ] (\t -> prove_cryptol (rewrite (cryptol_ss()) t) []);
+
 normalize_point_fp2_abs_thm <- prove_cryptol
   {{ \p -> normalize_point Fp_2 (POINTonE2_abs p) ==
            if POINTonE2_invariant p
@@ -396,6 +401,7 @@ let curve_operations_e2_ovs = [POINTonE2_add_alias_1_2_ov, POINTonE2_add_ov, POI
 // ... abs_rep rules for points, and some structure rules
 POINTonE2_base_thms <- for
  [ {{ \p1 -> POINTonE2_abs (POINTonE2_rep p1) == normalize_point Fp_2 p1 }}
+ , {{ \p -> POINTonE2_affine_abs (POINTonE2_affine_rep p) == normalize_affine_point Fp_2 p }}
  , {{ \p1 -> POINTonE2_invariant (POINTonE2_rep p1) == True }}
  , {{ \p1 -> POINTonE2_rep (POINTonE2_abs p1) ==
              if POINTonE2_invariant p1
@@ -416,7 +422,6 @@ POINTonE2_base_thms <- for
  , {{ \ c (x1: [2]Vec384) (x2: [2]Vec384) (x3: [2]Vec384) y1 y2 y3 ->
         (if c then x1 else y1, if c then x2 else y2, if c then x3 else y3) ==
         if c then (x1,x2,x3) else (y1,y2,y3) }}
- , {{ \p -> POINTonE2_affine_abs (POINTonE2_affine_rep p) == p }}
  , {{ \p2 -> POINTonE2_affine_invariant (POINTonE2_affine_rep p2) == True }}
  ]
  (\t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)

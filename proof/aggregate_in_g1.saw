@@ -99,9 +99,10 @@ uncompress_on_curve <- admit_cryptol {{ \x -> (is_point_affine E (uncompress_E1_
 
 let simpset = addsimps (concat_all [e1_curve_op_thms, POINTonE1_thms, [normalize_uncompress_OK_thm, uncompress_not_point_O, uncompress_on_curve]]) fp_simpset; // uncompress_not_point_O and uncompress_on_curve are there to satisfy the preconditions of the subgroup check
 
+let fp_unit_rep = run ( eval_term {{ (fp_rep Fp.field_unit):[6][64] }} ); // NOTE: this results in type `([6][64])` (a one-tuple?) instead of `[6][64]`, but not in newer versions of SAW.
+
 normalize_uncompress_OK_thm' <- custom_prove_cryptol {{ \x -> (affinify E (POINTonE1_abs (x'.0, x'.1, fp_unit_rep)) == uncompress_E1_OK x where x' = POINTonE1_affine_rep (uncompress_E1_OK x)) }}
   do {
-    let fp_unit_rep = run ( eval_term {{ (fp_rep Fp.field_unit):[6][64] }} ); // NOTE: this results in type `([6][64])` (a one-tuple?) instead of `[6][64]`, but not in newer versions of SAW.
     let l1 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x y -> affinify E (POINTonE1_abs (x, y, fp_unit_rep)) == (fp_abs x, fp_abs y) }}) w4);
     let l2 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x -> (Fp.normalize x.0, Fp.normalize x.1) == normalize_affine_point Fp x }}) w4);
     rw_with_1 l1;
