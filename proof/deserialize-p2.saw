@@ -379,6 +379,33 @@ POINTonE2_Uncompress_inf_BAD_ov <- verify_unint "POINTonE2_Uncompress" [] deseri
 
 POINTonE2_Uncompress_inf_OK_ov <- verify "POINTonE2_Uncompress" [] POINTonE2_Uncompress_inf_OK_spec ;
 
+normalize_uncompress_fp_thm <- custom_prove_cryptol
+  {{ \x -> Fp_2.normalize (uncompress_E2_x_fp x) == uncompress_E2_x_fp x }}
+  do { unfolding ["uncompress_E2_x_fp"];
+       // TODO: rewrite fp2_normalize using fp_normalize
+       let l = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x -> (Fp_2.normalize x == [Fp.normalize x0, Fp.normalize x1] where [x0,x1] = x)}}) w4);
+       rw_with_1 l;
+       simplify fp_simpset;
+       w4_unint_z3 fp_unints; } ;
+
+normalize_uncompress_E2_y_thm <- custom_prove_cryptol
+  {{ \x -> Fp_2.normalize (uncompress_E2_y x) == uncompress_E2_y x }}
+  do { unfolding ["uncompress_E2_y"];
+       rw_with_1 normalize_sqrt_fp2_thm;
+       print_readably;
+       simplify fp_simpset;
+       w4_unint_z3 (concat fp_unints fp2_unints); } ;
+
+normalize_uncompress_OK_thm <- custom_prove_cryptol
+  {{ \x -> normalize_affine_point Fp_2 (uncompress_E2_OK x) == uncompress_E2_OK x }}
+  do { unfolding ["uncompress_E2_OK","normalize_affine_point"];
+       hoist_ifs_in_goal;
+       rw_with [normalize_uncompress_fp_thm,normalize_uncompress_E2_y_thm];
+       simplify fp_simpset;
+       simplify fp2_simpset;
+       w4_unint_z3 (concat fp_unints fp2_unints); } ;
+
+
 POINTonE2_Uncompress_OK_ov <- custom_verify
   "POINTonE2_Uncompress"
   (foldr concat [fp2_overrides, vec_overrides] POINTonE2_Uncompress_BE_overrides)
