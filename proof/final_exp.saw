@@ -181,7 +181,7 @@ frobenius_map_fp12_C_expt_thm <- admit_cryptol
 // final_exp_frobenius_map
 to_final_exp_frobenius_map_thm <- custom_prove_cryptol {{ \x -> Fp_12.mul (Fp_12.div (fp12_conjugate x, x), fp12_frobenius (fp12_frobenius (Fp_12.div (fp12_conjugate x, x)))) == final_exp_frobenius_map x }}
   do {
-    unfolding ["final_exp_frobenius_map", "Pairing::f12"];
+    unfolding ["final_exp_frobenius_map", "f12"];
     simplify (addsimp mul_commutes_fp12_thm empty_ss);
     w4_unint_z3 fp12_unints;
   };
@@ -257,7 +257,7 @@ final_exponentiation_equiv_thm <- custom_prove_cryptol
   do {
     unfolding [ "final_exponentiation"
               , "final_exponentiation_impl"
-              , "Pairing::f12"
+              , "f12"
               , "apply" ];
     simplify fp12_simpset;
     simplify (addsimps [ k_expt_C_expt_thm
