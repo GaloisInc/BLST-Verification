@@ -542,7 +542,7 @@ mult_by_doubling_thm <- custom_prove_cryptol {{ \p -> affinify E (clear_cofactor
 
 // Finally, we put all the pieces together to prove that the C code is equivalent to the high-level spec
 
-let prove_hash_to_curve_E1_opt_impl_equiv_thm msg_len DST_len = custom_prove_cryptol {{ \(msg:[msg_len][8]) (dst:[DST_len][8]) -> affinify E (hash_to_curve_opt_impl (msg,dst)) == HE1::hash_to_curve_opt (msg, dst) }}
+let prove_hash_to_curve_E1_opt_impl_equiv_thm msg_len DST_len = really_custom_prove_cryptol {{ \(msg:[msg_len][8]) (dst:[DST_len][8]) -> affinify E (hash_to_curve_opt_impl (msg,dst)) == HE1::hash_to_curve_opt (msg, dst) }}
   do {
     unfolding ["hash_to_curve_opt_impl","map_to_g1_impl"];
     simplify (addsimps [mult_by_doubling_thm, isogeny_map_to_E1_impl_thm_z] (cryptol_ss ()));
@@ -551,6 +551,9 @@ let prove_hash_to_curve_E1_opt_impl_equiv_thm msg_len DST_len = custom_prove_cry
     simplify (addsimps [dadd_thm,map_to_isogenous_E1_thm] (cryptol_ss ()));
     w4_unint_z3 (concat fp_unints ["HE1::iso_map","HE1::map_to_curve_simple_swu","HE1::clear_cofactor","HashToCurveE1::hash_to_field"]);
   };
+
+// TODO: Try to get this proof to go through
+final_thm <- (prove_hash_to_curve_E1_opt_impl_equiv_thm 32 43);
 
 // The final overrides:
 
@@ -617,7 +620,7 @@ let DST_len= 43; // "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_" in the chosen 
 
 prove_hash_to_g1_impl_ov msg_len DST_len aug_len;
 prove_hash_to_g1_ov msg_len DST_len aug_len;
-prove_hash_to_g1_impl_ov msg_len DST_len 0;
+hash_to_g1_impl_ov <- prove_hash_to_g1_impl_ov msg_len DST_len 0;
 prove_hash_to_g1_ov msg_len DST_len 0;
 
 // another value of msg_len:

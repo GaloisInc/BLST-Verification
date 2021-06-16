@@ -100,7 +100,7 @@ BP'_is_point_affine_thm <- prove_cryptol
 
 let boolEq_core = parse_core "boolEq";
 
-and_true_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+and_true_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \b1 b2 -> boolEq_core (and_core b1 b2) (b1 /\ (True /\ (b2 /\ True))) == True }}) [];
 
 e2_scalar_mult_not_O_thm <- admit_cryptol (rewrite (cryptol_ss())
@@ -549,7 +549,7 @@ let remove_ho_rules = concat
    ];
 
 
-test_thm_correct' <- really_custom_prove_cryptol (rewrite (cryptol_ss())
+test_thm_correct' <- custom_prove_cryptol (rewrite (cryptol_ss())
   {{ \P sk (x:([32][8],[43][8])) ->
                 (same_point_affine
                   E
