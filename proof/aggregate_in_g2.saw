@@ -40,7 +40,7 @@ let blst_aggregate_in_g2_OK_nonnull_spec = do {
 
 let blst_aggregate_in_g2_null_spec = do {
   //
-  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g2_out" (llvm_struct "struct.POINTonE2");
+  out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE2");
   let inp_ptr = llvm_null;
   //
   (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g2_zwire" (llvm_array 96 (llvm_int 8));
