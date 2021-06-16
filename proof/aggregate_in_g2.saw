@@ -99,8 +99,6 @@ uncompress_not_point_O <- admit_cryptol {{ \x -> (is_point_O E' (uncompress_E2_O
 
 uncompress_on_curve <- admit_cryptol {{ \x -> (is_point_affine E' (uncompress_E2_OK x)) == True }};
 
-let do_prove = true;
-
 // Proofs
 
 let simps = (concat_all [e2_curve_op_thms, POINTonE2_thms, unrip_thms_E2, [normalize_uncompress_OK_thm, uncompress_not_point_O, uncompress_on_curve]]); // uncompress_not_point_O and uncompress_on_curve are there to satisfy the preconditions of the subgroup check

@@ -40,4 +40,5 @@ import "../spec/G2SubGroupCheck.cry";
 import "../spec/implementation/Psi.cry";
 import "../spec/implementation/Fp12.cry";
 import "../spec/Pairing.cry";
+import "../spec/implementation/PairingImpl.cry";
 import "../spec/implementation/FinalExp.cry";

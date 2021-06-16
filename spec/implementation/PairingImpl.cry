@@ -46,7 +46,7 @@
       So computing with Q and conjugating at the end gives the correct result.
 */
 
-module implementation::Pairing where
+module implementation::PairingImpl where
 
 import Parameters (t_Fp, t_Fp_2, t_Fp_6, t_Fp_12, Fp, Fp_2, Fp_12, Fp_to_Fp_2, E, E')
 import Parameters as P

@@ -11,14 +11,6 @@ import ShortWeierstrassCurve as EC
 import FieldExtras
 import Frobenius
 
-type t1 = P::t_Fp
-type t2 = P::t_Fp_2
-type t12 = P::t_Fp_12 
-
-f1 = P::Fp
-f2 = P::Fp_2
-f12 = P::Fp_12
-
 /**
  * The curve E: y^2 = x^3 + 4, over F_p^12
  */
