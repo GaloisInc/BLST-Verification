@@ -11,12 +11,6 @@
   So those are what we prove overrides for.
 */
 
-import "../spec/Parameters.cry";
-import "../spec/ExtensionField.cry";
-import "../spec/Frobenius.cry";
-import "../spec/implementation/Field.cry";
-import "../spec/implementation/Fp12.cry";
-
 let vec384fp4_type = llvm_array 2 vec384x_type; // only used in this file
 
 ///////////////////////////////////////////////////////////////////////////////

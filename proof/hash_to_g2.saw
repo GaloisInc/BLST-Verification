@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import "../spec/Parameters.cry";
-import "../spec/ShortWeierstrassCurve.cry";
-HE2 <- cryptol_load "../spec/HashToCurveE2.cry";
-import "../spec/BLSFieldExtras.cry";
-import "../spec/implementation/CurveOperation.cry";
-Aux <- cryptol_load "../spec/HashToCurveE2Aux.cry";
-import "../spec/implementation/HashToG2.cry";
-
 // Specs
 
 let blst_hash_to_g2_spec msg_len DST_len aug_len = do {
@@ -83,7 +75,7 @@ let isogeny_map_to_E2_impl_alias_spec = do {
 // Assumptions
 
 // The optimized version of clear_cofactor given in the IETF spec is correct:
-clear_cofactor_bls12381_correct <- admit_cryptol {{ \p -> Aux::clear_cofactor_bls12381_g2 p == HE2::clear_cofactor p }};
+clear_cofactor_bls12381_correct <- admit_cryptol {{ \p -> HE2Aux::clear_cofactor_bls12381_g2 p == HE2::clear_cofactor p }};
 
 // The SWU map maps to the isogenous curve:
 swu_on_curve <- simp_then_admit {{ \u -> is_point_affine HE2::Isogenous_Curve (HE2::map_to_curve_simple_swu u) == True }};
@@ -134,7 +126,7 @@ isogeny_map_to_E2_impl_alias_ov <- custom_verify
     (do {
       simplify fp2_simpset; // eliminate `abs . rep` etc.
       // simplify (addsimps isogeny_invs empty_ss); // NOTE: unecessary
-      goal_eval_unint ["Fp_2","Fp","fp2_rep","fp2_abs","fp2_invariant","HashToCurveE2Aux::k1s","HashToCurveE2Aux::k2s","HashToCurveE2Aux::k3s","HashToCurveE2Aux::k4s"]; // TODO: why do we need to keep the kns opaque?
+      goal_eval_unint ["Fp_2","Fp","fp2_rep","fp2_abs","fp2_invariant","HashToCurveE2HE2Aux::k1s","HashToCurveE2HE2Aux::k2s","HashToCurveE2HE2Aux::k3s","HashToCurveE2HE2Aux::k4s"]; // TODO: why do we need to keep the kns opaque?
       let algebra_rules = run (for [ // here we only use a subset of the fp2_laws; as a whole it's too slow (or is it looping?)
           {{ \x y -> Fp_2.mul(x,y) == Fp_2.mul(y,x) }}
         , {{ \x y z -> Fp_2.mul(Fp_2.mul(x,y),z) == Fp_2.mul(x, Fp_2.mul(y,z)) }}

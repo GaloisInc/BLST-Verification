@@ -13,8 +13,6 @@ include "sha_overrides.saw";
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
 
-import "../spec/ExpandMessage.cry";
-
 let expand_message_spec len_in_bytes aug_len msg_len DST_len = do {
   bytes_ptr <- llvm_alloc_aligned 8 (llvm_array len_in_bytes (llvm_int 8));
   (aug, aug_ptr) <- if (eval_bool {{ `aug_len == zero}})
@@ -27,11 +25,6 @@ let expand_message_spec len_in_bytes aug_len msg_len DST_len = do {
     then (llvm_points_to bytes_ptr (llvm_term {{ expand_message_xmd`{len_in_bytes=len_in_bytes} msg DST }}))
     else (llvm_points_to bytes_ptr (llvm_term {{ expand_message_xmd`{len_in_bytes=len_in_bytes} (aug # msg) DST }}));
 };
-
-HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
-HE2 <- cryptol_load "../spec/HashToCurveE2.cry";
-import "../spec/implementation/Types.cry";
-import "../spec/implementation/Field.cry";
 
 let hash_to_field_fp_spec nelems aug_len msg_len DST_len = do {
   elems_ptr <- llvm_alloc (llvm_array nelems vec384_type);

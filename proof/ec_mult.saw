@@ -131,10 +131,6 @@ let booth_lemma_1 n_bits = do {
     return thm;
     };
 
-import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/implementation/Types.cry";
-import "../spec/implementation/CurveOperation.cry";
-
 //  We use algebraic rules relating addition and doubling to scalar multiples
 //
 // ... so first we define scalar multiplication with an Integer exponent

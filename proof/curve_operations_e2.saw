@@ -3,10 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/implementation/Types.cry";
-import "../spec/implementation/CurveOperation.cry";
-
 let {{
     hoist_if_proj_0 : {a} (Eq a) => Bit -> (a,a,a) -> (a,a,a) -> Bit
     hoist_if_proj_0 x y z = (if x then y else z).0 == if x then y.0 else z.0

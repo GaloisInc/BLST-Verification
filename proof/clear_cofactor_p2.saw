@@ -3,16 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import "../spec/HashToCurveE2Aux.cry";
-import "../spec/implementation/HashToG2.cry";
-
 // Admitted theorem that doubling a point in projective coordinates has the
 // right effect in affine coordinates.
 point_double_thm <- admit_cryptol
   {{ \P -> affinify E' (point_double Fp_2 P) == double E' (affinify E' P) }};
 
 psi_psi_double_equiv_thm <- custom_prove_cryptol
-  {{ \P -> affinify E' (psi_psi_double_impl P) == psi_psi_double (affinify E' P) }}
+  {{ \P -> affinify E' (psi_psi_double_impl P) == HE2Aux::psi_psi_double (affinify E' P) }}
   do {
     unfolding ["psi_psi_double", "psi_psi_double_impl"];
     simplify (addsimps [psi_equiv_thm', point_double_thm, affinify_E'_thm] (cryptol_ss()));
@@ -30,7 +27,7 @@ times_minus_z_rev_thm <- custom_prove_cryptol
   };
 
 times_minus_z_thm <- custom_prove_cryptol
-  {{ \P -> affinify E' (times_minus_z P) == e2_scalar_mult pos_c1 (affinify E' P) }}
+  {{ \P -> affinify E' (times_minus_z P) == e2_scalar_mult HE2Aux::pos_c1 (affinify E' P) }}
   do {
     simplify (addsimps [times_minus_z_rev_thm, affinify_POINTonE2_times_minus_z_thm] empty_ss);
     simplify (addsimps POINTonE2_thms empty_ss);
@@ -80,18 +77,18 @@ Fp_2_normalize_second_thm <- prove_cryptol
            else (P.0, apply Fp_2.normalize P.1) }} [];
 
 e2_scalar_mult_inv_thm <- admit_cryptol
-  {{ \P -> AffinePoint_Fp_2_invariant (e2_scalar_mult pos_c1 P) ==
+  {{ \P -> AffinePoint_Fp_2_invariant (e2_scalar_mult HE2Aux::pos_c1 P) ==
            if AffinePoint_Fp_2_invariant P
            then True
-           else apply AffinePoint_Fp_2_invariant (e2_scalar_mult pos_c1 P) }};
+           else apply AffinePoint_Fp_2_invariant (e2_scalar_mult HE2Aux::pos_c1 P) }};
 
 // Prove clear_cofactor_bls12381_g2 (RFC spec) is equivalent to
 // clear_cofactor_E2_impl (spec based on C clear_cofactor_E2 function).
 clear_cofactor_E2_equiv_thm <- custom_prove_cryptol
-  {{ \P -> clear_cofactor_bls12381_g2 (affinify E' P) ==
+  {{ \P -> HE2Aux::clear_cofactor_bls12381_g2 (affinify E' P) ==
       if AffinePoint_Fp_2_invariant (affinify E' P)
       then affinify E' (clear_cofactor_E2_impl P)
-      else apply clear_cofactor_bls12381_g2 (affinify E' P) }}
+      else apply HE2Aux::clear_cofactor_bls12381_g2 (affinify E' P) }}
  do {
     unfolding ["clear_cofactor_bls12381_g2", "clear_cofactor_E2_impl"];
     // Affinify goal

@@ -14,12 +14,6 @@
 
 // NOTE: must have included fp_overrides.saw before this
 
-import "../spec/Parameters.cry";
-import "../spec/PrimeField.cry";
-import "../spec/FieldExtras.cry" (mul_by_2 mul_by_3 mul_by_4 mul_by_6 mul_by_8);
-import "../spec/implementation/Field.cry";
-import "../spec/implementation/CryptolHelpers.cry";
-
 //let hoist f unints =
 //  prove_cryptol {{\x y z -> f (if x then y else z) == if x then f y else f z}} unints;
 
@@ -44,7 +38,7 @@ fp2_normalize_thm <- admit_cryptol
 
 fp2_abs_normalize_thm <- prove_cryptol
   {{ \x -> Fp_2.normalize x == if Fp_2.is_val x then x else apply Fp_2.normalize x }} [];
-  
+
 // hoisting if for rewrites to match
 fp2_abs_ite_thm <- hoist {{fp2_abs}} ["fp2_abs"] ;
 fp2_invariant_ite_thm <- hoist {{fp2_invariant}} [] ;

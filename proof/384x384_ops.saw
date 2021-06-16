@@ -20,11 +20,6 @@
  *  vec384fp12
  */
 
-import "../spec/Parameters.cry" (p);
-import "../spec/implementation/CryptolHelpers.cry" (apply);
-import "../spec/implementation/Types.cry";
-import "../spec/implementation/Field.cry";
-
 let {{ // type shifted_p = p * 2^^384
 
        // abs_384x384 (x:Vec768) = toInteger (vec_abs x) => fpx2_abs

@@ -3,16 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import "../spec/Parameters.cry";
-import "../spec/Frobenius.cry";
-import "../spec/implementation/Types.cry";
-import "../spec/implementation/Field.cry";
-import "../spec/G2SubGroupCheck.cry";
-import "../spec/Pairing.cry" (alpha); // for "alpha"
-import "../spec/ShortWeierstrassCurve.cry"; // for ProjectivePoint, affinify
-import "../spec/implementation/CurveOperation.cry"; // for POINTonE2_invariant, _abs, etc.
-import "../spec/implementation/Psi.cry";
-
 fp_inv_fp2_rep_thms <- for [0,1]
   (\ i -> custom_prove_cryptol (rewrite (cryptol_ss()) {{ \ x -> fp_invariant ((fp2_rep x) @ (`i:[1])) == True }})
             do {unfolding ["fp2_rep"];

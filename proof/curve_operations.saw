@@ -3,10 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/implementation/Types.cry";
-import "../spec/implementation/CurveOperation.cry";
-
 // In order to get the necessary rewrites to happen, there are some "administrative" type
 // rewrites that help bring the terms we need together.    We start with them:
 

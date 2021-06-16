@@ -13,6 +13,9 @@ m <- llvm_load_module "../build/llvm/libblst.a.bc";
 let do_prove = true;
 
 include "proof-helpers.saw";
+
+include "cryptol_imports.saw";
+
 include "algebraic-laws.saw";
 
 include "hash_to_field.saw";
@@ -26,7 +29,6 @@ include "sgn0.saw";
 include "hash_to_g1.saw";
 include "compress-p1.saw";
 include "deserialize-p1.saw";
-include "misc_rules_E1.saw";
 include "aggregate_in_g1.saw";
 
 include "fp2_overrides.saw";
@@ -39,7 +41,6 @@ include "compress-p2.saw";
 include "deserialize-p2.saw";
 include "clear_cofactor_p2.saw";
 include "hash_to_g2.saw";
-include "misc_rules_E2.saw";
 include "aggregate_in_g2.saw";
 
 include "api-extra-for-release-2.saw";

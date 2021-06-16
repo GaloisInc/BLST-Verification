@@ -3,13 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
 
-import "../spec/Parameters.cry";
-import "../spec/ShortWeierstrassCurve.cry";
-HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
-import "../spec/implementation/CurveOperation.cry";
-Aux <- cryptol_load "../spec/HashToCurveE1Aux.cry";
-import "../spec/implementation/HashToG1.cry";
-
 // Specs
 
 let blst_hash_to_g1_spec msg_len DST_len aug_len = do {
@@ -109,20 +102,20 @@ recip_sqrt_fp_3mod4_ov <- custom_verify "recip_sqrt_fp_3mod4"
                       w4_unint_z3 (concat ["fp_exp"] fp_unints);
                       };
 
-// rewrite rules to get rid of the Aux version of some definitions
+// rewrite rules to get rid of the HE1Aux version of some definitions
 
 aux_rewrites <- for [
-    {{ Aux::A' == HE1::A' }}
-  , {{ Aux::Z == HE1::Z }}
-  , {{ Aux::B' == HE1::B' }}
-  , {{ \x -> Aux::sgn0 x == HE1::sgn0 x}}
+    {{ HE1Aux::A' == HE1::A' }}
+  , {{ HE1Aux::Z == HE1::Z }}
+  , {{ HE1Aux::B' == HE1::B' }}
+  , {{ \x -> HE1Aux::sgn0 x == HE1::sgn0 x}}
 ] (\ eq -> prove_cryptol eq []);
 
 // Assumptions we will not prove:
 
 // We assume that the optimized implementation of the SWU map given in the IETF spec is correct:
 swu_3mod4_correct <- admit_cryptol
-  {{ \u -> ((Fp.div(xn,xd), Fp.div(yn,yd)) where (xn, xd, yn, yd) = Aux::map_to_curve_simple_swu_3mod4 u)
+  {{ \u -> ((Fp.div(xn,xd), Fp.div(yn,yd)) where (xn, xd, yn, yd) = HE1Aux::map_to_curve_simple_swu_3mod4 u)
         == HE1::map_to_curve_simple_swu u
   }};
 
@@ -323,9 +316,9 @@ let {{
 e2_lemma <- simp_then_admit (unfold_term ["e2_eqn"] {{ e2_eqn }});
 //_ <- custom_prove_cryptol {{ \(gx1:[2]) (xd:[2]) -> e2_eqn (toInteger gx1) (toInteger xd) }} (quickcheck 16);
 
-swu_impl_equiv_3mod4_impl <- custom_prove_cryptol {{ \u -> map_to_curve_simple_swu_impl u == Aux::map_to_curve_simple_swu_3mod4_proj u }}
+swu_impl_equiv_3mod4_impl <- custom_prove_cryptol {{ \u -> map_to_curve_simple_swu_impl u == HE1Aux::map_to_curve_simple_swu_3mod4_proj u }}
   do {
-    unfolding ["map_to_curve_simple_swu_impl", "Aux::map_to_curve_simple_swu_3mod4_proj", "Aux::map_to_curve_simple_swu_3mod4"];
+    unfolding ["map_to_curve_simple_swu_impl", "HE1Aux::map_to_curve_simple_swu_3mod4_proj", "HE1Aux::map_to_curve_simple_swu_3mod4"];
     simplify (addsimps aux_rewrites (cryptol_ss ()));
     simplify (addsimp e2_lemma empty_ss);
     simplify (addsimp recip_sqrt_fp_algebra_thm empty_ss);
@@ -373,13 +366,13 @@ do {
 };
 
 
-swu_3mod4_abs_thm <- custom_prove_cryptol {{ \u -> affinify HE1::Isogenous_Curve (Aux::map_to_curve_simple_swu_3mod4_proj u) ==
-  ((Fp.div(xn,xd), Fp.div(yn,yd)) where (xn, xd, yn, yd) = Aux::map_to_curve_simple_swu_3mod4 u) }}
+swu_3mod4_abs_thm <- custom_prove_cryptol {{ \u -> affinify HE1::Isogenous_Curve (HE1Aux::map_to_curve_simple_swu_3mod4_proj u) ==
+  ((Fp.div(xn,xd), Fp.div(yn,yd)) where (xn, xd, yn, yd) = HE1Aux::map_to_curve_simple_swu_3mod4 u) }}
   do {
     let algebra_rewrite = run ( simp_then_admit {{ \xn xd yn -> (affinify_nz (Fp.mul (xn, xd), Fp.mul (yn, gxd), xd) == if ~Fp.is_equal(xd, Fp.field_zero) then (Fp.div(xn,xd), Fp.div(yn,Fp.field_unit)) else apply affinify_nz (Fp.mul (xn, xd), Fp.mul (yn, gxd), xd) where gxd = Fp.mul(xd, Fp.sq xd) )}} ); // TODO
-    unfolding ["Aux::map_to_curve_simple_swu_3mod4_proj"];
+    unfolding ["HE1Aux::map_to_curve_simple_swu_3mod4_proj"];
     simplify (addsimps [affinify_lemma',algebra_rewrite ] empty_ss);
-    let swu_impl_nz_thm = run (custom_prove_cryptol {{ \u -> (Fp.is_equal(z, Fp.field_zero) == False where (_,z,_,_) = (Aux::map_to_curve_simple_swu_3mod4 u)) }} w4);
+    let swu_impl_nz_thm = run (custom_prove_cryptol {{ \u -> (Fp.is_equal(z, Fp.field_zero) == False where (_,z,_,_) = (HE1Aux::map_to_curve_simple_swu_3mod4 u)) }} w4);
     simplify (addsimp swu_impl_nz_thm empty_ss);
     w4_unint_z3 ["Fp","fp_exp"];
   };
@@ -463,10 +456,10 @@ do {
 let {{ // this is the "else" term in the definition of HE1::iso_map
   iso_map_nz (x', y') = (x, y) where
     x_powers = [Fp.field_unit] # [Fp.mul(x', xi) | xi <- x_powers]
-    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k1s | xi <- x_powers]
-    x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k2s | xi <- x_powers])
-    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k3s | xi <- x_powers]
-    y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- Aux::k4s | xi <- x_powers])
+    x_num = F_sum Fp [Fp.mul(ki, xi) | ki <- HE1Aux::k1s | xi <- x_powers]
+    x_den = Fp.add (x_powers@10, F_sum Fp [Fp.mul(ki, xi) | ki <- HE1Aux::k2s | xi <- x_powers])
+    y_num = F_sum Fp [Fp.mul(ki, xi) | ki <- HE1Aux::k3s | xi <- x_powers]
+    y_den = Fp.add (x_powers@15, F_sum Fp [Fp.mul(ki, xi) | ki <- HE1Aux::k4s | xi <- x_powers])
     x = Fp.div (x_num, x_den)
     y = Fp.mul (y', Fp.div(y_num, y_den))
 }};
@@ -519,7 +512,7 @@ let prove_dbl_lemma n = custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p q ->
 dbl_lemmas <- for dbl_n_add_ns prove_dbl_lemma;
 
 // rewrite mult to e1_scalar_mult because the rewrite rules in ec_mult.saw use e1_scalar_mult:
-scalar_mult_lemma <-admit_cryptol (rewrite (cryptol_ss ()) {{ \p -> mult E Aux::h_eff p == e1_scalar_mult (to_Fp Aux::h_eff) p }});
+scalar_mult_lemma <-admit_cryptol (rewrite (cryptol_ss ()) {{ \p -> mult E HE1Aux::h_eff p == e1_scalar_mult (to_Fp HE1Aux::h_eff) p }});
 
 // now let's prove the multiplication-by-doubling code is correct
 

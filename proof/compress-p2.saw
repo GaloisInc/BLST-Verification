@@ -3,16 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-HE2 <- cryptol_load "../spec/HashToCurveE2.cry";
-import "../spec/Parameters.cry";
-import "../spec/rfc8017.cry";
-import "../spec/Serialization.cry" (sign_F_p_2 serialize_E2);
-import "../spec/ShortWeierstrassCurve.cry";
-
-import "../spec/implementation/CurveOperation.cry";
-import "../spec/implementation/Types.cry";
-
-
 // POINTonE2_affine_Compress_BE compresses X and returns the sign for Y
 let POINTonE2_affine_Compress_BE_spec = do {
   out_ptr <- crucible_alloc (llvm_array 96 (llvm_int 8));

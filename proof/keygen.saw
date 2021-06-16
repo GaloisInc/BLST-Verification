@@ -8,7 +8,7 @@
 // a maximum of 4.  This should never in fact come up, we expect that the first iteration
 // will succeed in determining a nonzero key.
 //
-// SAW also cannot prove correctless for all input llengths; instead we must choose some
+// SAW also cannot prove correctless for all input lengths; instead we must choose some
 // fixed input lengths, and can show correspondence for those.  See the selection at the end of
 // this file.
 

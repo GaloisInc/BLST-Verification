@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import "../spec/implementation/Types.cry";
-import "../spec/Parameters.cry";
-import "../spec/FieldExtras.cry";
-import "../spec/BLSFieldExtras.cry";
-
 /* C code exists, but is not used.
 
 // All uses have p_ptr == BLS12_381_p and n0 == p0

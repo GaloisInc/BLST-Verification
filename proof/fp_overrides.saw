@@ -22,11 +22,6 @@
 let use_abs_method = false;
 let use_concrete_method = true;
 
-import "../spec/Parameters.cry";
-import "../spec/PrimeField.cry";
-import "../spec/FieldExtras.cry" (mul_by_2 mul_by_3 mul_by_4 mul_by_6 mul_by_8);
-import "../spec/implementation/Field.cry";
-import "../spec/implementation/CryptolHelpers.cry";
 
 // generic unary operation specification, pass-by-reference, no aliasing
 let unop_spec name llvm_type inv rep abs op = do {

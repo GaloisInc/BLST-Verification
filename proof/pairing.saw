@@ -10,8 +10,6 @@
    Cryptol sources for implementation::Pairing.
 */
 
-import "../spec/implementation/Pairing.cry";
-
 /* Notes:
 
   1.  We show here that the `miller_loop_n` function computes what the specification

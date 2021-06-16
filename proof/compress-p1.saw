@@ -3,15 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import "../spec/HashToCurveE1.cry" (sgn0);
-import "../spec/Parameters.cry";
-import "../spec/rfc8017.cry";
-import "../spec/Serialization.cry" (sign_F_p serialize_E1);
-import "../spec/ShortWeierstrassCurve.cry";
-
-import "../spec/implementation/CurveOperation.cry";
-import "../spec/implementation/Types.cry";
-
 // fromx_mont_384 converts a vector from the montgomery domain
 let fromx_mont_384_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
@@ -42,7 +33,7 @@ let POINTonE1_affine_Compress_BE_spec = do {
   crucible_execute_func [out_ptr, inp_ptr];
 
   crucible_points_to out_ptr (crucible_term {{ I2OSP48 ((POINTonE1_affine_abs inp ).0) }});
-  crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs inp.1), sgn0 (fp_abs inp.1)]):[64] }});
+  crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs inp.1), HE1::sgn0 (fp_abs inp.1)]):[64] }});
 };
 
 POINTonE1_affine_Compress_BE_ov <- custom_verify "POINTonE1_affine_Compress_BE"
@@ -105,7 +96,7 @@ let POINTonE1_Compress_BE_spec is_point_affine = do {
 
   if is_point_affine then do {
     crucible_points_to out_ptr (crucible_term {{ I2OSP48 (fp_abs inp.0) }});
-    crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs inp.1), sgn0 (fp_abs inp.1)]):[64] }});
+    crucible_return (crucible_term {{ (zext [sign_F_p (fp_abs inp.1), HE1::sgn0 (fp_abs inp.1)]):[64] }});
   } else do {
     // Point is not already in affine coordinates, so must affinify first
     let affinified = {{ affinify E (POINTonE1_abs inp) }};
