@@ -7,10 +7,8 @@ import "../spec/BLSMinimalSignatureSize.cry";
 
 HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
 
-/*
 let do_prove = true;
 include "proof-helpers.saw";
-*/
 
 let {{
   drop_join_reverse: {n_bits, n_bytes} (fin n_bytes, n_bits <= 8*n_bytes) => [n_bytes][8] -> [n_bits]
@@ -601,7 +599,7 @@ hash_to_curve_e1_impl_thm <- custom_prove_cryptol
   do {
     simplify (addsimp hash_to_curve_arg_expand_thm empty_ss);
     unfolding ["apply"];
-    simplify (addsimp final_thm empty_ss);
+    simplify (addsimp hash_to_curve_E1_opt_impl_equiv_ov empty_ss);
     simplify (addsimp hash_to_curve_e1_opt_thm empty_ss);
     simplify basic_ss;
     (print_goal);

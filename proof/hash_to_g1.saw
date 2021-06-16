@@ -552,8 +552,7 @@ let prove_hash_to_curve_E1_opt_impl_equiv_thm msg_len DST_len = really_custom_pr
     w4_unint_z3 (concat fp_unints ["HE1::iso_map","HE1::map_to_curve_simple_swu","HE1::clear_cofactor","HashToCurveE1::hash_to_field"]);
   };
 
-// TODO: Try to get this proof to go through
-final_thm <- (prove_hash_to_curve_E1_opt_impl_equiv_thm 32 43);
+hash_to_curve_E1_opt_impl_equiv_ov <- (prove_hash_to_curve_E1_opt_impl_equiv_thm 32 43);
 
 // The final overrides:
 
