@@ -45,4 +45,4 @@ include "fp12.saw";
 include "pairing.saw";
 include "final_exp.saw";
 
-//include "bls_operations.saw";
+include "bls_operations.saw";

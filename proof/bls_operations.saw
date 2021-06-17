@@ -7,8 +7,10 @@ import "../spec/BLSMinimalSignatureSize.cry";
 
 HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
 
+/*
 let do_prove = true;
 include "proof-helpers.saw";
+*/
 
 let {{
   drop_join_reverse: {n_bits, n_bytes} (fin n_bytes, n_bits <= 8*n_bytes) => [n_bytes][8] -> [n_bits]
@@ -27,6 +29,12 @@ let {{
   is_bad_O_form_E': POINTonE2_t -> Bool
   is_bad_O_form_E' P = (is_point_O E' (fp2_abs P.0, fp2_abs P.1)) /\
                        (fp2_abs (P.2) == Fp_2.field_unit)
+
+  pubkey_to_point_is_affine: [96][8] -> Bool
+  pubkey_to_point_is_affine pk =
+    maybe_cases (pubkey_to_point (join pk))
+      False
+      (\y -> is_point_affine E' y)
 }};
 
 same_point_affine_E_thm <- prove_cryptol
@@ -262,6 +270,8 @@ let demo_KeyValidate_A_spec = do {
   crucible_precond {{ uncompress_E2_imp inp != nothing }};
   // TODO: Maybe drop this precond vv
   crucible_precond {{ ~((inp@0)@1) }};
+  //llvm_precond {{ is_point_affine E' ((pubkey_to_point (join inp)).1) }};
+  llvm_precond {{ pubkey_to_point_is_affine inp }};
   llvm_execute_func [ in_ptr ];
   llvm_return (llvm_term {{ bool_to_limb (KeyValidate (join inp)) }});
 };
@@ -283,7 +293,10 @@ just_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \(x : EC::AffinePoint t_Fp_
 // NOTE: Too slow for quickcheck
 is_in_g2_impl_thm <- admit_cryptol
   (rewrite (cryptol_ss())
-  {{ \P -> pubkey_subgroup_check P == (is_point_affine_E' P /\ is_in_g2_impl P) }});
+  {{ \P -> pubkey_subgroup_check P ==
+           if is_point_affine_E' P
+           then is_in_g2_impl P
+           else apply pubkey_subgroup_check P }});
 
 hoist_POINTonE2_affine_invariant <- prove_cryptol
   (rewrite (cryptol_ss())
@@ -345,7 +358,7 @@ normalize_uncompress_E2_OK_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
     w4_unint_z3 fp2_unints;
   };
 
-demo_KeyValidate_A_ov <- custom_verify "demo_KeyValidate_A"
+demo_KeyValidate_A_ov <- really_custom_verify "demo_KeyValidate_A"
   [ blst_p2_uncompress_OK_ov
   , POINTonE2_affine_on_curve_ov
   , vec_is_zero_2fp2_ov
@@ -358,6 +371,7 @@ demo_KeyValidate_A_ov <- custom_verify "demo_KeyValidate_A"
               , "module parameter other_curve"
               , "bool_to_limb"
               , "POINTonE2_affine_rep"
+              , "pubkey_to_point_is_affine"
               , "POINTonE2_affine_abs"
               , "other_curve"
               , "pubkey_to_point"
@@ -404,6 +418,7 @@ demo_KeyValidate_A_ov <- custom_verify "demo_KeyValidate_A"
                     , "is_point_affine_E'"
                     , "deserialize_E2"
                     , "POINTonE2_affine_invariant"
+                    , "fp2_rep"
                     , "uncompress_E2_imp"];
       })
       (do { 
@@ -732,7 +747,7 @@ serialize_e1_affine_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
     w4_unint_z3 ["fp_abs", "serialize_E1", "affinify_E", "POINTonE1_abs"];
   };
 
-demo_CoreSign_A_ov <- really_custom_verify "demo_CoreSign_A"
+demo_CoreSign_A_ov <- custom_verify "demo_CoreSign_A"
   [ hash_to_g1_impl_ov
   , POINTonE1_mult_w5_sk_ov
   , blst_p1_compress_affine_ov
