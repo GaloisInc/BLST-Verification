@@ -17,12 +17,12 @@ let aug_len = 8;
 // `hash_or_encode` is true. Moreover, we assume that the input points satisfy
 // the invariants POINTonE1_affine_invariant (pk) and
 // POINTonE2_affine_invariant (sig) and that the signature is a point on the
-// curve; I suppose those are the responsibility of the caller. Note that,
+// curve; ensuring those is the responsibility of the caller. Note that,
 // assuming the signature has been deserialized using `blst_p1_uncompress`,
 // then there's no need to check whether it's on the curve because that is a
 // guarantee of a successful call to `blst_p1_uncompress`. Also note that the
 // public key must be a point on the curve and in the right subgroup (this is
-// not checked at all by the C code; I presume public keys should be validated
+// not checked at all by the C code; presumably, public keys should be validated
 // separately before use).
 
 // TODO: null-pk case
@@ -53,6 +53,8 @@ let blst_core_verify_pk_in_g1_non_null_spec msg_len dst_len aug_len = do {
   crucible_execute_func [pk_ptr, signature_ptr, crucible_term hash_or_encode, msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `dst_len : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}];
   crucible_return (crucible_term {{ if core_verify_pk_in_g1_impl (POINTonE1_affine_abs pk) (POINTonE2_affine_abs sig) msg dst aug then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
 };
+
+core_verify_pk_in_g1_impl_thm <- admit {{ core_verify_pk_in_g1_impl pk sig msg dst aug == core_verify_pk_in_g1 pk sig msg dst aug }};
 
 // error case
 let blst_core_verify_pk_in_g1_error_spec msg_len dst_len aug_len = do {
