@@ -13,18 +13,25 @@ include "proof-helpers.saw";
 let {{
   drop_join_reverse: {n_bits, n_bytes} (fin n_bytes, n_bits <= 8*n_bytes) => [n_bytes][8] -> [n_bits]
   drop_join_reverse bytes = drop`{back=n_bits} (join (reverse bytes))
+
   sk_to_pk_proj_precond: [32][8] -> Bool
   sk_to_pk_proj_precond scalar = undefined
+
   same_point_affine_E' = same_point_affine E'
   same_point_affine_E  = same_point_affine E
+
   is_bad_O_form_E: POINTonE1_t -> Bool
   is_bad_O_form_E P = ((is_point_O E (fp_abs P.0, fp_abs P.1)) /\
                        (fp_abs (P.2) != Fp.field_zero)) \/
                       ((~(is_point_O E (fp_abs P.0, fp_abs P.1))) /\
                        fp_abs (P.2) == Fp.field_zero)
+
   is_bad_O_form_E': POINTonE2_t -> Bool
-  is_bad_O_form_E' P = (is_point_O E' (fp2_abs P.0, fp2_abs P.1)) /\
-                       (fp2_abs (P.2) == Fp_2.field_unit)
+  is_bad_O_form_E' P = ((is_point_O E' (fp2_abs P.0, fp2_abs P.1)) /\
+                        (fp2_abs (P.2) != Fp_2.field_zero)) \/
+                       ((~(is_point_O E' (fp2_abs P.0, fp2_abs P.1))) /\
+                        fp2_abs (P.2) == Fp_2.field_zero)
+
   pubkey_to_point_is_affine: [96][8] -> Bool
   pubkey_to_point_is_affine pk =
     maybe_cases (pubkey_to_point (join pk))
@@ -61,17 +68,14 @@ let not_core = parse_core "not";
 let and_core = parse_core "and";
 
 affine_E'_inv_thm <- test_cryptol (rewrite (cryptol_ss())
-  {{ \P1 P2 b ->
+  {{ \P1 P2 ->
      (and_core (same_point_affine E' (affinify E' (POINTonE2_abs P1)) P2)
                (and_core (POINTonE2_invariant P1)
-                         (and_core (if b
-                                    then True
-                                    else ~(is_point_O E' (fp2_abs P1.0,
-                                                          fp2_abs P1.1)))
+                         (and_core (not_core (is_bad_O_form_E' P1))
                                    (is_point_projective E' (POINTonE2_abs P1))))) ==
      (same_point_affine E' (affinify E' (POINTonE2_abs P1)) P2 /\
       POINTonE2_affine_invariant (POINTonE2_affine_rep P2) /\
-      (if b then True else ~(is_point_O E' P2)) /\
+      ~(is_bad_O_form_E' P1) /\
       // TODO: Might need that P1/P2 are not point_O (see
       // hash_to_g2.saw:118).  Can hash to curve even return point_O?
       is_point_affine E' P2) }});
@@ -104,9 +108,16 @@ let boolEq_core = parse_core "boolEq";
 and_true_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \b1 b2 -> boolEq_core (and_core b1 b2) (b1 /\ (True /\ (b2 /\ True))) == True }}) [];
 
-e2_scalar_mult_not_O_thm <- admit_cryptol (rewrite (cryptol_ss())
-  {{ \sk -> is_point_O E' (e2_scalar_mult (scalar_value`{255,32} sk) BP') ==
-            (sk == zero) }});
+e2_scalar_mult_not_bad_O_thm <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \P sk -> (same_point_affine
+                E'
+                (affinify E' (POINTonE2_abs P))
+                (e2_scalar_mult (scalar_value`{255,32} sk) BP')) ==
+              ((apply same_point_affine
+                      E'
+                      (affinify E' (POINTonE2_abs P))
+                      (e2_scalar_mult (scalar_value`{255,32} sk) BP')) &&
+                ~(is_bad_O_form_E' P)) }});
 
 same_point_affine_E'_thm <- prove_cryptol
   {{ \P1 P2 -> same_point_affine E' P1 P2 == same_point_affine_E' P1 P2 }} [];
@@ -125,13 +136,11 @@ test_thm_correct <- custom_prove_cryptol (rewrite (cryptol_ss())
                       (affinify E' (POINTonE2_abs P))
                       (e2_scalar_mult (scalar_value`{255,32} sk) BP')) &&
                POINTonE2_invariant P &&
-               (if sk != zero
-                // TODO: I think this actually needs to be that it's not (0, 0, 1)
-                then ~(is_point_O E' (fp2_abs P.0, fp2_abs P.1))
-                else True) &&
+               ~(is_bad_O_form_E' P) &&
                // TODO: Probably need to condition on a nonzero scalar
                is_point_projective E' (POINTonE2_abs P)) }})
   do {
+    rw_with_1 e2_scalar_mult_not_bad_O_thm;
     unfolding ["apply"];
     simplify basic_ss;
     simplify (cryptol_ss());
@@ -139,12 +148,12 @@ test_thm_correct <- custom_prove_cryptol (rewrite (cryptol_ss())
                        , e2_scalar_mult_inv_thm
                        , e2_scalar_mult_on_curve_thm
                        , BP'_is_point_affine_thm
-                       , e2_scalar_mult_not_O_thm
                        , BP'_inv_thm ] empty_ss);
     simplify basic_ss;
     simplify (addsimp same_point_affine_E'_thm empty_ss);
     print_goal;
     w4_unint_z3 (concat [ "e2_scalar_mult"
+                        , "is_bad_O_form_E'"
                         , "scalar_value"
                         , "same_point_affine_E'" ]
                         e2_unints);
@@ -209,6 +218,13 @@ if_elim_thms <- for at_96_cores
            then x (if b2 then x1 else x2)
            else (x x1)) == (x x1) }}) []);
 
+O_O_unit_implies_bad_O_form_E' <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \P -> (is_bad_O_form_E' P) ==
+           if (is_point_O E' (fp2_abs P.0, fp2_abs P.1)) /\
+              (fp2_abs (P.2) == Fp_2.field_unit)
+           then True
+           else apply is_bad_O_form_E' P }}) [];
+
 demo_SkToPk_A_ov <- custom_verify "demo_SkToPk_A"
   [blst_sk_to_pk_in_g2_ov, blst_p2_compress_projective_ov, blst_p2_compress_affine_ov]
   demo_SkToPk_A_spec
@@ -230,6 +246,7 @@ demo_SkToPk_A_ov <- custom_verify "demo_SkToPk_A"
     unfolding ["apply"];
     simplify basic_ss;
     simplify (cryptol_ss());
+    rw_with_1 O_O_unit_implies_bad_O_form_E';
     // BEGIN final goal proof
     simplify (addsimps (concat split_join_thms
                                [mult_scalar_mult_thm,
@@ -742,7 +759,7 @@ serialize_e1_affine_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
     w4_unint_z3 ["fp_abs", "serialize_E1", "affinify_E", "POINTonE1_abs"];
   };
 
-O_O_unit_implies_bad_O_form_E <- really_prove_cryptol (rewrite (cryptol_ss())
+O_O_unit_implies_bad_O_form_E <- prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> (is_bad_O_form_E P) ==
            if (is_point_O E (fp_abs P.0, fp_abs P.1)) /\
               (fp_abs (P.2) == Fp.field_unit)
@@ -751,7 +768,7 @@ O_O_unit_implies_bad_O_form_E <- really_prove_cryptol (rewrite (cryptol_ss())
 
 // TODO: Solution is going to be some kind of "zero is not one" theorem, since
 // we have to leave Fp uninterpreted (or that ~is_bad_O_form_E -> P.2 != 1)
-demo_CoreSign_A_ov <- really_custom_verify "demo_CoreSign_A"
+demo_CoreSign_A_ov <- custom_verify "demo_CoreSign_A"
   [ hash_to_g1_impl_ov
   , POINTonE1_mult_w5_sk_ov
   , blst_p1_compress_affine_ov
