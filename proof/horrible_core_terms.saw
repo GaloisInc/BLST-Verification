@@ -97,7 +97,7 @@ let at_48_45 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 45"
 let at_48_46 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 46";
 let at_48_47 = parse_core "\\(x:Vec 48 (Vec 8 Bool)) -> at 48 (Vec 8 Bool) x 47";
 
-unrip_thm_48 <- really_prove_cryptol (rewrite (cryptol_ss())
+unrip_thm_48 <- prove_cryptol (rewrite (cryptol_ss())
   {{ \(v : [48][8]) ->
     [ at_48_0 v
     , at_48_1 v
@@ -344,7 +344,7 @@ let at_96_93 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 93"
 let at_96_94 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 94";
 let at_96_95 = parse_core "\\(x:Vec 96 (Vec 8 Bool)) -> at 96 (Vec 8 Bool) x 95";
 
-unrip_thm_96 <- really_prove_cryptol (rewrite (cryptol_ss())
+unrip_thm_96 <- prove_cryptol (rewrite (cryptol_ss())
   {{ \(v : [96][8]) ->
     [ at_96_0 v
     , at_96_1 v
@@ -444,7 +444,7 @@ unrip_thm_96 <- really_prove_cryptol (rewrite (cryptol_ss())
     , at_96_95 v
     ] == v }}) [];
 
-hoist_unrip_48_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+hoist_unrip_48_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \b (x1 : [48][8]) (x2 : [48][8]) ->
     [ if b then at_48_0 x1 else at_48_0 x2
     , if b then at_48_1 x1 else at_48_1 x2
