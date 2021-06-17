@@ -301,8 +301,9 @@ is_point_O_affine_rev_thm <- prove_cryptol
 
 just_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \(x : EC::AffinePoint t_Fp_2) -> just x == (True, x) }}) [];
 
-// TODO: Is this true?  Does it need to be proven?
-// NOTE: Too slow for quickcheck
+// We assume that pubkey_subgroup_check is equivalent to is_in_g2_impl for
+// points on the curve.  This assumption is proved in Bowe "Faster Subgroup
+// Checks for BLS12-381".
 is_in_g2_impl_thm <- admit_cryptol
   (rewrite (cryptol_ss())
   {{ \P -> pubkey_subgroup_check P ==
