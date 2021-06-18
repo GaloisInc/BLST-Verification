@@ -243,7 +243,7 @@ dbl_n_add_norm_thms <- for dbl_n_add_ns
 
 isogeny_map_norm_thm <- custom_prove_cryptol
   {{ \ p -> normalize_point Fp (isogeny_map_to_E1_impl p) == isogeny_map_to_E1_impl p }}
-  do { unfolding ["isogeny_map_to_E1_impl", "to_jacobian", "normalize_point"];
+  do { unfolding ["isogeny_map_to_E1_impl", "implementation::HashToG1::to_jacobian", "normalize_point"];
        apply_fp_rewrites;
        w4_unint_z3 fp_unints; };
 
