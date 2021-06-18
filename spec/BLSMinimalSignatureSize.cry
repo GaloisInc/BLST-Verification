@@ -59,7 +59,9 @@ pubkey_to_point S = deserialize_E2 (split S)
 
 // signature_to_point: [signature_len] -> Maybe (EC::AffinePoint t_F) // can fail
 // signature_to_point = octets_to_point_E1
-signature_to_point S = deserialize_E1 (split S)
+// TODO: Was deserialize_E1, but types didn't line up with the expected
+// signature length
+signature_to_point S = uncompress_E1 (split S)
 
 // Here are the unoptimized versions of the subgroup check
 
