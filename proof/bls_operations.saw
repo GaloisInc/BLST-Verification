@@ -453,7 +453,7 @@ let {{
 }};
 
 
-let demo_CoreSign_A_spec = do {
+let demo_BasicSign_A_spec = do {
   //let DST = {{ "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_" }};
   global_alloc_init "demo_DST_A" {{ DST }};
   let msg_len = 32;
@@ -769,12 +769,12 @@ O_O_unit_implies_bad_O_form_E <- prove_cryptol (rewrite (cryptol_ss())
 
 // TODO: Solution is going to be some kind of "zero is not one" theorem, since
 // we have to leave Fp uninterpreted (or that ~is_bad_O_form_E -> P.2 != 1)
-demo_CoreSign_A_ov <- custom_verify "demo_CoreSign_A"
+demo_BasicSign_A_ov <- custom_verify "demo_BasicSign_A"
   [ hash_to_g1_impl_ov
   , POINTonE1_mult_w5_sk_ov
   , blst_p1_compress_affine_ov
   , blst_p1_compress_projective_ov ]
-  demo_CoreSign_A_spec
+  demo_BasicSign_A_spec
   do {
     simplify (addsimp eq_to_same_point_affine_E_thm (cryptol_ss()));
     simplify (addsimp hash_to_g1_inv_thm empty_ss);

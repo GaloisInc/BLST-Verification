@@ -58,9 +58,9 @@ BLST_ERROR demo_KeyValidate_B(const unsigned char in[48]) {
 };
 
 
-// CoreSign
+// BasicSign
 
-void demo_CoreSign_A(byte out[48], const blst_scalar *SK,
+void demo_BasicSign_A(byte out[48], const blst_scalar *SK,
                      const byte *message, size_t message_len) {
   // TODO: Figure out how to use globals in SAW?
   //const byte local_DST_A[] = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_AUG_";
@@ -75,7 +75,7 @@ void demo_CoreSign_A(byte out[48], const blst_scalar *SK,
   blst_p1_compress(out, &Q2);
 };
 
-void demo_CoreSign_B(byte out[96], const blst_scalar *SK,
+void demo_BasicSign_B(byte out[96], const blst_scalar *SK,
                      const byte *message, size_t message_len) {
   blst_p2 Q;
   blst_hash_to_g2(&Q, message, message_len, demo_DST_A, 43, NULL, 0); // no "aug" string
@@ -84,9 +84,9 @@ void demo_CoreSign_B(byte out[96], const blst_scalar *SK,
   blst_p2_compress(out, &Q);
 };
 
-// CoreVerify
+// BasicVerify
 
-bool demo_CoreVerify_A(const byte sig[48], const byte pk[96], const byte *message, size_t message_len) {
+bool demo_BasicVerify_A(const byte sig[48], const byte pk[96], const byte *message, size_t message_len) {
   blst_p1_affine R;
   blst_p1 Q;
   blst_p2_affine PK;
@@ -107,7 +107,7 @@ bool demo_CoreVerify_A(const byte sig[48], const byte pk[96], const byte *messag
   return 1;
 };
 
-bool demo_CoreVerify_B(const byte sig[96], const byte pk[48], const byte *message, size_t message_len) {
+bool demo_BasicVerify_B(const byte sig[96], const byte pk[48], const byte *message, size_t message_len) {
   blst_p2_affine R;
   blst_p2 Q;
   blst_p1_affine PK;
