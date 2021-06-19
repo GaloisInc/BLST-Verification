@@ -1,0 +1,238 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+include "print_readably.saw";
+//import "../spec/implementation/CoreVerifyPKInG2.cry";
+
+// Specifications
+
+let msg_len = 32;
+let dst_len = 8;
+let aug_len = 8;
+
+// TODO: null-pk case
+
+let {{
+  blst_core_verify_pk_in_g2_error_precond : POINTonE2_affine_t -> POINTonE1_affine_t -> Bool
+  blst_core_verify_pk_in_g2_error_precond pk sig =
+       is_point_O E' (POINTonE2_affine_abs pk) \/ ( ~(is_point_O E (POINTonE1_affine_abs sig)) /\ ~is_in_g1_impl (POINTonE1_affine_abs sig) )
+}};
+
+// case in which no argument is null and the error condition is false
+let blst_core_verify_pk_in_g2_non_null_spec msg_len dst_len aug_len = do {
+  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_struct "struct.POINTonE2_affine");
+  (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_struct "struct.POINTonE1_affine");
+  llvm_precond {{ POINTonE2_affine_invariant pk /\ POINTonE1_affine_invariant sig /\ is_point_affine E (POINTonE1_affine_abs sig) /\ ~blst_core_verify_pk_in_g2_error_precond pk sig }};
+  hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
+  llvm_precond {{ hash_or_encode != zero }};
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (dst, dst_ptr) <- ptr_to_fresh_readonly "dst" (llvm_array dst_len (llvm_int 8));
+  //(aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
+  crucible_execute_func [pk_ptr, signature_ptr, crucible_term hash_or_encode,
+  msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `dst_len : [64] }}, llvm_null , crucible_term {{ `aug_len : [64] }}];
+  //crucible_return (crucible_term {{ if core_verify_pk_in_g2_impl (POINTonE2_affine_abs pk) (POINTonE1_affine_abs sig) msg dst aug then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
+};
+
+blst_core_verify_pk_in_g2_ov <- admit "blst_core_verify_pk_in_g2"
+(blst_core_verify_pk_in_g2_non_null_spec 32 43 0);
+
+/*
+// error case
+let blst_core_verify_pk_in_g2_error_spec msg_len dst_len aug_len = do {
+  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_struct "struct.POINTonE2_affine");
+  (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_struct "struct.POINTonE1_affine");
+  llvm_precond {{ POINTonE2_affine_invariant pk /\ POINTonE1_affine_invariant sig /\ is_point_affine E (POINTonE1_affine_abs sig) /\ blst_core_verify_pk_in_g2_error_precond pk sig }};
+  hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
+  llvm_precond {{ hash_or_encode != zero }};
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (dst, dst_ptr) <- ptr_to_fresh_readonly "dst" (llvm_array dst_len (llvm_int 8));
+  (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
+  crucible_execute_func [pk_ptr, signature_ptr, crucible_term hash_or_encode, msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `dst_len : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}];
+  ret <- llvm_fresh_var "blst_core_verify_pk_in_g2_ret" (llvm_int 32);
+  llvm_return (llvm_term ret);
+  llvm_postcond {{ ret != `BLST_SUCCESS }};
+};
+
+// null cases
+
+// sig is null
+let blst_core_verify_pk_in_g2_null_sig_spec msg_len dst_len aug_len = do {
+  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_struct "struct.POINTonE2_affine");
+  let signature_ptr = llvm_null;
+  llvm_precond {{ POINTonE2_affine_invariant pk }};
+  hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
+  llvm_precond {{ hash_or_encode != zero }};
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (dst, dst_ptr) <- ptr_to_fresh_readonly "dst" (llvm_array dst_len (llvm_int 8));
+  (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
+  crucible_execute_func [pk_ptr, signature_ptr, crucible_term hash_or_encode, msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `dst_len : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}];
+  crucible_return (crucible_term {{ if is_point_O E' (POINTonE2_affine_abs pk) then `BLST_PK_IS_INFINITY else if core_verify_pk_in_g2_impl (POINTonE2_affine_abs pk) (POINTonE1_affine_abs zero) msg dst aug then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
+};
+
+// pk is null
+let blst_core_verify_pk_in_g2_null_pk_spec msg_len dst_len aug_len = do {
+  (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_struct "struct.POINTonE1_affine");
+  hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
+  llvm_precond {{ hash_or_encode != zero }};
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  (dst, dst_ptr) <- ptr_to_fresh_readonly "dst" (llvm_array dst_len (llvm_int 8));
+  (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
+  crucible_execute_func [llvm_null, signature_ptr, crucible_term hash_or_encode, msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `dst_len : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}];
+  // crucible_return (crucible_term {{ if is_point_O E (POINTonE2_affine_abs pk) then `BLST_PK_IS_INFINITY else if core_verify_pk_in_g2_impl (POINTonE2_affine_abs pk) (POINTonE1_affine_abs zero) msg dst aug then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
+};
+
+// overrides:
+
+Hash_to_G1_ov <- prove_Hash_to_G1_impl_ov msg_len dst_len aug_len;
+
+let overrides = foldr concat [
+  mul_fp12_ovs ] [ // fp12.saw
+  Hash_to_G1_ov
+, POINTonE1_from_Jacobian_alias_ov // compress-p1.saw
+, POINTonE2_from_Jacobian_ov // compress-p2.saw
+, POINTonE1_from_Jacobian_ov // compress-p1.saw
+, miller_loop_n_1_ov // pairing.saw
+, conjugate_fp12_ov // fp12.saw
+, final_exp_alias_ov
+, vec_copy_2fp_ov
+, vec_copy_POINTonE2_affine_ov
+, vec_copy_POINTonE1_affine_ov
+, vec_copy_fp12_ov
+, vec_select_Fp_ov
+, vec_is_zero_10fp_ov
+, vec_is_zero_2fp2_ov
+// , vec_is_zero_2fp_ov
+, vec_is_zero_2fp_is_equal_ov
+, vec_is_zero_fp2_ov
+, vec_is_equal_fp2_ov
+, POINTonE1_in_G1_ov // subgroup_check_g1.saw
+];
+
+// Proofs
+
+fp_unit_rep <- eval_term {{ fp_rep Fp.field_unit }};
+rewrite_unit <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp_abs fp_unit_rep == Fp.field_unit }}) w4;
+from_affine_nz_rewrite <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \ap -> POINTonE1_abs (ap.0, ap.1, fp_unit_rep) == projectify E (POINTonE1_affine_abs ap) }}) w4; // this is to rewrite FROM_AFFINE
+let BP'_rep = run (eval_term {{ POINTonE2_affine_rep BP' }});
+let BP'_rewrite = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ POINTonE2_affine_abs BP'_rep == BP' }}) w4);
+let fp12_unit_rep = run( eval_term {{ fp12_rep Fp_12.field_unit }});
+let rewrite_fp12_unit = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp12_abs fp12_unit_rep == Fp_12.field_unit }}) w4);
+let rewrite_is_equal = run (custom_prove_cryptol {{
+  \x -> Fp_12.is_equal (x,Fp_12.field_unit) ==
+    (Fp_2.is_equal(x12, Fp_2.field_unit) /\ y == zero
+      where [x0,x1] = x; [x00,x01,x02] = x0; [x10,x11,x12] = x1; y = take`{front=10} (join (join x)))
+}} w4);
+let affinify_projectify_is_id = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p -> affinify E (projectify E (POINTonE1_affine_abs p)) == if POINTonE1_affine_invariant p then (POINTonE1_affine_abs p) else apply affinify E (projectify E (POINTonE1_affine_abs p)) }}) w4); // the signature undergoes this round-trip, which we rewrite away with this rule
+
+let core_verify_pk_in_g2_unints = ["BP'","is_in_g1_impl","hash_to_curve_opt_impl","miller_loop_opt_checked","final_exponentiation_impl","fp12_conjugate","affinify_E","affinify_E'", "projectify_E'", "projectify_E","is_point_projective_E","is_point_projective_E'","is_point_affine_E","is_point_affine_E'","Fp_12"]; // the stuff we want to leave unfolded
+
+core_verify_pk_in_g2_POINTonE1_from_Jacobian_preconds <- do {
+  on_curve <- admit_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> is_point_projective E (hash_to_curve_opt_impl (aug#msg, DST)) == True }});
+  not_zero <- admit_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> Fp.is_equal ((hash_to_curve_opt_impl (aug#msg, DST)).2, Fp.field_zero) == False }}); // NOTE: this is unsound, but it's morally okay as it's deemed it will never happen
+  return [on_curve,not_zero];
+};
+miller_loop_zero_thm <- admit_cryptol {{  \x -> fp12_conjugate (miller_loop_opt_checked x BP') == if (is_point_O E x) then Fp_12.field_unit else apply miller_loop_opt_checked x BP' }}; // TODO
+
+// case in which no argument is null and we reach the final check
+blst_core_verify_pk_in_g2_non_null_ov <- custom_verify
+  "blst_core_verify_pk_in_g2"
+  overrides
+  (blst_core_verify_pk_in_g2_non_null_spec msg_len dst_len aug_len)
+  do {
+    let projectify_on_curve = run (admit_cryptol {{ \sig  -> is_point_projective E (projectify E (POINTonE1_affine_abs sig)) == if (sig != zero /\ is_point_affine E (POINTonE1_affine_abs sig)) then True else apply is_point_projective E (projectify E (POINTonE1_affine_abs sig)) }});
+    simplify (addsimps (concat POINTonE2_thms POINTonE1_thms) empty_ss);
+    unfolding ["POINTonE1_rep"];
+    simplify fp12_simpset;
+    simplify fp2_simpset;
+    simplify fp_simpset;
+    simplify (addsimps core_verify_pk_in_g2_POINTonE1_from_Jacobian_preconds empty_ss);
+    unfolding ["select"];
+    hoist_ifs_in_goal; // this is slow but works and avoids using the ugly-looking rules in hoist_ifs_rules
+    // simplify (addsimps hoist_ifs_rules empty_ss);
+    simplify (addsimps [rewrite_unit,from_affine_nz_rewrite,projectify_on_curve] empty_ss);
+    simplify (addsimps [rewrite_fp12_unit,BP'_rewrite,affinify_projectify_is_id] empty_ss);
+    unfolding ["core_verify_pk_in_g2_impl"];
+    simplify (addsimp miller_loop_zero_thm empty_ss);
+    simplify (addsimp rewrite_is_equal empty_ss);
+    unfolding ["apply"];
+    simplify (addsimps remove_ho_rules empty_ss);
+    goal_eval_unint (concat core_verify_pk_in_g2_unints ["fp_rep","fp_abs"]);
+    simplify (addsimps restitching_rules empty_ss);
+    simplify fp_simpset; // get rid of remaining `abs rep` terms
+    (w4_unint_z3 core_verify_pk_in_g2_unints);
+  };
+
+let do_prove = true;
+
+blst_core_verify_pk_in_g2_error_ov <- custom_verify
+  "blst_core_verify_pk_in_g2"
+  overrides
+  (blst_core_verify_pk_in_g2_error_spec msg_len dst_len aug_len)
+  do {
+    unfolding ["blst_core_verify_pk_in_g2_error_precond"];
+    // hoist_ifs_in_goal;
+    simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
+    unfolding ["POINTonE1_rep"];
+    simplify fp12_simpset;
+    simplify fp2_simpset;
+    simplify fp_simpset;
+    simplify (addsimps remove_ho_rules empty_ss);
+    print_readably;
+    goal_num_ite 17 // post-condition
+      do {
+        // here there should be only the zero tests and the subgroup tests that matter, so we can leave Fp uninterpreted (as long as the is_zero overrides is Fp operations)
+        (unint_z3 (concat ["Fp","fp12_rep","POINTonE2_invariant","POINTonE1_invariant","fp_invariant","fp2_invariant"] core_verify_pk_in_g2_unints)); // w4_unint_z3 produces a problem on which Z3 does not return
+      }
+      (w4_unint_z3 core_verify_pk_in_g2_unints);
+  };
+
+// blst_core_verify_pk_in_g2_null_pk_ov <- custom_verify
+  // "blst_core_verify_pk_in_g2"
+  // overrides
+  // (blst_core_verify_pk_in_g2_null_pk_spec msg_len dst_len aug_len)
+    // do {
+      // assume_unsat;
+      // // // TODO: no idea why this fails on the first goal (matching vec_is_zero)
+      // // unfolding ["blst_core_verify_pk_in_g2_error_precond"];
+      // // // get rid of `abs rep` terms
+      // // simplify (addsimps (concat POINTonE2_thms POINTonE1_thms) empty_ss);
+      // // unfolding ["POINTonE1_rep"];
+      // // simplify fp2_simpset;
+      // // simplify fp_simpset;
+      // // simplify fp12_simpset;
+      // // // all remaining simulation side-conditions:
+      // // print_readably;
+      // // simplify (addsimps remove_ho_rules empty_ss);
+      // // w4_unint_z3 core_verify_pk_in_g2_unints;
+    // };
+
+blst_core_verify_pk_in_g2_null_sig_ov <- custom_verify
+  "blst_core_verify_pk_in_g2"
+  overrides
+  (blst_core_verify_pk_in_g2_null_sig_spec msg_len dst_len aug_len)
+  do {
+    let projectify_on_curve = run (admit_cryptol {{ \sig  -> is_point_projective E (projectify E (POINTonE1_affine_abs sig)) == if (sig != zero /\ is_point_affine E (POINTonE1_affine_abs sig)) then True else apply is_point_projective E (projectify E (POINTonE1_affine_abs sig)) }});
+    simplify (addsimps (concat POINTonE2_thms POINTonE1_thms) empty_ss);
+    unfolding ["POINTonE1_rep"];
+    simplify fp12_simpset;
+    simplify fp2_simpset;
+    simplify fp_simpset;
+    simplify (addsimps core_verify_pk_in_g2_POINTonE1_from_Jacobian_preconds empty_ss);
+    unfolding ["select"];
+    hoist_ifs_in_goal; // this is slow but works and avoids using the ugly-looking rules in hoist_ifs_rules
+    // simplify (addsimps hoist_ifs_rules empty_ss);
+    simplify (addsimps [rewrite_unit,from_affine_nz_rewrite,projectify_on_curve] empty_ss);
+    simplify (addsimps [rewrite_fp12_unit,BP'_rewrite,affinify_projectify_is_id] empty_ss);
+    unfolding ["core_verify_pk_in_g2_impl"];
+    simplify (addsimp miller_loop_zero_thm empty_ss);
+    simplify (addsimp rewrite_is_equal empty_ss);
+    unfolding ["apply"];
+    simplify (addsimps remove_ho_rules empty_ss);
+    goal_eval_unint (concat core_verify_pk_in_g2_unints ["fp_rep","fp_abs"]);
+    simplify (addsimps restitching_rules empty_ss);
+    simplify fp_simpset; // get rid of remaining `abs rep` terms
+    (w4_unint_z3 core_verify_pk_in_g2_unints);
+  };
+  */

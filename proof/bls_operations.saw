@@ -875,6 +875,7 @@ let BasicVerify_A_unints = (concat [ "uncompress_E1_imp"
                                    , "POINTonE2_affine_rep"
                                    , "POINTonE2_affine_abs"
                                    , "is_point_affine_E"
+                                   , "is_in_g2_impl"
                                    , "is_in_g1_impl"
                                    , "nothing"
                                    , "bool_to_limb"
@@ -906,7 +907,8 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
   , blst_p2_uncompress_OK_ov
   , POINTonE2_affine_on_curve_ov
   , vec_is_zero_2fp2_ov
-  , blst_p2_affine_in_g2_ov ]
+  , blst_p2_affine_in_g2_ov
+  , blst_core_verify_pk_in_g2_ov ]
   demo_BasicVerify_A_spec
   do {
     unfolding [ "POINTonE1_affine_abs" , "POINTonE2_affine_abs" ];
