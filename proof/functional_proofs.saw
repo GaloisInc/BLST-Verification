@@ -45,4 +45,6 @@ include "fp12.saw";
 include "pairing.saw";
 include "final_exp.saw";
 
+include "core_verify_pk_in_g2.saw";
+
 include "bls_operations.saw";

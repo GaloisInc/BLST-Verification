@@ -834,6 +834,7 @@ demo_BasicSign_A_ov <- custom_verify "demo_BasicSign_A"
 let compressed_E1_rep_type = llvm_array 48 (llvm_int 8);
 
 let demo_BasicVerify_A_spec = do {
+  global_alloc_init "demo_DST_A" {{ DST }};
   (sig, sig_ptr) <- ptr_to_fresh_readonly "sig" compressed_E1_rep_type;
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" compressed_E2_rep_type;
   let message_len = 32;
@@ -878,7 +879,7 @@ let BasicVerify_A_unints = (concat [ "uncompress_E1_imp"
                                    , "is_in_g2_impl"
                                    , "is_in_g1_impl"
                                    , "nothing"
-                                   , "bool_to_limb"
+                                   //, "bool_to_limb"
                                    , "uncompress_E1_OK"
                                    , "uncompress_E2_imp"
                                    , "uncompress_E2_OK"
@@ -911,7 +912,9 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
   , blst_core_verify_pk_in_g2_ov ]
   demo_BasicVerify_A_spec
   do {
-    unfolding [ "POINTonE1_affine_abs" , "POINTonE2_affine_abs" ];
+    unfolding [ "POINTonE1_affine_abs"
+              , "POINTonE2_affine_abs"
+              , "blst_core_verify_pk_in_g2_error_precond"];
     simplify basic_ss;
     simplify (cryptol_ss());
     simplify basic_ss;
