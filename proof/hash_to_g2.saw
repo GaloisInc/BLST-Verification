@@ -283,7 +283,7 @@ let prove_hash_to_curve_opt_equiv msg_len DST_len =
   custom_prove_cryptol {{ \(msg:[msg_len][8]) (dst:[DST_len][8]) -> affinify E' (hash_to_curve_E2_opt_impl (msg,dst)) == HE2::hash_to_curve_opt (msg, dst) }}
     do {
       unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl"];
-      let clear_cofactor_correct = run (custom_prove_cryptol {{ \P -> affinify E' (clear_cofactor_E2_impl P) == if AffinePoint_Fp_2_invariant (affinify E' P) then clear_cofactor_bls12381_g2 (affinify E' P) else affinify E' (apply clear_cofactor_E2_impl P) }}
+      let clear_cofactor_correct = run (custom_prove_cryptol {{ \P -> affinify E' (clear_cofactor_E2_impl P) == if AffinePoint_Fp_2_invariant (affinify E' P) then HE2Aux::clear_cofactor_bls12381_g2 (affinify E' P) else affinify E' (apply clear_cofactor_E2_impl P) }}
         do {
           simplify (addsimp clear_cofactor_E2_equiv_thm empty_ss);
           simplify remove_higher_order_function_simpset;
