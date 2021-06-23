@@ -852,6 +852,10 @@ let demo_BasicVerify_A_spec = do {
                     , message_ptr
                     , llvm_term {{ `message_len : [64] }} ];
   // TODO: Postcond
+  /*
+  llvm_return (llvm_term
+      {{ bool_to_limb (CoreVerify (join pk, message, join sig)) }});
+      */
 };
 
 is_point_O_E_affine_rev_thm <- prove_cryptol (rewrite (cryptol_ss())
@@ -940,6 +944,17 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with remove_ho_rules;
+    // END Precondition proofs
+    /*
+    unfolding [ "CoreVerify"
+              , "module parameter signature_subgroup_check"
+              , "module parameter other_curve"
+              , "module parameter pubkey_subgroup_check"
+              , "KeyValidate"
+              , "maybe_cases"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    */
     print_goal;
     w4_unint_z3 BasicVerify_A_unints;
   };

@@ -86,7 +86,7 @@ void demo_BasicSign_B(byte out[96], const blst_scalar *SK,
 
 // BasicVerify
 
-bool demo_BasicVerify_A(const byte sig[48], const byte pk[96], const byte *message, size_t message_len) {
+limb_t demo_BasicVerify_A(const byte sig[48], const byte pk[96], const byte *message, size_t message_len) {
   blst_p1_affine R;
   blst_p1 Q;
   blst_p2_affine PK;
@@ -96,6 +96,7 @@ bool demo_BasicVerify_A(const byte sig[48], const byte pk[96], const byte *messa
   if (blst_p1_affine_is_inf(&R)) return 0;
   if (! blst_p1_affine_in_g1(&R)) return 0;
 
+  // TODO: Use KeyValidate below instead to better match the spec?
   // uncompress and check the pub key
   if (blst_p2_uncompress(&PK, pk) != BLST_SUCCESS) return 0;
   if (! blst_p2_affine_on_curve(&PK)) return 0;

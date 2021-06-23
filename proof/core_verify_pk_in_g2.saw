@@ -24,11 +24,7 @@ let {{
 let blst_core_verify_pk_in_g2_non_null_spec msg_len dst_len aug_len = do {
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_struct "struct.POINTonE2_affine");
   (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_struct "struct.POINTonE1_affine");
-  //llvm_precond {{ POINTonE2_affine_invariant pk /\ POINTonE1_affine_invariant sig /\ is_point_affine E (POINTonE1_affine_abs sig) /\ ~blst_core_verify_pk_in_g2_error_precond pk sig }};
-  llvm_precond {{ POINTonE2_affine_invariant pk }};
-  llvm_precond {{ POINTonE1_affine_invariant sig }};
-  llvm_precond {{ is_point_affine E (POINTonE1_affine_abs sig) }};
-  llvm_precond {{ ~blst_core_verify_pk_in_g2_error_precond pk sig }};
+  llvm_precond {{ POINTonE2_affine_invariant pk /\ POINTonE1_affine_invariant sig /\ is_point_affine E (POINTonE1_affine_abs sig) /\ ~blst_core_verify_pk_in_g2_error_precond pk sig }};
   hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
   llvm_precond {{ hash_or_encode != zero }};
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
