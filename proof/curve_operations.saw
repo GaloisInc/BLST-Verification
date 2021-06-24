@@ -615,6 +615,14 @@ POINTonE1_base_thms <- for
          simplify (addsimp fp_normalize_thm empty_ss); // for the rep_abs rule
          w4_unint_z3 fp_unints; }) ;
 
+// this is already included in POINTonE1_base_thms but here we give it a name to allow to refer to it without indexing into the POINTonE1_base_thms, which is very brittle (when the list changes, proofs that refer to indexes in the list fail)
+POINTonE1_invariant_rep_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p1 -> POINTonE1_invariant (POINTonE1_rep p1) == True }}) (
+    do { unfolding ["POINTonE1_abs", "POINTonE1_affine_abs", "POINTonE1_rep", "POINTonE1_affine_rep", "POINTonE1_invariant", "POINTonE1_affine_invariant", "POINTonE1_normalize"];
+         apply_fp_rewrites;
+         // unfolding ["fp_invariant"]; // for the (zero,zero,zero) thm
+         simplify (addsimp fp_normalize_thm empty_ss); // for the rep_abs rule
+         w4_unint_z3 fp_unints; } ) ;
+
 POINTonE1_selection_ite_thms <- for
   [ {{ \ c (p1:(ProjectivePoint t_Fp)) p2 ->
         (if c then p1 else p2).0 == if c then p1.0 else p2.0 }}
