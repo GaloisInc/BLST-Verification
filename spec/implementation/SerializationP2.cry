@@ -19,7 +19,7 @@ uncompress_E2_x s_string = x where
     // Step 6 - but not clearly described in the IETF specification
     // AND - some uncertainty about the order of the parts
     // x = reverse (split`{parts=2} (join s_string'))
-    // NOTE: this order, used in ZCash and the code, disagrees with the spec. TODO: is this comment still accurate?
+    // NOTE: this order, used in ZCash and the code, disagrees with the spec.
     x = split`{parts=2} (join s_string')
 
 uncompress_E2_x_fp: [96][8] -> t_Fp_2

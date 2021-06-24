@@ -602,8 +602,8 @@ POINTonE1_base_thms <- for
  , {{ \c p1 p2 -> point_neg Fp (if c then p1 else p2) ==
                   if c then point_neg Fp p1 else point_neg Fp p2 }}
 //
- , {{ \(x:POINTonE1_t) -> (x.0, x.1, x.2) == x }}
- , {{ \(x:POINTonE1_affine_t) -> (x.0, x.1) == x }}
+ , {{ \ (x:POINTonE1_t) -> (x.0, x.1, x.2) == x }}
+ , {{ \ (x:POINTonE1_affine_t) -> (x.0, x.1) == x }}
  , {{ \ c (x1: Vec384) (x2: Vec384) (x3: Vec384) y1 y2 y3 ->
         (if c then x1 else y1, if c then x2 else y2, if c then x3 else y3) ==
         if c then (x1,x2,x3) else (y1,y2,y3) }}
