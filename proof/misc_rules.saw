@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import "../spec/Parameters.cry";
-import "../spec/implementation/Field.cry";
-import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/implementation/CurveOperation.cry";
-
 let remove_ho_rules = concat
   [ point_add_fp2_thm, point_dadd_fp2_thm, point_double_fp2_thm, point_neg_fp2_thm
    , point_add_affine_fp2_thm, point_dadd_affine_fp2_thm

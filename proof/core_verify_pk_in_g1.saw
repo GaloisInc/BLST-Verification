@@ -213,7 +213,18 @@ blst_core_verify_pk_in_g1_non_null_ov <- custom_verify
       unfolding ["select"];
       hoist_ifs_in_goal;
       print_goal;
-      rewrite_to_false;
+      simplify (addsimps [rewrite_unit,from_affine_nz_rewrite,projectify_on_curve] empty_ss);
+      simplify (addsimps [rewrite_fp12_unit,BP_rewrite,affinify_projectify_is_id] empty_ss);
+      unfolding ["core_verify_pk_in_g1_impl"];
+      simplify (addsimp miller_loop_zero_thm empty_ss);
+      simplify (addsimp rewrite_is_equal empty_ss);
+      unfolding ["apply"];
+      simplify (addsimps remove_ho_rules empty_ss);
+      goal_eval_unint (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs"]);
+      simplify (addsimps restitching_rules empty_ss);
+      simplify fp_simpset; // get rid of remaining `abs rep` terms
+      w4_unint_z3 core_verify_pk_in_g1_unints;
+  };
     }
     do {
       assume_unsat;
