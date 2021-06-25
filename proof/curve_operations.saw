@@ -3,18 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/implementation/Types.cry";
-import "../spec/implementation/CurveOperation.cry";
-
-/*
-let print_goal_readably_fp = do {
-    unfolding ["Fp", "prime_field_bv", "prime_field_integer", "prime_field"];
-    simplify cleanup_simpset;
-    print_goal;
-    };
-*/
-
 // In order to get the necessary rewrites to happen, there are some "administrative" type
 // rewrites that help bring the terms we need together.    We start with them:
 
@@ -597,7 +585,9 @@ let curve_operations_e1_ovs = [POINTonE1_add_alias_1_2_ov, POINTonE1_add_ov, POI
 // ... abs_rep rules for points, and some structure rules
 POINTonE1_base_thms <- for
  [ {{ \p1 -> POINTonE1_abs (POINTonE1_rep p1) == normalize_point Fp p1 }}
+ , {{ \p1 -> POINTonE1_affine_abs (POINTonE1_affine_rep p1) == normalize_affine_point Fp p1 }}
  , {{ \p1 -> POINTonE1_invariant (POINTonE1_rep p1) == True }}
+ , {{ \p1 -> POINTonE1_affine_invariant (POINTonE1_affine_rep p1) == True }}
  , {{ \p1 -> POINTonE1_rep (POINTonE1_abs p1) ==
              if POINTonE1_invariant p1
              then p1
@@ -608,21 +598,30 @@ POINTonE1_base_thms <- for
          if c then POINTonE1_rep p1 else POINTonE1_rep p2 }}
  , {{ \c p1 p2 -> POINTonE1_abs (if c then p1 else p2) ==
          if c then POINTonE1_abs p1 else POINTonE1_abs p2 }}
-
+//
  , {{ \c p1 p2 -> point_neg Fp (if c then p1 else p2) ==
                   if c then point_neg Fp p1 else point_neg Fp p2 }}
-
+//
  , {{ \ (x:POINTonE1_t) -> (x.0, x.1, x.2) == x }}
  , {{ \ (x:POINTonE1_affine_t) -> (x.0, x.1) == x }}
  , {{ \ c (x1: Vec384) (x2: Vec384) (x3: Vec384) y1 y2 y3 ->
         (if c then x1 else y1, if c then x2 else y2, if c then x3 else y3) ==
         if c then (x1,x2,x3) else (y1,y2,y3) }}
- ] (\t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
-    do { unfolding ["POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant", "POINTonE1_normalize"];
+ ]
+ (\t -> custom_prove_cryptol (rewrite (cryptol_ss ()) t)
+    do { unfolding ["POINTonE1_abs", "POINTonE1_affine_abs", "POINTonE1_rep", "POINTonE1_affine_rep", "POINTonE1_invariant", "POINTonE1_affine_invariant", "POINTonE1_normalize"];
          apply_fp_rewrites;
          // unfolding ["fp_invariant"]; // for the (zero,zero,zero) thm
          simplify (addsimp fp_normalize_thm empty_ss); // for the rep_abs rule
          w4_unint_z3 fp_unints; }) ;
+
+// this is already included in POINTonE1_base_thms but here we give it a name to allow to refer to it without indexing into the POINTonE1_base_thms, which is very brittle (when the list changes, proofs that refer to indexes in the list fail)
+POINTonE1_invariant_rep_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \p1 -> POINTonE1_invariant (POINTonE1_rep p1) == True }}) (
+    do { unfolding ["POINTonE1_abs", "POINTonE1_affine_abs", "POINTonE1_rep", "POINTonE1_affine_rep", "POINTonE1_invariant", "POINTonE1_affine_invariant", "POINTonE1_normalize"];
+         apply_fp_rewrites;
+         // unfolding ["fp_invariant"]; // for the (zero,zero,zero) thm
+         simplify (addsimp fp_normalize_thm empty_ss); // for the rep_abs rule
+         w4_unint_z3 fp_unints; } ) ;
 
 POINTonE1_selection_ite_thms <- for
   [ {{ \ c (p1:(ProjectivePoint t_Fp)) p2 ->
@@ -699,13 +698,13 @@ normalize_projectify_thm <- custom_prove_cryptol
        w4_unint_z3 fp_unints; };
 
 /* unsuitable rules.
-normalize_projections_thms <- for
-  [ {{ \x -> Fp.normalize x.0 == (normalize_affine_point Fp x).0 }}
-  , {{ \x -> Fp.normalize x.1 == (normalize_affine_point Fp x).1 }}
-  , {{ \x -> Fp.normalize x.0 == (normalize_point Fp x).0 }}
-  , {{ \x -> Fp.normalize x.1 == (normalize_point Fp x).1 }}
-  , {{ \x -> Fp.normalize x.2 == (normalize_point Fp x).2 }}
-  ] (\ t -> prove_cryptol t []);
+  normalize_projections_thms <- for
+    [ {{ \x -> Fp.normalize x.0 == (normalize_affine_point Fp x).0 }}
+    , {{ \x -> Fp.normalize x.1 == (normalize_affine_point Fp x).1 }}
+    , {{ \x -> Fp.normalize x.0 == (normalize_point Fp x).0 }}
+    , {{ \x -> Fp.normalize x.1 == (normalize_point Fp x).1 }}
+    , {{ \x -> Fp.normalize x.2 == (normalize_point Fp x).2 }}
+    ] (\ t -> prove_cryptol t []);
 */
 
 normalize_affinify_projections_thms <- for

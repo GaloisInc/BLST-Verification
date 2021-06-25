@@ -1,5 +1,3 @@
-import "../spec/implementation/CryptolHelpers.cry" (apply);
-
 let bv_int_properties n =
   [ {{ \ (x:[n]) y -> toInteger (x+y) == ((toInteger x) + (toInteger y)) % 2^^`n }}
   , {{ \ (x:[n]) y -> toInteger (x-y) == ((toInteger x) - (toInteger y)) % 2^^`n }}

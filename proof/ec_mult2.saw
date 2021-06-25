@@ -3,10 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import "../spec/ShortWeierstrassCurve.cry";
-import "../spec/implementation/Types.cry";
-import "../spec/implementation/CurveOperation.cry";
-
 unrip_thm_2 <- prove_cryptol (rewrite (cryptol_ss ())
    {{ \ (x:[2][6][64]) -> ([x0, x1] == x where [x0,x1] = x)}}) [];
 
@@ -280,7 +276,7 @@ invariant_booth'_thm <-
   custom_prove_cryptol
   {{ \p1 booth_index -> POINTonE2_invariant (booth' (precomputed_table p1) booth_index) == True }}
   do { unfolding ["booth'", "booth_lookup"];
-       simplify (addsimp (nth POINTonE2_thms 1) (cryptol_ss ())); // the "invariant_rep" theorem
+       simplify (addsimp (nth POINTonE2_thms 2) (cryptol_ss ())); // needs the "invariant_rep" theorem; other rules get in the way if using the whole simpset
        w4_unint_z3 ec_mult_unints; } ;
 
 let {{

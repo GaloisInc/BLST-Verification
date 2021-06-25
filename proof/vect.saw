@@ -8,7 +8,7 @@
 // While these functions just operate on arrays of limbs, in our proofs we often need to
 // consider their effect in the abstract, not concrete, domain.
 
-import "../spec/implementation/Types.cry";
+// import "../spec/implementation/Types.cry";
 
 // ... vec_select
 let vec_select_asm_spec (bytes:Int) = do {
@@ -235,6 +235,8 @@ vec_copy_POINTonE2_ov <- verify "vec_copy" [] (vec_copy_spec 288 POINTonE2_type)
 vec_copy_POINTonE2_affine_ov <- verify "vec_copy" [] (vec_copy_spec 192 POINTonE2_affine_type);
 
 vec_copy_fp12_ov <- verify "vec_copy" [] (vec_copy_spec 576 vec384fp12_type);
+
+vec_copy_2fp_ov <- verify "vec_copy" [] (vec_copy_spec 192 vec768x_type);
 
 // all overrides
 

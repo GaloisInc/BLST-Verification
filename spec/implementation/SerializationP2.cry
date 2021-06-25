@@ -28,7 +28,7 @@ uncompress_E2_x_fp s_string = [f x0, f x1] where
     f x = Fp.mul (fp_abs (vec384_rep x), montgomery_factor_p) // Montgomery-encode using multiplication
 
 not_too_big_E2: [2][384] -> Bool
-not_too_big_E2 x = (x@0 < `p) && (x@1 < `p)
+not_too_big_E2 x = (x@0 < `p) /\ (x@1 < `p)
 
 uncompress_E2_y2: [96][8] -> t_Fp_2
 uncompress_E2_y2 s_string = y2 where
@@ -52,8 +52,6 @@ uncompress_E2_imp s_string = ret where
     Y_bit = sign_F_p_2 y
     ret = if C_bit == False then nothing // Error, from Step 2
            | I_bit then (if ~S_bit /\ s_string' == zero then just (EC::point_O E') else nothing)
-//           | (uncompress_E2_x s_string)@0 >= `p then nothing // extra check in the C code
-//           | (uncompress_E2_x s_string)@1 >= `p then nothing // extra check in the C code
            | ~ (not_too_big_E2 (uncompress_E2_x s_string)) then nothing // extra checks in the C code
            | ~ (is_square_fp2 y2) then nothing // from Step 7
            | S_bit == Y_bit then just (x,y)

@@ -1,0 +1,153 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+// NOTE: we only consider inputs that either have the infinity-bit set or compressed-bit set
+
+// aggregate_in_g2_error_precond describes the circumstances under which aggregate_in_g2 returns an error (assuming either the compressed bit is set of the infinity bit is set)
+let {{
+  aggregate_in_g2_error_precond : [96][8] -> Bool
+  aggregate_in_g2_error_precond zwire =
+      ~(zwire@0)@1 // not infinity
+    /\ (   (uncompress_E2_x zwire)@0 >= `p
+        \/ (uncompress_E2_x zwire)@1 >= `p
+        \/ ~ is_square_fp2 (uncompress_E2_y2 zwire) // not on curve
+        \/ ~ is_in_g2_impl (uncompress_E2_OK zwire) ) // not in group g2
+}};
+
+// case in which the input is not null and we return BLST_SUCCESS:
+let blst_aggregate_in_g2_OK_nonnull_spec = do {
+  //
+  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g2_out" (llvm_struct "struct.POINTonE2");
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g2_in" (llvm_struct "struct.POINTonE2");
+  (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g2_zwire" (llvm_array 96 (llvm_int 8));
+  //
+  llvm_precond {{ (zwire@0)@0 }}; // compressed
+  llvm_precond {{ POINTonE2_invariant inp }}; // inp is a valid point (precondition of add)
+  llvm_precond {{ ~aggregate_in_g2_error_precond zwire }}; // no error condition
+  //
+  llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
+  //
+  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE2");
+  llvm_points_to out_ptr (llvm_term new_out);
+  llvm_postcond {{ affinify E' (POINTonE2_abs new_out) == if (zwire@0)@1 then affinify E' (POINTonE2_abs out) else add E' (affinify E' (POINTonE2_abs inp)) (uncompress_E2_OK zwire) }};
+  //
+  llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
+};
+
+// Special case: the input is null:
+
+let blst_aggregate_in_g2_null_spec = do {
+  //
+  out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE2");
+  let inp_ptr = llvm_null;
+  //
+  (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g2_zwire" (llvm_array 96 (llvm_int 8));
+  llvm_precond {{ (zwire@0)@0 }}; // compressed
+  llvm_precond {{ ~aggregate_in_g2_error_precond zwire }}; // no error condition
+  //
+  llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
+  //
+  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE2");
+  llvm_points_to out_ptr (llvm_term new_out);
+  llvm_postcond {{ affinify E' (POINTonE2_abs new_out) ==
+    if (zwire@0)@1
+    then point_O E'
+    else uncompress_E2_OK zwire
+  }};
+  //
+  llvm_return (llvm_term {{ (`BLST_SUCCESS):[32] }});
+};
+
+// here we cover the error cases:
+let blst_aggregate_in_g2_error_spec = do {
+  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g2_out" (llvm_struct "struct.POINTonE2");
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g2_in" (llvm_struct "struct.POINTonE2");
+  (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g2_zwire" (llvm_array 96 (llvm_int 8));
+  llvm_precond {{ (zwire@0)@0 }}; // compressed
+  llvm_precond {{ aggregate_in_g2_error_precond zwire }};
+  llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
+  ret <- llvm_fresh_var "blst_aggregate_in_g2_ret" (llvm_int 32);
+  llvm_return (llvm_term ret);
+  llvm_postcond {{ ret != `BLST_SUCCESS }};
+  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE2");
+  llvm_points_to out_ptr (llvm_term new_out);
+  llvm_postcond {{ new_out == out }};
+};
+
+let blst_aggregate_in_g2_null_error_spec = do {
+  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g2_out" (llvm_struct "struct.POINTonE2");
+  let inp_ptr = llvm_null;
+  (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g2_zwire" (llvm_array 96 (llvm_int 8));
+  llvm_precond {{ (zwire@0)@0 }}; // compressed
+  llvm_precond {{ aggregate_in_g2_error_precond zwire }};
+  llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
+  ret <- llvm_fresh_var "blst_aggregate_in_g2_ret" (llvm_int 32);
+  llvm_return (llvm_term ret);
+  llvm_postcond {{ ret != `BLST_SUCCESS }};
+  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE2");
+  llvm_points_to out_ptr (llvm_term new_out);
+  llvm_postcond {{ new_out == out }};
+};
+
+let overrides = foldr concat [vec_overrides,curve_operations_e2_ovs] [POINTonE2_Uncompress_OK_ov,POINTonE2_in_g2_ov];
+
+// Assumptions
+
+uncompress_not_point_O <- admit_cryptol {{ \x -> (is_point_O E' (uncompress_E2_OK x)) == if uncompress_E2_x_fp x != Fp_2.field_zero then False else apply is_point_O E' (uncompress_E2_OK x) }};
+
+uncompress_on_curve <- admit_cryptol {{ \x -> (is_point_affine E' (uncompress_E2_OK x)) == True }};
+
+// Proofs
+
+let simps = (concat_all [e2_curve_op_thms, POINTonE2_thms, unrip_thms_E2, [normalize_uncompress_OK_thm, uncompress_not_point_O, uncompress_on_curve]]); // uncompress_not_point_O and uncompress_on_curve are there to satisfy the preconditions of the subgroup check
+
+let fp2_unit_rep = run ( eval_term {{ (fp2_rep Fp_2.field_unit):[2][6][64] }} ); // NOTE: this results in type `([6][64])` (a one-tuple?) instead of `[6][64]`, but not in newer versions of SAW.
+
+normalize_uncompress_OK_thm' <- custom_prove_cryptol {{ \x -> (affinify E' (POINTonE2_abs (x'.0, x'.1, fp2_unit_rep)) == uncompress_E2_OK x where x' = POINTonE2_affine_rep (uncompress_E2_OK x)) }}
+  do {
+    let l1 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x y -> affinify E' (POINTonE2_abs (x, y, fp2_unit_rep)) == (fp2_abs x, fp2_abs y) }}) w4);
+    let l2 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \x -> (Fp_2.normalize x.0, Fp_2.normalize x.1) == normalize_affine_point Fp_2 x }}) w4);
+    rw_with_1 l1;
+    unfolding ["POINTonE2_affine_rep"];
+    simplify fp2_simpset;
+    rw_with [l2, normalize_uncompress_OK_thm];
+    w4;
+  };
+
+affinify_abs_zero_thm <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{affinify E' (POINTonE2_abs (z,z,z)) == point_O E' where z = [[zero,zero,zero,zero,zero,zero],[zero,zero,zero,zero,zero,zero]]}}) w4;
+
+let proof_script =
+  do {
+    hoist_ifs_in_goal;
+    simplify (addsimps simps fp_simpset);
+    simplify (addsimps simps fp2_simpset);
+    rw_with [affinify_abs_zero_thm,normalize_uncompress_OK_thm'];
+    simplify remove_higher_order_function_simpset;
+    w4_unint_z3 ["sqrt_fp2","uncompress_E2_x_fp","uncompress_E2_x","uncompress_E2_y2","is_square_fp2","is_in_g2_impl","uncompress_E2_OK","is_point_affine_E'","affinify_E'","add_E'"];
+  };
+
+blst_aggregate_in_g2_OK_nonnull_ov <- custom_verify
+  "blst_aggregate_in_g2"
+  (foldr concat [vec_overrides,curve_operations_e2_ovs] [POINTonE2_Uncompress_OK_ov,POINTonE2_in_g2_ov])
+  blst_aggregate_in_g2_OK_nonnull_spec
+  proof_script;
+
+blst_aggregate_in_g2_null_ov <- custom_verify
+  "blst_aggregate_in_g2"
+  (foldr concat [vec_overrides,curve_operations_e2_ovs] [vec_copy_2fp_ov,POINTonE2_Uncompress_OK_ov,POINTonE2_in_g2_ov])
+  blst_aggregate_in_g2_null_spec
+  proof_script;
+
+blst_aggregate_in_g2_error_ov <- custom_verify
+  "blst_aggregate_in_g2"
+  [POINTonE2_Uncompress_BAD_ov,POINTonE2_Uncompress_OK_ov,POINTonE2_in_g2_ov]
+  blst_aggregate_in_g2_error_spec
+  proof_script;
+
+blst_aggregate_in_g2_null_error_ov <- custom_verify
+  "blst_aggregate_in_g2"
+  [POINTonE2_Uncompress_BAD_ov,POINTonE2_Uncompress_OK_ov,POINTonE2_in_g2_ov]
+  blst_aggregate_in_g2_null_error_spec
+  proof_script;

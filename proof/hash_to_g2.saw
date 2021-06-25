@@ -3,14 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import "../spec/Parameters.cry";
-import "../spec/ShortWeierstrassCurve.cry";
-HE2 <- cryptol_load "../spec/HashToCurveE2.cry";
-import "../spec/BLSFieldExtras.cry";
-import "../spec/implementation/CurveOperation.cry";
-Aux <- cryptol_load "../spec/HashToCurveE2Aux.cry";
-import "../spec/implementation/HashToG2.cry";
-
 // Specs
 
 let blst_hash_to_g2_spec msg_len DST_len aug_len = do {
@@ -83,7 +75,7 @@ let isogeny_map_to_E2_impl_alias_spec = do {
 // Assumptions
 
 // The optimized version of clear_cofactor given in the IETF spec is correct:
-clear_cofactor_bls12381_correct <- admit_cryptol {{ \p -> Aux::clear_cofactor_bls12381_g2 p == HE2::clear_cofactor p }};
+clear_cofactor_bls12381_correct <- admit_cryptol {{ \p -> HE2Aux::clear_cofactor_bls12381_g2 p == HE2::clear_cofactor p }};
 
 // The SWU map maps to the isogenous curve:
 swu_on_curve <- simp_then_admit {{ \u -> is_point_affine HE2::Isogenous_Curve (HE2::map_to_curve_simple_swu u) == True }};
@@ -134,7 +126,7 @@ isogeny_map_to_E2_impl_alias_ov <- custom_verify
     (do {
       simplify fp2_simpset; // eliminate `abs . rep` etc.
       // simplify (addsimps isogeny_invs empty_ss); // NOTE: unecessary
-      goal_eval_unint ["Fp_2","Fp","fp2_rep","fp2_abs","fp2_invariant","HashToCurveE2Aux::k1s","HashToCurveE2Aux::k2s","HashToCurveE2Aux::k3s","HashToCurveE2Aux::k4s"]; // TODO: why do we need to keep the kns opaque?
+      goal_eval_unint ["Fp_2","Fp","fp2_rep","fp2_abs","fp2_invariant","HE2Aux::k1s","HE2Aux::k2s","HE2Aux::k3s","HE2Aux::k4s"]; // TODO: why do we need to keep the kns opaque?
       let algebra_rules = run (for [ // here we only use a subset of the fp2_laws; as a whole it's too slow (or is it looping?)
           {{ \x y -> Fp_2.mul(x,y) == Fp_2.mul(y,x) }}
         , {{ \x y z -> Fp_2.mul(Fp_2.mul(x,y),z) == Fp_2.mul(x, Fp_2.mul(y,z)) }}
@@ -291,7 +283,7 @@ let prove_hash_to_curve_opt_equiv msg_len DST_len =
   custom_prove_cryptol {{ \(msg:[msg_len][8]) (dst:[DST_len][8]) -> affinify E' (hash_to_curve_E2_opt_impl (msg,dst)) == HE2::hash_to_curve_opt (msg, dst) }}
     do {
       unfolding ["hash_to_curve_E2_opt_impl","map_to_g2_impl"];
-      let clear_cofactor_correct = run (custom_prove_cryptol {{ \P -> affinify E' (clear_cofactor_E2_impl P) == if AffinePoint_Fp_2_invariant (affinify E' P) then clear_cofactor_bls12381_g2 (affinify E' P) else affinify E' (apply clear_cofactor_E2_impl P) }}
+      let clear_cofactor_correct = run (custom_prove_cryptol {{ \P -> affinify E' (clear_cofactor_E2_impl P) == if AffinePoint_Fp_2_invariant (affinify E' P) then HE2Aux::clear_cofactor_bls12381_g2 (affinify E' P) else affinify E' (apply clear_cofactor_E2_impl P) }}
         do {
           simplify (addsimp clear_cofactor_E2_equiv_thm empty_ss);
           simplify remove_higher_order_function_simpset;

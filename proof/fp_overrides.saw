@@ -12,6 +12,7 @@
   add_X, sub_X, sqr_X, mul_X, mul_by_3_X, mul_by_8_X
 */
 
+// TODO: we only use one method out of the three below:
 // There are three approaches to writing the postconditions, either
 // abs method: - (abs result) = fn (abs arg)
 // concrete method: - result = rep (fn (abs arg)) --- OK, if we have a rewrite (abs (rep x)) == x
@@ -21,11 +22,6 @@
 let use_abs_method = false;
 let use_concrete_method = true;
 
-import "../spec/Parameters.cry";
-import "../spec/PrimeField.cry";
-import "../spec/FieldExtras.cry" (mul_by_2 mul_by_3 mul_by_4 mul_by_6 mul_by_8);
-import "../spec/implementation/Field.cry";
-import "../spec/implementation/CryptolHelpers.cry";
 
 // generic unary operation specification, pass-by-reference, no aliasing
 let unop_spec name llvm_type inv rep abs op = do {
@@ -142,16 +138,6 @@ fp_normalize_thm <- admit_cryptol
 fp_abs_normalize_thm <- prove_cryptol
   {{ \x -> Fp.normalize x == if Fp.is_val x then x else apply Fp.normalize x }} [];
 
-/*
-// we sometimes need to undo SAW's rip-and-restitching of vectors.  It is a bit tricky 
-let at0 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 0";
-let at1 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 1";
-let at2 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 2";
-let at3 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 3";
-let at4 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 4";
-let at5 = parse_core "\\ (x:(Vec 6 (Vec 64 Bool))) -> at 6 (Vec 64 Bool) x 5";
-*/
-// unrip_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[6][64]) -> [at0 x, at1 x, at2 x, at3 x, at4 x, at5 x] == x }}) [];
 unrip_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ \(x:[6][64]) -> ([x0,x1,x2,x3,x4,x5] == x where [x0,x1,x2,x3,x4,x5] = x)}}) [];
 
 // ... and sometimes the rip-and-restitch has if-then-else pushed inside, so here we hoist out
