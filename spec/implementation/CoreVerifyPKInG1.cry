@@ -9,7 +9,7 @@ import Parameters (Fp_12, t_Fp, t_Fp_2, BP, E')
 import ShortWeierstrassCurve (AffinePoint, affinify)
 import implementation::PairingImpl (miller_loop_opt)
 import implementation::HashToG2 (hash_to_curve_E2_opt_impl)
-import Pairing (final_exponentiation_impl)
+import implementation::FinalExp (final_exponentiation_impl)
 import implementation::PairingImpl (miller_loop_opt_checked)
 import ExpandMessage
 import Frobenius (fp12_conjugate)
