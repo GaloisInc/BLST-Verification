@@ -21,6 +21,9 @@ let verify_x86_noadx = verify_x86_helper "../../../build/x86_noadx/libblst.so" m
 let verify_x86_recent = verify_x86_helper "../../../build/x86_recent/libblst.so" m_recent;
 let verify_x86_noadx_recent = verify_x86_helper "../../../build/x86_noadx_recent/libblst.so" m_noadx_recent;
 
+m_ctest <- llvm_load_module "../../ctests/test.bc";
+let verify_x86_ctest name spec tactic = crucible_llvm_verify_x86 m_ctest "../../../ctests/test" name [] false spec tactic;
+
 enable_what4_hash_consing;
 enable_x86_what4_hash_consing;
 

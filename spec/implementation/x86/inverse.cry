@@ -318,7 +318,7 @@ __smulx_383_n_shift_by_31 a b f0 g0 = result
 
 // 0x0000000000018de3 <+227>:	4c 31 e8	xor    rax,r13
     // 56
-    r13_56 = rax_46 ^ r13_44
+    rax_56 = rax_46 ^ r13_44
 
 
 // 0x0000000000018de6 <+230>:	49 01 e8	add    r8,rbp
@@ -352,7 +352,7 @@ __smulx_383_n_shift_by_31 a b f0 g0 = result
 
 // 0x0000000000018df9 <+249>:	48 83 d0 00	adc    rax,0x0
     // 62: Add rax, 0x0, and cf and store the result in rax
-    (cf_62, rax_62) = adc rax_46 0 cf_61
+    (cf_62, rax_62) = adc rax_56 0 cf_61
     // 62
 
 
@@ -703,7 +703,7 @@ __smulx_191_n_shift_by_31 a b f0 g0 = result
 
 // 0x0000000000018f0b <+43>:	4c 31 d0	xor    rax,r10
     // 9
-    r10_9 = r10_0 ^ rax_2
+    rax_9 = rax_2 ^ r10_0
 
 
 // 0x0000000000018f0e <+46>:	49 01 e8	add    r8,rbp
@@ -718,7 +718,7 @@ __smulx_191_n_shift_by_31 a b f0 g0 = result
 
 // 0x0000000000018f15 <+53>:	48 83 d0 00	adc    rax,0x0
     // 12
-    (cf_12, rax_12) = adc rax_2 0 cf_11
+    (cf_12, rax_12) = adc rax_9 0 cf_11
 
 
 
@@ -1090,7 +1090,7 @@ __smulx_383x63 u v f0 g0 = result
 
 // 0x0000000000018bdd <+61>:	49 31 ed	xor    r13,rbp
     // 12
-    r13_2 = r13_0 ^ rbp_2
+    r13_12 = r13_0 ^ rbp_2
 
 
 // 0x0000000000018be0 <+64>:	49 01 c0	add    r8,rax
@@ -1120,7 +1120,7 @@ __smulx_383x63 u v f0 g0 = result
 
 // 0x0000000000018bf3 <+83>:	49 83 d5 00	adc    r13,0x0
     // 18
-    (cf_18, r13_18) = adc r13_2 0 cf_17
+    (cf_18, r13_18) = adc r13_12 0 cf_17
 
 
 
@@ -1913,7 +1913,7 @@ __smulx_767x63 u v f0 g0 = result
 
 // 0x0000000000018ac7 <+327>:	48 83 d5 00	adc    rbp,0x0
     // 90
-    (cf_90, rbx_90) = adc rbp_78 0 cf_89
+    (cf_90, rbp_90) = adc rbp_78 0 cf_89
 
 
 // 0x0000000000018acb <+331>:	48 83 d1 00	adc    rcx,0x0
@@ -2012,7 +2012,7 @@ __smulx_767x63 u v f0 g0 = result
 
 // 0x0000000000018b10 <+400>:	c4 e2 e3 f6 c3	mulx   rax,rbx,rbx
     // 108: Multiply rbx and rdx (implicit) and store the high bits in rax and low bits in rbx
-    (rax_108, rbx_108) = mulx rbx_90 rdx_68
+    (rax_108, rbx_108) = mulx rbx_89 rdx_68
     // 108
 
 
@@ -2023,7 +2023,7 @@ __smulx_767x63 u v f0 g0 = result
 
 // 0x0000000000018b18 <+408>:	c4 e2 d3 f6 f5	mulx   rsi,rbp,rbp
     // 110: Multiply rbp and rdx (implicit) and store the high bits in rsi and low bits in rbp
-    (rsi_110, rbp_110) = mulx rbp_78 rdx_68
+    (rsi_110, rbp_110) = mulx rbp_90 rdx_68
     // 110
 
 
@@ -2061,37 +2061,37 @@ __smulx_767x63 u v f0 g0 = result
 
 // 0x0000000000018b3a <+442>:	4c 03 02	add    r8,QWORD PTR [rdx]
     // 118
-    r8_118 = offload0
+    (cf_118, r8_118) = add r8_93 offload0
 
 
 // 0x0000000000018b3d <+445>:	4c 13 4a 08	adc    r9,QWORD PTR [rdx+0x8]
     // 119
-    r9_119 = offload1
+    (cf_119, r9_119) = adc r9_95 offload1 cf_118
 
 
 // 0x0000000000018b41 <+449>:	4c 13 52 10	adc    r10,QWORD PTR [rdx+0x10]
     // 120
-    r10_120 = offload2
+    (cf_120, r10_120) = adc r10_97 offload2 cf_119
 
 
 // 0x0000000000018b45 <+453>:	4c 13 5a 18	adc    r11,QWORD PTR [rdx+0x18]
     // 121
-    r11_121 = offload3
+    (cf_121, r11_121) = adc r11_99 offload3 cf_120
 
 
 // 0x0000000000018b49 <+457>:	4c 13 62 20	adc    r12,QWORD PTR [rdx+0x20]
     // 122
-    r12_122 = offload4
+    (cf_122, r12_122) = adc r12_101 offload4 cf_121
 
 
 // 0x0000000000018b4d <+461>:	4c 13 6a 28	adc    r13,QWORD PTR [rdx+0x28]
     // 123
-    r13_123 = offload5
+    (cf_123, r13_123) = adc r13_103 offload5 cf_122
 
 
 // 0x0000000000018b51 <+465>:	4c 13 72 30	adc    r14,QWORD PTR [rdx+0x30]
     // 124
-    r14_124 = offload6
+    (cf_124, r14_124) = adc r14_105 offload6 cf_123
 
 
 // 0x0000000000018b55 <+469>:	48 8b 7a 38	mov    rdi,QWORD PTR [rdx+0x38]
@@ -2101,7 +2101,7 @@ __smulx_767x63 u v f0 g0 = result
 
 // 0x0000000000018b59 <+473>:	49 11 ff	adc    r15,rdi
     // 126
-    (cf_126, r15_126) = adc r15_107 rdi_125 cf_117
+    (cf_126, r15_126) = adc r15_107 rdi_125 cf_124
 
 
 // 0x0000000000018b5c <+476>:	48 11 fb	adc    rbx,rdi
@@ -2121,7 +2121,7 @@ __smulx_767x63 u v f0 g0 = result
 
 // 0x0000000000018b65 <+485>:	48 11 f8	adc    rax,rdi
     // 130
-    (cf_130, rcx_130) = adc rax_117 rdi_125 cf_129
+    (cf_130, rax_130) = adc rax_117 rdi_125 cf_129
 
 
 
@@ -2180,12 +2180,12 @@ __smulx_767x63 u v f0 g0 = result
 
 // 0x0000000000018b92 <+530>:	48 89 4a 50	mov    QWORD PTR [rdx+0x50],rcx
     // 142
-    result10 = rcx_130
+    result10 = rcx_129
 
 
 // 0x0000000000018b96 <+534>:	48 89 42 58	mov    QWORD PTR [rdx+0x58],rax
     // 143
-    result11 = rax_117
+    result11 = rax_130
 
 // 0x0000000000018b9a <+538>:	f3 c3	repz ret 
     // 144
@@ -2198,7 +2198,7 @@ __ab_approximation_31
   : Integer // number of iterations
   -> Vec384 // a
   -> Vec384 // b
-  -> [6][64] // result; a, b, f0, g0, f1, g1
+  -> [4][64] // result; f0, g0, f1, g1
 __ab_approximation_31 iters a b = result
   where
 // 0x0000000000018fe4 <+4>:	4c 8b 4e 28	mov    r9,QWORD PTR [rsi+0x28]
@@ -2428,13 +2428,14 @@ __inner_loop_31
   : Integer // number of iterations
   -> [64] // a
   -> [64] // b
-  -> [6][64] // result; a, b, f0, g0, f1, g1
+  -> [4][64] // result; f0, g0, f1, g1
 __inner_loop_31 iters a_init b_init = result
   where
     [post_a, post_b, post_fg0, post_fg1, post_bias] = loop iters [a_init, b_init, 0x7FFFFFFF80000000, 0x800000007FFFFFFF, 0x7FFFFFFF7FFFFFFF]
-    [tmp_f0, tmp_g0] = split post_fg0
-    [tmp_f1, tmp_g1] = split post_fg1
-    result = [post_a, post_b, zext tmp_f0 - post_bias, zext tmp_g0 - post_bias, zext tmp_f1 - post_bias, zext tmp_g1 - post_bias]
+    [tmp_g0, tmp_f0] = split post_fg0
+    [tmp_g1, tmp_f1] = split post_fg1
+    tmp_bias = post_bias >> 32
+    result = [zext tmp_f0 - tmp_bias, zext tmp_g0 - tmp_bias, zext tmp_f1 - tmp_bias, zext tmp_g1 - tmp_bias]
 
     loop : Integer -> [5][64] -> [5][64]
     loop counter [a, b, fg0, fg1, bias] = loopresult
@@ -2478,7 +2479,7 @@ __inner_loop_31 iters a_init b_init = result
     
     // 0x00000000000190f5 <+53>:	4c 0f 42 d0	cmovb  r10,rax
         // 7
-        r10_7 = rax_2
+        r10_7 = cmovb r10_0 rax_2 cf_1
     
     
     // 0x00000000000190f9 <+57>:	49 0f 42 cd	cmovb  rcx,r13
@@ -2531,7 +2532,6 @@ __inner_loop_31 iters a_init b_init = result
         r13_17 = cmove r13_9 r14_5 zf_13
     
     
-    
     // 0x0000000000019120 <+96>:	49 d1 e8	shr    r8,1
         // 18
         r8_18 = r8_14 >> 1
@@ -2560,10 +2560,10 @@ __inner_loop_62
   : Integer // number of iterations
   -> [64] // a
   -> [64] // b
-  -> [6][64] // result; a, b, f0, g0, f1, g1
+  -> [4][64] // result; f0, g0, f1, g1
 __inner_loop_62 iters a_init b_init = result
   where
-    result = loop iters [a_init, b_init, 1, 0, 0, 1]
+    result = drop (loop iters [a_init, b_init, 1, 0, 0, 1])
     loop : Integer -> [6][64] -> [6][64]
     loop counter [a, b, f0, g0, f1, g1] = loopresult
       where
@@ -2711,9 +2711,9 @@ __inner_loop_62 iters a_init b_init = result
 
 ctx_inverse_mod_383
   : Vec384 // a; pointer in rsi
-  -> Vec384 // m; pointer in rdx
-  -> Vec384 // ret
-ctx_inverse_mod_383 a m = result
+  -> Vec384 // n; pointer in rdx
+  -> Vec768 // ret
+ctx_inverse_mod_383 a n = result
   where
 // 0x0000000000017d23 <+35>:	48 89 7c 24 20	mov    QWORD PTR [rsp+0x20],rdi
 // 0x0000000000017d28 <+40>:	48 89 54 24 28	mov    QWORD PTR [rsp+0x28],rdx
@@ -2736,7 +2736,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017d53 <+83>:	48 8b 72 20	mov    rsi,QWORD PTR [rdx+0x20]
 // 0x0000000000017d57 <+87>:	48 8b 7a 28	mov    rdi,QWORD PTR [rdx+0x28]
     // 3: Load m into registers
-    b_3 = m
+    b_3 = n
 
 // 0x0000000000017d5b <+91>:	4c 89 00	mov    QWORD PTR [rax],r8
 // 0x0000000000017d5e <+94>:	4c 89 48 08	mov    QWORD PTR [rax+0x8],r9
@@ -2745,6 +2745,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017d6a <+106>:	4c 89 60 20	mov    QWORD PTR [rax+0x20],r12
 // 0x0000000000017d6e <+110>:	4c 89 68 28	mov    QWORD PTR [rax+0x28],r13
     // 4: Store a at the low offsets of stack (rax)
+    loa_4 = a_2
 
 // 0x0000000000017d72 <+114>:	4c 89 70 30	mov    QWORD PTR [rax+0x30],r14
 // 0x0000000000017d76 <+118>:	4c 89 78 38	mov    QWORD PTR [rax+0x38],r15
@@ -2754,6 +2755,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017d86 <+134>:	48 89 c6	mov    rsi,rax
 // 0x0000000000017d89 <+137>:	48 89 78 58	mov    QWORD PTR [rax+0x58],rdi
     // 5: Store m at the high offsets of stack, set rsi to stack pointer
+    lob_5 = b_3
 
 
 
@@ -2763,7 +2765,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017d97 <+151>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000017d9c <+156>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 6: rdi lo, rsi lo: Call __ab_approximation_31(31, a, b), and offload f1 and g1
-    [loa_6, lob_6, f0_6, g0_6, f1_6, g1_6] = __ab_approximation_31 31 a_?? b_??
+    [f0_6, g0_6, f1_6, g1_6] = __ab_approximation_31 31 loa_4 lob_5
 
 
 // 0x0000000000017da1 <+161>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
@@ -2771,7 +2773,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017dab <+171>:	e8 50 0f 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
 // 0x0000000000017db0 <+176>:	48 89 57 60	mov    QWORD PTR [rdi+0x60],rdx
     // 7: rdi hi, rsi lo: Swap rdi to high offsets, and store result of __smulx_383_n_shift_by_31(a, b, f0, g0) there, offloading f0
-    (hia_7, f0_7, g0_7) = __smulx_383_n_shift_by_31 loa_?? lob_?? f0_?? g0_??
+    (hia_7, f0_7, g0_7) = __smulx_383_n_shift_by_31 loa_4 lob_5 f0_6 g0_6
     offloadu_7 = f0_7
 
 // 0x0000000000017db4 <+180>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
@@ -2780,7 +2782,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017dc2 <+194>:	e8 39 0f 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
 // 0x0000000000017dc7 <+199>:	48 89 57 60	mov    QWORD PTR [rdi+0x60],rdx
     // 8: rdi hi, rsi lo: Increment high offset, and store result of __smulx_383_n_shift_by_31(a, b, f1, g1) there, offloading f1
-    (hib_8, f1_8, g1_8) = __smulx_383_n_shift_by_31 loa_?? lob_?? f1_?? g1_??
+    (hib_8, f1_8, g1_8) = __smulx_383_n_shift_by_31 loa_4 lob_5 f1_6 g1_6
     offloadv_8 = f1_8
 
 
@@ -2791,7 +2793,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017ddc <+220>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000017de1 <+225>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 9: rdi hi, rsi hi: Swap rsi to high offsets and call __ab_approximation_31(31, a, b), offloading f1 and g1
-    [hia_9, hib_9, f0_9, g0_9, f1_9, g1_9] = __ab_approximation_31 31 hia_?? hib_??
+    [f0_9, g0_9, f1_9, g1_9] = __ab_approximation_31 31 hia_7 hib_8
 
 
 // 0x0000000000017de6 <+230>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
@@ -2800,7 +2802,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017df5 <+245>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x0000000000017dfa <+250>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 10: rdi lo, rsi hi: Swap rdi to low offsets, and store result of __smulx_383_n_shift_by_31(a, b, f0, g0) there, offloading f0 and g0
-    (loa_10, f0_10, g0_10) = __smulx_383_n_shift_by_31 hia_?? hib_?? f0_?? g0_??
+    (loa_10, f0_10, g0_10) = __smulx_383_n_shift_by_31 hia_7 hib_8 f0_9 g0_9
 
 
 
@@ -2809,7 +2811,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017e09 <+265>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000017e0d <+269>:	e8 ee 0e 00 00	call   0x18d00 <__smulx_383_n_shift_by_31>
     // 11: rdi lo, rsi hi
-    (lob_11, f1_11, g1_11) = __smulx_383_n_shift_by_31 hia_?? hib_?? f1_?? g1_??
+    (lob_11, f1_11, g1_11) = __smulx_383_n_shift_by_31 hia_7 hib_8 f1_9 g1_9
 
 
 
@@ -2853,12 +2855,13 @@ ctx_inverse_mod_383 a m = result
     tmp12_rbx_0 = f1_11
     tmp12_r10_0 = tmp12_rax_0
 
-    (tmp12_rdx_1, tmp12_rax_1) = imul1 f0_10
-    tmp12_r8_1 = tmp12_rax_1
-    tmp12_rax_1 = tmp12_r11_0
-    tmp12_r9_1 = tmp12_rdx_1
+    (tmp12_rdx_05, tmp12_rax_05) = imul1 f0_10 tmp12_rax_0
 
-    (tmp12_rdx_2, tmp12_rax_2) = imul1 g0_10
+    tmp12_r8_1 = tmp12_rax_05
+    tmp12_rax_1 = tmp12_r11_0
+    tmp12_r9_1 = tmp12_rdx_05
+
+    (tmp12_rdx_2, tmp12_rax_2) = imul1 g0_10 tmp12_rax_1
 
     (tmp12_cf_3, tmp12_r8_3) = add tmp12_r8_1 tmp12_rax_2
     (tmp12_cf_4, tmp12_r9_4) = adc tmp12_r9_1 tmp12_rdx_2 tmp12_cf_3
@@ -2871,14 +2874,14 @@ ctx_inverse_mod_383 a m = result
     tmp12_ret4 = tmp12_r9_5
     tmp12_ret5 = tmp12_r9_5
 
-    tmp12_rax_6 = tmp12_r10_0
-    (tmp12_rdx_6, tmp12_rax_6) = imul1 tmp12_rbx_0
+    tmp12_rax_55 = tmp12_r10_0
+    (tmp12_rdx_6, tmp12_rax_6) = imul1 tmp12_rbx_0 tmp12_rax_55
     tmp12_r8_6 = tmp12_rax_6
 
     tmp12_rax_7 = tmp12_r11_0
     tmp12_r9_7 = tmp12_rdx_6
 
-    (tmp12_rdx_8, tmp12_rax_8) = imul1 g1_11
+    (tmp12_rdx_8, tmp12_rax_8) = imul1 g1_11 tmp12_rax_7
 
     (tmp12_cf_9, tmp12_r8_9) = add tmp12_r8_6 tmp12_rax_8
     (tmp12_cf_10, tmp12_r9_10) = adc tmp12_r9_7 tmp12_rdx_8 tmp12_cf_9
@@ -2891,8 +2894,8 @@ ctx_inverse_mod_383 a m = result
     tmp12_ret10 = tmp12_r9_11
     tmp12_ret11 = tmp12_r9_11
 
-    lou_12 = [tmp12_ret0, tmp12_ret1, temp12_ret2, temp12_ret3, tmp12_ret4, tmp12_ret5]
-    lov_12 = [tmp12_ret6, tmp12_ret7, temp12_ret8, temp12_ret9, tmp12_ret10, tmp12_ret11]
+    lou_12 = [tmp12_ret0, tmp12_ret1, tmp12_ret2, tmp12_ret3, tmp12_ret4, tmp12_ret5]
+    lov_12 = [tmp12_ret6, tmp12_ret7, tmp12_ret8, tmp12_ret9, tmp12_ret10, tmp12_ret11]
 
 
 // 0x0000000000017e96 <+406>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -2901,7 +2904,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017ea7 <+423>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000017eac <+428>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 14: rdi lo, rsi lo: Reset rsi to low offsets
-    [loa_14, lob_14, f0_14, g0_14, f1_14, g1_14] = __ab_approximation_31 31 loa_?? lob_??
+    [f0_14, g0_14, f1_14, g1_14] = __ab_approximation_31 31 loa_10 lob_11
     
 
 
@@ -2911,7 +2914,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017ec0 <+448>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x0000000000017ec5 <+453>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 15: rdi hi, rsi lo: Swap rdi to high offsets
-    (hia_15, f0_15, g0_15) = __smulx_383_n_shift_by_31 loa_?? lob_?? f0_?? g0_??
+    (hia_15, f0_15, g0_15) = __smulx_383_n_shift_by_31 loa_10 lob_11 f0_14 g0_14
 
 
 
@@ -2922,7 +2925,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017edd <+477>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x0000000000017ee2 <+482>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 16
-    (hib_16, f1_16, g1_16) = __smulx_383_n_shift_by_31 loa_?? lob_?? f1_?? g1_??
+    (hib_16, f1_16, g1_16) = __smulx_383_n_shift_by_31 loa_10 lob_11 f1_14 g1_14
 
 
 
@@ -2932,7 +2935,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017ef5 <+501>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000017ef9 <+505>:	e8 a2 0c 00 00	call   0x18ba0 <__smulx_383x63>
     // 17
-    hiu_17 = __smulx_383x63 lou_12 lov_12 f0_?? g0_??
+    hiu_17 = __smulx_383x63 lou_12 lov_12 f0_15 g0_15
 
 
 // 0x0000000000017efe <+510>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
@@ -2940,7 +2943,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017f08 <+520>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000017f0c <+524>:	e8 8f 0c 00 00	call   0x18ba0 <__smulx_383x63>
     // 18
-    hiv_18 = __smulx_383x63 lou_12 lov_12 f1_?? g1_??
+    hiv_18 = __smulx_383x63 lou_12 lov_12 f1_16 g1_16
 
 
 // 0x0000000000017f11 <+529>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -2949,7 +2952,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017f22 <+546>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000017f27 <+551>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 19: swap rsi to high offsets
-    [hia_19, hib_19, f0_19, g0_19, f1_19, g1_19] = __ab_approximation_31 31 hia_?? hib_??
+    [f0_19, g0_19, f1_19, g1_19] = __ab_approximation_31 31 hia_15 hib_16
 
 
 
@@ -2959,7 +2962,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017f3b <+571>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x0000000000017f40 <+576>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 20
-    (loa_20, f0_20, g0_20) = __smulx_383_n_shift_by_31 hia_?? hib_?? f0_?? g0_??
+    (loa_20, f0_20, g0_20) = __smulx_383_n_shift_by_31 hia_15 hib_16 f0_19 g0_19
 
 
 // 0x0000000000017f45 <+581>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
@@ -2969,7 +2972,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017f58 <+600>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x0000000000017f5d <+605>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 21
-    (lob_21, f1_21, g1_21) = __smulx_383_n_shift_by_31 hia_?? hib_?? f1_?? g1_??
+    (lob_21, f1_21, g1_21) = __smulx_383_n_shift_by_31 hia_15 hib_16 f1_19 g1_19
 
 
 
@@ -2979,14 +2982,14 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017f70 <+624>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000017f74 <+628>:	e8 27 0c 00 00	call   0x18ba0 <__smulx_383x63>
     // 22
-    lou_22 = __smulx_383x63 hiu_?? hiv_?? f0_?? g0_??
+    lou_22 = __smulx_383x63 hiu_17 hiv_18 f0_20 g0_20
 
 // 0x0000000000017f79 <+633>:	48 8b 54 24 48	mov    rdx,QWORD PTR [rsp+0x48]
 // 0x0000000000017f7e <+638>:	48 8b 4c 24 50	mov    rcx,QWORD PTR [rsp+0x50]
 // 0x0000000000017f83 <+643>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000017f87 <+647>:	e8 14 0c 00 00	call   0x18ba0 <__smulx_383x63>
     // 23
-    lov_23 = __smulx_383x63 hiu_?? hiv_?? f1_?? g1_??
+    lov_23 = __smulx_383x63 hiu_17 hiv_18 f1_21 g1_21
 
 
 // 0x0000000000017f8c <+652>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -2995,7 +2998,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017f9d <+669>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000017fa2 <+674>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 24
-    [loa_24, lob_24, f0_24, g0_24, f1_24, g1_24] = __ab_approximation_31 31 loa_?? lob_??
+    [f0_24, g0_24, f1_24, g1_24] = __ab_approximation_31 31 loa_20 lob_21
 
 
 // 0x0000000000017fa7 <+679>:	48 c7 c7 00 01 00 00	mov    rdi,0x100
@@ -3004,7 +3007,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017fb6 <+694>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x0000000000017fbb <+699>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 25
-    (hia_25, f0_25, g0_25) = __smulx_383_n_shift_by_31 loa_?? lob_?? f0_?? g0_??
+    (hia_25, f0_25, g0_25) = __smulx_383_n_shift_by_31 loa_20 lob_21 f0_24 g0_24
 
 
 
@@ -3015,7 +3018,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017fd3 <+723>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x0000000000017fd8 <+728>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 26
-    (hib_26, f1_26, g1_26) = __smulx_383_n_shift_by_31 loa_?? lob_?? f1_?? g1_??
+    (hib_26, f1_26, g1_26) = __smulx_383_n_shift_by_31 loa_20 lob_21 f1_24 g1_24
 
 
 
@@ -3025,7 +3028,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017feb <+747>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000017fef <+751>:	e8 ac 0b 00 00	call   0x18ba0 <__smulx_383x63>
     // 27
-    hiu_27 = __smulx_383x63 lou_?? lov_?? f0_?? g0_??
+    hiu_27 = __smulx_383x63 lou_22 lov_23 f0_25 g0_25
 
 
 
@@ -3034,7 +3037,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000017ffe <+766>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000018002 <+770>:	e8 99 0b 00 00	call   0x18ba0 <__smulx_383x63>
     // 28
-    hiv_28 = __smulx_383x63 lou_?? lov_?? f1_?? g1_??
+    hiv_28 = __smulx_383x63 lou_22 lov_23 f1_26 g1_26
 
 
 // 0x0000000000018007 <+775>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3043,7 +3046,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018018 <+792>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x000000000001801d <+797>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 29
-    [hia_29, hib_29, f0_29, g0_29, f1_29, g1_29] = __ab_approximation_31 31 hia_?? hib_??
+    [f0_29, g0_29, f1_29, g1_29] = __ab_approximation_31 31 hia_25 hib_26
 
 
 
@@ -3053,7 +3056,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018031 <+817>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x0000000000018036 <+822>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 30
-    (loa_30, f0_30, g0_30) = __smulx_383_n_shift_by_31 hia_?? hib_?? f0_?? g0_??
+    (loa_30, f0_30, g0_30) = __smulx_383_n_shift_by_31 hia_25 hib_26 f0_29 g0_29
 
 
 
@@ -3064,7 +3067,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001804e <+846>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x0000000000018053 <+851>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 31
-    (lob_31, f1_31, g1_31) = __smulx_383_n_shift_by_31 hia_?? hib_?? f1_?? g1_??
+    (lob_31, f1_31, g1_31) = __smulx_383_n_shift_by_31 hia_25 hib_26 f1_29 g1_29
 
 
 
@@ -3074,7 +3077,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018066 <+870>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x000000000001806a <+874>:	e8 31 0b 00 00	call   0x18ba0 <__smulx_383x63>
     // 32
-    lou_32 = __smulx_383x63 hiu_?? hiv_?? f0_?? g0_??
+    lou_32 = __smulx_383x63 hiu_27 hiv_28 f0_30 g0_30
 
 
 
@@ -3083,7 +3086,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018079 <+889>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x000000000001807d <+893>:	e8 1e 0b 00 00	call   0x18ba0 <__smulx_383x63>
     // 33
-    lov_33 = __smulx_383x63 hiu_?? hiv_?? f1_?? g1_??
+    lov_33 = __smulx_383x63 hiu_27 hiv_28 f1_31 g1_31
 
 
 // 0x0000000000018082 <+898>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3092,7 +3095,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018093 <+915>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000018098 <+920>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 34
-    [loa_34, lob_34, f0_34, g0_34, f1_34, g1_34] = __ab_approximation_31 31 loa_?? lob_??
+    [f0_34, g0_34, f1_34, g1_34] = __ab_approximation_31 31 loa_30 lob_31
 
 
 
@@ -3102,7 +3105,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000180ac <+940>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x00000000000180b1 <+945>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 35
-    (hia_35, f0_35, g0_35) = __smulx_383_n_shift_by_31 loa_?? lob_?? f0_?? g0_??
+    (hia_35, f0_35, g0_35) = __smulx_383_n_shift_by_31 loa_30 lob_31 f0_34 g0_34
 
 
 
@@ -3113,7 +3116,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000180c9 <+969>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x00000000000180ce <+974>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 36
-    (hib_36, f1_36, g1_36) = __smulx_383_n_shift_by_31 loa_?? lob_?? f1_?? g1_??
+    (hib_36, f1_36, g1_36) = __smulx_383_n_shift_by_31 loa_30 lob_31 f1_34 g1_34
 
 
 
@@ -3123,7 +3126,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000180e1 <+993>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000180e5 <+997>:	e8 b6 0a 00 00	call   0x18ba0 <__smulx_383x63>
     // 37
-    hiu_37 = __smulx_383x63 lou_?? lov_?? f0_?? g0_??
+    hiu_37 = __smulx_383x63 lou_32 lov_33 f0_35 g0_35
 
 
 
@@ -3132,7 +3135,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000180f4 <+1012>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000180f8 <+1016>:	e8 a3 0a 00 00	call   0x18ba0 <__smulx_383x63>
     // 38
-    hiv_38 = __smulx_383x63 lou_?? lov_?? f1_?? g1_??
+    hiv_38 = __smulx_383x63 lou_32 lov_33 f1_36 g1_36
 
 
 // 0x00000000000180fd <+1021>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3141,7 +3144,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001810e <+1038>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000018113 <+1043>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 39
-    [hia_39, hib_39, f0_39, g0_39, f1_39, g1_39] = __ab_approximation_31 31 hia_?? hib_??
+    [f0_39, g0_39, f1_39, g1_39] = __ab_approximation_31 31 hia_35 hib_36
 
 
 
@@ -3151,7 +3154,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018127 <+1063>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x000000000001812c <+1068>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 40
-    (loa_40, f0_40, g0_40) = __smulx_383_n_shift_by_31 hia_?? hib_?? f0_?? g0_??
+    (loa_40, f0_40, g0_40) = __smulx_383_n_shift_by_31 hia_35 hib_36 f0_39 g0_39
 
 
 
@@ -3162,7 +3165,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018144 <+1092>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x0000000000018149 <+1097>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 41
-    (lob_41, f1_41, g1_41) = __smulx_383_n_shift_by_31 hia_?? hib_?? f1_?? g1_??
+    (lob_41, f1_41, g1_41) = __smulx_383_n_shift_by_31 hia_35 hib_36 f1_39 g1_39
 
 
 
@@ -3172,7 +3175,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001815c <+1116>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000018160 <+1120>:	e8 3b 0a 00 00	call   0x18ba0 <__smulx_383x63>
     // 42
-    lou_42 = __smulx_383x63 hiu_?? hiv_?? f0_?? g0_??
+    lou_42 = __smulx_383x63 hiu_37 hiv_38 f0_40 g0_40
 
 
 
@@ -3181,7 +3184,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001816f <+1135>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000018173 <+1139>:	e8 28 0a 00 00	call   0x18ba0 <__smulx_383x63>
     // 43
-    lov_43 = __smulx_383x63 hiu_?? hiv_?? f1_?? g1_??
+    lov_43 = __smulx_383x63 hiu_37 hiv_38 f1_41 g1_41
 
 
 // 0x0000000000018178 <+1144>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3190,7 +3193,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018189 <+1161>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x000000000001818e <+1166>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 44
-    [loa_44, lob_44, f0_44, g0_44, f1_44, g1_44] = __ab_approximation_31 31 loa_?? lob_??
+    [f0_44, g0_44, f1_44, g1_44] = __ab_approximation_31 31 loa_40 lob_41
 
 
 
@@ -3200,7 +3203,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000181a2 <+1186>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x00000000000181a7 <+1191>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 45
-    (hia_45, f0_45, g0_45) = __smulx_383_n_shift_by_31 loa_?? lob_?? f0_?? g0_??
+    (hia_45, f0_45, g0_45) = __smulx_383_n_shift_by_31 loa_40 lob_41 f0_44 g0_44
 
 
 
@@ -3211,7 +3214,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000181bf <+1215>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x00000000000181c4 <+1220>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 46
-    (hib_46, f1_46, g1_46) = __smulx_383_n_shift_by_31 loa_?? lob_?? f1_?? g1_??
+    (hib_46, f1_46, g1_46) = __smulx_383_n_shift_by_31 loa_40 lob_41 f1_44 g1_44
 
 
 
@@ -3221,7 +3224,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000181d7 <+1239>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000181db <+1243>:	e8 c0 09 00 00	call   0x18ba0 <__smulx_383x63>
     // 47
-    hiu_47 = __smulx_383x63 lou_?? lov_?? f0_?? g0_??
+    hiu_47 = __smulx_383x63 lou_42 lov_43 f0_45 g0_45
 
 
 
@@ -3230,7 +3233,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000181ea <+1258>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000181ee <+1262>:	e8 ad 09 00 00	call   0x18ba0 <__smulx_383x63>
     // 48
-    hiv_48 = __smulx_383x63 lou_?? lov_?? f1_?? g1_??
+    hiv_48 = __smulx_383x63 lou_42 lov_43 f1_46 g1_46
 
 
 // 0x00000000000181f3 <+1267>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3239,7 +3242,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018204 <+1284>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000018209 <+1289>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 49
-    [hia_49, hib_49, f0_49, g0_49, f1_49, g1_49] = __ab_approximation_31 31 hia_?? hib_??
+    [f0_49, g0_49, f1_49, g1_49] = __ab_approximation_31 31 hia_45 hib_46
 
 
 
@@ -3249,7 +3252,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001821d <+1309>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x0000000000018222 <+1314>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 50
-    (loa_50, f0_50, g0_50) = __smulx_383_n_shift_by_31 hia_?? hib_?? f0_?? g0_??
+    (loa_50, f0_50, g0_50) = __smulx_383_n_shift_by_31 hia_45 hib_46 f0_49 g0_49
 
 
 
@@ -3260,7 +3263,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001823a <+1338>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x000000000001823f <+1343>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 51
-    (lob_51, f1_51, g1_51) = __smulx_383_n_shift_by_31 hia_?? hib_?? f1_?? g1_??
+    (lob_51, f1_51, g1_51) = __smulx_383_n_shift_by_31 hia_45 hib_46 f1_49 g1_49
 
 
 
@@ -3270,7 +3273,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018252 <+1362>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000018256 <+1366>:	e8 45 09 00 00	call   0x18ba0 <__smulx_383x63>
     // 52
-    lou_52 = __smulx_383x63 hiu_?? hiv_?? f0_?? g0_??
+    lou_52 = __smulx_383x63 hiu_47 hiv_48 f0_50 g0_50
 
 
 
@@ -3279,7 +3282,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018265 <+1381>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000018269 <+1385>:	e8 32 09 00 00	call   0x18ba0 <__smulx_383x63>
     // 53
-    lov_53 = __smulx_383x63 hiu_?? hiv_?? f1_?? g1_??
+    lov_53 = __smulx_383x63 hiu_47 hiv_48 f1_51 g1_51
 
 
 // 0x000000000001826e <+1390>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3288,7 +3291,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001827f <+1407>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000018284 <+1412>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 54
-    [loa_54, lob_54, f0_54, g0_54, f1_54, g1_54] = __ab_approximation_31 31 loa_?? lob_??
+    [f0_54, g0_54, f1_54, g1_54] = __ab_approximation_31 31 loa_50 lob_51
 
 
 
@@ -3298,7 +3301,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018298 <+1432>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x000000000001829d <+1437>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 55
-    (hia_55, f0_55, g0_55) = __smulx_383_n_shift_by_31 loa_?? lob_?? f0_?? g0_??
+    (hia_55, f0_55, g0_55) = __smulx_383_n_shift_by_31 loa_50 lob_51 f0_54 g0_54
 
 
 
@@ -3309,7 +3312,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000182b5 <+1461>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x00000000000182ba <+1466>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 56
-    (hib_56, f1_56, g1_56) = __smulx_383_n_shift_by_31 loa_?? lob_?? f1_?? g1_??
+    (hib_56, f1_56, g1_56) = __smulx_383_n_shift_by_31 loa_50 lob_51 f1_54 g1_54
 
 
 
@@ -3319,7 +3322,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000182cd <+1485>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000182d1 <+1489>:	e8 ca 08 00 00	call   0x18ba0 <__smulx_383x63>
     // 57
-    hiu_57 = __smulx_383x63 lou_?? lov_?? f0_?? g0_??
+    hiu_57 = __smulx_383x63 lou_52 lov_53 f0_55 g0_55
 
 
 
@@ -3328,7 +3331,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000182e0 <+1504>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000182e4 <+1508>:	e8 b7 08 00 00	call   0x18ba0 <__smulx_383x63>
     // 58
-    hiv_58 = __smulx_383x63 lou_?? lov_?? f1_?? g1_??
+    hiv_58 = __smulx_383x63 lou_52 lov_53 f1_56 g1_56
 
 
 // 0x00000000000182e9 <+1513>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3337,7 +3340,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000182fa <+1530>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x00000000000182ff <+1535>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 59
-    [hia_59, hib_59, f0_59, g0_59, f1_59, g1_59] = __ab_approximation_31 31 hia_?? hib_??
+    [f0_59, g0_59, f1_59, g1_59] = __ab_approximation_31 31 hia_55 hib_56
 
 
 
@@ -3347,7 +3350,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018313 <+1555>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x0000000000018318 <+1560>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 60
-    (loa_60, f0_60, g0_60) = __smulx_383_n_shift_by_31 hia_?? hib_?? f0_?? g0_??
+    (loa_60, f0_60, g0_60) = __smulx_383_n_shift_by_31 hia_55 hib_56 f0_59 g0_59
 
 
 
@@ -3358,7 +3361,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018330 <+1584>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x0000000000018335 <+1589>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 61
-    (lob_61, f1_61, g1_61) = __smulx_383_n_shift_by_31 hia_?? hib_?? f1_?? g1_??
+    (lob_61, f1_61, g1_61) = __smulx_383_n_shift_by_31 hia_55 hib_56 f1_59 g1_59
 
 
 
@@ -3368,7 +3371,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018348 <+1608>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x000000000001834c <+1612>:	e8 4f 08 00 00	call   0x18ba0 <__smulx_383x63>
     // 62
-    lou_62 = __smulx_383x63 hiu_?? hiv_?? f0_?? g0_??
+    lou_62 = __smulx_383x63 hiu_57 hiv_58 f0_60 g0_60
 
 
 
@@ -3377,7 +3380,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001835b <+1627>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x000000000001835f <+1631>:	e8 3c 08 00 00	call   0x18ba0 <__smulx_383x63>
     // 63
-    lov_63 = __smulx_383x63 hiu_?? hiv_?? f1_?? g1_??
+    lov_63 = __smulx_383x63 hiu_57 hiv_58 f1_61 g1_61
 
 
 // 0x0000000000018364 <+1636>:	49 c1 fd 3f	sar    r13,0x3f
@@ -3389,7 +3392,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001837c <+1660>:	4c 89 6f 58	mov    QWORD PTR [rdi+0x58],r13
     // 64
     tmp64_r13_0 = (lov_63 @ 5) >>$ 0x3f
-    lov_64 = lov_64 # [tmp64_r13_0, tmp64_r13_0, tmp64_r13_0, tmp64_r13_0, tmp64_r13_0, tmp64_r13_0]
+    lov_64 = lov_63 # [tmp64_r13_0, tmp64_r13_0, tmp64_r13_0, tmp64_r13_0, tmp64_r13_0, tmp64_r13_0]
 
 
 // 0x0000000000018380 <+1664>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3398,7 +3401,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018391 <+1681>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000018396 <+1686>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 65
-    [loa_65, lob_65, f0_65, g0_65, f1_65, g1_65] = __ab_approximation_31 31 loa_?? lob_??
+    [f0_65, g0_65, f1_65, g1_65] = __ab_approximation_31 31 loa_60 lob_61
 
 
 
@@ -3408,7 +3411,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000183aa <+1706>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x00000000000183af <+1711>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 66
-    (hia_66, f0_66, g0_66) = __smulx_383_n_shift_by_31 loa_?? lob_?? f0_?? g0_??
+    (hia_66, f0_66, g0_66) = __smulx_383_n_shift_by_31 loa_60 lob_61 f0_65 g0_65
 
 
 
@@ -3419,7 +3422,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000183c7 <+1735>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x00000000000183cc <+1740>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 67
-    (hib_67, f1_67, g1_67) = __smulx_383_n_shift_by_31 loa_?? lob_?? f1_?? g1_??
+    (hib_67, f1_67, g1_67) = __smulx_383_n_shift_by_31 loa_60 lob_61 f1_65 g1_65
 
 
 
@@ -3429,7 +3432,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000183df <+1759>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000183e3 <+1763>:	e8 b8 07 00 00	call   0x18ba0 <__smulx_383x63>
     // 68
-    hiu_68 = __smulx_383x63 lou_?? lov_?? f0_?? g0_??
+    hiu_68 = __smulx_383x63 lou_62 (take lov_64) f0_66 g0_66
 
 
 
@@ -3438,7 +3441,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000183f2 <+1778>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000183f6 <+1782>:	e8 85 05 00 00	call   0x18980 <__smulx_767x63>
     // 69
-    hiv_69 = __smulx_767x63 lou_?? lov_?? f1_?? g1_??
+    hiv_69 = __smulx_767x63 lou_62 lov_64 f1_67 g1_67
 
 
 // 0x00000000000183fb <+1787>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3447,7 +3450,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001840c <+1804>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000018411 <+1809>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 70
-    [hia_70, hib_70, f0_70, g0_70, f1_70, g1_70] = __ab_approximation_31 31 hia_?? hib_??
+    [f0_70, g0_70, f1_70, g1_70] = __ab_approximation_31 31 hia_66 hib_67
 
 
 
@@ -3457,7 +3460,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018425 <+1829>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x000000000001842a <+1834>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 71
-    (loa_71, f0_71, g0_71) = __smulx_383_n_shift_by_31 hia_?? hib_?? f0_?? g0_??
+    (loa_71, f0_71, g0_71) = __smulx_383_n_shift_by_31 hia_66 hib_67 f0_70 g0_70
 
 
 
@@ -3468,7 +3471,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018442 <+1858>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x0000000000018447 <+1863>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 72
-    (lob_72, f1_72, g1_72) = __smulx_383_n_shift_by_31 hia_?? hib_?? f1_?? g1_??
+    (lob_72, f1_72, g1_72) = __smulx_383_n_shift_by_31 hia_66 hib_67 f1_70 g1_70
 
 
 
@@ -3478,7 +3481,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001845a <+1882>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x000000000001845e <+1886>:	e8 3d 07 00 00	call   0x18ba0 <__smulx_383x63>
     // 73
-    lou_73 = __smulx_383x63 hiu_?? hiv_?? f0_?? g0_??
+    lou_73 = __smulx_383x63 hiu_68 (take hiv_69) f0_71 g0_71
 
 
 
@@ -3487,7 +3490,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001846d <+1901>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000018471 <+1905>:	e8 0a 05 00 00	call   0x18980 <__smulx_767x63>
     // 74
-    lov_74 = __smulx_383x63 hiu_?? hiv_?? f1_?? g1_??
+    lov_74 = __smulx_767x63 hiu_68 hiv_69 f1_72 g1_72
 
 
 // 0x0000000000018476 <+1910>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3496,7 +3499,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018487 <+1927>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x000000000001848c <+1932>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 75
-    [loa_75, lob_75, f0_75, g0_75, f1_75, g1_75] = __ab_approximation_31 31 loa_?? lob_??
+    [f0_75, g0_75, f1_75, g1_75] = __ab_approximation_31 31 loa_71 lob_72
 
 
 
@@ -3506,7 +3509,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000184a0 <+1952>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x00000000000184a5 <+1957>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 76
-    (hia_76, f0_76, g0_76) = __smulx_383_n_shift_by_31 loa_?? lob_?? f0_?? g0_??
+    (hia_76, f0_76, g0_76) = __smulx_383_n_shift_by_31 loa_71 lob_72 f0_75 g0_75
 
 
 
@@ -3517,7 +3520,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000184bd <+1981>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x00000000000184c2 <+1986>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 77
-    (hib_77, f1_77, g1_77) = __smulx_383_n_shift_by_31 loa_?? lob_?? f1_?? g1_??
+    (hib_77, f1_77, g1_77) = __smulx_383_n_shift_by_31 loa_71 lob_72 f1_75 g1_75
 
 
 
@@ -3527,7 +3530,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000184d5 <+2005>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000184d9 <+2009>:	e8 c2 06 00 00	call   0x18ba0 <__smulx_383x63>
     // 78
-    hiu_78 = __smulx_383x63 lou_?? (take lov_??) f0_?? g0_??
+    hiu_78 = __smulx_383x63 lou_73 (take lov_74) f0_76 g0_76
 
 
 
@@ -3536,7 +3539,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000184e8 <+2024>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000184ec <+2028>:	e8 8f 04 00 00	call   0x18980 <__smulx_767x63>
     // 79
-    hiv_79 = __smulx_767x63 lou_?? lov_?? f1_?? g1_??
+    hiv_79 = __smulx_767x63 lou_73 lov_74 f1_77 g1_77
 
 
 // 0x00000000000184f1 <+2033>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3545,7 +3548,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018502 <+2050>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000018507 <+2055>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 80
-    [hia_80, hib_80, f0_80, g0_80, f1_80, g1_80] = __ab_approximation_31 31 hia_?? hib_??
+    [f0_80, g0_80, f1_80, g1_80] = __ab_approximation_31 31 hia_76 hib_77
 
 
 
@@ -3555,7 +3558,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001851b <+2075>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x0000000000018520 <+2080>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 81
-    (loa_81, f0_81, g0_81) = __smulx_383_n_shift_by_31 hia_?? hib_?? f0_?? g0_??
+    (loa_81, f0_81, g0_81) = __smulx_383_n_shift_by_31 hia_76 hib_77 f0_80 g0_80
 
 
 
@@ -3566,7 +3569,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018538 <+2104>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x000000000001853d <+2109>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 82
-    (lob_82, f1_82, g1_82) = __smulx_383_n_shift_by_31 hia_?? hib_?? f1_?? g1_??
+    (lob_82, f1_82, g1_82) = __smulx_383_n_shift_by_31 hia_76 hib_77 f1_80 g1_80
 
 
 
@@ -3576,7 +3579,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018550 <+2128>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000018554 <+2132>:	e8 47 06 00 00	call   0x18ba0 <__smulx_383x63>
     // 83
-    lou_83 = __smulx_383x63 hiu_?? (take hiv_??) f0_?? g0_??
+    lou_83 = __smulx_383x63 hiu_78 (take hiv_79) f0_81 g0_81
 
 
 
@@ -3585,7 +3588,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018563 <+2147>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000018567 <+2151>:	e8 14 04 00 00	call   0x18980 <__smulx_767x63>
     // 84
-    lov_84 = __smulx_767x63 hiu_?? hiv_?? f1_?? g1_??
+    lov_84 = __smulx_767x63 hiu_78 hiv_79 f1_82 g1_82
 
 
 // 0x000000000001856c <+2156>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3594,7 +3597,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001857d <+2173>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000018582 <+2178>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 85
-    [loa_85, lob_85, f0_85, g0_85, f1_85, g1_85] = __ab_approximation_31 31 loa_?? lob_??
+    [f0_85, g0_85, f1_85, g1_85] = __ab_approximation_31 31 loa_81 lob_82
 
 
 
@@ -3604,7 +3607,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018596 <+2198>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x000000000001859b <+2203>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 86
-    (hia_86, f0_86, g0_86) = __smulx_383_n_shift_by_31 loa_?? lob_?? f0_?? g0_??
+    (hia_86, f0_86, g0_86) = __smulx_383_n_shift_by_31 loa_81 lob_82 f0_85 g0_85
 
 
 
@@ -3615,7 +3618,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000185b3 <+2227>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x00000000000185b8 <+2232>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 87
-    (hib_87, f1_87, g1_87) = __smulx_383_n_shift_by_31 loa_?? lob_?? f1_?? g1_??
+    (hib_87, f1_87, g1_87) = __smulx_383_n_shift_by_31 loa_81 lob_82 f1_85 g1_85
 
 
 
@@ -3625,7 +3628,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000185cb <+2251>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000185cf <+2255>:	e8 cc 05 00 00	call   0x18ba0 <__smulx_383x63>
     // 88
-    hiu_88 = __smulx_383x63 lou_?? (take lov_??) f0_?? g0_??
+    hiu_88 = __smulx_383x63 lou_83 (take lov_84) f0_86 g0_86
 
 
 
@@ -3634,7 +3637,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000185de <+2270>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000185e2 <+2274>:	e8 99 03 00 00	call   0x18980 <__smulx_767x63>
     // 89
-    hiv_89 = __smulx_767x63 lou_?? lov_?? f1_?? g1_??
+    hiv_89 = __smulx_767x63 lou_83 lov_84 f1_87 g1_87
 
 
 // 0x00000000000185e7 <+2279>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3643,7 +3646,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000185f8 <+2296>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x00000000000185fd <+2301>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 90
-    [hia_90, hib_90, f0_90, g0_90, f1_90, g1_90] = __ab_approximation_31 31 hia_?? hib_??
+    [f0_90, g0_90, f1_90, g1_90] = __ab_approximation_31 31 hia_86 hib_87
 
 
 
@@ -3653,7 +3656,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018611 <+2321>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x0000000000018616 <+2326>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 92
-    (loa_92, f0_92, g0_92) = __smulx_383_n_shift_by_31 hia_?? hib_?? f0_?? g0_??
+    (loa_92, f0_92, g0_92) = __smulx_383_n_shift_by_31 hia_86 hib_87 f0_90 g0_90
 
 
 
@@ -3664,7 +3667,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001862e <+2350>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x0000000000018633 <+2355>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 93
-    (lob_93, f1_93, g1_93) = __smulx_383_n_shift_by_31 hia_?? hib_?? f1_?? g1_??
+    (lob_93, f1_93, g1_93) = __smulx_383_n_shift_by_31 hia_86 hib_87 f1_90 g1_90
 
 
 
@@ -3674,7 +3677,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018646 <+2374>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x000000000001864a <+2378>:	e8 51 05 00 00	call   0x18ba0 <__smulx_383x63>
     // 94
-    lou_94 = __smulx_383x63 hiu_?? (take hiv_??) f0_?? g0_??
+    lou_94 = __smulx_383x63 hiu_88 (take hiv_89) f0_92 g0_92
 
 
 
@@ -3683,7 +3686,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018659 <+2393>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x000000000001865d <+2397>:	e8 1e 03 00 00	call   0x18980 <__smulx_767x63>
     // 95
-    lov_95 = __smulx_767x63 hiu_?? hiv_?? f1_?? g1_??
+    lov_95 = __smulx_767x63 hiu_88 hiv_89 f1_93 g1_93
 
 
 // 0x0000000000018662 <+2402>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3692,7 +3695,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018673 <+2419>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000018678 <+2424>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 96
-    [loa_96, lob_96, f0_96, g0_96, f1_96, g1_96] = __ab_approximation_31 31 loa_?? lob_??
+    [f0_96, g0_96, f1_96, g1_96] = __ab_approximation_31 31 loa_92 lob_93
 
 
 
@@ -3702,7 +3705,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001868c <+2444>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x0000000000018691 <+2449>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 97
-    (hia_97, f0_97, g0_97) = __smulx_383_n_shift_by_31 loa_?? lob_?? f0_?? g0_??
+    (hia_97, f0_97, g0_97) = __smulx_383_n_shift_by_31 loa_92 lob_93 f0_96 g0_96
 
 
 
@@ -3713,7 +3716,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000186a9 <+2473>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x00000000000186ae <+2478>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 98
-    (hib_98, f1_98, g1_98) = __smulx_383_n_shift_by_31 loa_?? lob_?? f1_?? g1_??
+    (hib_98, f1_98, g1_98) = __smulx_383_n_shift_by_31 loa_92 lob_93 f1_96 g1_96
 
 
 
@@ -3723,7 +3726,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000186c1 <+2497>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000186c5 <+2501>:	e8 d6 04 00 00	call   0x18ba0 <__smulx_383x63>
     // 99
-    hiu_99 = __smulx_383x63 lou_?? (take lov_??) f0_?? g0_??
+    hiu_99 = __smulx_383x63 lou_94 (take lov_95) f0_97 g0_97
 
 
 
@@ -3732,7 +3735,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000186d4 <+2516>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000186d8 <+2520>:	e8 a3 02 00 00	call   0x18980 <__smulx_767x63>
     // 100
-    hiv_100 = __smulx_767x63 lou_?? lov_?? f1_?? g1_??
+    hiv_100 = __smulx_767x63 lou_94 lov_95 f1_98 g1_98
 
 
 // 0x00000000000186dd <+2525>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3741,7 +3744,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000186ee <+2542>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x00000000000186f3 <+2547>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 101
-    [hia_101, hib_101, f0_101, g0_101, f1_101, g1_101] = __ab_approximation_31 31 hia_?? hib_??
+    [f0_101, g0_101, f1_101, g1_101] = __ab_approximation_31 31 hia_97 hib_98
 
 
 
@@ -3751,7 +3754,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018707 <+2567>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x000000000001870c <+2572>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 102
-    (loa_102, f0_102, g0_102) = __smulx_191_n_shift_by_31 hia_?? hib_?? f0_?? g0_??
+    (loa_102, f0_102, g0_102) = __smulx_191_n_shift_by_31 hia_97 hib_98 f0_101 g0_101
 
 
 
@@ -3762,7 +3765,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018724 <+2596>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x0000000000018729 <+2601>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 103
-    (lob_103, f1_103, g1_103) = __smulx_191_n_shift_by_31 hia_?? hib_?? f1_?? g1_??
+    (lob_103, f1_103, g1_103) = __smulx_191_n_shift_by_31 hia_97 hib_98 f1_101 g1_101
 
 
 
@@ -3772,7 +3775,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001873c <+2620>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000018740 <+2624>:	e8 5b 04 00 00	call   0x18ba0 <__smulx_383x63>
     // 104
-    lou_104 = __smulx_383x63 hiu_?? (take hiv_??) f0_?? g0_??
+    lou_104 = __smulx_383x63 hiu_99 (take hiv_100) f0_102 g0_102
 
 
 
@@ -3781,7 +3784,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001874f <+2639>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000018753 <+2643>:	e8 28 02 00 00	call   0x18980 <__smulx_767x63>
     // 105
-    lov_105 = __smulx_767x63 hiu_?? hiv_?? f1_?? g1_??
+    lov_105 = __smulx_767x63 hiu_99 hiv_100 f1_103 g1_103
 
 
 // 0x0000000000018758 <+2648>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3790,7 +3793,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018769 <+2665>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x000000000001876e <+2670>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 106
-    [loa_106, lob_106, f0_106, g0_106, f1_106, g1_106] = __ab_approximation_31 31 loa_?? lob_??
+    [f0_106, g0_106, f1_106, g1_106] = __ab_approximation_31 31 loa_102 lob_103
 
 
 
@@ -3800,7 +3803,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018782 <+2690>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x0000000000018787 <+2695>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 107
-    (hia_107, f0_107, g0_107) = __smulx_191_n_shift_by_31 loa_?? lob_?? f0_?? g0_??
+    (hia_107, f0_107, g0_107) = __smulx_191_n_shift_by_31 loa_102 lob_103 f0_106 g0_106
 
 
 
@@ -3811,7 +3814,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001879f <+2719>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x00000000000187a4 <+2724>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 108
-    (hib_108, f1_108, g1_108) = __smulx_191_n_shift_by_31 loa_?? lob_?? f1_?? g1_??
+    (hib_108, f1_108, g1_108) = __smulx_191_n_shift_by_31 loa_102 lob_103 f1_106 g1_106
 
 
 
@@ -3821,7 +3824,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000187b7 <+2743>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000187bb <+2747>:	e8 e0 03 00 00	call   0x18ba0 <__smulx_383x63>
     // 109
-    hiu_109 = __smulx_383x63 lou_?? (take lov_??) f0_?? g0_??
+    hiu_109 = __smulx_383x63 lou_104 (take lov_105) f0_107 g0_107
 
 
 
@@ -3830,7 +3833,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000187ca <+2762>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000187ce <+2766>:	e8 ad 01 00 00	call   0x18980 <__smulx_767x63>
     // 110
-    hiv_110 = __smulx_767x63 lou_?? lov_?? f1_?? g1_??
+    hiv_110 = __smulx_767x63 lou_104 lov_105 f1_108 g1_108
 
 
 // 0x00000000000187d3 <+2771>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3839,7 +3842,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000187e4 <+2788>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x00000000000187e9 <+2793>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 111
-    [hia_111, hib_111, f0_111, g0_111, f1_111, g1_111] = __ab_approximation_31 31 hia_?? hib_??
+    [f0_111, g0_111, f1_111, g1_111] = __ab_approximation_31 31 hia_107 hib_108
 
 
 
@@ -3849,7 +3852,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000187fd <+2813>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x0000000000018802 <+2818>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 112
-    (loa_112, f0_112, g0_112) = __smulx_191_n_shift_by_31 hia_?? hib_?? f0_?? g0_??
+    (loa_112, f0_112, g0_112) = __smulx_191_n_shift_by_31 hia_107 hib_108 f0_111 g0_111
 
 
 
@@ -3860,7 +3863,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001881a <+2842>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x000000000001881f <+2847>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 113
-    (lob_113, f1_113, g1_113) = __smulx_191_n_shift_by_31 hia_?? hib_?? f1_?? g1_??
+    (lob_113, f1_113, g1_113) = __smulx_191_n_shift_by_31 hia_107 hib_108 f1_111 g1_111
 
 
 
@@ -3870,7 +3873,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018832 <+2866>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000018836 <+2870>:	e8 65 03 00 00	call   0x18ba0 <__smulx_383x63>
     // 114
-    lou_114 = __smulx_383x63 hiu_?? (take hiv_??) f0_?? g0_??
+    lou_114 = __smulx_383x63 hiu_109 (take hiv_110) f0_112 g0_112
 
 
 
@@ -3879,7 +3882,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018845 <+2885>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x0000000000018849 <+2889>:	e8 32 01 00 00	call   0x18980 <__smulx_767x63>
     // 115
-    lov_115 = __smulx_767x63 hiu_?? hiv_?? f1_?? g1_??
+    lov_115 = __smulx_767x63 hiu_109 hiv_110 f1_113 g1_113
 
 
 // 0x000000000001884e <+2894>:	48 81 f6 60 01 00 00	xor    rsi,0x160
@@ -3888,7 +3891,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001885f <+2911>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000018864 <+2916>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 116
-    [loa_116, lob_116, f0_116, g0_116, f1_116, g1_116] = __ab_approximation_31 31 loa_?? lob_??
+    [f0_116, g0_116, f1_116, g1_116] = __ab_approximation_31 31 loa_112 lob_113
 
 
 
@@ -3898,7 +3901,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018878 <+2936>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x000000000001887d <+2941>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 117
-    (hia_117, f0_117, g0_117) = __smulx_191_n_shift_by_31 loa_?? lob_?? f0_?? g0_??
+    (hia_117, f0_117, g0_117) = __smulx_191_n_shift_by_31 loa_112 lob_113 f0_116 g0_116
 
 
 
@@ -3909,7 +3912,7 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018895 <+2965>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x000000000001889a <+2970>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 118
-    (hib_118, f1_118, g1_118) = __smulx_191_n_shift_by_31 loa_?? lob_?? f1_?? g1_??
+    (hib_118, f1_118, g1_118) = __smulx_191_n_shift_by_31 loa_112 lob_113 f1_116 g1_116
 
 
 
@@ -3919,7 +3922,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000188ad <+2989>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000188b1 <+2993>:	e8 ea 02 00 00	call   0x18ba0 <__smulx_383x63>
     // 119
-    hiu_119 = __smulx_383x63 lou_?? (take lov_115) f0_?? g0_??
+    hiu_119 = __smulx_383x63 lou_114 (take lov_115) f0_117 g0_117
 
 
 
@@ -3928,7 +3931,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000188c0 <+3008>:	48 8d 7f 30	lea    rdi,[rdi+0x30]
 // 0x00000000000188c4 <+3012>:	e8 b7 00 00 00	call   0x18980 <__smulx_767x63>
     // 120
-    hiv_120 = __smulx_767x63 lou_?? lov_115 f1_118 g1_118
+    hiv_120 = __smulx_767x63 lou_114 lov_115 f1_118 g1_118
 
 
 
@@ -3938,7 +3941,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000188d8 <+3032>:	4c 8b 56 30	mov    r10,QWORD PTR [rsi+0x30]
 // 0x00000000000188dc <+3036>:	e8 7f 08 00 00	call   0x19160 <__inner_loop_62>
     // 121
-    [hia_121, hib_121, f0_121, g0_121, f1_121, g1_121] = __inner_loop_62 55 (hia_117 @ 0) (hib_118 @ 0)
+    [f0_121, g0_121, f1_121, g1_121] = __inner_loop_62 55 (hia_117 @ 0) (hib_118 @ 0)
 
 
 
@@ -3955,6 +3958,7 @@ ctx_inverse_mod_383 a m = result
 // 0x00000000000188f0 <+3056>:	e8 8b 00 00 00	call   0x18980 <__smulx_767x63>
     // 122
     v_122 = __smulx_767x63 hiu_119 hiv_120 f1_121 g1_121
+    resultlow = take v_122
     [r14_122, r15_122, rbx_122, rbp_122, rcx_122, rax_122] = drop v_122
 
 
@@ -3973,7 +3977,7 @@ ctx_inverse_mod_383 a m = result
 // 0x000000000001891f <+3103>:	4c 23 66 20	and    r12,QWORD PTR [rsi+0x20]
 // 0x0000000000018923 <+3107>:	48 23 46 28	and    rax,QWORD PTR [rsi+0x28]
     // 123
-    rdx_123 = rax_122 @ 11
+    rdx_123 = rax_122
 
     tmp123_rax_0 = rax_122 >>$ 0x3f
 
@@ -4007,12 +4011,12 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018949 <+3145>:	48 89 4f 50	mov    QWORD PTR [rdi+0x50],rcx
 // 0x000000000001894d <+3149>:	48 89 57 58	mov    QWORD PTR [rdi+0x58],rdx
     // 125
-    result0 = r14_124
-    result1 = r15_124
-    result2 = rbx_124
-    result3 = rbp_124
-    result4 = rcx_124
-    result5 = rdx_124
+    result6 = r14_124
+    result7 = r15_124
+    result8 = rbx_124
+    result9 = rbp_124
+    result10 = rcx_124
+    result11 = rdx_124
 
 
 // 0x0000000000018951 <+3153>:	4c 8d 84 24 58 04 00 00	lea    r8,[rsp+0x458]
@@ -4025,4 +4029,4 @@ ctx_inverse_mod_383 a m = result
 // 0x0000000000018970 <+3184>:	49 8d 60 30	lea    rsp,[r8+0x30]
 // 0x0000000000018974 <+3188>:	f3 c3	repz ret 
     // 126
-    result = [result0, result1, result2, result3, result4, result5]
+    result = resultlow # [result6, result7, result8, result9, result10, result11]

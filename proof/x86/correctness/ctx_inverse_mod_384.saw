@@ -3,6 +3,129 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
+let {{ ab = [10, 20, 30, 40, 50, 60, 70, 80, 90, 11, 21, 00] : Vec768 }};
+let {{ uv = [10, 20, 30, 40, 50, 60, 70, 80, 90, 11, 21, 00, 4, 5, 6, 7, 8, 9] : [18][64] }};
+
+print "\n\n__inner_loop_31:";
+print {{ __inner_loop_31 1 10422311190518931696 795000831975168813}};
+// exit 1;
+
+// print "\n\n__smulx_383_n_shift_by_31:";
+// print {{ __smulx_383_n_shift_by_31 (take ab) (drop ab) 4 5 }};
+// 
+// print "\n\n__smulx_191_n_shift_by_31:";
+// print {{ __smulx_191_n_shift_by_31 (take ab) (drop ab) 4 5 }};
+// 
+// print "\n\n__smulx_383x63:";
+// print {{ __smulx_383x63 (take ab) (drop ab) 4 5 }};
+// 
+// print "\n\n__smulx_767x63:";
+// print {{ __smulx_767x63 (take uv) (drop uv) 4 5 }};
+// 
+// print "\n\n__inner_loop_31:";
+// print {{ __inner_loop_31 31 4 5 }};
+// 
+// print "\n\n__inner_loop_62:";
+// print {{ __inner_loop_62 62 4 5 }};
+
+// print {{ ctx_inverse_mod_383 zero modulus384 }};
+
+let test__smulx_383_n_shift_by_31_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (ab, ab_ptr) <- ptr_to_fresh_readonly "inp" vec768_type;
+  f0 <- crucible_fresh_var "f0" (llvm_int 64);
+  g0 <- crucible_fresh_var "g0" (llvm_int 64);
+  crucible_execute_func [ret_ptr, ab_ptr, crucible_term f0, crucible_term g0];
+  let new_ret = {{ (__smulx_383_n_shift_by_31 (take ab) (drop ab) f0 g0).0 }};
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+verify_x86_ctest "test__smulx_383_n_shift_by_31" test__smulx_383_n_shift_by_31_spec do {
+  // quickcheck 100;
+  w4;
+};
+
+let test__smulx_191_n_shift_by_31_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  crucible_points_to ret_ptr (crucible_term {{ zero : [6][64] }});
+  (ab, ab_ptr) <- ptr_to_fresh_readonly "inp" vec768_type;
+  f0 <- crucible_fresh_var "f0" (llvm_int 64);
+  g0 <- crucible_fresh_var "g0" (llvm_int 64);
+  crucible_execute_func [ret_ptr, ab_ptr, crucible_term f0, crucible_term g0];
+  let new_ret = {{ (__smulx_191_n_shift_by_31 (take ab) (drop ab) f0 g0).0 }};
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+verify_x86_ctest "test__smulx_191_n_shift_by_31" test__smulx_191_n_shift_by_31_spec do {
+  // quickcheck 100;
+  w4;
+};
+
+let test__smulx_383x63_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (ab, ab_ptr) <- ptr_to_fresh_readonly "inp" vec768_type;
+  f0 <- crucible_fresh_var "f0" (llvm_int 64);
+  g0 <- crucible_fresh_var "g0" (llvm_int 64);
+  crucible_execute_func [ret_ptr, ab_ptr, crucible_term f0, crucible_term g0];
+  let new_ret = {{ __smulx_383x63 (take ab) (drop ab) f0 g0 }};
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+verify_x86_ctest "test__smulx_383x63" test__smulx_383x63_spec do {
+  // quickcheck 100;
+  w4;
+};
+
+let test__smulx_767x63_spec = do {
+  ret_ptr <- crucible_alloc vec768_type;
+  (ab, ab_ptr) <- ptr_to_fresh_readonly "inp" (llvm_array 18 (llvm_int 64));
+  f0 <- crucible_fresh_var "f0" (llvm_int 64);
+  g0 <- crucible_fresh_var "g0" (llvm_int 64);
+  crucible_execute_func [ret_ptr, ab_ptr, crucible_term f0, crucible_term g0];
+  let new_ret = {{ __smulx_767x63 (take ab) (drop ab) f0 g0 }};
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+verify_x86_ctest "test__smulx_767x63" test__smulx_767x63_spec do {
+  // quickcheck 100;
+  w4;
+};
+
+let test__inner_loop_31_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  a <- crucible_fresh_var "a" (llvm_int 64);
+  b <- crucible_fresh_var "b" (llvm_int 64);
+  crucible_execute_func [ret_ptr, crucible_term a, crucible_term b];
+  // let new_ret = {{ __inner_loop_31 2 a b }};
+  let new_ret = {{ zero : [4][64] }};
+  crucible_points_to_untyped ret_ptr (crucible_term new_ret);
+};
+
+verify_x86_ctest "test__inner_loop_31" test__inner_loop_31_spec do {
+  // quickcheck 100;
+  goal_eval_unint [];
+  print_goal;
+  w4;
+};
+
+exit 1;
+
+let test__inner_loop_62_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  a <- crucible_fresh_var "a" (llvm_int 64);
+  b <- crucible_fresh_var "b" (llvm_int 64);
+  crucible_execute_func [ret_ptr, crucible_term a, crucible_term b];
+  let new_ret = {{ __inner_loop_62 62 a b }};
+  crucible_points_to_untyped ret_ptr (crucible_term new_ret);
+};
+
+verify_x86_ctest "test__inner_loop_62" test__inner_loop_62_spec do {
+  // quickcheck 100;
+  w4;
+};
+
+exit 1;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
 ///////////////////////////////////////////////////////////////////////////////
@@ -10,10 +133,10 @@
 // ct_inverse_mod_383
 let ct_inverse_mod_383_spec = do {
   ret_ptr <- crucible_alloc vec768_type;
-  (_, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384_type;
-  (_, mod_ptr) <- ptr_to_fresh_readonly "mod" vec384_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384_type;
+  mod_ptr <- ptr_to_modulus384;
   crucible_execute_func [ret_ptr, inp_ptr, mod_ptr];
-  new_ret <- crucible_fresh_var "new_ret" vec768_type;
+  let new_ret = {{ ctx_inverse_mod_383 inp modulus384 }};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
@@ -41,7 +164,8 @@ set_x86_stack_base_align 512;
 
 // ctx_inverse_mod_383
 verify_x86_recent "ctx_inverse_mod_383" ct_inverse_mod_383_spec do {
-  w4;
+  quickcheck 100;
+  // w4;
 };
 
 default_x86_stack_base_align;
