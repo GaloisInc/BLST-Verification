@@ -79,11 +79,9 @@ POINTonE2_from_Jacobian_alias_ov <- custom_verify "POINTonE2_from_Jacobian"
   (concat [reciprocal_fp2_ov] (concat vec_select_asm_ovs fp2_overrides))
   POINTonE2_from_Jacobian_alias_spec
   do {
-    unfolding ["POINTonE2_affine_invariant", "POINTonE2_affine_rep"];
-    (simplify (addsimps [ mul_commutes_fp2_thm
-                        , reciprocal_div_fp2_thm
-                        , fp2_unrip_thm ]
-                        fp2_simpset));
+    rw_with [mul_commutes_fp2_thm, reciprocal_div_fp2_thm];
+    unfolding ["POINTonE2_affine_invariant", "POINTonE2_affine_rep", "apply"];
+    simplify (addsimp fp2_unrip_thm fp2_simpset);
     w4_unint_z3 fp2_unints;
   };
 
@@ -149,19 +147,21 @@ POINTonE2_Compress_BE_projective_ov <- custom_verify "POINTonE2_Compress_BE"
      unfolding [ "POINTonE2_affine_abs"
                , "POINTonE2_affine_rep"
                , "POINTonE2_invariant" ];
-     (apply_fp_rewrites);
+     apply_fp_rewrites;
      simplify (addsimps [ one_mont_px_abs_thm
                         , one_mont_px_invariant_thm
                         , seq_ite_2_thm
                         , unrip_thm_2 ]
                         (addsimps POINTonE2_thms fp2_simpset));
+     simplify remove_higher_order_function_simpset;
      w4_unint_z3 [ "POINTonE2_abs"
                  , "POINTonE2_invariant"
-                 , "Fp_2"
                  , "fp2_abs"
                  , "I2OSP48"
                  , "fp2_invariant"
-                 , "POINTonE2_affine_invariant"];
+                 , "POINTonE2_affine_invariant"
+                 , "affinify_E'"
+                 , "is_point_projective_E'"];
   };
 
 // Prove POINTonE2_Compress_BE matches the spec for affine points
@@ -176,7 +176,6 @@ POINTonE2_Compress_BE_affine_ov <- custom_verify "POINTonE2_Compress_BE"
      simplify (addsimp one_mont_px_abs_thm fp2_simpset);
      w4_unint_z3 [ "POINTonE2_abs"
                  , "POINTonE2_invariant"
-                 , "Fp_2"
                  , "fp2_abs"
                  , "I2OSP48"];
   };

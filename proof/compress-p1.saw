@@ -98,8 +98,8 @@ POINTonE1_from_Jacobian_alias_ov <- custom_verify "POINTonE1_from_Jacobian"
   POINTonE1_from_Jacobian_alias_spec
   do {
     (simplify (addsimps [mul_commutes_fp_thm, reciprocal_div_fp_thm] empty_ss));
-    unfolding ["POINTonE1_affine_invariant", "POINTonE1_affine_rep"];
-    (apply_fp_rewrites);
+    unfolding ["POINTonE1_affine_invariant", "POINTonE1_affine_rep", "apply"];
+    apply_fp_rewrites;
     w4_unint_z3 fp_unints;
   };
 
