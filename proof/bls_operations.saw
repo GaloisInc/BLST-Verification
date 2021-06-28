@@ -885,6 +885,11 @@ let BasicVerify_A_unints = (concat [ "uncompress_E1_imp"
                                    , "nothing"
                                    //, "bool_to_limb"
                                    , "uncompress_E1_OK"
+                                   , "uncompress_E1_y2"
+                                   , "uncompress_E1_x_fp"
+                                   , "sqrt_fp"
+                                   , "sign_F_p"
+                                   , "is_square_fp"
                                    , "uncompress_E2_imp"
                                    , "uncompress_E2_OK"
                                    , "fp_invariant"] []);
@@ -905,7 +910,7 @@ point_O_E'_inv_thm <- prove_cryptol
   {{ POINTonE2_affine_invariant (POINTonE2_affine_rep (point_O E')) == True }} [];
 
 demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
-  [ blst_p1_uncompress_OK_ov
+  [ POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
   , POINTonE1_affine_on_curve_ov
   , vec_is_zero_2fp_ov
   , blst_p1_affine_in_g1_ov
@@ -916,7 +921,9 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
   , blst_core_verify_pk_in_g2_ov ]
   demo_BasicVerify_A_spec
   do {
+    // Precondition proof(s)
     unfolding [ "POINTonE1_affine_abs"
+              , "uncompress_E1_imp"
               , "POINTonE2_affine_abs"
               , "blst_core_verify_pk_in_g2_error_precond"];
     simplify basic_ss;
@@ -945,16 +952,12 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
     simplify (cryptol_ss());
     rw_with remove_ho_rules;
     // END Precondition proofs
-    /*
+    // Postcondition proof
     unfolding [ "CoreVerify"
-              , "module parameter signature_subgroup_check"
-              , "module parameter other_curve"
-              , "module parameter pubkey_subgroup_check"
-              , "KeyValidate"
-              , "maybe_cases"];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    */
+              , "module parameter signature_to_point"
+              , "maybe_cases"
+              , "signature_to_point" ];
+    rw_with split_join_thms;
     print_goal;
     w4_unint_z3 BasicVerify_A_unints;
   };

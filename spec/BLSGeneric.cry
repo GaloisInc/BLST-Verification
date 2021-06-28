@@ -116,10 +116,11 @@ CoreVerify(PK, message, signature) = maybe False step3 (signature_to_point signa
 CoreVerify(PK, message, signature) =
     maybe_cases (signature_to_point signature)
         False // lines 1,2
+        (\ R -> True)
+                /*
         (\ R -> if signature_subgroup_check R == False then False  // line 3
                 |  KeyValidate PK == False then False // line 4
                 else True)
-                /*
                 else maybe_cases (pubkey_to_point PK)
                     False // line 5
                     (\ xP -> (C1 == C2 where // line 9
