@@ -5,10 +5,24 @@
 
 let {{ ab = [10, 20, 30, 40, 50, 60, 70, 80, 90, 11, 21, 00] : Vec768 }};
 let {{ uv = [10, 20, 30, 40, 50, 60, 70, 80, 90, 11, 21, 00, 4, 5, 6, 7, 8, 9] : [18][64] }};
+let {{ counter1 = [14887991191818067569, 10600907798955702713, 17969282662736400989, 5306823368173006678, 6143912767336108153, 9101953922701736164, 5624938709033255226, 13355288635269784339, 2369357645298796285, 2034170586855796812, 12736028278853893225, 17188762707846777513] : Vec768 }};
 
-print "\n\n__inner_loop_31:";
-print {{ __inner_loop_31 1 10422311190518931696 795000831975168813}};
-// exit 1;
+let test__bsr_spec = do {
+  x <- crucible_fresh_var "x" (llvm_int 64);
+  crucible_execute_func [crucible_term x];
+  crucible_return (crucible_term {{ test__bsr x : [64] }});
+};
+
+verify_x86_ctest "test__bsr" test__bsr_spec do {
+  // quickcheck 100;
+  w4;
+};
+
+print "\n\nbsr:";
+print {{ test__bsr (zext 0xdeadbeef) }};
+
+print "\n\n__ab_approximation_31:";
+print {{ __ab_approximation_31 1 (take counter1) (drop counter1)}};
 
 // print "\n\n__smulx_383_n_shift_by_31:";
 // print {{ __smulx_383_n_shift_by_31 (take ab) (drop ab) 4 5 }};
@@ -30,6 +44,23 @@ print {{ __inner_loop_31 1 10422311190518931696 795000831975168813}};
 
 // print {{ ctx_inverse_mod_383 zero modulus384 }};
 
+ite_add_thm <- prove_folding_theorem {{
+  \(c : Bit) (x : [64]) (y : [64]) (z : [64]) ->
+  (z + if c then x else y)
+  == if c then (z + x) else (z + y)
+}};
+
+ite_dup_cond_thm <- prove_folding_theorem {{
+  \(c : Bit) (x : [64]) (y : [64]) (z : [64]) ->
+  (if c then (if c then x else z) else y)
+  == if c then x else y
+}};
+
+let ite_ss = addsimps
+  [ ite_add_thm
+  , ite_dup_cond_thm
+  ] empty_ss;
+
 let test__smulx_383_n_shift_by_31_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
   (ab, ab_ptr) <- ptr_to_fresh_readonly "inp" vec768_type;
@@ -42,6 +73,11 @@ let test__smulx_383_n_shift_by_31_spec = do {
 
 verify_x86_ctest "test__smulx_383_n_shift_by_31" test__smulx_383_n_shift_by_31_spec do {
   // quickcheck 100;
+  goal_eval_unint [];
+  simplify ite_ss;
+  simplify mul_ss;
+  goal_eval_unint [];
+  print_goal;
   w4;
 };
 
@@ -58,6 +94,8 @@ let test__smulx_191_n_shift_by_31_spec = do {
 
 verify_x86_ctest "test__smulx_191_n_shift_by_31" test__smulx_191_n_shift_by_31_spec do {
   // quickcheck 100;
+  goal_eval_unint [];
+  print_goal;
   w4;
 };
 
@@ -73,6 +111,8 @@ let test__smulx_383x63_spec = do {
 
 verify_x86_ctest "test__smulx_383x63" test__smulx_383x63_spec do {
   // quickcheck 100;
+  goal_eval_unint [];
+  print_goal;
   w4;
 };
 
@@ -88,6 +128,8 @@ let test__smulx_767x63_spec = do {
 
 verify_x86_ctest "test__smulx_767x63" test__smulx_767x63_spec do {
   // quickcheck 100;
+  goal_eval_unint [];
+  print_goal;
   w4;
 };
 
@@ -96,19 +138,18 @@ let test__inner_loop_31_spec = do {
   a <- crucible_fresh_var "a" (llvm_int 64);
   b <- crucible_fresh_var "b" (llvm_int 64);
   crucible_execute_func [ret_ptr, crucible_term a, crucible_term b];
-  // let new_ret = {{ __inner_loop_31 2 a b }};
-  let new_ret = {{ zero : [4][64] }};
+  let new_ret = {{ __inner_loop_31 31 a b }};
   crucible_points_to_untyped ret_ptr (crucible_term new_ret);
 };
 
 verify_x86_ctest "test__inner_loop_31" test__inner_loop_31_spec do {
   // quickcheck 100;
   goal_eval_unint [];
+  simplify ite_ss;
+  goal_eval_unint [];
   print_goal;
   w4;
 };
-
-exit 1;
 
 let test__inner_loop_62_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
@@ -121,10 +162,27 @@ let test__inner_loop_62_spec = do {
 
 verify_x86_ctest "test__inner_loop_62" test__inner_loop_62_spec do {
   // quickcheck 100;
+  goal_eval_unint [];
+  print_goal;
   w4;
 };
 
-exit 1;
+let test__ab_approximation_31_spec = do {
+  ret_ptr <- crucible_alloc vec384_type;
+  (ab, ab_ptr) <- ptr_to_fresh_readonly "inp" vec768_type;
+  crucible_execute_func [ret_ptr, ab_ptr];
+  let new_ret = {{ __ab_approximation_31 31 (take ab) (drop ab) }};
+  crucible_points_to_untyped ret_ptr (crucible_term new_ret);
+};
+
+verify_x86_ctest "test__ab_approximation_31" test__ab_approximation_31_spec do {
+  // quickcheck 100;
+  goal_eval_unint [];
+  simplify ite_ss;
+  goal_eval_unint [];
+  print_goal;
+  w4;
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specifications
@@ -164,7 +222,10 @@ set_x86_stack_base_align 512;
 
 // ctx_inverse_mod_383
 verify_x86_recent "ctx_inverse_mod_383" ct_inverse_mod_383_spec do {
-  quickcheck 100;
+  quickcheck 10;
+  // goal_eval_unint [];
+  // print_goal;
+  // simplify ite_ss;
   // w4;
 };
 

@@ -3,11 +3,12 @@ module implementation::x86::helpers where
 import implementation::Types
 
 // Instruction definitions
+// bsr is broken in macaw
 bsr : [64] -> [64]
 bsr x = sum shifts
   where
-    shifts : [64][64]
-    shifts = [if (x << n) == 0 then 0 else 1 | n <- [0..63]]
+    shifts : [63][64]
+    shifts = [if (x >> n) == 0 then 0 else 1 | n <- [1..63]]
 
 mulx : [64] -> [64] -> ([64], [64])
 mulx x y = splitAt (zext x * zext y)
@@ -71,11 +72,35 @@ cmovae old new c = if c then old else new
 cmovne : [64] -> [64] -> Bit -> [64]
 cmovne = cmovae
 
-shld : [64] -> [64] -> [64] -> [64]
-shld x shiftin count = take ((x # shiftin) << count)
+sar : {n} (fin n, 64 >= n, n >= 8) => [64] -> [n] -> [64]
+sar x count = if count && 63 == 0 then x else x >>$ countmod
+  where
+    countmod : [64]
+    countmod = zext (count && 63)
 
-shrd : [64] -> [64] -> [64] -> [64]
-shrd x shiftin count = drop ((shiftin # x) >> count)
+shr : {n} (fin n, 64 >= n, n >= 8) => [64] -> [n] -> [64]
+shr x count = if count && 63 == 0 then x else x >> countmod
+  where
+    countmod : [64]
+    countmod = zext (count && 63)
+
+shl : {n} (fin n, 64 >= n, n >= 8) => [64] -> [n] -> [64]
+shl x count = if count && 63 == 0 then x else x << countmod
+  where
+    countmod : [64]
+    countmod = zext (count && 63)
+
+shld : {n} (fin n, 64 >= n, n >= 8) => [64] -> [64] -> [n] -> [64]
+shld x shiftin count = if count && 63 == 0 then x else take ((x # shiftin) << countmod)
+  where
+    countmod : [128]
+    countmod = zext (count && 63)
+
+shrd : {n} (fin n, 64 >= n, n >= 8) => [64] -> [64] -> [n] -> [64]
+shrd x shiftin count = if count && 63 == 0 then x else drop ((shiftin # x) >> countmod)
+  where
+    countmod : [128]
+    countmod = zext (count && 63)
 
 // Helper routines
 __sub_mod_384x384
