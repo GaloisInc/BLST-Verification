@@ -846,16 +846,16 @@ let demo_BasicVerify_A_spec = do {
   crucible_precond {{ uncompress_E2_imp pk != nothing }};
   // TODO: Maybe drop this precond vv
   crucible_precond {{ ~((pk@0)@1) }};
+  // TODO: Maybe drop this precond vv
+  crucible_precond {{ uncompress_E1_x_fp sig != Fp.field_zero }};
   // preconditions
   llvm_execute_func [ sig_ptr
                     , pk_ptr
                     , message_ptr
                     , llvm_term {{ `message_len : [64] }} ];
   // TODO: Postcond
-  /*
   llvm_return (llvm_term
       {{ bool_to_limb (CoreVerify (join pk, message, join sig)) }});
-      */
 };
 
 is_point_O_E_affine_rev_thm <- prove_cryptol (rewrite (cryptol_ss())
@@ -884,6 +884,7 @@ let BasicVerify_A_unints = (concat [ "uncompress_E1_imp"
                                    , "is_in_g1_impl"
                                    , "nothing"
                                    //, "bool_to_limb"
+                                   , "uncompress_E1"
                                    , "uncompress_E1_OK"
                                    , "uncompress_E1_y2"
                                    , "uncompress_E1_x_fp"
@@ -908,6 +909,13 @@ fold_POINTonE2_affine_invariant <- prove_cryptol
 
 point_O_E'_inv_thm <- prove_cryptol
   {{ POINTonE2_affine_invariant (POINTonE2_affine_rep (point_O E')) == True }} [];
+
+// TODO: Is this proved somewhere?
+uncompress_E1_uncompress_E1_OK_thm <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \x -> uncompress_E1 x ==
+           if uncompress_E1_imp x != nothing
+           then (True, uncompress_E1_OK x)
+           else apply uncompress_E1 x }});
 
 demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
   [ POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
@@ -958,6 +966,10 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
               , "maybe_cases"
               , "signature_to_point" ];
     rw_with split_join_thms;
+    rw_with [uncompress_E1_uncompress_E1_OK_thm];
+    unfolding ["apply", "uncompress_E1_imp"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
     print_goal;
     w4_unint_z3 BasicVerify_A_unints;
   };
