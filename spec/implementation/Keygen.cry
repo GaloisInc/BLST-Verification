@@ -2,6 +2,8 @@
  * Copyright (c) 2020 Galois, Inc.
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
+module implementation::Keygen where
+
 // Definitions needed for the code proof of blst_keygen
 
 import Parameters as P
@@ -11,9 +13,12 @@ import rfc8017
 
 import Common::bv
 
-// Implementation types
-//
+import implementation::Types
+import implementation::Field
 
+// Implementation types - now in implementation::Types
+//
+/*
 type Vec256 = [4][64]
 type Vec384 = [6][64]
 type Vec512 = [8][64]
@@ -40,7 +45,7 @@ vec_rep:  {n} (fin n) => [n*64] -> [n]Limb
 vec_rep x = reverse (split x)
 
 vec256_rep x = vec_rep`{256/64} x
-
+*/
 
 // Pow256 uses a little-endian representation
 
@@ -49,36 +54,36 @@ pow256_abs x = join (reverse x)
 
 // for Montgomery mod r
 
-modulus = toInteger 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001 // r
+r_modulus = toInteger P::r // 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001 // r
 
-R = 2^^256
+r_R = 2^^256
 
-R_inv = toInteger 0x1bbe869330009d577204078a4f77266aab6fca8f09dc705f13f75b69fe75c040
+r_R_inv = toInteger 0x1bbe869330009d577204078a4f77266aab6fca8f09dc705f13f75b69fe75c040
 
-RR = 2^^512
+r_RR = 2^^512
 
 // Montgomery representation of values; Integer form
 
-R_reduced = R % modulus
-RR_reduced = RR % modulus
-R_inv_reduced = R_inv % modulus
+r_R_reduced = r_R % r_modulus
+r_RR_reduced = r_RR % r_modulus
+r_R_inv_reduced = r_R_inv % r_modulus
 
-to_mont x = (x*R) % modulus
+r_to_mont x = (x*r_R) % r_modulus
 
-from_mont x = (x*R_inv) % modulus
+r_from_mont x = (x*r_R_inv) % r_modulus
 
-add_mont x y = (x+y) % modulus
+r_add_mont x y = (x+y) % r_modulus
 
-mul_mont x y = (x*y*R_inv) % modulus
+r_mul_mont x y = (x*y*r_R_inv) % r_modulus
 
-property keygen_finish_integer x = mul_mont (from_mont x) (2^^512 % modulus) == (x % modulus)
+property keygen_finish_integer x = r_mul_mont (r_from_mont x) (2^^512 % r_modulus) == (x % r_modulus)
 
 // ... and bitvector form
 
-bv_r = (fromInteger modulus):[256] // = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
-bv_R = (fromInteger R_reduced):[256]
-bv_R_inv = (fromInteger R_inv):[256] // = 0x1bbe869330009d577204078a4f77266aab6fca8f09dc705f13f75b69fe75c040
-bv_RR = (fromInteger RR_reduced):[256]
+bv_r = (fromInteger r_modulus):[256] // = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+bv_R = (fromInteger r_R_reduced):[256]
+bv_R_inv = (fromInteger r_R_inv):[256] // = 0x1bbe869330009d577204078a4f77266aab6fca8f09dc705f13f75b69fe75c040
+bv_RR = (fromInteger r_RR_reduced):[256]
 
 mul_mont_r_bv: [256] -> [256] -> [256]
 mul_mont_r_bv a b = safe_mod (bv_r, safe_product (zext a, safe_product (b, bv_R_inv)))
@@ -91,18 +96,18 @@ property keygen_finish_bv x =
 
 // concretized versions
 
-// modulus_rep = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+// r_modulus_rep = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 
-mul_mont_rep: Vec256 -> Vec256 -> Vec256
-mul_mont_rep x y = vec256_rep (mul_mont_r_bv (vec256_abs x) (vec256_abs y))
+mul_mont_256_rep: Vec256 -> Vec256 -> Vec256
+mul_mont_256_rep x y = vec256_rep (mul_mont_r_bv (vec256_abs x) (vec256_abs y))
 
-redc_rep: Vec512 -> Vec256
-redc_rep x = vec256_rep (redc_r_bv (vec512_abs x))
+r_redc_rep: Vec512 -> Vec256
+r_redc_rep x = vec256_rep (redc_r_bv (vec512_abs x))
 
-RR_rep: Vec256 // representing R^2 mod r
-RR_rep = [14526898881837571181, 3129137299524312099, 419701826671360399, 524908885293268753]
+r_RR_rep: Vec256 // representing R^2 mod r
+r_RR_rep = [14526898881837571181, 3129137299524312099, 419701826671360399, 524908885293268753]
 
-// property p2 x = mul_mont_rep (from_mont_rep x) RR == (x % modulus_rep)
+// property p2 x = mul_mont_256_rep (from_mont_rep x) RR == (x % r_modulus_rep)
 
 limbs_from_be_bytes_rep48: [48][8] -> [6]Limb
 limbs_from_be_bytes_rep48 bytes = reverse (split (join bytes))
@@ -125,7 +130,7 @@ KeyGenStep_rep salt IKM key_info = SK where
     PRK = HKDF_Extract (split salt) (IKM # [0]) // I2OSP`{xLen=1} 0)
     OKM = HKDF_Expand`{L=L} PRK (key_info # I2OSP`{xLen=2} `L)
     OKM_vec = (limbs_from_be_bytes_rep48 OKM) # [0,0]
-    SK = mul_mont_rep (redc_rep OKM_vec) RR_rep
+    SK = mul_mont_256_rep (r_redc_rep OKM_vec) r_RR_rep
 
 KeyGenLoop_rep: {IKM_len, info_len} (validHMACSizes 20 (1+IKM_len)
                                     , validHMACSizes 32 (35+info_len)
