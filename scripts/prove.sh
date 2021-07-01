@@ -13,7 +13,9 @@ files="${argfiles:=$defaultfiles}"
 
 for f in $files; do
   file=$f
-  saw "$f" -s "$(printf '%s' "build/${f}_output.json" | sed -e 's/\.saw//' -e 's!/proof/!/!')" -f json
+  summary_file=$(printf '%s' "build/${f}_output.json" | sed -e 's/\.saw//' -e 's!/proof/!/!')
+  saw "$f" -s "$summary_file" -f json
+  python3 scripts/html_summary.py "$summary_file" -o "build/$(basename $f)_dependencies.html"
 done
 
 echo "All functions under verification were verified successfully"
