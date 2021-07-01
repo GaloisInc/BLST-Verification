@@ -183,25 +183,25 @@ blst_core_verify_pk_in_g2_error_ov <- custom_verify
       (w4_unint_z3 core_verify_pk_in_g2_unints);
   };
 
-// blst_core_verify_pk_in_g2_null_pk_ov <- custom_verify
-  // "blst_core_verify_pk_in_g2"
-  // overrides
-  // (blst_core_verify_pk_in_g2_null_pk_spec msg_len dst_len aug_len)
-    // do {
+blst_core_verify_pk_in_g2_null_pk_ov <- custom_verify
+  "blst_core_verify_pk_in_g2"
+  overrides
+  (blst_core_verify_pk_in_g2_null_pk_spec msg_len dst_len aug_len)
+    do {
       // assume_unsat;
-      // // // TODO: no idea why this fails on the first goal (matching vec_is_zero)
-      // // unfolding ["blst_core_verify_pk_in_g2_error_precond"];
-      // // // get rid of `abs rep` terms
-      // // simplify (addsimps (concat POINTonE2_thms POINTonE1_thms) empty_ss);
-      // // unfolding ["POINTonE1_rep"];
-      // // simplify fp2_simpset;
-      // // simplify fp_simpset;
-      // // simplify fp12_simpset;
-      // // // all remaining simulation side-conditions:
-      // // print_readably;
-      // // simplify (addsimps remove_ho_rules empty_ss);
-      // // w4_unint_z3 core_verify_pk_in_g2_unints;
-    // };
+      // TODO: no idea why this fails on the first goal (matching vec_is_zero)
+      unfolding ["blst_core_verify_pk_in_g2_error_precond"];
+      // get rid of `abs rep` terms
+      simplify (addsimps (concat POINTonE2_thms POINTonE1_thms) empty_ss);
+      unfolding ["POINTonE1_rep"];
+      simplify fp2_simpset;
+      simplify fp_simpset;
+      simplify fp12_simpset;
+      // all remaining simulation side-conditions:
+      print_readably;
+      simplify (addsimps remove_ho_rules empty_ss);
+      w4_unint_z3 core_verify_pk_in_g2_unints;
+    };
 
 blst_core_verify_pk_in_g2_null_sig_ov <- custom_verify
   "blst_core_verify_pk_in_g2"

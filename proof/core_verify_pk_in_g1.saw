@@ -13,6 +13,8 @@ let msg_len = 32;
 let dst_len = 8;
 let aug_len = 8;
 
+// TODO: null aug...
+
 // We assume that we use the uniform encoding to the curve, i.e.
 // `hash_or_encode` is true. Moreover, we assume that the input points satisfy
 // the invariants POINTonE1_affine_invariant (pk) and
@@ -99,8 +101,8 @@ let blst_core_verify_pk_in_g1_null_pk_spec msg_len dst_len aug_len = do {
 };
 
 // overrides:
-hash_to_field_fp2_ovs <- for hash_to_field_nelems (verify_hash_to_field_fp2_for aug_len msg_len dst_len);
-Hash_to_G2_ov <- prove_Hash_to_G2_concrete msg_len dst_len aug_len hash_to_field_fp2_ovs;
+// hash_to_field_fp2_ovs <- for hash_to_field_nelems (verify_hash_to_field_fp2_for aug_len msg_len dst_len);
+Hash_to_G2_ov <- prove_Hash_to_G2_impl msg_len dst_len aug_len;
 
 let overrides = concat mul_fp12_ovs // fp12.saw
 [ Hash_to_G2_ov
@@ -157,6 +159,7 @@ blst_core_verify_pk_in_g1_non_null_ov <- custom_verify
   overrides
   (blst_core_verify_pk_in_g1_non_null_spec msg_len dst_len aug_len)
   do {
+    // print_goal;
     // get rid of `abs rep` terms
     simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
     unfolding ["POINTonE2_rep"];
@@ -179,72 +182,72 @@ blst_core_verify_pk_in_g1_non_null_ov <- custom_verify
     w4_unint_z3 core_verify_pk_in_g1_unints;
   };
 
-blst_core_verify_pk_in_g1_error_ov <- custom_verify_path_sat
-  "blst_core_verify_pk_in_g1"
-  overrides
-  (blst_core_verify_pk_in_g1_error_spec msg_len dst_len aug_len)
-  do {
-    unfolding ["blst_core_verify_pk_in_g1_error_precond"];
-    // hoist_ifs_in_goal;
-    simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
-    unfolding ["POINTonE2_rep"];
-    simplify fp12_simpset;
-    simplify fp2_simpset;
-    simplify fp_simpset;
-    simplify (addsimps remove_ho_rules empty_ss);
-    print_readably;
-    goal_num_ite 17 // post-condition
-      do {
-        // here there should be only the zero tests and the subgroup tests that matter, so we can leave Fp uninterpreted (as long as the is_zero overrides is Fp operations)
-        (unint_z3 (concat ["Fp","fp12_rep","POINTonE2_invariant","POINTonE1_invariant","fp_invariant","fp2_invariant"] core_verify_pk_in_g1_unints)); // w4_unint_z3 produces a problem on which Z3 does not return
-      }
-      (w4_unint_z3 core_verify_pk_in_g1_unints);
-  };
+// blst_core_verify_pk_in_g1_error_ov <- custom_verify_path_sat
+  // "blst_core_verify_pk_in_g1"
+  // overrides
+  // (blst_core_verify_pk_in_g1_error_spec msg_len dst_len aug_len)
+  // do {
+    // unfolding ["blst_core_verify_pk_in_g1_error_precond"];
+    // // hoist_ifs_in_goal;
+    // simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
+    // unfolding ["POINTonE2_rep"];
+    // simplify fp12_simpset;
+    // simplify fp2_simpset;
+    // simplify fp_simpset;
+    // simplify (addsimps remove_ho_rules empty_ss);
+    // print_readably;
+    // goal_num_ite 17 // post-condition
+      // do {
+        // // here there should be only the zero tests and the subgroup tests that matter, so we can leave Fp uninterpreted (as long as the is_zero overrides is Fp operations)
+        // (unint_z3 (concat ["Fp","fp12_rep","POINTonE2_invariant","POINTonE1_invariant","fp_invariant","fp2_invariant"] core_verify_pk_in_g1_unints)); // w4_unint_z3 produces a problem on which Z3 does not return
+      // }
+      // (w4_unint_z3 core_verify_pk_in_g1_unints);
+  // };
 
-blst_core_verify_pk_in_g1_null_pk_ov <- custom_verify
-  "blst_core_verify_pk_in_g1"
-  overrides
-  (blst_core_verify_pk_in_g1_null_pk_spec msg_len dst_len aug_len)
-    do {
-      assume_unsat;
-      // // TODO: no idea why this fails on the first goal (matching vec_is_zero)
-      // unfolding ["blst_core_verify_pk_in_g1_error_precond"];
-      // // get rid of `abs rep` terms
-      // simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
-      // unfolding ["POINTonE2_rep"];
-      // simplify fp2_simpset;
-      // simplify fp_simpset;
-      // simplify fp12_simpset;
-      // // all remaining simulation side-conditions:
-      // print_readably;
-      // simplify (addsimps remove_ho_rules empty_ss);
-      // w4_unint_z3 core_verify_pk_in_g1_unints;
-    };
+// blst_core_verify_pk_in_g1_null_pk_ov <- custom_verify
+  // "blst_core_verify_pk_in_g1"
+  // overrides
+  // (blst_core_verify_pk_in_g1_null_pk_spec msg_len dst_len aug_len)
+    // do {
+      // assume_unsat;
+      // // // TODO: no idea why this fails on the first goal (matching vec_is_zero)
+      // // unfolding ["blst_core_verify_pk_in_g1_error_precond"];
+      // // // get rid of `abs rep` terms
+      // // simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
+      // // unfolding ["POINTonE2_rep"];
+      // // simplify fp2_simpset;
+      // // simplify fp_simpset;
+      // // simplify fp12_simpset;
+      // // // all remaining simulation side-conditions:
+      // // print_readably;
+      // // simplify (addsimps remove_ho_rules empty_ss);
+      // // w4_unint_z3 core_verify_pk_in_g1_unints;
+    // };
 
-blst_core_verify_pk_in_g1_null_sig_ov <- custom_verify
-  // a null sig is treated as a zero sig
-  "blst_core_verify_pk_in_g1"
-  overrides
-  (blst_core_verify_pk_in_g1_null_sig_spec msg_len dst_len aug_len)
-  do {
-    // get rid of `abs rep` terms
-    simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
-    unfolding ["POINTonE2_rep"];
-    simplify fp12_simpset;
-    simplify fp2_simpset;
-    simplify fp_simpset;
-    simplify (addsimps core_verify_pk_in_g1_POINTonE2_from_Jacobian_preconds empty_ss);
-    unfolding ["select"];
-    hoist_ifs_in_goal; // this is slow but works and avoids using the ugly-looking rules in hoist_ifs_rules
-    simplify (addsimps [rewrite_unit,from_affine_nz_rewrite,projectify_on_curve] empty_ss);
-    simplify (addsimps [rewrite_fp12_unit,BP_rewrite,affinify_projectify_is_id] empty_ss);
-    unfolding ["core_verify_pk_in_g1_impl"];
-    simplify (addsimp miller_loop_zero_thm empty_ss);
-    simplify (addsimp rewrite_is_equal empty_ss);
-    unfolding ["apply"];
-    simplify (addsimps remove_ho_rules empty_ss);
-    goal_eval_unint (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs"]);
-    simplify (addsimps restitching_rules empty_ss);
-    simplify fp_simpset; // get rid of remaining `abs rep` terms
-    w4_unint_z3 core_verify_pk_in_g1_unints;
-  };
+// blst_core_verify_pk_in_g1_null_sig_ov <- custom_verify
+  // // a null sig is treated as a zero sig
+  // "blst_core_verify_pk_in_g1"
+  // overrides
+  // (blst_core_verify_pk_in_g1_null_sig_spec msg_len dst_len aug_len)
+  // do {
+    // // get rid of `abs rep` terms
+    // simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
+    // unfolding ["POINTonE2_rep"];
+    // simplify fp12_simpset;
+    // simplify fp2_simpset;
+    // simplify fp_simpset;
+    // simplify (addsimps core_verify_pk_in_g1_POINTonE2_from_Jacobian_preconds empty_ss);
+    // unfolding ["select"];
+    // hoist_ifs_in_goal; // this is slow but works and avoids using the ugly-looking rules in hoist_ifs_rules
+    // simplify (addsimps [rewrite_unit,from_affine_nz_rewrite,projectify_on_curve] empty_ss);
+    // simplify (addsimps [rewrite_fp12_unit,BP_rewrite,affinify_projectify_is_id] empty_ss);
+    // unfolding ["core_verify_pk_in_g1_impl"];
+    // simplify (addsimp miller_loop_zero_thm empty_ss);
+    // simplify (addsimp rewrite_is_equal empty_ss);
+    // unfolding ["apply"];
+    // simplify (addsimps remove_ho_rules empty_ss);
+    // goal_eval_unint (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs"]);
+    // simplify (addsimps restitching_rules empty_ss);
+    // simplify fp_simpset; // get rid of remaining `abs rep` terms
+    // w4_unint_z3 core_verify_pk_in_g1_unints;
+  // };

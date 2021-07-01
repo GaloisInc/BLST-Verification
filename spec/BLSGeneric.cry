@@ -122,5 +122,5 @@ CoreVerify PK message signature =
                               C1 = pairing (Q, xP) // line 7
                               C2 = pairing (R, P)))) // line 8
 
-// TODO?
+// TODO
 CoreAggregateVerify: {n, msg_len} (fin n, Hashable msg_len) => [n][pubkey_len] -> [signature_len] -> [n][msg_len] -> Bool
