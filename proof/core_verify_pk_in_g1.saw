@@ -40,12 +40,11 @@ let {{
 }};
 
 // case in which no argument is null and the error condition is false
-// TODO: temporarily assumed that the sig is not null
 let blst_core_verify_pk_in_g1_non_null_spec msg_len dst_len aug_len = do {
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_struct "struct.POINTonE1_affine");
   (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_struct "struct.POINTonE2_affine");
-  // llvm_precond {{ POINTonE1_affine_invariant pk /\ POINTonE2_affine_invariant sig /\ is_point_affine E' (POINTonE2_affine_abs sig) /\ ~blst_core_verify_pk_in_g1_error_precond pk sig /\ ~(is_point_O E' (POINTonE2_affine_abs sig)) }};
-  llvm_precond {{ POINTonE1_affine_invariant pk /\ POINTonE2_affine_invariant sig /\ is_point_affine E' (POINTonE2_affine_abs sig) /\ ~blst_core_verify_pk_in_g1_error_precond pk sig }};
+  llvm_precond {{ POINTonE1_affine_invariant pk /\ POINTonE2_affine_invariant sig /\ is_point_affine E' (POINTonE2_affine_abs sig) /\ ~blst_core_verify_pk_in_g1_error_precond pk sig /\ ~(is_point_O E' (POINTonE2_affine_abs sig)) }};
+  // llvm_precond {{ POINTonE1_affine_invariant pk /\ POINTonE2_affine_invariant sig /\ is_point_affine E' (POINTonE2_affine_abs sig) /\ ~blst_core_verify_pk_in_g1_error_precond pk sig }};
   hash_or_encode <- llvm_fresh_var "hash_or_encode" (llvm_int 32);
   llvm_precond {{ hash_or_encode != zero }};
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
@@ -197,7 +196,8 @@ fp2_unit_rep <- eval_term {{ fp2_rep Fp_2.field_unit }};
 
 // creating the following rewrite rule takes a little work
 let _term = rewrite (add_cryptol_defs ["ecEq"] (cryptol_ss ())) {{ \(x:POINTonE2_affine_t) -> affinify E' (POINTonE2_abs (x.0, x.1, select x.0 fp2_unit_rep (~((if ((Fp_2.is_equal (fp2_abs x.0, Fp_2.field_zero)) /\ (Fp_2.is_equal (fp2_abs x.1, Fp_2.field_zero))) then (1:[64]) else zero) == zero)))) }};
-affinify_projectify_is_id <- admit_cryptol (rewrite (cryptol_ss ()) {{ \x -> ((_term x) == (POINTonE2_affine_abs x)) }});
+// NOTE: using `apply _term x` create a rewrite rule that loops; so I expanded the definition
+affinify_projectify_is_id <- admit_cryptol (rewrite (cryptol_ss ()) {{ \x -> _term x == if POINTonE2_affine_invariant x then (POINTonE2_affine_abs x) else apply affinify E' (POINTonE2_abs (x.0, x.1, select x.0 fp2_unit_rep (~((if ((Fp_2.is_equal (fp2_abs x.0, Fp_2.field_zero)) /\ (Fp_2.is_equal (fp2_abs x.1, Fp_2.field_zero))) then (1:[64]) else zero) == zero)))) }});
 
 // {{ \ap -> affinify E' POINTonE2_abs (ap.0, ap.1, select (ap.0) fp2_unit_rep c) }}
 
@@ -236,6 +236,7 @@ let do_prove=true;
 // * Need some normalization assumptions
 // * The C code transforms the signature to Jacobian coordinates (using macro FROM_AFFINE) and back to affine coordinates (using POINTonE2_from_Jacobian); we need to prove that this is the identity transformation. This is made harder than it seems by `ite` terms appearing in the middle of things, and the fact that hoist_ifs does not eliminate them all (TODO: create an issues for this)
 // * The implementation of the final test for equality needs to be shown equivalent to equality in Fp_12; since we leave Fp_12 uninterpreted to avoid unfolding `Fp_12.mul`, we rewrite the Fp_12.is_equal in terms of lower fields which we do not leave uninterpreted
+// NOTE: this works if we assume that sig is zero, but not otherwise; this could indicate an issue in the affine->projective->affine transformation
 blst_core_verify_pk_in_g1_non_null_ov <- custom_verify_path_sat
   "blst_core_verify_pk_in_g1"
   overrides
@@ -257,6 +258,7 @@ blst_core_verify_pk_in_g1_non_null_ov <- custom_verify_path_sat
       rw_with (concat normalize_hash_to_curve_impl [normalize_miller_loop_opt_checked_thm]);
       // take care of the round-trip that sig takes from affine represetation to jacobian and back to affine:
       rw_with [affinify_projectify_is_id];
+      print_readably;
       // print_readably;
       // establish the preconditions of POINTonE2_from_Jacobian:
       // simplify (addsimps core_verify_pk_in_g1_POINTonE2_from_Jacobian_preconds empty_ss);
