@@ -43,8 +43,7 @@ let {{
 let blst_core_verify_pk_in_g1_non_null_spec msg_len dst_len aug_len = do {
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_struct "struct.POINTonE1_affine");
   (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_struct "struct.POINTonE2_affine");
-  llvm_precond {{ POINTonE1_affine_invariant pk /\ POINTonE2_affine_invariant sig /\ is_point_affine E' (POINTonE2_affine_abs sig) /\ ~blst_core_verify_pk_in_g1_error_precond pk sig /\ ~(is_point_O E' (POINTonE2_affine_abs sig)) }};
-  // llvm_precond {{ POINTonE1_affine_invariant pk /\ POINTonE2_affine_invariant sig /\ is_point_affine E' (POINTonE2_affine_abs sig) /\ ~blst_core_verify_pk_in_g1_error_precond pk sig }};
+  llvm_precond {{ POINTonE1_affine_invariant pk /\ POINTonE2_affine_invariant sig /\ is_point_affine E' (POINTonE2_affine_abs sig) /\ ~blst_core_verify_pk_in_g1_error_precond pk sig /\ (is_point_O E' (POINTonE2_affine_abs sig)) }};
   hash_or_encode <- llvm_fresh_var "hash_or_encode" (llvm_int 32);
   llvm_precond {{ hash_or_encode != zero }};
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
@@ -159,6 +158,7 @@ projectify_on_curve <- admit_cryptol {{ \sig  -> is_point_projective E' (project
 
 // TODO: why does this cause verification to fail if applied only to the spec term? We have not is_point_O as assumption!
 miller_loop_zero_thm <- admit_cryptol (unfold_term ["Fp_12"] {{  \x -> fp12_conjugate (miller_loop_opt_checked BP x) == if (is_point_O E' x) then Fp_12.field_unit else apply miller_loop_opt_checked BP x }});
+miller_loop_zero_thm <- admit_cryptol {{  \x -> fp12_conjugate (miller_loop_opt_checked BP x) == if (is_point_O E' x) then Fp_12.field_unit else apply miller_loop_opt_checked BP x }};
 
 // Proofs
 
@@ -244,8 +244,9 @@ blst_core_verify_pk_in_g1_non_null_ov <- custom_verify_path_sat
   "blst_core_verify_pk_in_g1"
   overrides
   (blst_core_verify_pk_in_g1_non_null_spec msg_len dst_len aug_len)
-  (goal_num_ite 8 // TODO: last goal now fails...
+  (goal_num_ite 17
     do {
+      print_goal;
       // get rid of `abs rep` terms
       rw_with (concat POINTonE1_thms POINTonE2_thms);
       unfolding ["POINTonE2_rep"];
@@ -257,7 +258,7 @@ blst_core_verify_pk_in_g1_non_null_ov <- custom_verify_path_sat
       // take care of the round-trip that sig takes from affine represetation to jacobian and back to affine:
       rw_with [affinify_projectify_is_id];
       // establish the preconditions of POINTonE2_from_Jacobian:
-      // simplify (addsimps core_verify_pk_in_g1_POINTonE2_from_Jacobian_preconds empty_ss);
+      simplify (addsimps core_verify_pk_in_g1_POINTonE2_from_Jacobian_preconds empty_ss);
       // hoist_ifs_in_goal;
       // simplify (addsimps [projectify_on_curve] empty_ss); // TODO: needed?
       // now we unfold everything down to Fp, except for Fp_12:
@@ -269,14 +270,8 @@ blst_core_verify_pk_in_g1_non_null_ov <- custom_verify_path_sat
       rw_with [miller_loop_zero_thm];
       unfolding ["apply"];
       rw_with [rewrite_is_equal'];
-      print_readably;
-      // let r1 = run (admit_cryptol (rewrite (cryptol_ss ()) {{\c x y z -> (miller_loop_opt_checked (if c then x else y) z) == (if c then miller_loop_opt_checked x z else miller_loop_opt_checked y z)}}));
-      // let r2 = run (admit_cryptol (rewrite (cryptol_ss ()) {{\c x y z -> (miller_loop_opt_checked z (if c then x else y)) == (if c then miller_loop_opt_checked z x else miller_loop_opt_checked z y)}}));
-      // let r3 = run (admit_cryptol (rewrite (cryptol_ss ()) {{\c x y -> (fp12_conjugate (if c then x else y)) == (if c then fp12_conjugate x else fp12_conjugate y)}}));
-      // let r4 = run (admit_cryptol (rewrite (cryptol_ss ()) {{\c x y z -> Fp_12.mul ((if c then x else y), z) == if c then Fp_12.mul (x, z) else Fp_12.mul (y, z)}}));
-      // rw_with [r1,r2,r3,r4];
-      // hoist_ifs_in_goal;
       rw_with remove_ho_rules;
+      // print_readably;
       // goal_eval_unint (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs"]);
       goal_eval_unint (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs","POINTonE2_invariant","POINTonE2_affine_invariant","POINTonE1_affine_invariant","fp2_invariant","fp_invariant"]);
       rw_with restitching_rules; // TODO: needed?
@@ -290,7 +285,7 @@ blst_core_verify_pk_in_g1_non_null_ov <- custom_verify_path_sat
       // w4_unint_z3 (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs"]);
     }
     do {
-      // print_goal;
+      print_goal;
       assume_unsat;
     }
     );
