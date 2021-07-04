@@ -188,15 +188,14 @@ fp2_unit_rep <- eval_term {{ fp2_rep Fp_2.field_unit }};
 // from_affine_nz_rewrite' <- admit_cryptol (rewrite (cryptol_ss ()) {{ \ap x c -> POINTonE2_abs (ap.0, ap.1, select x fp2_unit_rep c) == select (POINTonE2_abs (ap.0,ap.1,x)) (projectify E' (POINTonE2_affine_abs ap)) c }}); // this is to rewrite FROM_AFFINE
 
 // creating the following rewrite rules takes a little work
-let select_term = rewrite (add_cryptol_defs ["ecEq"] (cryptol_ss ())) {{ \(x:POINTonE2_affine_t) -> (x.0, x.1, select x.0 fp2_unit_rep (~((if ((Fp_2.is_equal (fp2_abs x.0, Fp_2.field_zero)) /\ (Fp_2.is_equal (fp2_abs x.1, Fp_2.field_zero))) then (1:[64]) else zero) == zero))) }};
-affinify_projectify_is_id <- admit_cryptol (rewrite (cryptol_ss ()) {{ \x -> affinify E' (POINTonE2_abs (select_term x)) == if POINTonE2_affine_invariant x then (POINTonE2_affine_abs x) else apply affinify E' (POINTonE2_abs (select_term x)) }});
+let select_term = rewrite (add_cryptol_defs ["ecEq"] (cryptol_ss ())) {{ \(x:POINTonE2_affine_t) -> select x.0 fp2_unit_rep (~((if ((Fp_2.is_equal (fp2_abs x.0, Fp_2.field_zero)) /\ (Fp_2.is_equal (fp2_abs x.1, Fp_2.field_zero))) then (1:[64]) else zero) == zero)) }};
+affinify_projectify_is_id <- admit_cryptol (rewrite (cryptol_ss ()) {{ \x -> affinify E' (POINTonE2_abs (x.0,x.1,select_term x)) == if POINTonE2_affine_invariant x then (POINTonE2_affine_abs x) else apply affinify E' (POINTonE2_abs (x.0,x.1,select_term x)) }});
 
 core_verify_pk_in_g1_POINTonE2_from_Jacobian_sig_preconds <- do {
-  // on_curve <- admit_cryptol (rewrite (cryptol_ss ()) {{ \sig  -> is_point_projective E' (POINTonE2_abs (select_term sig)) == if (is_point_affine E' (POINTonE2_affine_abs sig)) then True else apply is_point_projective E' (POINTonE2_abs (select_term sig)) }});
-  on_curve <- admit_cryptol (rewrite (cryptol_ss ()) {{ \sig  -> is_point_projective E' (POINTonE2_abs (select_term sig)) == True }});
-  // not_zero <- admit_cryptol (rewrite (cryptol_ss ()) {{ \sig-> Fp_2.is_equal ((POINTonE2_abs (select_term sig)).2, Fp_2.field_zero) == is_point_O E' (POINTonE2_affine_abs sig) }}); // TODO: needed?
-  not_zero <- admit_cryptol (rewrite (cryptol_ss ()) {{ \sig-> Fp_2.is_equal ((POINTonE2_abs (select_term sig)).2, Fp_2.field_zero) == True }}); // TODO: needed?
-  return [on_curve];
+  on_curve <- admit_cryptol (rewrite (cryptol_ss ()) {{ \sig  -> is_point_projective E' (POINTonE2_abs (sig.0,sig.1,select_term sig)) == if (is_point_affine E' (POINTonE2_affine_abs sig)) then True else apply is_point_projective E' (POINTonE2_abs (sig.0,sig.1,select_term sig)) }});
+  not_zero <- admit_cryptol (rewrite (cryptol_ss ()) {{ \sig-> Fp_2.is_equal (fp2_abs (select_term sig), Fp_2.field_zero) == (is_point_O E' (POINTonE2_affine_abs sig))  }}); // TODO: needed?
+  // inv <- admit_cryptol (rewrite (cryptol_ss ()) {{ \sig -> POINTonE2_invariant (sig.0,sig.1,select_term sig) == if (POINTonE2_affine_invariant sig) then True else False}}); // NOTE: not needed
+  return [on_curve,not_zero];
 }
 
 core_verify_pk_in_g1_POINTonE2_from_Jacobian_hash_preconds <- do {
@@ -274,30 +273,25 @@ blst_core_verify_pk_in_g1_non_null_ov <- custom_verify_path_sat
       rw_with normalize_final_exp_thms; // get rid of `normalize` terms introduced by fp_simpset
       w4_unint_z3 (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs","POINTonE2_invariant","POINTonE2_affine_invariant","POINTonE1_affine_invariant","fp2_invariant","fp_invariant"]);
     }
-      (goal_num_ite 90
-        do {
-          assume_unsat;
-        }
-        do {
-        rw_with (concat POINTonE1_thms POINTonE2_thms);
-        unfolding ["POINTonE2_rep"];
-        simplify fp12_simpset;
-        simplify fp2_simpset;
-        simplify fp_simpset;
-        // get rid of normalize terms produced by the rewrites:
-        rw_with (concat normalize_hash_to_curve_impl [normalize_miller_loop_opt_checked_thm]);
-        // take care of the round-trip that sig takes from affine represetation to jacobian and back to affine:
-        rw_with [affinify_projectify_is_id];
-        // establish the preconditions of POINTonE2_from_Jacobian:
-        rw_with (concat core_verify_pk_in_g1_POINTonE2_from_Jacobian_hash_preconds core_verify_pk_in_g1_POINTonE2_from_Jacobian_sig_preconds);
-        unfolding ["apply"];
-        rw_with remove_ho_rules;
-        goal_eval_unint (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs","fp_invariant"]);
-        simplify fp_simpset;
-        print_readably;
-        w4_unint_z3 (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs"]);
-      }
-      ));
+    do {
+    rw_with (concat POINTonE1_thms POINTonE2_thms);
+    unfolding ["POINTonE2_rep"];
+    simplify fp12_simpset;
+    simplify fp2_simpset;
+    simplify fp_simpset;
+    // get rid of normalize terms produced by the rewrites:
+    rw_with (concat normalize_hash_to_curve_impl [normalize_miller_loop_opt_checked_thm]);
+    // take care of the round-trip that sig takes from affine represetation to jacobian and back to affine:
+    rw_with [affinify_projectify_is_id];
+    // establish the preconditions of POINTonE2_from_Jacobian:
+    rw_with (concat core_verify_pk_in_g1_POINTonE2_from_Jacobian_hash_preconds core_verify_pk_in_g1_POINTonE2_from_Jacobian_sig_preconds);
+    print_readably;
+    unfolding ["apply"];
+    rw_with remove_ho_rules;
+    goal_eval_unint (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs","fp_invariant"]);
+    simplify fp_simpset;
+    w4_unint_z3 (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs"]);
+  });
 
 // blst_core_verify_pk_in_g1_error_ov <- custom_verify_path_sat
   // "blst_core_verify_pk_in_g1"
