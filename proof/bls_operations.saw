@@ -7,10 +7,8 @@ import "../spec/BLSMinimalSignatureSize.cry";
 
 HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
 
-/*
 let do_prove = true;
 include "proof-helpers.saw";
-*/
 
 let {{
   drop_join_reverse: {n_bits, n_bytes} (fin n_bytes, n_bits <= 8*n_bytes) => [n_bytes][8] -> [n_bits]
@@ -975,42 +973,6 @@ is_point_O_E_affine_no_abs_rev_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x y -> ((peq x Fp.field_zero) /\ (peq y Fp.field_zero)) ==
              is_point_O E (x, y) }}) [];
 
-let precond_proof = do {
-  // Precondition proof(s)
-  unfolding [ "POINTonE1_affine_abs"
-            , "uncompress_E1_imp"
-            , "POINTonE2_affine_abs"
-            , "blst_core_verify_pk_in_g2_error_precond"];
-  simplify basic_ss;
-  simplify (cryptol_ss());
-  simplify basic_ss;
-  rw_with [ hoist_POINTonE1_affine_rep
-          , hoist_POINTonE1_affine_invariant
-          , hoist_POINTonE2_affine_rep
-          , hoist_POINTonE2_affine_invariant
-          , uncompress_E2_OK_inv
-          , zero_lt_one_thm
-          , intLe_sym_thm
-          , point_O_E'_inv_thm
-          , uncompress_E1_OK_inv ];
-  rw_with structural_rewrites;
-  simplify basic_ss;
-  rw_with [ fold_POINTonE1_affine_invariant
-          , fold_POINTonE2_affine_invariant
-          , hoist_POINTonE1_affine_invariant
-          , hoist_POINTonE2_affine_invariant
-          , uncompress_E2_OK_inv
-          , point_O_E'_inv_thm
-          , uncompress_E1_OK_inv ];
-  //rw_with_1 is_point_O_affine_rev_thm;
-  simplify basic_ss;
-  simplify (cryptol_ss());
-  rw_with remove_ho_rules;
-  // END Precondition proofs
-  print_goal;
-  w4_unint_z3 BasicVerify_A_unints;
-};
-
 demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
   [ POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
   , POINTonE1_affine_on_curve_ov
@@ -1023,50 +985,82 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
   , blst_core_verify_pk_in_g2_ov ]
   demo_BasicVerify_A_spec
   do {
-    goal_num_ite 3
-      (precond_proof)
-      (goal_num_ite 4
-        (do {
-          // Postcondition proof
-          unfolding [ "CoreVerify"
-                    , "module parameter signature_to_point"
-                    , "module parameter signature_subgroup_check"
-                    , "maybe_cases"
-                    //, "POINTonE1_affine_rep"
-                    , "signature_to_point"
-                    //, "POINTonE1_affine_abs"
-                    //, "POINTonE2_affine_abs"
-                    , "blst_core_verify_pk_in_g2_error_precond"];
-          rw_with split_join_thms;
-          rw_with [ uncompress_E1_uncompress_E1_OK_thm
-                  , POINTonE1_affine_abs_rep_thm
-                  , is_in_g1_impl_thm];
-          unfolding ["apply"];
-          simplify basic_ss;
-          simplify (cryptol_ss());
-          simplify fp_simpset;
-          simplify (addsimps core_rewrites empty_ss);
-          //rw_with_1 squash_at_0_thm;
-          rw_with [ fold_normalize_affine_fp_thm
-                  , intLe_sym_thm
-                  , normalize_uncompress_E1_OK_thm ];
-          simplify basic_ss;
-          simplify (cryptol_ss());
-          unfolding ["POINTonE1_affine_rep"];
-          rw_with fp_rep_thms;
-          rw_with [ normalize_uncompress_E1_OK_thm
-                  , intLe_sym_thm
-                  , zero_lt_one_thm
-                  , is_point_O_E_affine_no_abs_rev_thm
-                  , uncompress_E1_OK_on_curve ];
-          simplify basic_ss;
-          simplify (cryptol_ss());
-          rw_with_1 is_point_O_E_affine_no_abs_rev_thm;
-          rw_with [ fold_normalize_affine_fp_thm
-                  , normalize_uncompress_E1_OK_thm ];
-          rw_with remove_ho_rules;
-          print_goal;
-          w4_unint_z3 BasicVerify_A_unints;
-        })
-        (precond_proof));
+    (goal_num_ite 4
+      (do {
+        // Postcondition proof
+        unfolding [ "CoreVerify"
+                  , "module parameter signature_to_point"
+                  , "module parameter signature_subgroup_check"
+                  , "maybe_cases"
+                  //, "POINTonE1_affine_rep"
+                  , "signature_to_point"
+                  //, "POINTonE1_affine_abs"
+                  //, "POINTonE2_affine_abs"
+                  , "blst_core_verify_pk_in_g2_error_precond"];
+        rw_with split_join_thms;
+        rw_with [ uncompress_E1_uncompress_E1_OK_thm
+                , POINTonE1_affine_abs_rep_thm
+                , is_in_g1_impl_thm];
+        unfolding ["apply"];
+        simplify basic_ss;
+        simplify (cryptol_ss());
+        simplify fp_simpset;
+        simplify (addsimps core_rewrites empty_ss);
+        //rw_with_1 squash_at_0_thm;
+        rw_with [ fold_normalize_affine_fp_thm
+                , intLe_sym_thm
+                , normalize_uncompress_E1_OK_thm ];
+        simplify basic_ss;
+        simplify (cryptol_ss());
+        unfolding ["POINTonE1_affine_rep"];
+        rw_with fp_rep_thms;
+        rw_with [ normalize_uncompress_E1_OK_thm
+                , intLe_sym_thm
+                , zero_lt_one_thm
+                , is_point_O_E_affine_no_abs_rev_thm
+                , uncompress_E1_OK_on_curve ];
+        simplify basic_ss;
+        simplify (cryptol_ss());
+        rw_with_1 is_point_O_E_affine_no_abs_rev_thm;
+        rw_with [ fold_normalize_affine_fp_thm
+                , normalize_uncompress_E1_OK_thm ];
+        rw_with remove_ho_rules;
+        print_goal;
+        w4_unint_z3 BasicVerify_A_unints;
+      })
+      (do {
+        // Precondition proof(s)
+        unfolding [ "POINTonE1_affine_abs"
+                  , "uncompress_E1_imp"
+                  , "POINTonE2_affine_abs"
+                  , "blst_core_verify_pk_in_g2_error_precond"];
+        simplify basic_ss;
+        simplify (cryptol_ss());
+        simplify basic_ss;
+        rw_with [ hoist_POINTonE1_affine_rep
+                , hoist_POINTonE1_affine_invariant
+                , hoist_POINTonE2_affine_rep
+                , hoist_POINTonE2_affine_invariant
+                , uncompress_E2_OK_inv
+                , zero_lt_one_thm
+                , intLe_sym_thm
+                , point_O_E'_inv_thm
+                , uncompress_E1_OK_inv ];
+        rw_with structural_rewrites;
+        simplify basic_ss;
+        rw_with [ fold_POINTonE1_affine_invariant
+                , fold_POINTonE2_affine_invariant
+                , hoist_POINTonE1_affine_invariant
+                , hoist_POINTonE2_affine_invariant
+                , uncompress_E2_OK_inv
+                , point_O_E'_inv_thm
+                , uncompress_E1_OK_inv ];
+        //rw_with_1 is_point_O_affine_rev_thm;
+        simplify basic_ss;
+        simplify (cryptol_ss());
+        rw_with remove_ho_rules;
+        // END Precondition proofs
+        print_goal;
+        w4_unint_z3 BasicVerify_A_unints;
+      }));
   };
