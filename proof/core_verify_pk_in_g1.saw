@@ -24,7 +24,7 @@ let aug_len = 8;
 // not checked at all by the C code; presumably, public keys should be validated
 // separately before use).
 
-// TODO: related to high-level spec. At the very least, rewriting hash_to_curve_E2_opt_impl should be easy (we have the theorem in hash_to_g2.saw).
+// NOTE: calling the function with a null pk is not safe
 
 let {{
   blst_core_verify_pk_in_g1_error_precond : POINTonE1_affine_t -> POINTonE2_affine_t -> Bool
@@ -45,8 +45,6 @@ let blst_core_verify_pk_in_g1_non_null_spec msg_len dst_len aug_len = do {
   llvm_execute_func [pk_ptr, signature_ptr, llvm_term hash_or_encode, msg_ptr, llvm_term {{ `msg_len : [64] }}, dst_ptr, llvm_term {{ `dst_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
   llvm_return (llvm_term {{ if core_verify_pk_in_g1_impl (POINTonE1_affine_abs pk) (POINTonE2_affine_abs sig) msg dst aug then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
 };
-
-core_verify_pk_in_g1_impl_thm <- admit_cryptol {{ \pk sig msg dst aug -> core_verify_pk_in_g1_impl pk sig msg dst aug == core_verify_pk_in_g1 pk sig msg dst aug }};
 
 // error case
 let blst_core_verify_pk_in_g1_error_spec msg_len dst_len aug_len = do {
@@ -128,6 +126,10 @@ normalize_final_exp_thms <- for [
 miller_loop_zero_thm <- admit_cryptol {{  \x -> fp12_conjugate (miller_loop_opt_checked BP x) == if (is_point_O E' x) then Fp_12.field_unit else apply miller_loop_opt_checked BP x }};
 
 // Proofs
+
+// TODO:
+core_verify_pk_in_g1_impl_thm <- admit_cryptol {{ \pk sig msg dst aug -> core_verify_pk_in_g1_impl pk sig msg dst aug == core_verify_pk_in_g1 pk sig msg dst aug }};
+
 
 let remove_ho_rules = concat
   [ point_add_fp2_thm, point_dadd_fp2_thm, point_double_fp2_thm, point_neg_fp2_thm
