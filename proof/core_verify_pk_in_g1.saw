@@ -44,7 +44,6 @@ let blst_core_verify_pk_in_g1_non_null_spec msg_len dst_len aug_len = do {
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_struct "struct.POINTonE1_affine");
   (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_struct "struct.POINTonE2_affine");
   llvm_precond {{ POINTonE1_affine_invariant pk /\ POINTonE2_affine_invariant sig /\ is_point_affine E' (POINTonE2_affine_abs sig) /\ ~blst_core_verify_pk_in_g1_error_precond pk sig}};
-  // llvm_precond {{ POINTonE1_affine_invariant pk /\ POINTonE2_affine_invariant sig /\ is_point_affine E' (POINTonE2_affine_abs sig) /\ ~blst_core_verify_pk_in_g1_error_precond pk sig /\ ~(is_point_O E' (POINTonE2_affine_abs sig))}};
   hash_or_encode <- llvm_fresh_var "hash_or_encode" (llvm_int 32);
   llvm_precond {{ hash_or_encode != zero }};
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
@@ -85,7 +84,7 @@ let blst_core_verify_pk_in_g1_null_sig_spec msg_len dst_len aug_len = do {
   (dst, dst_ptr) <- ptr_to_fresh_readonly "dst" (llvm_array dst_len (llvm_int 8));
   (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
   llvm_execute_func [pk_ptr, signature_ptr, llvm_term hash_or_encode, msg_ptr, llvm_term {{ `msg_len : [64] }}, dst_ptr, llvm_term {{ `dst_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
-  llvm_return (llvm_term {{ if is_point_O E (POINTonE1_affine_abs pk) then `BLST_PK_IS_INFINITY else if core_verify_pk_in_g1_impl (POINTonE1_affine_abs pk) (POINTonE2_affine_abs zero) msg dst aug then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
+  llvm_return (llvm_term {{ if is_point_O E (POINTonE1_affine_abs pk) then `BLST_PK_IS_INFINITY else if core_verify_pk_in_g1_impl (POINTonE1_affine_abs pk) (point_O E') msg dst aug then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
 };
 
 // pk is null
@@ -231,8 +230,6 @@ sr1 <- prove_cryptol (rewrite (cryptol_ss ()) {{ \x y c a b -> ((x,y,if c then a
 sr2 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \c x y -> POINTonE2_abs (if c then x else y) == if c then POINTonE2_abs x else POINTonE2_abs y }}) (w4_unint_z3 ["POINTonE2_abs"]);
 sr3 <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ \c x y -> affinify E' (if c then x else y) == if c then affinify E' x else affinify E' y }}) (do {simplify (addsimps remove_ho_rules empty_ss); w4_unint_z3 ["affinify_E'"];});
 
-let do_prove=true;
-
 // Case in which no argument is null and we reach the final check
 
 // Technicalities:
@@ -240,40 +237,28 @@ let do_prove=true;
 // * Need some normalization assumptions
 // * The C code transforms the signature to Jacobian coordinates (using macro FROM_AFFINE) and back to affine coordinates (using POINTonE2_from_Jacobian); we need to prove that this is the identity transformation. This is made harder than it seems by `ite` terms appearing in the middle of things, and the fact that hoist_ifs does not eliminate them all (TODO: create an issues for this)
 // * The implementation of the final test for equality needs to be shown equivalent to equality in Fp_12; since we leave Fp_12 uninterpreted to avoid unfolding `Fp_12.mul`, we rewrite the Fp_12.is_equal in terms of `is_equal` in lower fields
-// NOTE: this (used to...) work if we assume that sig is zero, but not otherwise; this could indicate an issue in the affine->projective->affine transformation
-blst_core_verify_pk_in_g1_non_null_ov <- custom_verify_path_sat
-  "blst_core_verify_pk_in_g1"
-  overrides
-  (blst_core_verify_pk_in_g1_non_null_spec msg_len dst_len aug_len)
-  (goal_num_ite 17
-    do {
-      print_goal;
-      // get rid of `abs rep` terms
-      rw_with (concat POINTonE1_thms POINTonE2_thms);
-      unfolding ["POINTonE2_rep"];
-      simplify fp12_simpset;
-      simplify fp2_simpset;
-      simplify fp_simpset;
-      // get rid of normalize terms produced by the rewrites:
-      rw_with (concat normalize_hash_to_curve_impl [normalize_miller_loop_opt_checked_thm]);
-      // take care of the round-trip that sig takes from affine represetation to jacobian and back to affine:
-      rw_with [affinify_projectify_is_id];
-      // rewrite abstracted constants (we're leaving fp_rep and fp_abs uninterpreted, so we need to rewrite the concrete constants):
-      simplify (addsimps [BP_rewrite,rewrite_fp12_unit,rewrite_fp2_unit] empty_ss);
-      // we rewrite the spec term:
-      unfolding ["core_verify_pk_in_g1_impl"];
-      // print_readably;
-      rw_with [miller_loop_zero_thm];
-      unfolding ["apply"];
-      rw_with [rewrite_is_equal'];
-      rw_with remove_ho_rules;
-      goal_eval_unint (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs","POINTonE2_invariant","POINTonE2_affine_invariant","POINTonE1_affine_invariant","fp2_invariant","fp_invariant"]);
-      rw_with restitching_rules; // TODO: needed?
-      simplify fp_simpset; // get rid of remaining `abs rep` terms
-      rw_with normalize_final_exp_thms; // get rid of `normalize` terms introduced by fp_simpset
-      w4_unint_z3 (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs","POINTonE2_invariant","POINTonE2_affine_invariant","POINTonE1_affine_invariant","fp2_invariant","fp_invariant"]);
-    }
-    do {
+
+let side_conditions_script = do {
+  rw_with (concat POINTonE1_thms POINTonE2_thms);
+  unfolding ["POINTonE2_rep"];
+  simplify fp12_simpset;
+  simplify fp2_simpset;
+  simplify fp_simpset;
+  // get rid of normalize terms produced by the rewrites:
+  rw_with (concat normalize_hash_to_curve_impl [normalize_miller_loop_opt_checked_thm]);
+  // take care of the round-trip that sig takes from affine represetation to jacobian and back to affine:
+  rw_with [affinify_projectify_is_id];
+  // establish the preconditions of POINTonE2_from_Jacobian:
+  rw_with (concat core_verify_pk_in_g1_POINTonE2_from_Jacobian_hash_preconds core_verify_pk_in_g1_POINTonE2_from_Jacobian_sig_preconds);
+  unfolding ["apply"];
+  rw_with remove_ho_rules;
+  goal_eval_unint (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs","fp_invariant"]);
+  simplify fp_simpset;
+  w4_unint_z3 (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs"]);
+}
+
+let post_condition_script = do {
+    // get rid of `abs rep` terms
     rw_with (concat POINTonE1_thms POINTonE2_thms);
     unfolding ["POINTonE2_rep"];
     simplify fp12_simpset;
@@ -285,35 +270,45 @@ blst_core_verify_pk_in_g1_non_null_ov <- custom_verify_path_sat
     rw_with [affinify_projectify_is_id];
     // establish the preconditions of POINTonE2_from_Jacobian:
     rw_with (concat core_verify_pk_in_g1_POINTonE2_from_Jacobian_hash_preconds core_verify_pk_in_g1_POINTonE2_from_Jacobian_sig_preconds);
-    print_readably;
-    unfolding ["apply"];
-    rw_with remove_ho_rules;
-    goal_eval_unint (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs","fp_invariant"]);
-    simplify fp_simpset;
-    w4_unint_z3 (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs"]);
-  });
-
-// blst_core_verify_pk_in_g1_error_ov <- custom_verify_path_sat
-  // "blst_core_verify_pk_in_g1"
-  // overrides
-  // (blst_core_verify_pk_in_g1_error_spec msg_len dst_len aug_len)
-  // do {
-    // unfolding ["blst_core_verify_pk_in_g1_error_precond"];
-    // // hoist_ifs_in_goal;
-    // simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
-    // unfolding ["POINTonE2_rep"];
-    // simplify fp12_simpset;
-    // simplify fp2_simpset;
-    // simplify fp_simpset;
-    // simplify (addsimps remove_ho_rules empty_ss);
+    // rewrite abstracted constants (we're leaving fp_rep and fp_abs uninterpreted, so we need to rewrite the concrete constants):
+    simplify (addsimps [BP_rewrite,rewrite_fp12_unit,rewrite_fp2_unit] empty_ss);
+    // we rewrite the spec term:
+    unfolding ["core_verify_pk_in_g1_impl"];
     // print_readably;
-    // goal_num_ite 17 // post-condition
-      // do {
-        // // here there should be only the zero tests and the subgroup tests that matter, so we can leave Fp uninterpreted (as long as the is_zero overrides is Fp operations)
-        // (unint_z3 (concat ["Fp","fp12_rep","POINTonE2_invariant","POINTonE1_invariant","fp_invariant","fp2_invariant"] core_verify_pk_in_g1_unints)); // w4_unint_z3 produces a problem on which Z3 does not return
-      // }
-      // (w4_unint_z3 core_verify_pk_in_g1_unints);
-  // };
+    rw_with [miller_loop_zero_thm];
+    unfolding ["apply"];
+    rw_with [rewrite_is_equal'];
+    rw_with remove_ho_rules;
+    goal_eval_unint (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs","POINTonE2_invariant","POINTonE2_affine_invariant","POINTonE1_affine_invariant","fp2_invariant","fp_invariant"]);
+    rw_with restitching_rules;
+    simplify fp_simpset; // get rid of remaining `abs rep` terms
+    rw_with normalize_final_exp_thms; // get rid of `normalize` terms introduced by fp_simpset
+    w4_unint_z3 (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs","POINTonE2_invariant","POINTonE2_affine_invariant","POINTonE1_affine_invariant","fp2_invariant","fp_invariant"]);
+}
+
+blst_core_verify_pk_in_g1_non_null_ov <- custom_verify_path_sat
+  "blst_core_verify_pk_in_g1"
+  overrides
+  (blst_core_verify_pk_in_g1_non_null_spec msg_len dst_len aug_len)
+  (goal_num_ite 17
+    post_condition_script
+    side_conditions_script);
+
+blst_core_verify_pk_in_g1_error_ov <- custom_verify_path_sat
+  "blst_core_verify_pk_in_g1"
+  overrides
+  (blst_core_verify_pk_in_g1_error_spec msg_len dst_len aug_len)
+  do {
+    unfolding ["blst_core_verify_pk_in_g1_error_precond"];
+    // hoist_ifs_in_goal;
+    simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
+    unfolding ["POINTonE2_rep"];
+    simplify fp12_simpset;
+    simplify fp2_simpset;
+    simplify fp_simpset;
+    simplify (addsimps remove_ho_rules empty_ss);
+    (w4_unint_z3 (concat ["fp_rep","fp_abs","fp12_rep","POINTonE2_invariant","POINTonE1_invariant","fp_invariant","fp2_invariant"] core_verify_pk_in_g1_unints));
+  };
 
 // blst_core_verify_pk_in_g1_null_pk_ov <- custom_verify
   // "blst_core_verify_pk_in_g1"
@@ -335,30 +330,17 @@ blst_core_verify_pk_in_g1_non_null_ov <- custom_verify_path_sat
       // // w4_unint_z3 core_verify_pk_in_g1_unints;
     // };
 
-// blst_core_verify_pk_in_g1_null_sig_ov <- custom_verify
-  // // a null sig is treated as a zero sig
-  // "blst_core_verify_pk_in_g1"
-  // overrides
-  // (blst_core_verify_pk_in_g1_null_sig_spec msg_len dst_len aug_len)
-  // do {
-    // // get rid of `abs rep` terms
-    // simplify (addsimps (concat POINTonE1_thms POINTonE2_thms) empty_ss);
-    // unfolding ["POINTonE2_rep"];
-    // simplify fp12_simpset;
-    // simplify fp2_simpset;
-    // simplify fp_simpset;
-    // simplify (addsimps core_verify_pk_in_g1_POINTonE2_from_Jacobian_hash_preconds empty_ss);
-    // unfolding ["select"];
-    // hoist_ifs_in_goal; // this is slow but works and avoids using the ugly-looking rules in hoist_ifs_rules
-    // simplify (addsimps [rewrite_fp2_unit,from_affine_nz_rewrite,projectify_on_curve] empty_ss);
-    // simplify (addsimps [rewrite_fp12_unit,BP_rewrite,affinify_projectify_is_id] empty_ss);
-    // unfolding ["core_verify_pk_in_g1_impl"];
-    // simplify (addsimp miller_loop_zero_thm empty_ss);
-    // simplify (addsimp rewrite_is_equal empty_ss);
-    // unfolding ["apply"];
-    // simplify (addsimps remove_ho_rules empty_ss);
-    // goal_eval_unint (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs"]);
-    // simplify (addsimps restitching_rules empty_ss);
-    // simplify fp_simpset; // get rid of remaining `abs rep` terms
-    // w4_unint_z3 core_verify_pk_in_g1_unints;
-  // };
+blst_core_verify_pk_in_g1_null_sig_ov <- custom_verify
+  // a null sig is treated as a zero sig
+  "blst_core_verify_pk_in_g1"
+  overrides
+  (blst_core_verify_pk_in_g1_null_sig_spec msg_len dst_len aug_len)
+  (goal_num_ite 11
+    do {
+      print_goal;
+      post_condition_script;
+    }
+    do {
+      print_goal;
+      side_conditions_script;
+    });
