@@ -7,8 +7,10 @@ import "../spec/BLSMinimalSignatureSize.cry";
 
 HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
 
+/*
 let do_prove = true;
 include "proof-helpers.saw";
+*/
 
 let {{
   drop_join_reverse: {n_bits, n_bytes} (fin n_bytes, n_bits <= 8*n_bytes) => [n_bytes][8] -> [n_bits]
@@ -37,6 +39,12 @@ let {{
     maybe_cases (pubkey_to_point (join pk))
       False
       (\y -> is_point_affine E' y)
+
+  signature_to_point_is_affine: [48][8] -> Bool
+  signature_to_point_is_affine sig =
+    maybe_cases (signature_to_point (join sig))
+      False
+      (\y -> is_point_affine E y)
 }};
 
 same_point_affine_E_thm <- prove_cryptol
@@ -851,6 +859,7 @@ let demo_BasicVerify_A_spec = do {
   let uncompressed_sig = {{ uncompress_E1_OK sig }};
   llvm_precond {{ ~(((uncompressed_sig.0) == Fp.field_zero) /\
                     ((uncompressed_sig.1) == Fp.field_zero)) }};
+  llvm_precond {{ signature_to_point_is_affine sig }};
   // preconditions
   llvm_execute_func [ sig_ptr
                     , pk_ptr
@@ -931,14 +940,10 @@ uncompress_E1_uncompress_E1_OK_thm <- admit_cryptol (rewrite (cryptol_ss())
 // Checks for BLS12-381".
 is_in_g1_impl_thm <- admit_cryptol
   (rewrite (cryptol_ss())
-  // TODO: Revert to version below
-  {{ \P -> signature_subgroup_check P == is_in_g1_impl P }});
-  /*
   {{ \P -> signature_subgroup_check P ==
            if is_point_affine_E P
            then is_in_g1_impl P
            else apply signature_subgroup_check P }});
-           */
 
 fold_normalize_affine_fp_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> (Fp.normalize P.0, Fp.normalize P.1) ==
@@ -959,7 +964,6 @@ let fp_rep_at0 = parse_core "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6
 squash_at_0_thm <- prove_cryptol
   {{ \(x : Fp_rep_t) (y : Fp_rep_t) -> (fp_rep_at0 [x, y]) == x }} [];
 
-// TODO: Needs to be conditioned on uncompress_E1_imp (see E2 variant)
 uncompress_E1_OK_on_curve <- admit_cryptol
   {{ \x -> is_point_affine E (uncompress_E1_OK x) ==
            if uncompress_E1_imp x != nothing
@@ -991,6 +995,7 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
         unfolding [ "CoreVerify"
                   , "module parameter signature_to_point"
                   , "module parameter signature_subgroup_check"
+                  , "signature_to_point_is_affine"
                   , "maybe_cases"
                   //, "POINTonE1_affine_rep"
                   , "signature_to_point"
