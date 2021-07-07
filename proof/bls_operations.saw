@@ -852,6 +852,7 @@ let demo_BasicVerify_A_spec = do {
   crucible_precond {{ uncompress_E2_imp pk != nothing }};
   // TODO: Maybe drop this precond vv
   crucible_precond {{ ~((pk@0)@1) }};
+  llvm_precond {{ pubkey_to_point_is_affine pk }};
   // TODO: Maybe drop this precond vv
   crucible_precond {{ uncompress_E1_x_fp sig != Fp.field_zero }};
   // TODO: Explain (the library disagrees with spec on treating point_O as on
@@ -885,7 +886,8 @@ uncompress_E1_OK_inv <- prove_cryptol
 
 
 let BasicVerify_A_unints = (concat [
-  "POINTonE1_affine_abs"
+  "KeyValidate"
+, "POINTonE1_affine_abs"
 , "POINTonE1_affine_invariant"
 , "POINTonE1_affine_rep"
 , "POINTonE2_affine_abs"
@@ -901,8 +903,10 @@ let BasicVerify_A_unints = (concat [
 , "is_point_affine_E"
 , "is_square_fp"
 , "nothing"
+, "pubkey_to_point_is_affine"
 , "sign_F_p"
 , "signature_subgroup_check"
+, "signature_to_point_is_affine"
 , "sqrt_fp"
 , "uncompress_E1"
 , "uncompress_E1_OK"
@@ -986,10 +990,11 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
   , POINTonE2_affine_on_curve_ov
   , vec_is_zero_2fp2_ov
   , blst_p2_affine_in_g2_ov
+  , demo_KeyValidate_A_ov
   , blst_core_verify_pk_in_g2_ov ]
   demo_BasicVerify_A_spec
   do {
-    (goal_num_ite 4
+    (goal_num_ite 5
       (do {
         // Postcondition proof
         unfolding [ "CoreVerify"

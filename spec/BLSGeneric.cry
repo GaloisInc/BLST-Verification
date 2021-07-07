@@ -117,9 +117,9 @@ CoreVerify(PK, message, signature) =
     maybe_cases (signature_to_point signature)
         False // lines 1,2
         (\ R -> if signature_subgroup_check R == False then False  // line 3
+                |  KeyValidate PK == False then False // line 4
                 else True)
                 /*
-                |  KeyValidate PK == False then False // line 4
                 else maybe_cases (pubkey_to_point PK)
                     False // line 5
                     (\ xP -> (C1 == C2 where // line 9
