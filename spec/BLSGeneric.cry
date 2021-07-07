@@ -120,10 +120,7 @@ CoreVerify(PK, message, signature) =
                 |  KeyValidate PK == False then False // line 4
                 else maybe_cases (pubkey_to_point PK)
                     False // line 5
-                    (\ xP -> True))
-                /*
                     (\ xP -> (C1 == C2 where // line 9
                               Q = hash_to_point message // line
                               C1 = pairing (Q, xP) // line 7
                               C2 = pairing (R, P)))) // line 8
-                              */

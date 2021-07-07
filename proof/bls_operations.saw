@@ -867,8 +867,10 @@ let demo_BasicVerify_A_spec = do {
                     , message_ptr
                     , llvm_term {{ `message_len : [64] }} ];
   // TODO: Postcond
+  /*
   llvm_return (llvm_term
       {{ bool_to_limb (CoreVerify (join pk, message, join sig)) }});
+      */
 };
 
 is_point_O_E_affine_rev_thm <- prove_cryptol (rewrite (cryptol_ss())
@@ -902,8 +904,10 @@ let BasicVerify_A_unints = (concat [
 , "is_in_g1_impl"
 , "is_in_g2_impl"
 , "is_point_affine_E"
+, "is_point_affine_E'"
 , "is_square_fp"
 , "nothing"
+, "pubkey_subgroup_check"
 , "pubkey_to_point_is_affine"
 , "sign_F_p"
 , "signature_subgroup_check"
@@ -982,6 +986,32 @@ is_point_O_E_affine_no_abs_rev_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x y -> ((peq x Fp.field_zero) /\ (peq y Fp.field_zero)) ==
              is_point_O E (x, y) }}) [];
 
+fold_POINTonE2_affine_abs_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+  {{ \P -> ((fp2_abs P.0), (fp2_abs P.1)) == POINTonE2_affine_abs P }}) [];
+
+hoist_POINTonE2_affine_abs_thm <- really_prove_cryptol
+  (rewrite (cryptol_ss())
+    {{ \c p1 p2 -> POINTonE2_affine_abs (if c then p1 else p2) ==
+                   if c then POINTonE2_affine_abs p1 else POINTonE2_affine_abs p2 }})
+  ["POINTonE2_affine_abs"];
+
+hoist_is_point_O_E'_thm <- really_prove_cryptol
+  (rewrite (cryptol_ss())
+    {{ \c p1 p2 -> is_point_O E' (if c then p1 else p2) ==
+                   if c then is_point_O E' p1 else is_point_O E' p2 }}) [];
+
+// TODO: Prove
+POINTonE2_affine_abs_rep_thm <- test_cryptol (rewrite (cryptol_ss())
+  {{ \P -> POINTonE2_affine_abs (POINTonE2_affine_rep P) ==
+           normalize_affine_point Fp_2 P }});
+
+// TODO: Prove
+is_point_O_KeyValidate_thm <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \pk -> is_point_O E' (uncompress_E2_OK pk) ==
+            if KeyValidate (join pk) 
+            then False
+            else apply is_point_O E' (uncompress_E2_OK pk) }});
+
 demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
   [ POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
   , POINTonE1_affine_on_curve_ov
@@ -995,7 +1025,7 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
   , blst_core_verify_pk_in_g2_ov ]
   demo_BasicVerify_A_spec
   do {
-    (goal_num_ite 6
+    (goal_num_ite 60
       (do {
         // Postcondition proof
         unfolding [ "CoreVerify"
@@ -1047,7 +1077,17 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
         unfolding [ "POINTonE1_affine_abs"
                   , "uncompress_E1_imp"
                   , "POINTonE2_affine_abs"
-                  , "blst_core_verify_pk_in_g2_error_precond"];
+                  /*
+                  , "KeyValidate"
+                  , "module parameter pubkey_to_point"
+                  , "pubkey_to_point"
+                  , "module parameter pubkey_subgroup_check"
+                  , "module parameter other_curve"
+                  , "other_curve"
+                  , "maybe_cases"
+                  */
+                  , "blst_core_verify_pk_in_g2_error_precond"
+                  ];
         simplify basic_ss;
         simplify (cryptol_ss());
         simplify basic_ss;
@@ -1067,14 +1107,21 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
                 , hoist_POINTonE1_affine_invariant
                 , hoist_POINTonE2_affine_invariant
                 , uncompress_E2_OK_inv
-                , point_O_E'_inv_thm
+                , fold_POINTonE2_affine_abs_thm
+                , hoist_POINTonE2_affine_abs_thm
+                , hoist_is_point_O_E'_thm
+                , POINTonE2_affine_abs_rep_thm
+                , is_point_O_KeyValidate_thm
+                , normalize_uncompress_E2_OK_thm
                 , uncompress_E1_OK_inv ];
         //rw_with_1 is_point_O_affine_rev_thm;
         simplify basic_ss;
         simplify (cryptol_ss());
+        rw_with_1 fold_is_point_O_E'_thm;
+        print_goal;
         rw_with remove_ho_rules;
         // END Precondition proofs
-        print_goal;
+        //print_goal;
         w4_unint_z3 BasicVerify_A_unints;
       }));
   };

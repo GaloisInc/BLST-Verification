@@ -105,10 +105,10 @@ limb_t demo_BasicVerify_A(const byte sig[48], const byte pk[96], const byte *mes
   if (! blst_p2_affine_on_curve(&PK)) return 0;
   if (blst_p2_affine_is_inf(&PK)) return 0;
   if (! blst_p2_affine_in_g2(&PK)) return 0;
+  */
 
   if (blst_core_verify_pk_in_g2(&PK, &R, 1, message, message_len, demo_DST_A, 43, NULL, 0) != BLST_SUCCESS)
     return 0;
-    */
   return 1;
 };
 
