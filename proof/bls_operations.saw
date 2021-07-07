@@ -896,6 +896,7 @@ let BasicVerify_A_unints = (concat [
 //, "point_O_E"
 //, "Fp"
 //, "fp_abs"
+, "deserialize_E2"
 , "fp_invariant"
 , "fp_rep"
 , "is_in_g1_impl"
@@ -994,7 +995,7 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
   , blst_core_verify_pk_in_g2_ov ]
   demo_BasicVerify_A_spec
   do {
-    (goal_num_ite 5
+    (goal_num_ite 6
       (do {
         // Postcondition proof
         unfolding [ "CoreVerify"
@@ -1006,6 +1007,8 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
                   , "signature_to_point"
                   //, "POINTonE1_affine_abs"
                   //, "POINTonE2_affine_abs"
+                  , "module parameter pubkey_to_point"
+                  , "pubkey_to_point"
                   , "blst_core_verify_pk_in_g2_error_precond"];
         rw_with split_join_thms;
         rw_with [ uncompress_E1_uncompress_E1_OK_thm
@@ -1033,6 +1036,7 @@ demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
         simplify (cryptol_ss());
         rw_with_1 is_point_O_E_affine_no_abs_rev_thm;
         rw_with [ fold_normalize_affine_fp_thm
+                , deserialize_E2_uncompress_E2_OK_thm
                 , normalize_uncompress_E1_OK_thm ];
         rw_with remove_ho_rules;
         print_goal;

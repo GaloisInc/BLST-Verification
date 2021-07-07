@@ -100,8 +100,8 @@ limb_t demo_BasicVerify_A(const byte sig[48], const byte pk[96], const byte *mes
 
   // TODO: Use KeyValidate below instead to better match the spec?
   // uncompress and check the pub key
-  /*
   if (blst_p2_uncompress(&PK, pk) != BLST_SUCCESS) return 0;
+  /*
   if (! blst_p2_affine_on_curve(&PK)) return 0;
   if (blst_p2_affine_is_inf(&PK)) return 0;
   if (! blst_p2_affine_in_g2(&PK)) return 0;
