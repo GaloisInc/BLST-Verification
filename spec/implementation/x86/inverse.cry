@@ -5,6 +5,8 @@ import implementation::x86::helpers
 
 test__bsr = bsr
 
+tund = [undefined, undefined, undefined]
+
 __smulx_383_n_shift_by_31
   : Vec384 // a, stored at low offsets of rsi
   -> Vec384 // b, stored at high offsets of rsi
@@ -643,11 +645,11 @@ __smulx_383_n_shift_by_31 a b f0 g0 = result
     result = ([result0, result1, result2, result3, result4, result5], rdx_113, rcx_114)
 
 __smulx_191_n_shift_by_31
-  : [6][64] // a, stored at low offsets of rsi (only low 3 limbs used)
-  -> [6][64] // b, stored at high offsets of rsi (only low 3 limbs used)
+  : [3][64] // a, stored at low offsets of rsi
+  -> [3][64] // b, stored at high offsets of rsi
   -> [64] // f0
   -> [64] // g0
-  -> ([6][64], [64], [64])
+  -> ([3][64], [64], [64])
 __smulx_191_n_shift_by_31 a b f0 g0 = result
   where
 // 0x0000000000018ee4 <+4>:	48 89 d3	mov    rbx,rdx
@@ -668,7 +670,7 @@ __smulx_191_n_shift_by_31 a b f0 g0 = result
 
 // 0x0000000000018ef5 <+21>:	48 c1 f8 3f	sar    rax,0x3f
     // 2
-    rax_2 = rax_1 >>$ 0x3f
+    rax_2 = sar rax_1 0x3f
 
 
 // 0x0000000000018ef9 <+25>:	48 31 ed	xor    rbp,rbp
@@ -795,7 +797,7 @@ __smulx_191_n_shift_by_31 a b f0 g0 = result
 
 // 0x0000000000018f49 <+105>:	48 c1 f8 3f	sar    rax,0x3f
     // 26
-    rax_26 = rax_25 >>$ 0x3f
+    rax_26 = sar rax_25 0x3f
 
 
 // 0x0000000000018f4d <+109>:	48 31 ed	xor    rbp,rbp
@@ -930,7 +932,7 @@ __smulx_191_n_shift_by_31 a b f0 g0 = result
 
 // 0x0000000000018fa6 <+198>:	49 c1 fe 3f	sar    r14,0x3f
     // 52
-    r14_52 = r14_47 >>$ 0x3f
+    r14_52 = sar r14_47 0x3f
 
 
 // 0x0000000000018faa <+202>:	48 31 ed	xor    rbp,rbp
@@ -1011,7 +1013,7 @@ __smulx_191_n_shift_by_31 a b f0 g0 = result
 
 // 0x0000000000018fdb <+251>:	f3 c3	repz ret 
     // 68
-    result = ([result0, result1, result2, 0, 0, 0], rdx_66, rcx_67)
+    result = ([result0, result1, result2], rdx_66, rcx_67)
 
 __smulx_383x63
   : Vec384 // u, stored at low offsets of rsi
@@ -1040,7 +1042,7 @@ __smulx_383x63 u v f0 g0 = result
 
 // 0x0000000000018bbe <+30>:	48 c1 fd 3f	sar    rbp,0x3f
     // 2
-    rbp_2 = rbp_1 >>$ 0x3f
+    rbp_2 = sar rbp_1 0x3f
 
 
 // 0x0000000000018bc2 <+34>:	48 31 c0	xor    rax,rax
@@ -1264,7 +1266,7 @@ __smulx_383x63 u v f0 g0 = result
 
 // 0x0000000000018c59 <+185>:	48 c1 fd 3f	sar    rbp,0x3f
     // 44
-    rbp_44 = rbp_43 >>$ 0x3f
+    rbp_44 = sar rbp_43 0x3f
 
 
 // 0x0000000000018c5d <+189>:	48 31 c0	xor    rax,rax
@@ -1504,7 +1506,7 @@ __smulx_767x63 u v f0 g0 = result
 
 // 0x000000000001899e <+30>:	48 c1 f8 3f	sar    rax,0x3f
     // 8
-    rax_8 = rax_7 >>$ 0x3f
+    rax_8 = sar rax_7 0x3f
 
 // 0x00000000000189a2 <+34>:	48 31 ed	xor    rbp,rbp
     // 9
@@ -1784,7 +1786,7 @@ __smulx_767x63 u v f0 g0 = result
 
 // 0x0000000000018a70 <+240>:	48 c1 f8 3f	sar    rax,0x3f
     // 64
-    rax_64 = rax_51 >>$ 0x3f
+    rax_64 = sar rax_51 0x3f
 
 
 // 0x0000000000018a74 <+244>:	48 31 f6	xor    rsi,rsi
@@ -2356,7 +2358,7 @@ __ab_approximation_31 iters a b = result
 
 // 0x0000000000019075 <+149>:	48 8d 49 01	lea    rcx,[rcx+0x1]
     // 34
-    rcx_34 = rcx_33 + 1
+    rcx_34 = 1 + rcx_33
 
 // 0x0000000000019079 <+153>:	4c 0f 44 cb	cmove  r9,rbx
     // 35
@@ -2416,11 +2418,11 @@ __ab_approximation_31 iters a b = result
 
 // 0x00000000000190a9 <+201>:	4d 0f ad c8	shrd   r8,r9,cl
     // 49
-    r8_49 = shrd r8_47 r9_45 rcx_44
+    r8_49 = shrd_ret r8_22 r8_47 r9_45 rcx_44
 
 // 0x00000000000190ad <+205>:	4d 0f ad da	shrd   r10,r11,cl
     // 50
-    r10_50 = shrd r10_48 r11_46 rcx_44
+    r10_50 = shrd_ret r10_24 r10_48 r11_46 rcx_44
 
 // 0x00000000000190b1 <+209>:	eb 0d	jmp    0x190c0 <__inner_loop_31>
     // 51
@@ -2436,14 +2438,14 @@ __inner_loop_31 iters a_init b_init = result
     [post_a, post_b, post_fg0, post_fg1, post_bias] = loop iters [a_init, b_init, 0x7FFFFFFF80000000, 0x800000007FFFFFFF, 0x7FFFFFFF7FFFFFFF]
 
     tmp_f0 = zext`{64} (drop`{32} post_fg0)
-    tmp_g0 = post_fg0 >> 32
+    tmp_g0 = shr post_fg0 0x20
 
     tmp_f1 = zext`{64} (drop`{32} post_fg1)
-    tmp_g1 = post_fg1 >> 32
+    tmp_g1 = shr post_fg1 0x20
     // [tmp_g0, tmp_f0] = split post_fg0
     // [tmp_g1, tmp_f1] = split post_fg1
 
-    tmp_bias = post_bias >> 32
+    tmp_bias = shr post_bias 0x20
     result = [zext tmp_f0 - tmp_bias, zext tmp_g0 - tmp_bias, zext tmp_f1 - tmp_bias, zext tmp_g1 - tmp_bias]
 
     loop : Integer -> [5][64] -> [5][64]
@@ -2543,7 +2545,7 @@ __inner_loop_31 iters a_init b_init = result
     
     // 0x0000000000019120 <+96>:	49 d1 e8	shr    r8,1
         // 18
-        r8_18 = r8_14 >> 1
+        r8_18 = shr r8_14 0x01
     
     
     // 0x0000000000019123 <+99>:	4d 01 ed	add    r13,r13
@@ -2722,7 +2724,7 @@ ctx_inverse_mod_383
   : Vec384 // a; pointer in rsi
   -> Vec384 // n; pointer in rdx
   -> Vec768 // ret
-ctx_inverse_mod_383 a n = result
+ctx_inverse_mod_383 a n = result // (earlyresult # zero) // result
   where
 // 0x0000000000017d23 <+35>:	48 89 7c 24 20	mov    QWORD PTR [rsp+0x20],rdi
 // 0x0000000000017d28 <+40>:	48 89 54 24 28	mov    QWORD PTR [rsp+0x28],rdx
@@ -2982,7 +2984,6 @@ ctx_inverse_mod_383 a n = result
 // 0x0000000000017f5d <+605>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 21
     (lob_21, f1_21, g1_21) = __smulx_383_n_shift_by_31 hia_15 hib_16 f1_19 g1_19
-
 
 
 // 0x0000000000017f62 <+610>:	48 8b 54 24 38	mov    rdx,QWORD PTR [rsp+0x38]
@@ -3763,7 +3764,7 @@ ctx_inverse_mod_383 a n = result
 // 0x0000000000018707 <+2567>:	48 89 54 24 38	mov    QWORD PTR [rsp+0x38],rdx
 // 0x000000000001870c <+2572>:	48 89 4c 24 40	mov    QWORD PTR [rsp+0x40],rcx
     // 102
-    (loa_102, f0_102, g0_102) = __smulx_191_n_shift_by_31 hia_97 hib_98 f0_101 g0_101
+    (loa_102, f0_102, g0_102) = __smulx_191_n_shift_by_31 (take`{3} hia_97) (take`{3} hib_98) f0_101 g0_101
 
 
 
@@ -3774,7 +3775,7 @@ ctx_inverse_mod_383 a n = result
 // 0x0000000000018724 <+2596>:	48 89 54 24 48	mov    QWORD PTR [rsp+0x48],rdx
 // 0x0000000000018729 <+2601>:	48 89 4c 24 50	mov    QWORD PTR [rsp+0x50],rcx
     // 103
-    (lob_103, f1_103, g1_103) = __smulx_191_n_shift_by_31 hia_97 hib_98 f1_101 g1_101
+    (lob_103, f1_103, g1_103) = __smulx_191_n_shift_by_31 (take`{3} hia_97) (take`{3} hib_98) f1_101 g1_101
 
 
 
@@ -3802,7 +3803,7 @@ ctx_inverse_mod_383 a n = result
 // 0x0000000000018769 <+2665>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x000000000001876e <+2670>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 106
-    [f0_106, g0_106, f1_106, g1_106] = __ab_approximation_31 31 loa_102 lob_103
+    [f0_106, g0_106, f1_106, g1_106] = __ab_approximation_31 31 (loa_102 # drop`{3} loa_92) (lob_103 # drop`{3} lob_93)
 
 
 
@@ -3851,7 +3852,7 @@ ctx_inverse_mod_383 a n = result
 // 0x00000000000187e4 <+2788>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x00000000000187e9 <+2793>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 111
-    [f0_111, g0_111, f1_111, g1_111] = __ab_approximation_31 31 hia_107 hib_108
+    [f0_111, g0_111, f1_111, g1_111] = __ab_approximation_31 31 (hia_107 # drop`{3} hia_97) (hib_108 # drop`{3} hib_98)
 
 
 
@@ -3900,7 +3901,7 @@ ctx_inverse_mod_383 a n = result
 // 0x000000000001885f <+2911>:	4c 89 64 24 48	mov    QWORD PTR [rsp+0x48],r12
 // 0x0000000000018864 <+2916>:	4c 89 6c 24 50	mov    QWORD PTR [rsp+0x50],r13
     // 116
-    [f0_116, g0_116, f1_116, g1_116] = __ab_approximation_31 31 loa_112 lob_113
+    [f0_116, g0_116, f1_116, g1_116] = __ab_approximation_31 31 (loa_112 # drop`{3} loa_92) (lob_113 # drop`{3} lob_93)
 
 
 
@@ -3941,6 +3942,11 @@ ctx_inverse_mod_383 a n = result
 // 0x00000000000188c4 <+3012>:	e8 b7 00 00 00	call   0x18980 <__smulx_767x63>
     // 120
     hiv_120 = __smulx_767x63 lou_114 lov_115 f1_118 g1_118
+
+// early return
+    earlyresult = take`{6} hiv_120
+// end early return
+
 
 
 
@@ -4038,4 +4044,5 @@ ctx_inverse_mod_383 a n = result
 // 0x0000000000018970 <+3184>:	49 8d 60 30	lea    rsp,[r8+0x30]
 // 0x0000000000018974 <+3188>:	f3 c3	repz ret 
     // 126
+    result : Vec768
     result = resultlow # [result6, result7, result8, result9, result10, result11]

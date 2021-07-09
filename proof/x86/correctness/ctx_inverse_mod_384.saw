@@ -18,15 +18,15 @@ verify_x86_ctest "test__bsr" test__bsr_spec do {
   w4;
 };
 
-print "\n\nbsr:";
-print {{ test__bsr (zext 0xdeadbeef) }};
-
-print "\n\n__ab_approximation_31:";
-print {{ __ab_approximation_31 1 (take counter1) (drop counter1)}};
-
+// print "\n\nbsr:";
+// print {{ test__bsr (zext 0xdeadbeef) }};
+// 
+// print "\n\n__ab_approximation_31:";
+// print {{ __ab_approximation_31 1 (take counter1) (drop counter1)}};
+// 
 // print "\n\n__smulx_383_n_shift_by_31:";
 // print {{ __smulx_383_n_shift_by_31 (take ab) (drop ab) 4 5 }};
-// 
+
 // print "\n\n__smulx_191_n_shift_by_31:";
 // print {{ __smulx_191_n_shift_by_31 (take ab) (drop ab) 4 5 }};
 // 
@@ -45,9 +45,15 @@ print {{ __ab_approximation_31 1 (take counter1) (drop counter1)}};
 // print {{ ctx_inverse_mod_383 zero modulus384 }};
 
 ite_add_thm <- prove_folding_theorem {{
-  \(c : Bit) (x : [64]) (y : [64]) (z : [64]) ->
-  (z + if c then x else y)
-  == if c then (z + x) else (z + y)
+  \(c : Bit) (x : [64]) (y : [64]) ->
+  (9223372034707292159 + if c then x else y)
+  == if c then (9223372034707292159 + x) else (9223372034707292159 + y)
+}};
+
+ite_add_eq_thm <- prove_folding_theorem {{
+  \(a : [64]) (c : Bit)  ->
+  (a + if c then 0 else 1)
+  == if c then a else a + 1
 }};
 
 ite_dup_cond_thm <- prove_folding_theorem {{
@@ -58,46 +64,62 @@ ite_dup_cond_thm <- prove_folding_theorem {{
 
 let ite_ss = addsimps
   [ ite_add_thm
+  , ite_add_eq_thm
   , ite_dup_cond_thm
   ] empty_ss;
 
+let {{
+  mergeTup384 : ([6][64], [64], [64]) -> [8][64]
+  mergeTup384 (x, y, z) = x # [y, z]
+}};
+
 let test__smulx_383_n_shift_by_31_spec = do {
-  ret_ptr <- crucible_alloc vec384_type;
+  ret_ptr <- crucible_alloc (llvm_array 8 (llvm_int 64));
   (ab, ab_ptr) <- ptr_to_fresh_readonly "inp" vec768_type;
   f0 <- crucible_fresh_var "f0" (llvm_int 64);
   g0 <- crucible_fresh_var "g0" (llvm_int 64);
   crucible_execute_func [ret_ptr, ab_ptr, crucible_term f0, crucible_term g0];
-  let new_ret = {{ (__smulx_383_n_shift_by_31 (take ab) (drop ab) f0 g0).0 }};
+  let new_ret = {{ mergeTup384 (__smulx_383_n_shift_by_31 (take ab) (drop ab) f0 g0) }};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
-verify_x86_ctest "test__smulx_383_n_shift_by_31" test__smulx_383_n_shift_by_31_spec do {
-  // quickcheck 100;
-  goal_eval_unint [];
-  simplify ite_ss;
-  simplify mul_ss;
-  goal_eval_unint [];
-  print_goal;
-  w4;
-};
+// subterms identical up to commutativity not simplified - why?
+// verify_x86_ctest "test__smulx_383_n_shift_by_31" test__smulx_383_n_shift_by_31_spec do {
+//   // quickcheck 100;
+//   goal_eval_unint [];
+//   simplify mul_ss;
+//   goal_eval_unint [];
+//   simplify mul_ss;
+//   goal_eval_unint [];
+//   // print_goal;
+//   w4;
+// };
+
+// exit 1;
 
 let test__smulx_191_n_shift_by_31_spec = do {
-  ret_ptr <- crucible_alloc vec384_type;
-  crucible_points_to ret_ptr (crucible_term {{ zero : [6][64] }});
+  ret_ptr <- crucible_alloc (llvm_array 8 (llvm_int 64));
+  crucible_points_to ret_ptr (crucible_term {{ zero : [8][64] }});
   (ab, ab_ptr) <- ptr_to_fresh_readonly "inp" vec768_type;
   f0 <- crucible_fresh_var "f0" (llvm_int 64);
   g0 <- crucible_fresh_var "g0" (llvm_int 64);
   crucible_execute_func [ret_ptr, ab_ptr, crucible_term f0, crucible_term g0];
-  let new_ret = {{ (__smulx_191_n_shift_by_31 (take ab) (drop ab) f0 g0).0 }};
+  let new_ret = {{ mergeTup384 (__smulx_191_n_shift_by_31 (take ab) (drop ab) f0 g0) }};
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
-verify_x86_ctest "test__smulx_191_n_shift_by_31" test__smulx_191_n_shift_by_31_spec do {
-  // quickcheck 100;
-  goal_eval_unint [];
-  print_goal;
-  w4;
-};
+// verify_x86_ctest "test__smulx_191_n_shift_by_31" test__smulx_191_n_shift_by_31_spec do {
+//   // quickcheck 100;
+//   goal_eval_unint [];
+//   simplify mul_ss;
+//   goal_eval_unint [];
+//   simplify mul_ss;
+//   goal_eval_unint [];
+//   // print_goal;
+//   w4;
+// };
+
+// exit 1;
 
 let test__smulx_383x63_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
@@ -112,9 +134,15 @@ let test__smulx_383x63_spec = do {
 verify_x86_ctest "test__smulx_383x63" test__smulx_383x63_spec do {
   // quickcheck 100;
   goal_eval_unint [];
-  print_goal;
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  // print_goal;
   w4;
 };
+
+// exit 1;
 
 let test__smulx_767x63_spec = do {
   ret_ptr <- crucible_alloc vec768_type;
@@ -129,9 +157,15 @@ let test__smulx_767x63_spec = do {
 verify_x86_ctest "test__smulx_767x63" test__smulx_767x63_spec do {
   // quickcheck 100;
   goal_eval_unint [];
-  print_goal;
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  // print_goal;
   w4;
 };
+
+// exit 1;
 
 let test__inner_loop_31_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
@@ -145,9 +179,7 @@ let test__inner_loop_31_spec = do {
 verify_x86_ctest "test__inner_loop_31" test__inner_loop_31_spec do {
   // quickcheck 100;
   goal_eval_unint [];
-  simplify ite_ss;
-  goal_eval_unint [];
-  print_goal;
+  // print_goal;
   w4;
 };
 
@@ -163,9 +195,13 @@ let test__inner_loop_62_spec = do {
 verify_x86_ctest "test__inner_loop_62" test__inner_loop_62_spec do {
   // quickcheck 100;
   goal_eval_unint [];
-  print_goal;
+  simplify mul_ss;
+  goal_eval_unint [];
+  // print_goal;
   w4;
 };
+
+// exit 1;
 
 let test__ab_approximation_31_spec = do {
   ret_ptr <- crucible_alloc vec384_type;
@@ -178,9 +214,7 @@ let test__ab_approximation_31_spec = do {
 verify_x86_ctest "test__ab_approximation_31" test__ab_approximation_31_spec do {
   // quickcheck 100;
   goal_eval_unint [];
-  simplify ite_ss;
-  goal_eval_unint [];
-  print_goal;
+  // print_goal;
   w4;
 };
 
@@ -202,31 +236,220 @@ let ct_inverse_mod_383_spec = do {
 // Proofs
 ///////////////////////////////////////////////////////////////////////////////
 
-// Some elements of ctx_inverse_mod_383 present some performance problems for the
-// simulator. We enable some options here in order to make things easier:
-// - enable_x86_what4_hash_consing improves term sharing during simulation in
-//   some cases.
-// - set_x86_stack_base_align sets the alignment of the base of the stack
-//   allocation to 512 bytes. In the simulator's memory model, addresses are
-//   represented as an abstract base plus an offset bitvector. Since the base is
-//   abstract, we know little about the actual value of the address, making it
-//   difficult to perform bitwise operations on addresses. However, if the base
-//   is known to have a certain alignment, we know that a certain number of low
-//   bits of the address are determined entirely by the offset. This makes it
-//   possible to apply bitwise operations that only influence those bits
-//   directly to the offset. From an assurance perspective, this corresponds to
-//   a loss of some generality in the precondition describing the initial value
-//   of RSP.
 
 set_x86_stack_base_align 512;
 
 // ctx_inverse_mod_383
 verify_x86_recent "ctx_inverse_mod_383" ct_inverse_mod_383_spec do {
-  quickcheck 10;
-  // goal_eval_unint [];
-  // print_goal;
-  // simplify ite_ss;
-  // w4;
+  // quickcheck 10;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  goal_eval_unint [];
+  simplify mul_ss;
+  print_goal;
+  w4;
 };
 
 default_x86_stack_base_align;

@@ -84,8 +84,20 @@ shr x count = if count && 63 == 0 then x else x >> countmod
     countmod : [64]
     countmod = zext (count && 63)
 
+shr_nocheck : {n} (fin n, 64 >= n, n >= 8) => [64] -> [n] -> [64]
+shr_nocheck x count = x >> countmod
+  where
+    countmod : [64]
+    countmod = zext (count && 63)
+
 shl : {n} (fin n, 64 >= n, n >= 8) => [64] -> [n] -> [64]
 shl x count = if count && 63 == 0 then x else x << countmod
+  where
+    countmod : [64]
+    countmod = zext (count && 63)
+
+shl_nocheck : {n} (fin n, 64 >= n, n >= 8) => [64] -> [n] -> [64]
+shl_nocheck x count = x << countmod
   where
     countmod : [64]
     countmod = zext (count && 63)
@@ -98,6 +110,12 @@ shld x shiftin count = if count && 63 == 0 then x else take ((x # shiftin) << co
 
 shrd : {n} (fin n, 64 >= n, n >= 8) => [64] -> [64] -> [n] -> [64]
 shrd x shiftin count = if count && 63 == 0 then x else drop ((shiftin # x) >> countmod)
+  where
+    countmod : [128]
+    countmod = zext (count && 63)
+
+shrd_ret : {n} (fin n, 64 >= n, n >= 8) => [64] -> [64] -> [64] -> [n] -> [64]
+shrd_ret ret x shiftin count = if count && 63 == 0 then ret else drop ((shiftin # x) >> countmod)
   where
     countmod : [128]
     countmod = zext (count && 63)
