@@ -29,9 +29,6 @@ more_rewrites <- for
 
 let structural_rewrites = concat more_rewrites core_rewrites;
 
-let big_simpset = concat big_simpset structural_rewrites;
-
-
 ////////////////////////////////////////////////////////////////
 //
 // Operations on E1, over Fp

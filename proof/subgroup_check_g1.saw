@@ -39,6 +39,9 @@ sigma_ov <- custom_verify "sigma"
       z3;
       };
 
+normalize_sigma_thm <- prove_cryptol
+  {{ \ p -> normalize_affine_point Fp (sigma p) == sigma (normalize_affine_point Fp p) }} [];
+
 enable_experimental;
 
 
@@ -79,15 +82,15 @@ let POINTonE1_times_zz_minus_1_div_by_3_spec = do {
   crucible_points_to out_ptr (crucible_term out);
   };
 
-// POINTonE1_times_zz_minus_1_div_by_3_ov <- crucible_llvm_compositional_extract m
-    // "POINTonE1_times_zz_minus_1_div_by_3"
-    // "POINTonE1_times_c"
-    // (concat  point_op_overrides fp_overrides)
-    // false
-    // POINTonE1_times_zz_minus_1_div_by_3_spec
-    // do { simplify (addsimps POINTonE1_thms empty_ss);
-         // simplify remove_higher_order_function_simpset;
-         // w4_unint_z3 ec_mult_unints; };
+POINTonE1_times_zz_minus_1_div_by_3_ov <- crucible_llvm_compositional_extract m
+    "POINTonE1_times_zz_minus_1_div_by_3"
+    "POINTonE1_times_c"
+    (concat  point_op_overrides fp_overrides)
+    false
+    POINTonE1_times_zz_minus_1_div_by_3_spec
+    do { simplify (addsimps POINTonE1_thms empty_ss);
+         simplify remove_higher_order_function_simpset;
+         w4_unint_z3 ec_mult_unints; };
 
 let big_simpset = addsimps (foldr concat
                                   [POINTonE1_thms, e1_curve_op_thms
@@ -95,21 +98,21 @@ let big_simpset = addsimps (foldr concat
                                   [])
                            cleanup_simpset;
 
-// affinify_POINTonE1_times_c_thm <- custom_prove_cryptol
-  // {{\p -> affinify E (POINTonE1_abs (POINTonE1_times_c p)) ==
-          // e1_scalar_mult zz_minus_1_div_by_3 (affinify E (POINTonE1_abs p)) }}
-  // do { unfolding ["POINTonE1_times_c"];
-       // simplify big_simpset;
-       // simplify remove_higher_order_function_simpset;
-       // w4_unint_z3 ec_mult_unints;
-       // };
+affinify_POINTonE1_times_c_thm <- custom_prove_cryptol
+  {{\p -> affinify E (POINTonE1_abs (POINTonE1_times_c p)) ==
+          e1_scalar_mult zz_minus_1_div_by_3 (affinify E (POINTonE1_abs p)) }}
+  do { unfolding ["POINTonE1_times_c"];
+       simplify big_simpset;
+       simplify remove_higher_order_function_simpset;
+       w4_unint_z3 ec_mult_unints;
+       };
 
-// invariant_POINTonE1_times_c_thm <- custom_prove_cryptol
-  // {{ \p -> POINTonE1_invariant (POINTonE1_times_c p) == True }}
-  // do { unfolding ["POINTonE1_times_c"];
-       // simplify (addsimps POINTonE1_thms (cryptol_ss()));
-       // w4_unint_z3 ec_mult_unints;
-     // };
+invariant_POINTonE1_times_c_thm <- custom_prove_cryptol
+  {{ \p -> POINTonE1_invariant (POINTonE1_times_c p) == True }}
+  do { unfolding ["POINTonE1_times_c"];
+       simplify (addsimps POINTonE1_thms (cryptol_ss()));
+       w4_unint_z3 ec_mult_unints;
+     };
 
 // POINTonE1_in_G1:
 
@@ -151,14 +154,10 @@ let POINTonE1_in_G1_spec = do {
   crucible_return (crucible_term {{ bool_to_limb (is_in_g1_impl (POINTonE1_affine_abs p)) }});
   };
 
-
-// should be conditional, e.g. P = (0, -1)' we  need the coordinates to be proper field values
-// (This will be true if the t_Fp is (Z p) rather than Integer or [384]).
-// and so will be fine when we convert to that representation.
-affinify_projectify_thm <- admit_cryptol {{ \P -> affinify E (projectify E P) == P }};
+affinify_projectify_thm <- test_cryptol {{ \P -> affinify E (projectify E P) == normalize_affine_point Fp P }};
 
 in_G1_lemma <- custom_prove_cryptol
- {{ \P -> (POINTonE1_affine_abs (x.0, x.1) == P where x = POINTonE1_rep (projectify E P)) }}
+ {{ \P -> (POINTonE1_affine_abs (x.0, x.1) == normalize_affine_point Fp P where x = POINTonE1_rep (projectify E P)) }}
  do { unfolding ["projectify", "E", "POINTonE1_rep", "POINTonE1_affine_abs"];
       simplify fp_simpset;
       z3; } ;
@@ -189,23 +188,18 @@ is_point_projective_thms <- for
   ]
   admit_cryptol;
 
-
-propositional_lemma <- prove_cryptol {{ \ (x:Bool) c y ->  (x == if c then y else x) == (c ==> x == y) }} [];
-
-// For some strange reason, this proof fails unless I do some propositional rearangement 
-// is_point_projective_POINTonE1_times_c_thm <- custom_prove_cryptol
-  // {{ \p -> is_point_projective E (POINTonE1_abs (POINTonE1_times_c p)) ==
-           // if is_point_projective E (POINTonE1_abs p)
-           // then True
-           // else apply is_point_projective E (POINTonE1_abs (POINTonE1_times_c p)) }}
-  // do { unfolding ["apply"];
-       // simplify (addsimp propositional_lemma empty_ss);
-       // // Now it looks like is_point_projective E (POINTonE1_abs p) ==> ... ,
-       // unfolding ["POINTonE1_times_c"];
-       // simplify (addsimps (concat is_point_projective_thms POINTonE1_thms) (cryptol_ss()));
-       // simplify remove_higher_order_function_simpset;
-       // w4_unint_z3 ec_mult_unints;
-     // };
+is_point_projective_POINTonE1_times_c_thm <- custom_prove_cryptol
+  {{ \p -> is_point_projective E (POINTonE1_abs (POINTonE1_times_c p)) ==
+           if is_point_projective E (POINTonE1_abs p)
+           then True
+           else apply is_point_projective E (POINTonE1_abs (POINTonE1_times_c p)) }}
+  do { unfolding ["apply"];
+       // Now it looks like is_point_projective E (POINTonE1_abs p) ==> ... ,
+       unfolding ["POINTonE1_times_c"];
+       simplify (addsimps (concat is_point_projective_thms POINTonE1_thms) (cryptol_ss()));
+       simplify remove_higher_order_function_simpset;
+       w4_unint_z3 ec_mult_unints;
+     };
 
 // We now need a bunch of small rewrites in the main proof, to deal with tracking when points
 // stay on te curve or are the point at infinity
@@ -240,6 +234,8 @@ is_point_affine_sigma_thm <- prove_cryptol
     [];
 
 
+normalize_projectify_fp_thm <- prove_cryptol
+  {{ \ p -> normalize_point Fp (projectify E p) == projectify E (normalize_affine_point Fp p) }} [];
 // we need to use this function to match the SAWcore generated from the code
 let peq = parse_core "intEq"; // NOTE. This depends on t_Fp
 
@@ -252,20 +248,23 @@ is_point_O_thm' <- admit_cryptol (rewrite (cryptol_ss())
            else apply peq (fp_abs((POINTonE1_rep p).2)) (Fp.field_zero) }});
 
 POINTonE1_in_G1_ov <- custom_verify "POINTonE1_in_G1"
-    []
-    // (concat [sigma_ov, POINTonE1_times_zz_minus_1_div_by_3_ov] (concat  point_op_overrides fp_overrides))
+    (concat [sigma_ov, POINTonE1_times_zz_minus_1_div_by_3_ov] (concat  point_op_overrides fp_overrides))
     POINTonE1_in_G1_spec
-    assume_unsat;
-    // do {
-     // simplify (addsimps [sigma_call_thm, vec_is_zero_call_thm, invariant_POINTonE1_times_c_thm]
-                        // (addsimps POINTonE1_thms empty_ss)); // for the safety conditions
-     // unfolding ["is_in_g1_impl", "bool_to_limb", "sub"];
-     // simplify (addsimp is_point_O_thm' (cryptol_ss()));
-     // // use the rules and lemmas on is_point_projective
-     // simplify (addsimps [ is_point_affine_sigma_thm, is_point_projective_POINTonE1_times_c_thm
-                        // , affinify_projectify_thm, affinify_POINTonE1_times_c_thm, in_G1_lemma
-                        // , is_point_projective_projectify_thm, is_point_O_sigma_thm, is_point_O_sigma2_thm]
-                        // (addsimps is_point_projective_thms big_simpset));
-     // simplify remove_higher_order_function_simpset;
-     // w4_unint_z3 (concat ["sigma"] ec_mult_unints);
-  // };
+    do {
+     simplify (addsimps [sigma_call_thm, vec_is_zero_call_thm, invariant_POINTonE1_times_c_thm]
+                        (addsimps POINTonE1_thms empty_ss)); // for the safety conditions
+     unfolding ["is_in_g1_impl", "bool_to_limb", "sub"];
+     simplify (addsimp is_point_O_thm' (cryptol_ss()));
+     // use the rules and lemmas on is_point_projective
+     simplify (addsimps [ is_point_affine_sigma_thm, is_point_projective_POINTonE1_times_c_thm
+                        , affinify_projectify_thm, affinify_POINTonE1_times_c_thm, in_G1_lemma
+                        , is_point_projective_projectify_thm, is_point_O_sigma_thm, is_point_O_sigma2_thm
+                        , normalize_sigma_thm, normalize_projectify_fp_thm ]
+                        (addsimps is_point_projective_thms big_simpset));
+     // unfolding ["/\\"]; simplify basic_ss;
+     rw_with POINTonE1_thms;
+     rw_with_1 is_point_O_sigma2_thm;
+     rw_with_1 is_point_O_sigma_thm;
+     simplify remove_higher_order_function_simpset;
+     w4_unint_z3 (concat ["sigma"] ec_mult_unints);
+  };
