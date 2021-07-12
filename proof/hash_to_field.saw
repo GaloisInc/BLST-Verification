@@ -143,18 +143,16 @@ let verify_hash_to_field_for aug_len msg_len DST_len nelems = do {
   let L = 64; // sizeof(vec384) + 128/8 = 48 + 16
   let len_in_bytes = eval_size {| L*nelems |};
   block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
-  // expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, but abc does better
-  expand_message_ov <- admit "expand_message_xmd" (expand_message_spec len_in_bytes aug_len msg_len DST_len);
+  expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, but abc does better
   let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov];
-  r <- admit "hash_to_field" (hash_to_field_fp_spec nelems aug_len msg_len DST_len);
-  // r <- custom_verify "hash_to_field" overrides (hash_to_field_fp_spec nelems aug_len msg_len DST_len)
-    // (do {
-      // // assume_unsat;});
-      // unfolding ["redc_rep", "mul_mont_rep", "HE1::hash_to_field","expand_message"];
-      // simplify (addsimps [vec_abs_rep_thm] empty_ss);
-      // simplify (cryptol_ss ());
-      // simplify (addsimps [main_lemma, eq_1_thm] empty_ss);
-      // w4_unint_yices ["expand_message", "to_Fp", "fp_rep"];}); // TODO: still quite slow; z3 even slower. Probably not a stable proof.
+  r <- custom_verify "hash_to_field" overrides (hash_to_field_fp_spec nelems aug_len msg_len DST_len)
+    (do {
+      // assume_unsat;});
+      unfolding ["redc_rep", "mul_mont_rep", "HE1::hash_to_field","expand_message"];
+      simplify (addsimps [vec_abs_rep_thm] empty_ss);
+      simplify (cryptol_ss ());
+      simplify (addsimps [main_lemma, eq_1_thm] empty_ss);
+      w4_unint_yices ["expand_message", "to_Fp", "fp_rep"];}); // TODO: still quite slow; z3 even slower. Probably not a stable proof.
   return r;
 };
 
@@ -173,19 +171,17 @@ let verify_hash_to_field_fp2_for aug_len msg_len DST_len nelems = do {
   let L = 64; // sizeof(vec384) + 128/8 = 48 + 16
   let len_in_bytes = eval_size {| L*2*nelems |};
   block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
-  // expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, but abc does better
-  expand_message_ov <- admit "expand_message_xmd" (expand_message_spec len_in_bytes aug_len msg_len DST_len);
+  expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, but abc does better
   let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov];
-  r <- admit "hash_to_field" (hash_to_field_fp2_spec nelems aug_len msg_len DST_len);
-  // r <- custom_verify "hash_to_field" overrides (hash_to_field_fp2_spec nelems aug_len msg_len DST_len)
-    // do {
-      // // assume_unsat;});
-      // unfolding ["redc_rep", "mul_mont_rep", "HashToCurveE2::hash_to_field","expand_message"];
-      // simplify (addsimps [vec_abs_rep_thm] empty_ss);
-      // simplify (cryptol_ss ());
-      // simplify (addsimps [main_lemma, eq_1_thm] empty_ss);
-      // w4_unint_yices ["expand_message", "to_Fp", "fp_rep"];
-    // };
+  r <- custom_verify "hash_to_field" overrides (hash_to_field_fp2_spec nelems aug_len msg_len DST_len)
+    do {
+      // assume_unsat;});
+      unfolding ["redc_rep", "mul_mont_rep", "HashToCurveE2::hash_to_field","expand_message"];
+      simplify (addsimps [vec_abs_rep_thm] empty_ss);
+      simplify (cryptol_ss ());
+      simplify (addsimps [main_lemma, eq_1_thm] empty_ss);
+      w4_unint_yices ["expand_message", "to_Fp", "fp_rep"];
+    };
   return r;
 };
 
