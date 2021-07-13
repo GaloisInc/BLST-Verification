@@ -956,10 +956,17 @@ fold_normalize_affine_fp_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> (Fp.normalize P.0, Fp.normalize P.1) ==
            normalize_affine_point Fp P }}) [];
 
-// TODO: Prove
-POINTonE1_affine_abs_rep_thm <- test_cryptol (rewrite (cryptol_ss())
+POINTonE1_affine_abs_rep_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> POINTonE1_affine_abs (POINTonE1_affine_rep P) ==
-           normalize_affine_point Fp P }});
+           normalize_affine_point Fp P }})
+  do {
+    unfolding [ "POINTonE1_affine_abs"
+              , "POINTonE1_affine_rep"
+              , "normalize_affine_point"];
+    rw_with fp_rep_thms;
+    print_goal;
+    w4_unint_z3 [];
+  };
 
 hoist_normalize_affine_fp_thm <- really_prove_cryptol (rewrite (cryptol_ss())
   {{ \b P1 P2 -> normalize_affine_point Fp (if b then P1 else P2) ==
@@ -1017,9 +1024,16 @@ hoist_is_point_O_E'_thm <- prove_cryptol
                    if c then is_point_O E' p1 else is_point_O E' p2 }}) [];
 
 // TODO: Prove
-POINTonE2_affine_abs_rep_thm <- test_cryptol (rewrite (cryptol_ss())
+POINTonE2_affine_abs_rep_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> POINTonE2_affine_abs (POINTonE2_affine_rep P) ==
-           normalize_affine_point Fp_2 P }});
+           normalize_affine_point Fp_2 P }})
+  do {
+    unfolding [ "POINTonE2_affine_abs"
+              , "POINTonE2_affine_rep"
+              , "normalize_affine_point" ];
+    rw_with fp2_rep_thms;
+    w4_unint_z3 fp2_unints;
+  };
 
 // TODO: Prove
 is_point_O_KeyValidate_thm <- admit_cryptol (rewrite (cryptol_ss())
