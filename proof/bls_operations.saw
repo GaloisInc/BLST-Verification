@@ -231,7 +231,7 @@ O_O_unit_implies_bad_O_form_E' <- prove_cryptol (rewrite (cryptol_ss())
            then True
            else apply is_bad_O_form_E' P }}) [];
 
-demo_SkToPk_A_ov <- custom_verify "demo_SkToPk_A"
+demo_SkToPk_A_ov <- really_custom_verify "demo_SkToPk_A"
   [blst_sk_to_pk_in_g2_ov, blst_p2_compress_projective_ov, blst_p2_compress_affine_ov]
   demo_SkToPk_A_spec
   do {
@@ -242,34 +242,18 @@ demo_SkToPk_A_ov <- custom_verify "demo_SkToPk_A"
               , "other_curve"
               , "P"
               , "point_to_pubkey" ];
-    simplify (cryptol_ss());
-    simplify (addsimp eq_to_same_point_affine_E'_thm empty_ss);
-    simplify (addsimps [test_thm_correct] empty_ss);
+    simplify (addsimps [ eq_to_same_point_affine_E'_thm
+                       , test_thm_correct
+                       , O_O_unit_implies_bad_O_form_E'
+                       , mult_scalar_mult_thm
+                       , affinify_affine_thm
+                       , fold_scalar_value_thm ]
+                       (cryptol_ss()));
+    rw_with split_join_thms;
     simplify basic_ss;
-    simplify (cryptol_ss());
+    rw_with if_elim_thms;
+    rw_with [unrip_thm_96, serialize_e2_eq_thm];
     unfolding ["apply"];
-    //simplify (addsimp sk_to_pk_proj_precond_thm empty_ss);
-    unfolding ["apply"];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with_1 O_O_unit_implies_bad_O_form_E';
-    // BEGIN final goal proof
-    simplify (addsimps (concat split_join_thms
-                               [mult_scalar_mult_thm,
-                                affinify_affine_thm,
-                                fold_scalar_value_thm,
-                                serialize_e2_eq_thm])
-                       empty_ss);
-    simplify (addsimps split_join_thms empty_ss);
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    simplify (addsimps if_elim_thms empty_ss);
-    simplify (addsimps [unrip_thm_96, serialize_e2_eq_thm] empty_ss);
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    unfolding ["apply"];
-    simplify remove_higher_order_function_simpset;
-    simplify (addsimp same_point_affine_E'_thm empty_ss);
     print_goal;
     w4_unint_z3 (concat [ "e2_order"
                         , "sk_to_pk_proj_precond"
@@ -1023,7 +1007,6 @@ hoist_is_point_O_E'_thm <- prove_cryptol
     {{ \c p1 p2 -> is_point_O E' (if c then p1 else p2) ==
                    if c then is_point_O E' p1 else is_point_O E' p2 }}) [];
 
-// TODO: Prove
 POINTonE2_affine_abs_rep_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> POINTonE2_affine_abs (POINTonE2_affine_rep P) ==
            normalize_affine_point Fp_2 P }})
