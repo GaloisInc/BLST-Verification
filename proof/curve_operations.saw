@@ -721,8 +721,6 @@ let POINTonE1_thms = concat_all
   , [normalize_affinify_thm, normalize_projectify_thm]
   ];
 
-let big_simpset = concat big_simpset POINTonE1_thms;
-
 // .. and these theorems, which are admitted for now rather than proven, that
 // assert that the operations in projective coordinates have the right effect in
 // affine coordinates
