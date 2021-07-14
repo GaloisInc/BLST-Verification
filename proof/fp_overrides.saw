@@ -292,8 +292,6 @@ fp_alg_thms <- for
   , {{ Fp.neg Fp.field_zero == Fp.field_zero }} // -0 = 0
   ] (\ t -> prove_cryptol t []);
 
-let big_simpset = concat big_simpset fp_alg_thms;
-
 ////////////////////////////////////////////////////////////////
 //
 // Overrides for the fp_operations

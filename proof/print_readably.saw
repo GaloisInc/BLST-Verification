@@ -35,7 +35,6 @@ let {{
   fp_is_equal = Fp.is_equal
   fp_neg = Fp.neg
   fp_normalize = Fp.normalize
-  fp2_normalize = Fp_2.normalize
 }};
 
 readability_rewrites <- for [
