@@ -37,7 +37,7 @@ let blst_core_verify_pk_in_g2_non_null_spec msg_len dst_len aug_len = do {
   crucible_execute_func [pk_ptr, signature_ptr, crucible_term hash_or_encode,
   msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `dst_len : [64] }}, llvm_null , crucible_term {{ `aug_len : [64] }}];
   // TODO: Use '_impl" version and rewrite to non-impl version
-  crucible_return (crucible_term {{ if core_verify_pk_in_g2 (POINTonE2_affine_abs pk) (POINTonE1_affine_abs sig) msg dst then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
+  crucible_return (crucible_term {{ if core_verify_pk_in_g2_impl (POINTonE2_affine_abs pk) (POINTonE1_affine_abs sig) msg dst then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
   // TODO: Restore real postcond
   //llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }} );
 };
@@ -47,11 +47,10 @@ blst_core_verify_pk_in_g2_ov <- admit "blst_core_verify_pk_in_g2"
 
 // TODO: verify_eq probably needs explicit types to apply (maybe not: I applied
 // this in the wrong branch which is why it didn't work)
-/*
 verify_eq_thm <- admit_cryptol (rewrite (cryptol_ss())
-  {{ \(pk : [43][8]) sig msg dst -> core_verify_pk_in_g2_impl pk sig msg dst ==
-                        core_verify_pk_in_g2 pk sig msg dst }});
-                        */
+  {{ \pk sig (msg : [32][8]) (dst : [43][8]) ->
+       core_verify_pk_in_g2_impl pk sig msg dst ==
+       core_verify_pk_in_g2 pk sig msg dst }});
 
 /*
 // error case
