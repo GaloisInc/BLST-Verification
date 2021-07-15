@@ -4,7 +4,7 @@
 */
 
 include "print_readably.saw";
-//import "../spec/implementation/CoreVerifyPKInG2.cry";
+import "../spec/CoreVerifyPKInG2.cry";
 
 // Specifications
 
@@ -12,12 +12,16 @@ let msg_len = 32;
 let dst_len = 8;
 let aug_len = 8;
 
+let BLST_VERIFY_FAIL = 5;
+
 // TODO: null-pk case
 
 let {{
   blst_core_verify_pk_in_g2_error_precond : POINTonE2_affine_t -> POINTonE1_affine_t -> Bool
   blst_core_verify_pk_in_g2_error_precond pk sig =
        is_point_O E' (POINTonE2_affine_abs pk) \/ ( ~(is_point_O E (POINTonE1_affine_abs sig)) /\ ~is_in_g1_impl (POINTonE1_affine_abs sig) )
+       // TODO: Put `aug` back in
+  core_verify_pk_in_g2_impl pk sig msg dst = undefined
 }};
 
 // case in which no argument is null and the error condition is false
@@ -32,13 +36,22 @@ let blst_core_verify_pk_in_g2_non_null_spec msg_len dst_len aug_len = do {
   //(aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
   crucible_execute_func [pk_ptr, signature_ptr, crucible_term hash_or_encode,
   msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `dst_len : [64] }}, llvm_null , crucible_term {{ `aug_len : [64] }}];
-  //crucible_return (crucible_term {{ if core_verify_pk_in_g2_impl (POINTonE2_affine_abs pk) (POINTonE1_affine_abs sig) msg dst aug then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
+  // TODO: Use '_impl" version and rewrite to non-impl version
+  crucible_return (crucible_term {{ if core_verify_pk_in_g2 (POINTonE2_affine_abs pk) (POINTonE1_affine_abs sig) msg dst then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
   // TODO: Restore real postcond
-  llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }} );
+  //llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }} );
 };
 
 blst_core_verify_pk_in_g2_ov <- admit "blst_core_verify_pk_in_g2"
 (blst_core_verify_pk_in_g2_non_null_spec 32 43 0);
+
+// TODO: verify_eq probably needs explicit types to apply (maybe not: I applied
+// this in the wrong branch which is why it didn't work)
+/*
+verify_eq_thm <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \(pk : [43][8]) sig msg dst -> core_verify_pk_in_g2_impl pk sig msg dst ==
+                        core_verify_pk_in_g2 pk sig msg dst }});
+                        */
 
 /*
 // error case

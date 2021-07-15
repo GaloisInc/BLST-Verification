@@ -7,8 +7,10 @@ import "../spec/BLSMinimalSignatureSize.cry";
 
 HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
 
+/*
 let do_prove = true;
 include "proof-helpers.saw";
+*/
 
 let {{
   drop_join_reverse: {n_bits, n_bytes} (fin n_bytes, n_bits <= 8*n_bytes) => [n_bytes][8] -> [n_bits]
@@ -865,10 +867,8 @@ let demo_BasicVerify_A_spec = do {
                     , message_ptr
                     , llvm_term {{ `message_len : [64] }} ];
   // TODO: Postcond
-  /*
   llvm_return (llvm_term
       {{ bool_to_limb (CoreVerify (join pk, message, join sig)) }});
-      */
 };
 
 is_point_O_E_affine_rev_thm <- prove_cryptol (rewrite (cryptol_ss())
@@ -886,7 +886,8 @@ uncompress_E1_OK_inv <- prove_cryptol
 
 
 let BasicVerify_A_unints = (concat [
-  "KeyValidate"
+  "HashToCurveE1::hash_to_curve"
+, "KeyValidate"
 , "POINTonE1_affine_abs"
 , "POINTonE1_affine_invariant"
 , "POINTonE1_affine_rep"
@@ -896,6 +897,7 @@ let BasicVerify_A_unints = (concat [
 //, "point_O_E"
 //, "Fp"
 //, "fp_abs"
+, "bls_ate_pairing"
 , "deserialize_E2"
 , "fp_invariant"
 , "fp_rep"
@@ -956,7 +958,7 @@ fold_normalize_affine_fp_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> (Fp.normalize P.0, Fp.normalize P.1) ==
            normalize_affine_point Fp P }}) [];
 
-POINTonE1_affine_abs_rep_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss())
+POINTonE1_affine_abs_rep_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> POINTonE1_affine_abs (POINTonE1_affine_rep P) ==
            normalize_affine_point Fp P }})
   do {
@@ -968,13 +970,13 @@ POINTonE1_affine_abs_rep_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss
     w4_unint_z3 [];
   };
 
-hoist_normalize_affine_fp_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+hoist_normalize_affine_fp_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \b P1 P2 -> normalize_affine_point Fp (if b then P1 else P2) ==
                  if b
                  then normalize_affine_point Fp P1
                  else normalize_affine_point Fp P2 }}) [];
 
-normalize_uncompress_E1_OK_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss())
+normalize_uncompress_E1_OK_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
   {{ \x -> normalize_affine_point Fp (uncompress_E1_OK x) ==
            uncompress_E1_OK x }})
   do {
@@ -1024,7 +1026,7 @@ hoist_is_point_O_E'_thm <- prove_cryptol
                    if c then is_point_O E' p1 else is_point_O E' p2 }}) [];
 
 // TODO: Prove
-POINTonE2_affine_abs_rep_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss())
+POINTonE2_affine_abs_rep_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> POINTonE2_affine_abs (POINTonE2_affine_rep P) ==
            normalize_affine_point Fp_2 P }})
   do {
@@ -1036,13 +1038,14 @@ POINTonE2_affine_abs_rep_thm <- really_custom_prove_cryptol (rewrite (cryptol_ss
   };
 
 // TODO: Prove
+// TODO: Try new is_point_O assumption based on CoreVerify precondition instead
 is_point_O_KeyValidate_thm <- admit_cryptol (rewrite (cryptol_ss())
   {{ \pk -> is_point_O E' (uncompress_E2_OK pk) ==
             if KeyValidate (join pk) 
             then False
             else apply is_point_O E' (uncompress_E2_OK pk) }});
 
-demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
+demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
   [ POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
   , POINTonE1_affine_on_curve_ov
   , vec_is_zero_2fp_ov
@@ -1055,7 +1058,7 @@ demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
   , blst_core_verify_pk_in_g2_ov ]
   demo_BasicVerify_A_spec
   do {
-    (goal_num_ite 60
+    (goal_num_ite 7
       (do {
         // Postcondition proof
         unfolding [ "CoreVerify"
@@ -1070,6 +1073,13 @@ demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
                   , "module parameter pubkey_to_point"
                   , "pubkey_to_point"
                   , "blst_core_verify_pk_in_g2_error_precond"];
+        unfolding [ "core_verify_pk_in_g2"
+                  , "module parameter pairing"
+                  , "pairing"
+                  , "module parameter hash_to_point"
+                  , "hash_to_point"
+                  , "module parameter P"
+                  , "P" ];
         rw_with split_join_thms;
         rw_with [ uncompress_E1_uncompress_E1_OK_thm
                 , POINTonE1_affine_abs_rep_thm
@@ -1098,6 +1108,10 @@ demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
         rw_with [ fold_normalize_affine_fp_thm
                 , deserialize_E2_uncompress_E2_OK_thm
                 , normalize_uncompress_E1_OK_thm ];
+        // TODO: core_verify rewrite rule goes here
+        rw_with [ POINTonE2_affine_abs_rep_thm
+                , hoist_normalize_affine_fp2_thm
+                , normalize_uncompress_E2_OK_thm ];
         rw_with remove_ho_rules;
         print_goal;
         w4_unint_z3 BasicVerify_A_unints;
@@ -1147,8 +1161,6 @@ demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
         //rw_with_1 is_point_O_affine_rev_thm;
         simplify basic_ss;
         simplify (cryptol_ss());
-        //rw_with_1 fold_is_point_O_E'_thm;
-        //print_goal;
         rw_with remove_ho_rules;
         // END Precondition proofs
         print_goal;
