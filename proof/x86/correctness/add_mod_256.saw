@@ -101,23 +101,6 @@ let lshift_mod_256_alias_ret_a_spec count = do {
   crucible_points_to ret_ptr (crucible_term new_ret);
 };
 
-// rshift_mod_256
-let rshift_mod_256_spec count = do {
-  ret_ptr <- crucible_alloc vec256_type;
-  (_, a_ptr) <- ptr_to_fresh_readonly "a" vec256_type;
-  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
-  crucible_execute_func [ret_ptr, a_ptr, crucible_term count, p_ptr];
-  new_ret <- crucible_fresh_var "new_ret" vec256_type;
-  crucible_points_to ret_ptr (crucible_term new_ret);
-};
-let rshift_mod_256_alias_ret_a_spec count = do {
-  (_, ret_ptr) <- ptr_to_fresh "ret" vec256_type;
-  (_, p_ptr) <- ptr_to_fresh_readonly "p" vec256_type;
-  crucible_execute_func [ret_ptr, ret_ptr, crucible_term count, p_ptr];
-  new_ret <- crucible_fresh_var "new_ret" vec256_type;
-  crucible_points_to ret_ptr (crucible_term new_ret);
-};
-
 // cneg_mod_256
 let cneg_mod_256_spec = do {
   ret_ptr <- crucible_alloc vec256_type;
@@ -201,30 +184,26 @@ let sub_mod_256_alias_ret_a_b_spec = do {
 
 // add_mod_256
 verify_x86 "add_mod_256" add_mod_256_spec w4;
-verify_x86 "add_mod_256" add_mod_256_alias_ret_a_spec w4;
-verify_x86 "add_mod_256" add_mod_256_alias_ret_b_spec w4;
-verify_x86 "add_mod_256" add_mod_256_alias_a_b_spec w4;
-verify_x86 "add_mod_256" add_mod_256_alias_ret_a_b_spec w4;
+// verify_x86 "add_mod_256" add_mod_256_alias_ret_a_spec w4;
+// verify_x86 "add_mod_256" add_mod_256_alias_ret_b_spec w4;
+// verify_x86 "add_mod_256" add_mod_256_alias_a_b_spec w4;
+// verify_x86 "add_mod_256" add_mod_256_alias_ret_a_b_spec w4;
 
 // mul_by_3_mod_256
 verify_x86 "mul_by_3_mod_256" mul_by_3_mod_256_spec w4;
-verify_x86 "mul_by_3_mod_256" mul_by_3_mod_256_alias_ret_a_spec w4;
+// verify_x86 "mul_by_3_mod_256" mul_by_3_mod_256_alias_ret_a_spec w4;
 
 // lshift_mod_256
 verify_x86 "lshift_mod_256" (lshift_mod_256_spec {{ 5 : [64] }}) w4;
-verify_x86 "lshift_mod_256" (lshift_mod_256_alias_ret_a_spec {{ 5 : [64] }}) w4;
-
-// rshift_mod_256 - TODO
-// verify_x86 "rshift_mod_256" (rshift_mod_256_spec {{ 5 : [64] }}) w4;
-// verify_x86 "rshift_mod_256" (rshift_mod_256_alias_ret_a_spec {{ 5 : [64] }}) w4;
+// verify_x86 "lshift_mod_256" (lshift_mod_256_alias_ret_a_spec {{ 5 : [64] }}) w4;
 
 // cneg_mod_256
 verify_x86 "cneg_mod_256" cneg_mod_256_spec w4;
-verify_x86 "cneg_mod_256" cneg_mod_256_alias_ret_a_spec w4;
+// verify_x86 "cneg_mod_256" cneg_mod_256_alias_ret_a_spec w4;
 
 // sub_mod_256
 verify_x86 "sub_mod_256" sub_mod_256_spec w4;
-verify_x86 "sub_mod_256" sub_mod_256_alias_ret_a_spec w4;
-verify_x86 "sub_mod_256" sub_mod_256_alias_ret_b_spec w4;
-verify_x86 "sub_mod_256" sub_mod_256_alias_a_b_spec w4;
-verify_x86 "sub_mod_256" sub_mod_256_alias_ret_a_b_spec w4;
+// verify_x86 "sub_mod_256" sub_mod_256_alias_ret_a_spec w4;
+// verify_x86 "sub_mod_256" sub_mod_256_alias_ret_b_spec w4;
+// verify_x86 "sub_mod_256" sub_mod_256_alias_a_b_spec w4;
+// verify_x86 "sub_mod_256" sub_mod_256_alias_ret_a_b_spec w4;
