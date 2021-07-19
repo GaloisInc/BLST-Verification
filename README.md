@@ -51,7 +51,7 @@ Function `blst_keygen` has been shown to give a result in agreement with the Cry
 
 * Many algebraic properties of field operations, such as the associative and unit laws, have been assumed rather than proved.  Similarly, some algebraic properties relating to elliptic curves are assumed.
 
-* The assembly language subroutines involving addition (broadly, those in files `src/asm/add_mod_256-x86_64.pl`, `src/asm/add_mod_384-x86_64.pl`, and `src/asm/add_mod_384x384-x86_64.pl`) are proved equivalent to high-level Cryptol routines defined over bitvectors, while they are assumed elsewhere to be equivalent to routines defined over integers. The subroutines involving multiplication (in files `src/asm/mulx_mont_256-x86_64.pl`, `src/asm/mulx_mont_384-x86_64.pl`, and `src/asm/ctx_inverse_mod_384-x86_64` are proved equivalent to (verbose) low-level Cryptol routines that closely match the structure of the implementation.
+* The assembly language subroutines involving addition (broadly, those in files `src/asm/add_mod_256-x86_64.pl`, `src/asm/add_mod_384-x86_64.pl`, and `src/asm/add_mod_384x384-x86_64.pl`) are proved equivalent to high-level Cryptol routines defined over bitvectors, while they are assumed elsewhere to be equivalent to routines defined over integers. The subroutines involving multiplication (in files `src/asm/mulx_mont_256-x86_64.pl`, `src/asm/mulx_mont_384-x86_64.pl`, and `src/asm/ctx_inverse_mod_384-x86_64`) are proved equivalent to (verbose) low-level Cryptol routines that closely match the structure of the implementation.
 
 * We make an additional assumption about the stack pointer when verifying `ctx_inverse_mod_383` and `ct_inverse_mod_383` - see the comment in `proof/x86/ctx_inverse_mod_384.saw`
 
