@@ -84,7 +84,7 @@ let overrides = concat mul_fp12_ovs // fp12.saw
 , vec_is_zero_10fp_ov
 , vec_is_zero_2fp2_ov
 , vec_is_zero_2fp_is_equal_ov
-, vec_is_equal_fp2_ov
+, vec_is_equal_fp2_ov // TODO: needed?
 , POINTonE2_in_g2_ov // subgroup_check_g2.saw
 ];
 
