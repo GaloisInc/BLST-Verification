@@ -1,0 +1,380 @@
+module implementation::x86 where
+
+import implementation::Types
+import implementation::x86::helpers
+
+// Top-level functions
+mulx_mont_384x
+  : Vec768 // a
+  -> Vec768 // b
+  -> Vec384  // m
+  -> [64] // n0
+  -> Vec768 // result
+mulx_mont_384x a b m n0 = result
+  where
+    t0 = __mulx_384 (take a) (take b)
+    t1 = __mulx_384 (drop a) (drop b)
+    t2 = __mulx_384 (__add_mod_384 (take b) (drop b) m) (__add_mod_384 (take a) (drop a) m)
+    t2' = __sub_mod_384x384 (__sub_mod_384x384 t2 t0 m) t1 m
+    t0' = __sub_mod_384x384 t0 t1 m
+    ret_re = redcx_mont_384 t0' m n0
+    ret_im = redcx_mont_384 t2' m n0
+    result = ret_re # ret_im
+
+sqrx_mont_384x
+  : Vec768 // a
+  -> Vec384  // m
+  -> [64] // n0
+  -> Vec768 // result
+sqrx_mont_384x a m n0 = result
+  where
+    t0 = __add_mod_384 (take a) (drop a) m
+    t1 = __sub_mod_384 (take a) (drop a) m
+    tmp = mulx_mont_384 (take a) (drop a) m n0
+    ret_im = __add_mod_384 tmp tmp m
+    ret_re = mulx_mont_384 t0 t1 m n0
+    result = ret_re # ret_im
+
+mulx_382x
+  : Vec768 // a
+  -> Vec768 // b
+  -> Vec384  // m
+  -> [2]Vec768 // result
+mulx_382x a b m = result
+  where
+    a_re = take a
+    a_im = drop a
+    (t0_cf_0, t0_0) = add (a_re @ 0) (a_im @ 0)
+    (t0_cf_1, t0_1) = adc (a_re @ 1) (a_im @ 1) t0_cf_0
+    (t0_cf_2, t0_2) = adc (a_re @ 2) (a_im @ 2) t0_cf_1
+    (t0_cf_3, t0_3) = adc (a_re @ 3) (a_im @ 3) t0_cf_2
+    (t0_cf_4, t0_4) = adc (a_re @ 4) (a_im @ 4) t0_cf_3
+    (_, t0_5) = adc (a_re @ 5) (a_im @ 5) t0_cf_4
+    b_re = take b
+    b_im = drop b
+    (t1_cf_0, t1_0) = add (b_re @ 0) (b_im @ 0)
+    (t1_cf_1, t1_1) = adc (b_re @ 1) (b_im @ 1) t1_cf_0
+    (t1_cf_2, t1_2) = adc (b_re @ 2) (b_im @ 2) t1_cf_1
+    (t1_cf_3, t1_3) = adc (b_re @ 3) (b_im @ 3) t1_cf_2
+    (t1_cf_4, t1_4) = adc (b_re @ 4) (b_im @ 4) t1_cf_3
+    (_, t1_5) = adc (b_re @ 5) (b_im @ 5) t1_cf_4
+    tmp_im_0 = __mulx_384 [t0_0, t0_1, t0_2, t0_3, t0_4, t0_5] [t1_0, t1_1, t1_2, t1_3, t1_4, t1_5]
+    tmp_re = __mulx_384 a_re b_re
+    tx = __mulx_384 a_im b_im
+    tmp_im_1 = __sub_mod_384x384 tmp_im_0 tx m
+    ret_im = __sub_mod_384x384 tmp_im_1 tmp_re m
+    ret_re = __sub_mod_384x384 tmp_re tx m
+    result = [ret_re, ret_im]
+
+sqrx_382x
+  : Vec768 // a
+  -> Vec384  // m
+  -> [2]Vec768 // result
+sqrx_382x a m = result
+  where
+    a_re = take a
+    a_im = drop a
+    (t0_cf_0, t0_0) = add (a_re @ 0) (a_im @ 0)
+    (t0_cf_1, t0_1) = adc (a_re @ 1) (a_im @ 1) t0_cf_0
+    (t0_cf_2, t0_2) = adc (a_re @ 2) (a_im @ 2) t0_cf_1
+    (t0_cf_3, t0_3) = adc (a_re @ 3) (a_im @ 3) t0_cf_2
+    (t0_cf_4, t0_4) = adc (a_re @ 4) (a_im @ 4) t0_cf_3
+    (_, t0_5) = adc (a_re @ 5) (a_im @ 5) t0_cf_4
+    t1 = __sub_mod_384 a_re a_im m
+    ret_re = __mulx_384 t1 [t0_0, t0_1, t0_2, t0_3, t0_4, t0_5]
+    tmp_im = __mulx_384 a_re a_im
+    (ret_im_cf_0, ret_im_0) = add (tmp_im @ 0) (tmp_im @ 0)
+    (ret_im_cf_1, ret_im_1) = adc (tmp_im @ 1) (tmp_im @ 1) ret_im_cf_0
+    (ret_im_cf_2, ret_im_2) = adc (tmp_im @ 2) (tmp_im @ 2) ret_im_cf_1
+    (ret_im_cf_3, ret_im_3) = adc (tmp_im @ 3) (tmp_im @ 3) ret_im_cf_2
+    (ret_im_cf_4, ret_im_4) = adc (tmp_im @ 4) (tmp_im @ 4) ret_im_cf_3
+    (ret_im_cf_5, ret_im_5) = adc (tmp_im @ 5) (tmp_im @ 5) ret_im_cf_4
+    (ret_im_cf_6, ret_im_6) = adc (tmp_im @ 6) (tmp_im @ 6) ret_im_cf_5
+    (ret_im_cf_7, ret_im_7) = adc (tmp_im @ 7) (tmp_im @ 7) ret_im_cf_6
+    (ret_im_cf_8, ret_im_8) = adc (tmp_im @ 8) (tmp_im @ 8) ret_im_cf_7
+    (ret_im_cf_9, ret_im_9) = adc (tmp_im @ 9) (tmp_im @ 9) ret_im_cf_8
+    (ret_im_cf_10, ret_im_10) = adc (tmp_im @ 10) (tmp_im @ 10) ret_im_cf_9
+    (_, ret_im_11) = adc (tmp_im @ 11) (tmp_im @ 11) ret_im_cf_10
+    ret_im = [ret_im_0, ret_im_1, ret_im_2, ret_im_3, ret_im_4, ret_im_5, ret_im_6, ret_im_7, ret_im_8, ret_im_9, ret_im_10, ret_im_11]
+    result = [ret_re, ret_im]
+
+redcx_mont_384
+  : Vec768 // a; pointer in rsi
+  -> Vec384 // m; pointer in rdx
+  -> [64] // n0; passed in rcx
+  -> Vec384 // result
+redcx_mont_384 a m n0 = result
+  where
+    acc = __mulx_by_1_mont_384 (take a) m n0
+    result = __redc_tail_mont_384 acc a m
+fromx_mont_384
+  : Vec384 // a; pointer in rsi
+  -> Vec384 // m; pointer in rdx
+  -> [64] // n0; passed in rcx
+  -> Vec384 // result
+fromx_mont_384 a m n0 = result
+  where
+    
+    [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = __mulx_by_1_mont_384 a m n0
+    rax_1 = r14_0
+    rcx_1 = r15_0
+    rdx_1 = r8_0
+    rbp_1 = r9_0
+    (cf_2, r14_2) = sub r14_0 (m @ 0)
+    (cf_3, r15_3) = sbb r15_0 (m @ 1) cf_2
+    r13_4 = r10_0
+    (cf_5, r8_5) = sbb r8_0 (m @ 2) cf_3
+    (cf_6, r9_6) = sbb r9_0 (m @ 3) cf_5
+    (cf_7, r10_7) = sbb r10_0 (m @ 4) cf_6
+    rsi_8 = r11_0
+    (cf_9, r11_9) = sbb r11_0 (m @ 5) cf_7
+    r14_10 = cmovb r14_2 rax_1 cf_9
+    r15_10 = cmovb r15_3 rcx_1 cf_9
+    r8_10 = cmovb r8_5 rdx_1 cf_9
+    r9_10 = cmovb r9_6 rbp_1 cf_9
+    r10_10 = cmovb r10_7 r13_4 cf_9
+    r11_10 = cmovb r11_9 rsi_8 cf_9
+    result = [r14_10, r15_10, r8_10, r9_10, r10_10, r11_10]
+
+sgn0x_pty_mont_384
+  : Vec384 // a; passed in rdi
+  -> Vec384 // p; passed in rsi
+  -> [64] // n0; passed in rdx
+  -> [64]
+sgn0x_pty_mont_384 a p n0 = result
+  where
+    
+    [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = __mulx_by_1_mont_384 a p n0
+    rax_1 = 0
+    r13_2 = r14_0
+    (cf_3, r14_3) = adcx r14_0 r14_0 False
+    (cf_4, r15_4) = adcx r15_0 r15_0 cf_3
+    (cf_5, r8_5) = adcx r8_0 r8_0 cf_4
+    (cf_6, r9_6) = adcx r9_0 r9_0 cf_5
+    (cf_7, r10_7) = adcx r10_0 r10_0 cf_6
+    (cf_8, r11_8) = adcx r11_0 r11_0 cf_7
+    (_, rax_9) = adcx rax_1 0 cf_8
+    (cf_10, r14_10) = sub r14_3 (p @ 0)
+    (cf_11, r15_11) = sbb r15_4 (p @ 1) cf_10
+    (cf_12, r8_12) = sbb r8_5 (p @ 2) cf_11
+    (cf_13, r9_13) = sbb r9_6 (p @ 3) cf_12
+    (cf_14, r10_14) = sbb r10_7 (p @ 4) cf_13
+    (cf_15, r11_15) = sbb r11_8 (p @ 5) cf_14
+    (_, rax_16) = sbb rax_9 0 cf_15
+    rax_17 = ~rax_16
+    r13_18 = r13_2 && (zext 0x1 : [64])
+    rax_18 = rax_17 && (zext 0x2 : [64])
+    result = rax_18 || r13_18
+
+sgn0x_pty_mont_384x
+  : Vec768 // a; passed in rdi
+  -> Vec384 // m; passed in rsi
+  -> [64] // n0; passed in rdx
+  -> [64]
+sgn0x_pty_mont_384x a m n0 = result
+  where
+    [r8_4, r9_4, r10_4, r11_4, r12_4, r13_4, r14_4, r15_4] = __mulx_by_1_mont_384 (drop a) m n0
+    r12_5 = r14_4
+    r14_6 = r14_4 || r15_4
+    r14_7 = r14_6 || r8_4
+    r14_8 = r14_7 || r9_4
+    r14_9 = r14_8 || r10_4
+    r14_10 = r14_9 || r11_4
+    rdi_12 = 0
+    r13_13 = r12_5
+    (cf_14, r12_14) = add r12_5 r12_5
+    (cf_15, r15_15) = adc r15_4 r15_4 cf_14
+    (cf_16, r8_16) = adc r8_4 r8_4 cf_15
+    (cf_17, r9_17) = adc r9_4 r9_4 cf_16
+    (cf_18, r10_18) = adc r10_4 r10_4 cf_17
+    (cf_19, r11_19) = adc r11_4 r11_4 cf_18
+    (cf_20, rdi_20) = adc rdi_12 0 cf_19
+    (cf_21, r12_21) = sub r12_14 (m @ 0)
+    (cf_22, r15_22) = sbb r15_15 (m @ 1) cf_21
+    (cf_23, r8_23) = sbb r8_16 (m @ 2) cf_22
+    (cf_24, r9_24) = sbb r9_17 (m @ 3) cf_23
+    (cf_25, r10_25) = sbb r10_18 (m @ 4) cf_24
+    (cf_26, r11_26) = sbb r11_19 (m @ 5) cf_25
+    (cf_27, rdi_27) = sbb rdi_20 0 cf_26
+    stack0 = r14_10
+    rdi_29 = ~rdi_27
+    r13_30 = r13_13 && zext 0x1
+    rdi_31 = rdi_29 && zext 0x2
+    rdi_32 = rdi_31 || r13_30
+    [r8_33, r9_33, r10_33, r11_33, r12_33, r13_33, r14_33, r15_33] = __mulx_by_1_mont_384 (take a) m n0
+    r12_34 = r14_33
+    r14_35 = r14_33 || r15_33
+    r14_36 = r14_35 || r8_33
+    r14_37 = r14_36 || r9_33
+    r14_38 = r14_37 || r10_33
+    r14_39 = r14_38 || r11_33
+    rax_40 = 0
+    r13_41 = r12_34
+    (cf_42, r12_42) = add r12_34 r12_34
+    (cf_43, r15_43) = adc r15_33 r15_33 cf_42
+    (cf_44, r8_44) = adc r8_33 r8_33 cf_43
+    (cf_45, r9_45) = adc r9_33 r9_33 cf_44
+    (cf_46, r10_46) = adc r10_33 r10_33 cf_45
+    (cf_47, r11_47) = adc r11_33 r11_33 cf_46
+    (cf_48, rax_48) = adc rax_40 0 cf_47
+    (cf_49, r12_49) = sub r12_42 (m @ 0)
+    (cf_50, r15_50) = sbb r15_43 (m @ 1) cf_49
+    (cf_51, r8_51) = sbb r8_44 (m @ 2) cf_50
+    (cf_52, r9_52) = sbb r9_45 (m @ 3) cf_51
+    (cf_53, r10_53) = sbb r10_46 (m @ 4) cf_52
+    (cf_54, r11_54) = sbb r11_47 (m @ 5) cf_53
+    (cf_55, rax_55) = sbb rax_48 0 cf_54
+    r12_56 = stack0
+    rax_57 = ~rax_55
+    zf_58 = r14_39 == 0
+    r13_59 = cmove r13_41 rdi_32 zf_58
+    zf_60 = r12_56 == 0
+    rax_61 = cmovne rax_57 rdi_32 zf_60
+    r13_62 = r13_59 && zext 0x1
+    rax_63 = rax_61 && zext 0x2
+    rax_64 = rax_63 || r13_62
+    result = rax_64
+
+mulx_mont_384
+  : Vec384 // a; passed in rsi
+  -> Vec384 // b; passed in rdx
+  -> Vec384 // m; passed in rcx
+  -> [64] // n0; passed in r8
+  -> Vec384 // result
+mulx_mont_384 a b m n0 = result
+  where
+    (r9, r8) = mulx (a @ 0) (b @ 0)
+    acc =
+      [ r8 // r8
+      , r9 // r9
+      , undefined // r10
+      , undefined // r11
+      , a @ 3 // r12
+      , undefined // r13
+      , a @ 0 // r14
+      , a @ 1 // r15
+      , a @ 2 // rax
+      ]
+    lo = a @ 4
+    hi = a @ 5
+    result = __mulx_mont_384 acc (b @ 0) n0 lo hi a b m
+
+sqrx_n_mul_mont_383
+  : Vec384 // a
+  -> Integer  // count
+  -> Vec384 // m
+  -> [64] // n0
+  -> Vec384 // b
+  -> Vec384 // result
+sqrx_n_mul_mont_383 a count m n0 b = result
+  where
+    mulx_mont_383_nonred x y = __mulx_mont_383_nonred [r8, r9, undefined, undefined, x @ 3, undefined, x @ 0, x @ 1, x @ 2] (y @ 0) n0 (x @ 4) (x @ 5) x y m
+      where (r9, r8) = mulx (x @ 0) (y @ 0)
+    loop counter acc =
+      if counter == 0
+      then acc
+      else loop (counter - 1) (mulx_mont_383_nonred acc acc)
+    result = mulx_mont_384 (loop count a) b m n0
+
+sqrx_mont_382x
+  : Vec768 // a; pointer in rsi
+  -> Vec384  // m; pointer in rdx
+  -> [64] // n0; passed in rcx
+  -> Vec768 // result
+sqrx_mont_382x a m n0 = result
+  where
+    mulx_mont_383_nonred x y = __mulx_mont_383_nonred [r8, r9, undefined, undefined, x @ 3, undefined, x @ 0, x @ 1, x @ 2] (y @ 0) n0 (x @ 4) (x @ 5) x y m
+      where (r9, r8) = mulx (x @ 0) (y @ 0)
+    a_re = take a
+    a_im = drop a
+    (t0_cf_0, t0_0) = add (a_re @ 0) (a_im @ 0)
+    (t0_cf_1, t0_1) = adc (a_re @ 1) (a_im @ 1) t0_cf_0
+    (t0_cf_2, t0_2) = adc (a_re @ 2) (a_im @ 2) t0_cf_1
+    (t0_cf_3, t0_3) = adc (a_re @ 3) (a_im @ 3) t0_cf_2
+    (t0_cf_4, t0_4) = adc (a_re @ 4) (a_im @ 4) t0_cf_3
+    (_, t0_5) = adc (a_re @ 5) (a_im @ 5) t0_cf_4
+    t0 = [t0_0, t0_1, t0_2, t0_3, t0_4, t0_5]
+    (t1_cf_0, t1_0) = sub (a_re @ 0) (a_im @ 0)
+    (t1_cf_1, t1_1) = sbb (a_re @ 1) (a_im @ 1) t1_cf_0
+    (t1_cf_2, t1_2) = sbb (a_re @ 2) (a_im @ 2) t1_cf_1
+    (t1_cf_3, t1_3) = sbb (a_re @ 3) (a_im @ 3) t1_cf_2
+    (t1_cf_4, t1_4) = sbb (a_re @ 4) (a_im @ 4) t1_cf_3
+    (gt, t1_5) = sbb (a_re @ 5) (a_im @ 5) t1_cf_4
+    t1 = [t1_0, t1_1, t1_2, t1_3, t1_4, t1_5]
+    tmp_im = mulx_mont_383_nonred a_re a_im
+    (ret_im_cf_0, ret_im_0) = add (tmp_im @ 0) (tmp_im @ 0)
+    (ret_im_cf_1, ret_im_1) = adc (tmp_im @ 1) (tmp_im @ 1) ret_im_cf_0
+    (ret_im_cf_2, ret_im_2) = adc (tmp_im @ 2) (tmp_im @ 2) ret_im_cf_1
+    (ret_im_cf_3, ret_im_3) = adc (tmp_im @ 3) (tmp_im @ 3) ret_im_cf_2
+    (ret_im_cf_4, ret_im_4) = adc (tmp_im @ 4) (tmp_im @ 4) ret_im_cf_3
+    (_, ret_im_5) = adc (tmp_im @ 5) (tmp_im @ 5) ret_im_cf_4
+    ret_im = [ret_im_0, ret_im_1, ret_im_2, ret_im_3, ret_im_4, ret_im_5]
+    tmp_re = mulx_mont_383_nonred t0 t1
+    mask = if gt then -1 else 0
+    t0_mask = [mask && (t0 @ 0), mask && (t0 @ 1), mask && (t0 @ 2), mask && (t0 @ 3), mask && (t0 @ 4), mask && (t0 @ 5)]
+    ret_re = __sub_mod_384 tmp_re t0_mask m
+    result = ret_re # ret_im
+
+mulx_mont_sparse_256
+  : Vec256 // a; passed in rsi
+  -> Vec256 // b; passed in rdx
+  -> Vec256 // m; passed in rcx
+  -> [64] // n0; passed in r8
+  -> Vec256 // result
+mulx_mont_sparse_256 a b m n0 = result
+  where
+    (r11, rax) = mulx (a @ 0) (b @ 0)
+    acc =
+      [ undefined // r10
+      , r11 // r11
+      , undefined // r12
+      , undefined // r13
+      , a @ 0 // r14
+      , a @ 1 // r15
+      , rax // rax
+      ]
+    lo = a @ 2
+    hi = a @ 3
+    result = __mulx_mont_sparse_256 acc (b @ 0) n0 lo hi a b m
+
+redcx_mont_256
+  : Vec512 // a; pointer in rsi
+  -> Vec256 // m; pointer in rdx
+  -> [64] // n0; passed in rcx
+  -> Vec256 // result
+redcx_mont_256 a m n0 = result
+  where
+    [r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = __mulx_by_1_mont_256 (take a) m n0
+    (high_cf_0, high_0) = add r14_0 (a @ 4)
+    (high_cf_1, high_1) = adc r15_0 (a @ 5) high_cf_0
+    (high_cf_2, high_2) = adc r10_0 (a @ 6) high_cf_1
+    (high_cf_3, high_3) = adc r11_0 (a @ 7) high_cf_2
+    mask = if high_cf_3 then -1 else 0
+    (diff_cf_0, diff_0) = sub high_0 (m @ 0)
+    (diff_cf_1, diff_1) = sbb high_1 (m @ 1) diff_cf_0
+    (diff_cf_2, diff_2) = sbb high_2 (m @ 2) diff_cf_1
+    (diff_cf_3, diff_3) = sbb high_3 (m @ 3) diff_cf_2
+    (gt, _) = sbb mask 0 diff_cf_3
+    result0 = cmovae high_0 diff_0 gt
+    result1 = cmovae high_1 diff_1 gt
+    result2 = cmovae high_2 diff_2 gt
+    result3 = cmovae high_3 diff_3 gt
+    result = [result0, result1, result2, result3]
+
+fromx_mont_256
+  : Vec256 // a; pointer in rsi
+  -> Vec256 // m; pointer in rdx
+  -> [64] // n0; passed in rcx
+  -> Vec256 // result
+fromx_mont_256 a m n0 = result
+  where
+    [r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = __mulx_by_1_mont_256 a m n0
+    (diff_cf_0, diff_0) = sub r14_0 (m @ 0)
+    (diff_cf_1, diff_1) = sbb r15_0 (m @ 1) diff_cf_0
+    (diff_cf_2, diff_2) = sbb r10_0 (m @ 2) diff_cf_1
+    (diff_cf_3, diff_3) = sbb r11_0 (m @ 3) diff_cf_2
+    result0 = cmovae r14_0 diff_0 diff_cf_3
+    result1 = cmovae r15_0 diff_1 diff_cf_3
+    result2 = cmovae r10_0 diff_2 diff_cf_3
+    result3 = cmovae r11_0 diff_3 diff_cf_3
+    result = [result0, result1, result2, result3]

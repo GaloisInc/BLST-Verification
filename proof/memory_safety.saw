@@ -19,7 +19,7 @@ m_noadx_recent <- llvm_load_module "../build/llvm_noadx_recent/libblst.a.bc";
 let do_prove = true;
 include "proof-helpers.saw";
 
-include "x86.saw";
+include "x86/memory_safety.saw";
 include "fp12_tower.saw";
 include "ec_opts.saw";
 include "sha_overrides.saw";

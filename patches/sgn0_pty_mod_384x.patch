@@ -1,0 +1,467 @@
+From 61f8a1c78981a1c4b8ba0827dbe25a08f18a738f Mon Sep 17 00:00:00 2001
+From: Andy Polyakov <appro@cryptogams.org>
+Date: Mon, 19 Oct 2020 17:16:02 +0200
+Subject: [PATCH] Execute build/refresh.sh.
+
+---
+ build/coff/add_mod_384-x86_64.s    | 49 +++++++++++++++---------------
+ build/elf/add_mod_384-x86_64.s     | 49 +++++++++++++++---------------
+ build/mach-o/add_mod_384-x86_64.s  | 49 +++++++++++++++---------------
+ build/win64/add_mod_384-x86_64.asm | 49 +++++++++++++++---------------
+ 4 files changed, 100 insertions(+), 96 deletions(-)
+
+diff --git a/build/coff/add_mod_384-x86_64.s b/build/coff/add_mod_384-x86_64.s
+index 7af0c3e..cb1f061 100644
+--- a/build/coff/add_mod_384-x86_64.s
++++ b/build/coff/add_mod_384-x86_64.s
+@@ -1343,12 +1343,12 @@ sgn0_pty_mod_384x:
+ .LSEH_body_sgn0_pty_mod_384x:
+ 
+ 
+-	movq	0(%rdi),%r8
+-	movq	8(%rdi),%r9
+-	movq	16(%rdi),%r10
+-	movq	24(%rdi),%r11
+-	movq	32(%rdi),%rcx
+-	movq	40(%rdi),%rdx
++	movq	48(%rdi),%r8
++	movq	56(%rdi),%r9
++	movq	64(%rdi),%r10
++	movq	72(%rdi),%r11
++	movq	80(%rdi),%rcx
++	movq	88(%rdi),%rdx
+ 
+ 	movq	%r8,%rbx
+ 	orq	%r9,%r8
+@@ -1357,7 +1357,8 @@ sgn0_pty_mod_384x:
+ 	orq	%rcx,%r8
+ 	orq	%rdx,%r8
+ 
+-	xorq	%rax,%rax
++	leaq	0(%rdi),%rax
++	xorq	%rdi,%rdi
+ 	movq	%rbx,%rbp
+ 	addq	%rbx,%rbx
+ 	adcq	%r9,%r9
+@@ -1365,7 +1366,7 @@ sgn0_pty_mod_384x:
+ 	adcq	%r11,%r11
+ 	adcq	%rcx,%rcx
+ 	adcq	%rdx,%rdx
+-	adcq	$0,%rax
++	adcq	$0,%rdi
+ 
+ 	subq	0(%rsi),%rbx
+ 	sbbq	8(%rsi),%r9
+@@ -1373,20 +1374,20 @@ sgn0_pty_mod_384x:
+ 	sbbq	24(%rsi),%r11
+ 	sbbq	32(%rsi),%rcx
+ 	sbbq	40(%rsi),%rdx
+-	sbbq	$0,%rax
++	sbbq	$0,%rdi
+ 
+ 	movq	%r8,0(%rsp)
+-	notq	%rax
++	notq	%rdi
+ 	andq	$1,%rbp
+-	andq	$2,%rax
+-	orq	%rbp,%rax
++	andq	$2,%rdi
++	orq	%rbp,%rdi
+ 
+-	movq	48(%rdi),%r8
+-	movq	56(%rdi),%r9
+-	movq	64(%rdi),%r10
+-	movq	72(%rdi),%r11
+-	movq	80(%rdi),%rcx
+-	movq	88(%rdi),%rdx
++	movq	0(%rax),%r8
++	movq	8(%rax),%r9
++	movq	16(%rax),%r10
++	movq	24(%rax),%r11
++	movq	32(%rax),%rcx
++	movq	40(%rax),%rdx
+ 
+ 	movq	%r8,%rbx
+ 	orq	%r9,%r8
+@@ -1395,7 +1396,7 @@ sgn0_pty_mod_384x:
+ 	orq	%rcx,%r8
+ 	orq	%rdx,%r8
+ 
+-	xorq	%rdi,%rdi
++	xorq	%rax,%rax
+ 	movq	%rbx,%rbp
+ 	addq	%rbx,%rbx
+ 	adcq	%r9,%r9
+@@ -1403,7 +1404,7 @@ sgn0_pty_mod_384x:
+ 	adcq	%r11,%r11
+ 	adcq	%rcx,%rcx
+ 	adcq	%rdx,%rdx
+-	adcq	$0,%rdi
++	adcq	$0,%rax
+ 
+ 	subq	0(%rsi),%rbx
+ 	sbbq	8(%rsi),%r9
+@@ -1411,17 +1412,17 @@ sgn0_pty_mod_384x:
+ 	sbbq	24(%rsi),%r11
+ 	sbbq	32(%rsi),%rcx
+ 	sbbq	40(%rsi),%rdx
+-	sbbq	$0,%rdi
++	sbbq	$0,%rax
+ 
+ 	movq	0(%rsp),%rbx
+ 
+-	notq	%rdi
++	notq	%rax
+ 
+ 	testq	%r8,%r8
+-	cmovnzq	%rdi,%rax
++	cmovzq	%rdi,%rbp
+ 
+ 	testq	%rbx,%rbx
+-	cmovzq	%rdi,%rbp
++	cmovnzq	%rdi,%rax
+ 
+ 	andq	$1,%rbp
+ 	andq	$2,%rax
+diff --git a/build/elf/add_mod_384-x86_64.s b/build/elf/add_mod_384-x86_64.s
+index 218c5c7..a106def 100644
+--- a/build/elf/add_mod_384-x86_64.s
++++ b/build/elf/add_mod_384-x86_64.s
+@@ -1279,12 +1279,12 @@ sgn0_pty_mod_384x:
+ .cfi_adjust_cfa_offset	8
+ 
+ 
+-	movq	0(%rdi),%r8
+-	movq	8(%rdi),%r9
+-	movq	16(%rdi),%r10
+-	movq	24(%rdi),%r11
+-	movq	32(%rdi),%rcx
+-	movq	40(%rdi),%rdx
++	movq	48(%rdi),%r8
++	movq	56(%rdi),%r9
++	movq	64(%rdi),%r10
++	movq	72(%rdi),%r11
++	movq	80(%rdi),%rcx
++	movq	88(%rdi),%rdx
+ 
+ 	movq	%r8,%rbx
+ 	orq	%r9,%r8
+@@ -1293,7 +1293,8 @@ sgn0_pty_mod_384x:
+ 	orq	%rcx,%r8
+ 	orq	%rdx,%r8
+ 
+-	xorq	%rax,%rax
++	leaq	0(%rdi),%rax
++	xorq	%rdi,%rdi
+ 	movq	%rbx,%rbp
+ 	addq	%rbx,%rbx
+ 	adcq	%r9,%r9
+@@ -1301,7 +1302,7 @@ sgn0_pty_mod_384x:
+ 	adcq	%r11,%r11
+ 	adcq	%rcx,%rcx
+ 	adcq	%rdx,%rdx
+-	adcq	$0,%rax
++	adcq	$0,%rdi
+ 
+ 	subq	0(%rsi),%rbx
+ 	sbbq	8(%rsi),%r9
+@@ -1309,20 +1310,20 @@ sgn0_pty_mod_384x:
+ 	sbbq	24(%rsi),%r11
+ 	sbbq	32(%rsi),%rcx
+ 	sbbq	40(%rsi),%rdx
+-	sbbq	$0,%rax
++	sbbq	$0,%rdi
+ 
+ 	movq	%r8,0(%rsp)
+-	notq	%rax
++	notq	%rdi
+ 	andq	$1,%rbp
+-	andq	$2,%rax
+-	orq	%rbp,%rax
++	andq	$2,%rdi
++	orq	%rbp,%rdi
+ 
+-	movq	48(%rdi),%r8
+-	movq	56(%rdi),%r9
+-	movq	64(%rdi),%r10
+-	movq	72(%rdi),%r11
+-	movq	80(%rdi),%rcx
+-	movq	88(%rdi),%rdx
++	movq	0(%rax),%r8
++	movq	8(%rax),%r9
++	movq	16(%rax),%r10
++	movq	24(%rax),%r11
++	movq	32(%rax),%rcx
++	movq	40(%rax),%rdx
+ 
+ 	movq	%r8,%rbx
+ 	orq	%r9,%r8
+@@ -1331,7 +1332,7 @@ sgn0_pty_mod_384x:
+ 	orq	%rcx,%r8
+ 	orq	%rdx,%r8
+ 
+-	xorq	%rdi,%rdi
++	xorq	%rax,%rax
+ 	movq	%rbx,%rbp
+ 	addq	%rbx,%rbx
+ 	adcq	%r9,%r9
+@@ -1339,7 +1340,7 @@ sgn0_pty_mod_384x:
+ 	adcq	%r11,%r11
+ 	adcq	%rcx,%rcx
+ 	adcq	%rdx,%rdx
+-	adcq	$0,%rdi
++	adcq	$0,%rax
+ 
+ 	subq	0(%rsi),%rbx
+ 	sbbq	8(%rsi),%r9
+@@ -1347,17 +1348,17 @@ sgn0_pty_mod_384x:
+ 	sbbq	24(%rsi),%r11
+ 	sbbq	32(%rsi),%rcx
+ 	sbbq	40(%rsi),%rdx
+-	sbbq	$0,%rdi
++	sbbq	$0,%rax
+ 
+ 	movq	0(%rsp),%rbx
+ 
+-	notq	%rdi
++	notq	%rax
+ 
+ 	testq	%r8,%r8
+-	cmovnzq	%rdi,%rax
++	cmovzq	%rdi,%rbp
+ 
+ 	testq	%rbx,%rbx
+-	cmovzq	%rdi,%rbp
++	cmovnzq	%rdi,%rax
+ 
+ 	andq	$1,%rbp
+ 	andq	$2,%rax
+diff --git a/build/mach-o/add_mod_384-x86_64.s b/build/mach-o/add_mod_384-x86_64.s
+index 9b65c21..a9fc099 100644
+--- a/build/mach-o/add_mod_384-x86_64.s
++++ b/build/mach-o/add_mod_384-x86_64.s
+@@ -1279,12 +1279,12 @@ _sgn0_pty_mod_384x:
+ .cfi_adjust_cfa_offset	8
+ 
+ 
+-	movq	0(%rdi),%r8
+-	movq	8(%rdi),%r9
+-	movq	16(%rdi),%r10
+-	movq	24(%rdi),%r11
+-	movq	32(%rdi),%rcx
+-	movq	40(%rdi),%rdx
++	movq	48(%rdi),%r8
++	movq	56(%rdi),%r9
++	movq	64(%rdi),%r10
++	movq	72(%rdi),%r11
++	movq	80(%rdi),%rcx
++	movq	88(%rdi),%rdx
+ 
+ 	movq	%r8,%rbx
+ 	orq	%r9,%r8
+@@ -1293,7 +1293,8 @@ _sgn0_pty_mod_384x:
+ 	orq	%rcx,%r8
+ 	orq	%rdx,%r8
+ 
+-	xorq	%rax,%rax
++	leaq	0(%rdi),%rax
++	xorq	%rdi,%rdi
+ 	movq	%rbx,%rbp
+ 	addq	%rbx,%rbx
+ 	adcq	%r9,%r9
+@@ -1301,7 +1302,7 @@ _sgn0_pty_mod_384x:
+ 	adcq	%r11,%r11
+ 	adcq	%rcx,%rcx
+ 	adcq	%rdx,%rdx
+-	adcq	$0,%rax
++	adcq	$0,%rdi
+ 
+ 	subq	0(%rsi),%rbx
+ 	sbbq	8(%rsi),%r9
+@@ -1309,20 +1310,20 @@ _sgn0_pty_mod_384x:
+ 	sbbq	24(%rsi),%r11
+ 	sbbq	32(%rsi),%rcx
+ 	sbbq	40(%rsi),%rdx
+-	sbbq	$0,%rax
++	sbbq	$0,%rdi
+ 
+ 	movq	%r8,0(%rsp)
+-	notq	%rax
++	notq	%rdi
+ 	andq	$1,%rbp
+-	andq	$2,%rax
+-	orq	%rbp,%rax
++	andq	$2,%rdi
++	orq	%rbp,%rdi
+ 
+-	movq	48(%rdi),%r8
+-	movq	56(%rdi),%r9
+-	movq	64(%rdi),%r10
+-	movq	72(%rdi),%r11
+-	movq	80(%rdi),%rcx
+-	movq	88(%rdi),%rdx
++	movq	0(%rax),%r8
++	movq	8(%rax),%r9
++	movq	16(%rax),%r10
++	movq	24(%rax),%r11
++	movq	32(%rax),%rcx
++	movq	40(%rax),%rdx
+ 
+ 	movq	%r8,%rbx
+ 	orq	%r9,%r8
+@@ -1331,7 +1332,7 @@ _sgn0_pty_mod_384x:
+ 	orq	%rcx,%r8
+ 	orq	%rdx,%r8
+ 
+-	xorq	%rdi,%rdi
++	xorq	%rax,%rax
+ 	movq	%rbx,%rbp
+ 	addq	%rbx,%rbx
+ 	adcq	%r9,%r9
+@@ -1339,7 +1340,7 @@ _sgn0_pty_mod_384x:
+ 	adcq	%r11,%r11
+ 	adcq	%rcx,%rcx
+ 	adcq	%rdx,%rdx
+-	adcq	$0,%rdi
++	adcq	$0,%rax
+ 
+ 	subq	0(%rsi),%rbx
+ 	sbbq	8(%rsi),%r9
+@@ -1347,17 +1348,17 @@ _sgn0_pty_mod_384x:
+ 	sbbq	24(%rsi),%r11
+ 	sbbq	32(%rsi),%rcx
+ 	sbbq	40(%rsi),%rdx
+-	sbbq	$0,%rdi
++	sbbq	$0,%rax
+ 
+ 	movq	0(%rsp),%rbx
+ 
+-	notq	%rdi
++	notq	%rax
+ 
+ 	testq	%r8,%r8
+-	cmovnzq	%rdi,%rax
++	cmovzq	%rdi,%rbp
+ 
+ 	testq	%rbx,%rbx
+-	cmovzq	%rdi,%rbp
++	cmovnzq	%rdi,%rax
+ 
+ 	andq	$1,%rbp
+ 	andq	$2,%rax
+diff --git a/build/win64/add_mod_384-x86_64.asm b/build/win64/add_mod_384-x86_64.asm
+index 555fc0b..7d1d503 100644
+--- a/build/win64/add_mod_384-x86_64.asm
++++ b/build/win64/add_mod_384-x86_64.asm
+@@ -1369,12 +1369,12 @@ $L$SEH_begin_sgn0_pty_mod_384x::
+ $L$SEH_body_sgn0_pty_mod_384x::
+ 
+ 
+-	mov	r8,QWORD PTR[rdi]
+-	mov	r9,QWORD PTR[8+rdi]
+-	mov	r10,QWORD PTR[16+rdi]
+-	mov	r11,QWORD PTR[24+rdi]
+-	mov	rcx,QWORD PTR[32+rdi]
+-	mov	rdx,QWORD PTR[40+rdi]
++	mov	r8,QWORD PTR[48+rdi]
++	mov	r9,QWORD PTR[56+rdi]
++	mov	r10,QWORD PTR[64+rdi]
++	mov	r11,QWORD PTR[72+rdi]
++	mov	rcx,QWORD PTR[80+rdi]
++	mov	rdx,QWORD PTR[88+rdi]
+ 
+ 	mov	rbx,r8
+ 	or	r8,r9
+@@ -1383,7 +1383,8 @@ $L$SEH_body_sgn0_pty_mod_384x::
+ 	or	r8,rcx
+ 	or	r8,rdx
+ 
+-	xor	rax,rax
++	lea	rax,QWORD PTR[rdi]
++	xor	rdi,rdi
+ 	mov	rbp,rbx
+ 	add	rbx,rbx
+ 	adc	r9,r9
+@@ -1391,7 +1392,7 @@ $L$SEH_body_sgn0_pty_mod_384x::
+ 	adc	r11,r11
+ 	adc	rcx,rcx
+ 	adc	rdx,rdx
+-	adc	rax,0
++	adc	rdi,0
+ 
+ 	sub	rbx,QWORD PTR[rsi]
+ 	sbb	r9,QWORD PTR[8+rsi]
+@@ -1399,20 +1400,20 @@ $L$SEH_body_sgn0_pty_mod_384x::
+ 	sbb	r11,QWORD PTR[24+rsi]
+ 	sbb	rcx,QWORD PTR[32+rsi]
+ 	sbb	rdx,QWORD PTR[40+rsi]
+-	sbb	rax,0
++	sbb	rdi,0
+ 
+ 	mov	QWORD PTR[rsp],r8
+-	not	rax
++	not	rdi
+ 	and	rbp,1
+-	and	rax,2
+-	or	rax,rbp
++	and	rdi,2
++	or	rdi,rbp
+ 
+-	mov	r8,QWORD PTR[48+rdi]
+-	mov	r9,QWORD PTR[56+rdi]
+-	mov	r10,QWORD PTR[64+rdi]
+-	mov	r11,QWORD PTR[72+rdi]
+-	mov	rcx,QWORD PTR[80+rdi]
+-	mov	rdx,QWORD PTR[88+rdi]
++	mov	r8,QWORD PTR[rax]
++	mov	r9,QWORD PTR[8+rax]
++	mov	r10,QWORD PTR[16+rax]
++	mov	r11,QWORD PTR[24+rax]
++	mov	rcx,QWORD PTR[32+rax]
++	mov	rdx,QWORD PTR[40+rax]
+ 
+ 	mov	rbx,r8
+ 	or	r8,r9
+@@ -1421,7 +1422,7 @@ $L$SEH_body_sgn0_pty_mod_384x::
+ 	or	r8,rcx
+ 	or	r8,rdx
+ 
+-	xor	rdi,rdi
++	xor	rax,rax
+ 	mov	rbp,rbx
+ 	add	rbx,rbx
+ 	adc	r9,r9
+@@ -1429,7 +1430,7 @@ $L$SEH_body_sgn0_pty_mod_384x::
+ 	adc	r11,r11
+ 	adc	rcx,rcx
+ 	adc	rdx,rdx
+-	adc	rdi,0
++	adc	rax,0
+ 
+ 	sub	rbx,QWORD PTR[rsi]
+ 	sbb	r9,QWORD PTR[8+rsi]
+@@ -1437,17 +1438,17 @@ $L$SEH_body_sgn0_pty_mod_384x::
+ 	sbb	r11,QWORD PTR[24+rsi]
+ 	sbb	rcx,QWORD PTR[32+rsi]
+ 	sbb	rdx,QWORD PTR[40+rsi]
+-	sbb	rdi,0
++	sbb	rax,0
+ 
+ 	mov	rbx,QWORD PTR[rsp]
+ 
+-	not	rdi
++	not	rax
+ 
+ 	test	r8,r8
+-	cmovnz	rax,rdi
++	cmovz	rbp,rdi
+ 
+ 	test	rbx,rbx
+-	cmovz	rbp,rdi
++	cmovnz	rax,rdi
+ 
+ 	and	rbp,1
+ 	and	rax,2
+-- 
+2.30.1
+
