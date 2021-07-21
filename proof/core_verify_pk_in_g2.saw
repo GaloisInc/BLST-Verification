@@ -73,7 +73,6 @@ let overrides = concat mul_fp12_ovs // fp12.saw
 , vec_is_zero_10fp_ov
 , vec_is_zero_2fp2_ov
 , vec_is_zero_2fp_is_equal_ov
-// , vec_is_zero_fp2_ov // TODO: conflict with previous?
 , vec_is_equal_fp2_ov
 , POINTonE1_in_G1_ov // subgroup_check_g1.saw
 ];
@@ -131,12 +130,14 @@ let side_conditions_script msg_len dst_len aug_len = do {
   // establish the preconditions of POINTonE2_from_Jacobian:
   let core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds_thms = run (core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds msg_len dst_len aug_len);
   rw_with (concat core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds_thms core_verify_pk_in_g2_POINTonE1_from_Jacobian_sig_preconds);
-  // TODO: here it seems that select_term does not match the actual term to establish the preconditions of POINTonE1_from_Jacobian
-  print_goal;
   unfolding ["apply"];
   rw_with remove_ho_rules;
   goal_eval_unint (concat core_verify_pk_in_g2_unints ["fp_rep","fp_abs","fp_invariant"]);
   simplify fp_simpset;
+  // Not sure why the following is needed..
+  let r1 = run (custom_prove_cryptol {{fp_invariant fp_unit_rep == True}} w4);
+  let r2 = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{fp_invariant [zero,zero,zero,zero,zero,zero] == True}}) w4);
+  rw_with [r1,r2];
   w4_unint_z3 (concat core_verify_pk_in_g2_unints ["fp_rep","fp_abs"]);
 }
 
