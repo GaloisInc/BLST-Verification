@@ -6,10 +6,6 @@
 
 // Specifications
 
-let msg_len = 32;
-let dst_len = 8;
-let aug_len = 8;
-
 let {{
   blst_core_verify_pk_in_g2_error_precond : POINTonE2_affine_t -> POINTonE1_affine_t -> Bool
   blst_core_verify_pk_in_g2_error_precond pk sig =
@@ -46,8 +42,6 @@ let blst_core_verify_pk_in_g2_error_spec msg_len dst_len aug_len = do {
   llvm_postcond {{ ret != `BLST_SUCCESS }};
 };
 
-// null cases
-
 // sig is null
 let blst_core_verify_pk_in_g2_null_sig_spec msg_len dst_len aug_len = do {
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_struct "struct.POINTonE2_affine");
@@ -64,12 +58,8 @@ let blst_core_verify_pk_in_g2_null_sig_spec msg_len dst_len aug_len = do {
 
 // overrides:
 
-Hash_to_G1_ov <- prove_Hash_to_G1_impl_ov msg_len dst_len aug_len;
-
-let overrides = foldr concat [
-  mul_fp12_ovs ] [ // fp12.saw
-  Hash_to_G1_ov
-, POINTonE1_from_Jacobian_alias_ov // compress-p1.saw
+let overrides = concat mul_fp12_ovs // fp12.saw
+[ POINTonE1_from_Jacobian_alias_ov // compress-p1.saw
 , POINTonE2_from_Jacobian_ov // compress-p2.saw
 , POINTonE1_from_Jacobian_ov // compress-p1.saw
 , miller_loop_n_1_ov // pairing.saw
@@ -83,15 +73,12 @@ let overrides = foldr concat [
 , vec_is_zero_10fp_ov
 , vec_is_zero_2fp2_ov
 , vec_is_zero_2fp_is_equal_ov
-, vec_is_zero_fp2_ov
+// , vec_is_zero_fp2_ov // TODO: conflict with previous?
 , vec_is_equal_fp2_ov
 , POINTonE1_in_G1_ov // subgroup_check_g1.saw
 ];
 
-// Proofs
-
-// TODO:
-core_verify_pk_in_g2_impl_thm <- admit_cryptol {{ \pk sig msg dst aug -> core_verify_pk_in_g2_impl pk sig msg dst aug == core_verify_pk_in_g2 pk sig msg dst aug }};
+// Assumptions
 
 normalize_hash_to_curve_impl <- do {
   l1 <- simp_then_admit {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> normalize_point Fp (hash_to_curve_opt_impl (aug#msg, DST)) == hash_to_curve_opt_impl (aug#msg, DST) }};
@@ -101,9 +88,17 @@ normalize_hash_to_curve_impl <- do {
 
 miller_loop_zero_thm <- admit_cryptol {{  \x -> fp12_conjugate (miller_loop_opt_checked x BP') == if (is_point_O E x) then Fp_12.field_unit else apply miller_loop_opt_checked x BP' }};
 
+// Proofs
+
+// TODO:
+core_verify_pk_in_g2_impl_thm <- admit_cryptol {{ \pk sig msg dst aug -> core_verify_pk_in_g2_impl pk sig msg dst aug == core_verify_pk_in_g2 pk sig msg dst aug }};
+
 fp_unit_rep <- eval_term {{ fp_rep Fp.field_unit }};
-let select_term = rewrite (add_cryptol_defs ["ecEq"] (cryptol_ss ())) {{ \(x:POINTonE1_affine_t) -> select x.0 fp_unit_rep (~((if ((Fp.is_equal (fp_abs x.0, Fp.field_zero)) /\ (Fp.is_equal (fp_abs x.1, Fp.field_zero))) then (1:[64]) else zero) == zero)) }};
+
+let select_term = rewrite (add_cryptol_defs ["ecEq"] (cryptol_ss ())) {{ \(x:POINTonE1_affine_t) -> select x.0 fp_unit_rep (~(bool_to_limb (Fp.is_equal (fp_abs x.0, Fp.field_zero) /\ Fp.is_equal (fp_abs x.1, Fp.field_zero)) == zero)) }};
+
 affinify_projectify_is_id <- admit_cryptol (rewrite (cryptol_ss ()) {{ \x -> affinify E (POINTonE1_abs (x.0,x.1,select_term x)) == if POINTonE1_affine_invariant x then (POINTonE1_affine_abs x) else apply affinify E (POINTonE1_abs (x.0,x.1,select_term x)) }});
+
 
 core_verify_pk_in_g2_POINTonE1_from_Jacobian_sig_preconds <- do {
   on_curve <- admit_cryptol (rewrite (cryptol_ss ()) {{ \sig  -> is_point_projective E (POINTonE1_abs (sig.0,sig.1,select_term sig)) == if (is_point_affine E (POINTonE1_affine_abs sig)) then True else apply is_point_projective E (POINTonE1_abs (sig.0,sig.1,select_term sig)) }});
@@ -111,7 +106,7 @@ core_verify_pk_in_g2_POINTonE1_from_Jacobian_sig_preconds <- do {
   return [on_curve,not_zero];
 };
 
-core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds <- do {
+let core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds msg_len dst_len aug_len = do {
   on_curve <- admit_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> is_point_projective E (hash_to_curve_opt_impl (aug#msg, DST)) == True }});
   not_zero <- admit_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> Fp.is_equal ((hash_to_curve_opt_impl (aug#msg, DST)).2, Fp.field_zero) == False }}); // NOTE: this is unsound, but it's morally okay as it's deemed it will never happen
   return [on_curve,not_zero];
@@ -123,15 +118,9 @@ rewrite_unit <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp_abs fp_unit_
 let BP'_rep = run (eval_term {{ POINTonE2_affine_rep BP' }});
 let BP'_rewrite = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ POINTonE2_affine_abs BP'_rep == BP' }}) w4);
 
-// core_verify_pk_in_g2_POINTonE1_from_Jacobian_preconds <- do {
-  // on_curve <- admit_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> is_point_projective E (hash_to_curve_opt_impl (aug#msg, DST)) == True }});
-  // not_zero <- admit_cryptol (rewrite (cryptol_ss ()) {{ \(msg:[msg_len][8]) (DST:[dst_len][8]) (aug:[aug_len][8]) -> Fp.is_equal ((hash_to_curve_opt_impl (aug#msg, DST)).2, Fp.field_zero) == False }}); // NOTE: this is unsound, but it's morally okay as it's deemed it will never happen
-  // return [on_curve,not_zero];
-// };
-
-let side_conditions_script = do {
+let side_conditions_script msg_len dst_len aug_len = do {
   rw_with (concat POINTonE1_thms POINTonE2_thms);
-  unfolding ["POINTonE2_rep"];
+  unfolding ["POINTonE1_rep"];
   simplify fp12_simpset;
   simplify fp2_simpset;
   simplify fp_simpset;
@@ -140,7 +129,10 @@ let side_conditions_script = do {
   // take care of the round-trip that sig takes from affine represetation to jacobian and back to affine:
   rw_with [affinify_projectify_is_id];
   // establish the preconditions of POINTonE2_from_Jacobian:
-  rw_with (concat core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds core_verify_pk_in_g2_POINTonE1_from_Jacobian_sig_preconds);
+  let core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds_thms = run (core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds msg_len dst_len aug_len);
+  rw_with (concat core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds_thms core_verify_pk_in_g2_POINTonE1_from_Jacobian_sig_preconds);
+  // TODO: here it seems that select_term does not match the actual term to establish the preconditions of POINTonE1_from_Jacobian
+  print_goal;
   unfolding ["apply"];
   rw_with remove_ho_rules;
   goal_eval_unint (concat core_verify_pk_in_g2_unints ["fp_rep","fp_abs","fp_invariant"]);
@@ -148,10 +140,10 @@ let side_conditions_script = do {
   w4_unint_z3 (concat core_verify_pk_in_g2_unints ["fp_rep","fp_abs"]);
 }
 
-let post_condition_script = do {
+let post_condition_script msg_len dst_len aug_len = do {
     // get rid of `abs rep` terms
     rw_with (concat POINTonE1_thms POINTonE2_thms);
-    unfolding ["POINTonE2_rep"];
+    unfolding ["POINTonE1_rep"];
     simplify fp12_simpset;
     simplify fp2_simpset;
     simplify fp_simpset;
@@ -159,8 +151,6 @@ let post_condition_script = do {
     rw_with (concat normalize_hash_to_curve_impl [normalize_miller_loop_opt_checked_thm]);
     // take care of the round-trip that sig takes from affine represetation to jacobian and back to affine:
     rw_with [affinify_projectify_is_id];
-    // establish the preconditions of POINTonE2_from_Jacobian:
-    rw_with (concat core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds core_verify_pk_in_g2_POINTonE1_from_Jacobian_sig_preconds);
     // rewrite abstracted constants (we're leaving fp_rep and fp_abs uninterpreted, so we need to rewrite the concrete constants):
     simplify (addsimps [BP'_rewrite,rewrite_fp12_unit,rewrite_fp2_unit,rewrite_unit] empty_ss);
     // we rewrite the spec term:
@@ -176,13 +166,16 @@ let post_condition_script = do {
     w4_unint_z3 (concat core_verify_pk_in_g1_unints ["fp_rep","fp_abs","POINTonE1_invariant","POINTonE2_invariant","POINTonE2_affine_invariant","POINTonE1_affine_invariant","fp2_invariant","fp_invariant"]);
 }
 
-let verify_blst_core_verify_pk_in_g2_non_null msg_len dst_len aug_len = custom_verify_path_sat
-  "blst_core_verify_pk_in_g2"
-  overrides
-  (blst_core_verify_pk_in_g2_non_null_spec msg_len dst_len aug_len)
-  (goal_num_ite 17
-    post_condition_script
-    side_conditions_script);
+let verify_blst_core_verify_pk_in_g2_non_null msg_len dst_len aug_len = do {
+  let Hash_to_G1_ov = run (prove_Hash_to_G1_impl_ov msg_len dst_len aug_len);
+  custom_verify_path_sat
+    "blst_core_verify_pk_in_g2"
+    (concat overrides [Hash_to_G1_ov])
+    (blst_core_verify_pk_in_g2_non_null_spec msg_len dst_len aug_len)
+    (goal_num_ite 17
+      (post_condition_script msg_len dst_len aug_len)
+      (side_conditions_script msg_len dst_len aug_len));
+};
 
 verify_blst_core_verify_pk_in_g2_non_null msg_len dst_len aug_len;
 
