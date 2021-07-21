@@ -152,6 +152,7 @@ fp2_unit_rep <- eval_term {{ fp2_rep Fp_2.field_unit }};
 
 // creating the following rewrite rules takes a little work
 let select_term = rewrite (add_cryptol_defs ["ecEq"] (cryptol_ss ())) {{ \(x:POINTonE2_affine_t) -> select x.0 fp2_unit_rep (~((if ((Fp_2.is_equal (fp2_abs x.0, Fp_2.field_zero)) /\ (Fp_2.is_equal (fp2_abs x.1, Fp_2.field_zero))) then (1:[64]) else zero) == zero)) }};
+
 affinify_projectify_is_id <- admit_cryptol (rewrite (cryptol_ss ()) {{ \x -> affinify E' (POINTonE2_abs (x.0,x.1,select_term x)) == if POINTonE2_affine_invariant x then (POINTonE2_affine_abs x) else apply affinify E' (POINTonE2_abs (x.0,x.1,select_term x)) }});
 
 core_verify_pk_in_g1_POINTonE2_from_Jacobian_sig_preconds <- do {
@@ -223,8 +224,6 @@ let post_condition_script msg_len dst_len aug_len = do {
   rw_with (concat normalize_hash_to_curve_impl_thms [normalize_miller_loop_opt_checked_thm]);
   // take care of the round-trip that sig takes from affine representation to Jacobian and back to affine:
   rw_with [affinify_projectify_is_id];
-  // establish the preconditions of POINTonE2_from_Jacobian:
-  // rw_with (concat core_verify_pk_in_g1_POINTonE2_from_Jacobian_hash_preconds core_verify_pk_in_g1_POINTonE2_from_Jacobian_sig_preconds); // TODO: necessary?
   // rewrite abstracted constants (we're leaving fp_rep and fp_abs uninterpreted, so we need to rewrite the concrete constants):
   simplify (addsimps [BP_rewrite,rewrite_fp12_unit,rewrite_fp2_unit] empty_ss);
   // we rewrite the spec term:
