@@ -25,11 +25,13 @@ enable_what4_hash_consing;
 enable_x86_what4_hash_consing;
 
 include "correctness/helpers.saw";
+
 //include "correctness/add_mod_256.saw";
 //include "correctness/add_mod_384.saw";
 //include "correctness/add_mod_384x384.saw";
-//include "correctness/mulx_mont_256.saw";
-//include "correctness/mulx_mont_384.saw";
+
+include "correctness/mulx_mont_256.saw";
+include "correctness/mulx_mont_384.saw";
 include "correctness/ctx_inverse_mod_384.saw";
 
 disable_what4_hash_consing;

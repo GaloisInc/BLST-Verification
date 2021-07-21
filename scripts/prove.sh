@@ -7,8 +7,7 @@ err_handler() {
 
 trap err_handler EXIT
 
-#files="proof/memory_safety.saw proof/keygen.saw proof/functional_proofs.saw"
-files="proof/functional_proofs.saw"
+files="proof/memory_safety.saw proof/keygen.saw proof/functional_proofs.saw"
 
 for f in $files; do
   file=$f
