@@ -276,6 +276,14 @@ let final_exp_spec = do {
   llvm_points_to ret_ptr (llvm_term {{ fp12_rep (final_exponentiation_impl (fp12_abs f)) }});
 };
 
+let final_exp_alias_spec = do {
+  (f, f_ptr) <- ptr_to_fresh "f" vec384fp12_type;
+  llvm_precond {{ fp12_invariant f }};
+  llvm_execute_func [f_ptr, f_ptr];
+  llvm_points_to f_ptr (llvm_term {{ fp12_rep (final_exponentiation_impl (fp12_abs f)) }});
+};
+
+
 vec_copy_fp12_ov <- verify "vec_copy"
   []
   (vec_copy_spec 576 vec384fp12_type);
@@ -283,6 +291,28 @@ vec_copy_fp12_ov <- verify "vec_copy"
 final_exp_ov <- custom_verify "final_exp"
   (concat [vec_copy_fp12_ov, raise_to_z_div_by_2_ov] fp12_overrides)
   final_exp_spec
+  do {
+    unfolding ["final_exponentiation_impl", "raise_to_z_div_by_2"];
+    simplify fp12_simpset;
+    simplify (addsimps [ mul_inverse_div_fp12_ov
+                       , to_final_exp_frobenius_map_thm ]
+                       empty_ss);
+    simplify (addsimps [ cyclotomic_sqr_fp12_C_expt_thm
+                       , double_C_expt_thm
+                       , fp12_conjugate_C_expt_thm
+                       , mul_C_expt_thm
+                       , mul_commutes_fp12_thm
+                       , mul_C_expt_base_thm
+                       , final_exp_frobenius_map_is_cyclotomic_thm
+                       , expt_final_exp_frobenius_map_is_cyclotomic_thm
+                       , frobenius_map_fp12_C_expt_thm ]
+                       basic_ss);
+    w4_unint_z3 (concat ["raise_to_z_div_by_2", "C_expt"] fp12_unints);
+  };
+
+final_exp_alias_ov <- really_custom_verify "final_exp"
+  (concat [vec_copy_fp12_ov, raise_to_z_div_by_2_ov] fp12_overrides)
+  final_exp_alias_spec
   do {
     unfolding ["final_exponentiation_impl", "raise_to_z_div_by_2"];
     simplify fp12_simpset;

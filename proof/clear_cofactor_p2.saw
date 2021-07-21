@@ -26,6 +26,7 @@ times_minus_z_rev_thm <- custom_prove_cryptol
     w4_unint_z3 ["affinify_E'", "E'", "POINTonE2_abs", "e2_scalar_mult"];
   };
 
+// Prove times_minus_z is equivalent to e2_scalar_mult
 times_minus_z_thm <- custom_prove_cryptol
   {{ \P -> affinify E' (times_minus_z P) == e2_scalar_mult HE2Aux::pos_c1 (affinify E' P) }}
   do {
@@ -84,16 +85,16 @@ e2_scalar_mult_inv_thm <- admit_cryptol
 
 // Prove clear_cofactor_bls12381_g2 (RFC spec) is equivalent to
 // clear_cofactor_E2_impl (spec based on C clear_cofactor_E2 function).
+
 clear_cofactor_E2_equiv_thm <- custom_prove_cryptol
   {{ \P -> HE2Aux::clear_cofactor_bls12381_g2 (affinify E' P) ==
       if AffinePoint_Fp_2_invariant (affinify E' P)
       then affinify E' (clear_cofactor_E2_impl P)
       else apply HE2Aux::clear_cofactor_bls12381_g2 (affinify E' P) }}
- do {
-    unfolding ["clear_cofactor_bls12381_g2", "clear_cofactor_E2_impl"];
+  do {
+    unfolding ["HE2Aux::clear_cofactor_bls12381_g2", "clear_cofactor_E2_impl"];
     // Affinify goal
-    simplify (addsimps (concat [psi_psi_double_equiv_thm, times_minus_z_thm,  psi_equiv_thm'] e2_curve_op_thms) (cryptol_ss()));
-
+    simplify (addsimps (concat [psi_psi_double_equiv_thm, times_minus_z_thm, psi_equiv_thm'] e2_curve_op_thms) (cryptol_ss()));
     // Selectively remove polymorphic curve parameters from goal
     simplify (addsimps [affinify_E'_thm, e2_scalar_mult_thm] empty_ss);
     // Algebraic goal manipulation
@@ -121,6 +122,7 @@ let POINTonE2_add_n_dbl_spec n = do {
 
   llvm_points_to out_ptr (llvm_term out');
 };
+
 POINTonE2_add_n_dbl_ovs <- for [2, 3, 9, 32, 16]
   (\x -> custom_verify "POINTonE2_add_n_dbl"
     [POINTonE2_double_alias_1_2_ov, POINTonE2_dadd_null_alias_1_2_ov]
@@ -138,7 +140,6 @@ normalize_add_n_dbl_thms <- for [2,3,9,32,16]
     do { goal_eval_unint fp_unints;
          simplify fp_simpset;
          w4_unint_z3 fp_unints; });
-         
 
 // Prove POINTonE2_times_minus_z matches the times_minus_z spec
 let POINTonE2_times_minus_z_spec = do {
@@ -150,6 +151,7 @@ let POINTonE2_times_minus_z_spec = do {
   llvm_postcond {{ POINTonE2_invariant out }};
   llvm_points_to out_ptr (llvm_term out);
 };
+
 POINTonE2_times_minus_z_ov <- custom_verify "POINTonE2_times_minus_z"
   (concat [POINTonE2_double_ov] POINTonE2_add_n_dbl_ovs)
   POINTonE2_times_minus_z_spec
@@ -182,6 +184,7 @@ let POINTonE2_cneg_nonzero_spec = do {
   llvm_execute_func [p_ptr, llvm_term cbit];
   llvm_points_to p_ptr (llvm_term {{ POINTonE2_rep (point_neg Fp_2 (POINTonE2_abs p)) }} );
 };
+
 POINTonE2_cneg_nonzero_ov <- custom_verify "POINTonE2_cneg"
                       (concat vec_fp2_overrides fp2_overrides)
                       POINTonE2_cneg_nonzero_spec
@@ -204,8 +207,8 @@ clear_cofactor_ov <- custom_verify "clear_cofactor"
    POINTonE2_dadd_null_alias_1_2_ov]
   clear_cofactor_impl_spec
   do {
-      rw_with POINTonE2_thms;
-      unfolding ["clear_cofactor_E2_impl",
+    rw_with POINTonE2_thms;
+    unfolding ["clear_cofactor_E2_impl",
                "POINTonE2_abs",
                "POINTonE2_rep",
                "POINTonE2_invariant"];

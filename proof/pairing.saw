@@ -167,7 +167,7 @@ let add_n_dbl_n_spec n k = do {
 
 let miller_loop_n_1_spec = do {
   ret_ptr <- crucible_alloc vec384fp12_type;
-  (Q, Q_ptr) <- ptr_to_fresh "Q" POINTonE2_affine_type; // array in general
+  (Q, Q_ptr) <- ptr_to_fresh_readonly "Q" POINTonE2_affine_type; // array in general
   (P, P_ptr) <- ptr_to_fresh_readonly "P" POINTonE1_affine_type; // array in general
   crucible_precond {{ POINTonE2_affine_invariant Q }};
   crucible_precond {{ POINTonE1_affine_invariant P }};

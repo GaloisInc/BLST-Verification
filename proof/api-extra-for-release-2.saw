@@ -1,6 +1,6 @@
 /*
-Copyright (c) 2020 Galois, Inc.
-SPDX-License-Identifier: Apache-2.0 OR MIT
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
 blst_p1_affine_in_g1_ov <- verify_unint "blst_p1_affine_in_g1"

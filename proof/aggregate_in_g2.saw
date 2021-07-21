@@ -5,7 +5,7 @@
 
 // NOTE: we only consider inputs that either have the infinity-bit set or compressed-bit set
 
-// aggregate_in_g2_error_precond describes the circumstances under which aggregate_in_g2 returns an error (assuming either the compressed bit is set of the infinity bit is set)
+// aggregate_in_g2_error_precond describes the circumstances under which aggregate_in_g2 returns an error (assuming either the compressed bit is set or the infinity bit is set)
 let {{
   aggregate_in_g2_error_precond : [96][8] -> Bool
   aggregate_in_g2_error_precond zwire =
@@ -95,7 +95,8 @@ let overrides = foldr concat [vec_overrides,curve_operations_e2_ovs] [POINTonE2_
 
 // Assumptions
 
-uncompress_not_point_O <- admit_cryptol {{ \x -> (is_point_O E' (uncompress_E2_OK x)) == if uncompress_E2_x_fp x != Fp_2.field_zero then False else apply is_point_O E' (uncompress_E2_OK x) }};
+// uncompressing a valid point that does not have the infinity bit set does not return point_O:
+uncompress_not_point_O <- admit_cryptol {{ \x -> (is_point_O E' (uncompress_E2_OK x)) == if (uncompress_E2_imp x != nothing) then False else apply is_point_O E' (uncompress_E2_OK x) }};
 
 uncompress_on_curve <- admit_cryptol {{ \x -> (is_point_affine E' (uncompress_E2_OK x)) == True }};
 

@@ -43,6 +43,24 @@ let POINTonE2_from_Jacobian_spec = do {
   crucible_points_to_untyped out_ptr (crucible_term out);
 };
 
+let POINTonE2_from_Jacobian_alias_spec = do {
+  (out, out_ptr) <- ptr_to_fresh "out" POINTonE2_type;
+
+  crucible_precond {{ POINTonE2_invariant out }};
+  crucible_precond {{ is_point_projective E' (POINTonE2_abs out) }}; // on the curve
+  crucible_precond {{ ~(Fp_2.is_equal ((fp2_abs (out.2)), Fp_2.field_zero)) }};
+
+  crucible_execute_func [out_ptr, out_ptr];
+
+  let new_out = {{ POINTonE2_affine_rep (affinify E' (POINTonE2_abs out)) }};
+  crucible_postcond {{ POINTonE2_affine_invariant new_out }};
+
+  // Use points_to_untyped because out_ptr is a POINTonE2 that the caller
+  // immediately casts to a POINTonE2_affine.  Therefore, we can treat out_ptr
+  // as a POINTonE2_affine and ignore Z.
+  crucible_points_to_untyped out_ptr (crucible_term new_out);
+};
+
 // commute mul once -- use with caution!
 mul_commutes_fp2_thm <- prove_cryptol {{ \x y  -> Fp_2.mul (x, y) == apply Fp_2.mul (y,x) }} [];
 reciprocal_div_fp2_thm <- admit_cryptol {{ \x -> inverse_fp2 x ==  Fp_2.div (Fp_2.field_unit, x) }};
@@ -50,6 +68,16 @@ reciprocal_div_fp2_thm <- admit_cryptol {{ \x -> inverse_fp2 x ==  Fp_2.div (Fp_
 POINTonE2_from_Jacobian_ov <- custom_verify "POINTonE2_from_Jacobian"
   (concat [reciprocal_fp2_ov] (concat vec_select_asm_ovs fp2_overrides))
   POINTonE2_from_Jacobian_spec
+  do {
+    rw_with [mul_commutes_fp2_thm, reciprocal_div_fp2_thm];
+    unfolding ["POINTonE2_affine_invariant", "POINTonE2_affine_rep", "apply"];
+    simplify (addsimp fp2_unrip_thm fp2_simpset);
+    w4_unint_z3 fp2_unints;
+  };
+
+POINTonE2_from_Jacobian_alias_ov <- custom_verify "POINTonE2_from_Jacobian"
+  (concat [reciprocal_fp2_ov] (concat vec_select_asm_ovs fp2_overrides))
+  POINTonE2_from_Jacobian_alias_spec
   do {
     rw_with [mul_commutes_fp2_thm, reciprocal_div_fp2_thm];
     unfolding ["POINTonE2_affine_invariant", "POINTonE2_affine_rep", "apply"];
@@ -119,19 +147,21 @@ POINTonE2_Compress_BE_projective_ov <- custom_verify "POINTonE2_Compress_BE"
      unfolding [ "POINTonE2_affine_abs"
                , "POINTonE2_affine_rep"
                , "POINTonE2_invariant" ];
-     (apply_fp_rewrites);
+     apply_fp_rewrites;
      simplify (addsimps [ one_mont_px_abs_thm
                         , one_mont_px_invariant_thm
                         , seq_ite_2_thm
                         , unrip_thm_2 ]
                         (addsimps POINTonE2_thms fp2_simpset));
+     simplify remove_higher_order_function_simpset;
      w4_unint_z3 [ "POINTonE2_abs"
                  , "POINTonE2_invariant"
-                 , "Fp_2"
                  , "fp2_abs"
                  , "I2OSP48"
                  , "fp2_invariant"
-                 , "POINTonE2_affine_invariant"];
+                 , "POINTonE2_affine_invariant"
+                 , "affinify_E'"
+                 , "is_point_projective_E'"];
   };
 
 // Prove POINTonE2_Compress_BE matches the spec for affine points
@@ -146,7 +176,6 @@ POINTonE2_Compress_BE_affine_ov <- custom_verify "POINTonE2_Compress_BE"
      simplify (addsimp one_mont_px_abs_thm fp2_simpset);
      w4_unint_z3 [ "POINTonE2_abs"
                  , "POINTonE2_invariant"
-                 , "Fp_2"
                  , "fp2_abs"
                  , "I2OSP48"];
   };

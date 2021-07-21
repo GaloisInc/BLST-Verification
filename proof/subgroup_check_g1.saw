@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-import "../spec/implementation/Types.cry"; // bool_to_limb
-
 let point_op_overrides = concat vec_overrides
   [ POINTonE1_add_ov, POINTonE1_add_alias_1_2_ov // <= prob not needed
   , POINTonE1_dadd_null_ov, POINTonE1_dadd_null_alias_1_2_ov

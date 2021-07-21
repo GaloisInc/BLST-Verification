@@ -12,10 +12,9 @@ include "types.saw";
 m <- llvm_load_module "../build/llvm/libblst.a.bc";
 let do_prove = true;
 
-include "proof-helpers.saw";
-
 include "cryptol_imports.saw";
 
+include "proof-helpers.saw";
 include "algebraic-laws.saw";
 
 include "hash_to_field.saw";
@@ -27,6 +26,7 @@ include "ec_mult.saw";
 include "subgroup_check_g1.saw";
 include "sgn0.saw";
 include "hash_to_g1.saw";
+
 include "compress-p1.saw";
 include "deserialize-p1.saw";
 include "aggregate_in_g1.saw";
@@ -49,3 +49,5 @@ include "384x384_ops.saw";
 include "fp12.saw";
 include "pairing.saw";
 include "final_exp.saw";
+
+include "core_verify_pk_in_g1.saw";
