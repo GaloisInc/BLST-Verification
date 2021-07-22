@@ -1,0 +1,88 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+BMPKS <- cryptol_load "../spec/BLSMinimalPublicKeySize.cry";
+
+let demo_SkToPk_B_spec = do {
+  let n_bytes = 32;
+  let bits = 255;
+  out_ptr <- llvm_alloc (llvm_array 96 (llvm_int 8));
+  scalar_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array n_bytes (llvm_int 8));
+  scalar <- crucible_fresh_var "scalar" (llvm_array n_bytes (llvm_int 8));
+  crucible_points_to scalar_ptr (crucible_term scalar);
+  // extra precondition from POINTonE2_mult_w5
+  crucible_precond {{ e1_order BP > scalar_value`{bits,n_bytes} scalar + shift }};
+  llvm_precond {{ scalar != zero }};
+  llvm_execute_func [out_ptr, scalar_ptr];
+  // TODO: postcond
+  //llvm_points_to out_ptr (llvm_term {{ (split`{each=8} (sk_to_pk (drop_join_reverse scalar))) }});
+};
+
+// TODO: Prove
+test_thm_correct_min_pk <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \P sk -> (same_point_affine
+                E
+                (affinify E (POINTonE1_abs P))
+                (e1_scalar_mult (scalar_value`{255,32} sk) BP)) ==
+              ((apply same_point_affine
+                      E
+                      (affinify E (POINTonE1_abs P))
+                      (e1_scalar_mult (scalar_value`{255,32} sk) BP)) &&
+               POINTonE1_invariant P &&
+               ~(is_bad_O_form_E P) &&
+               // TODO: Probably need to condition on a nonzero scalar
+               is_point_projective E (POINTonE1_abs P)) }});
+
+let ec_mult_unints =
+    [ "e1_scalar_mult", "e1_order"
+    , "POINTonE1_abs", "POINTonE1_rep", "POINTonE1_invariant", "POINTonE1_normalize"
+    // , "point_add", "point_double"
+    , "Fp", "point_add_fp", "point_double_fp", "point_neg_fp"
+    , "point_add_affine_fp", "point_dadd_fp", "point_dadd_affine_fp"
+    , "precomputed_table"
+    , "add_E", "add'_E", "affinify_E", "projectify_E"
+    ];
+
+demo_SkToPk_B_ov <- really_custom_verify "demo_SkToPk_B"
+  [blst_sk_to_pk_in_g1_ov, blst_p1_compress_projective_ov, blst_p1_compress_affine_ov]
+  demo_SkToPk_B_spec
+  do {
+    unfolding [ "BMPKS::sk_to_pk"
+    /*
+              , "module parameter point_to_pubkey"
+              , "module parameter other_curve"
+              , "module parameter P"
+              */
+              //, "BMPKS::other_curve"
+              //, "BMPKS::P"
+              /*, "BMPKS::point_to_pubkey" */];
+    simplify (cryptol_ss());
+    simplify (addsimp eq_to_same_point_affine_E_thm empty_ss);
+    simplify (addsimps [test_thm_correct_min_pk] empty_ss);
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    unfolding ["apply"];
+    //simplify (addsimp sk_to_pk_proj_precond_thm empty_ss);
+    unfolding ["apply"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with_1 O_O_unit_implies_bad_O_form_E;
+    simplify (addsimp same_point_affine_E_thm empty_ss);
+    unfolding ["apply"];
+    rw_with remove_ho_rules;
+    print_goal;
+    w4_unint_z3 (concat [ "e1_order"
+                        , "is_point_projective_E"
+                        , "is_bad_O_form_E"
+                        , "sk_to_pk_proj_precond"
+                        , "scalar_value"
+                        , "POINTonE2_abs"
+                        , "serialize_E1"
+                        , "fp_abs"
+                        , "e1_scalar_mult"
+                        , "same_point_affine_E"
+                        , "POINTonE1_invariant" ]
+                        ec_mult_unints);
+  };
