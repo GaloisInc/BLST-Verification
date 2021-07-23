@@ -4,13 +4,22 @@ on: [pull_request]
 jobs:
   proofs:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        proof-target:
+          - proof/memory_safety.saw
+          - proof/keygen.saw
+          - proof/functional_proofs.saw
+          - proof/correctness_add.saw
+          - check
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: true
       - run: docker-compose pull
       - run: docker-compose build
-      - run: docker-compose run blst
+      - run: docker-compose run blst ${{ matrix.proof-target }}
       - run: |
           sudo chown -R $USER:$(id -gn $USER) build
           jq -r '.[]' < <(cat build/*_output.json) | jq -s '.' | jq '. |= unique' > docs/output.json

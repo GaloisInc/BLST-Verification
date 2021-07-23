@@ -119,14 +119,14 @@ let sub_mod_384x384_alias_ret_a_b_spec = do {
 
 // add_mod_384x384
 verify_x86 "add_mod_384x384" add_mod_384x384_spec w4;
-// verify_x86 "add_mod_384x384" add_mod_384x384_alias_ret_a_spec w4;
-// verify_x86 "add_mod_384x384" add_mod_384x384_alias_ret_b_spec w4;
-// verify_x86 "add_mod_384x384" add_mod_384x384_alias_a_b_spec w4;
-// verify_x86 "add_mod_384x384" add_mod_384x384_alias_ret_a_b_spec w4;
+verify_x86 "add_mod_384x384" add_mod_384x384_alias_ret_a_spec w4;
+verify_x86 "add_mod_384x384" add_mod_384x384_alias_ret_b_spec w4;
+verify_x86 "add_mod_384x384" add_mod_384x384_alias_a_b_spec w4;
+verify_x86 "add_mod_384x384" add_mod_384x384_alias_ret_a_b_spec w4;
 
 // sub_mod_384x
 verify_x86 "sub_mod_384x384" sub_mod_384x384_spec w4;
-// verify_x86 "sub_mod_384x384" sub_mod_384x384_alias_ret_a_spec w4;
-// verify_x86 "sub_mod_384x384" sub_mod_384x384_alias_ret_b_spec w4;
-// verify_x86 "sub_mod_384x384" sub_mod_384x384_alias_a_b_spec w4;
-// verify_x86 "sub_mod_384x384" sub_mod_384x384_alias_ret_a_b_spec w4;
+verify_x86 "sub_mod_384x384" sub_mod_384x384_alias_ret_a_spec w4;
+verify_x86 "sub_mod_384x384" sub_mod_384x384_alias_ret_b_spec w4;
+verify_x86 "sub_mod_384x384" sub_mod_384x384_alias_a_b_spec w4;
+verify_x86 "sub_mod_384x384" sub_mod_384x384_alias_ret_a_b_spec w4;
