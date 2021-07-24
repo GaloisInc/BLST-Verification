@@ -1,0 +1,32 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+let do_prove_x86 = true;
+let verify_x86_helper path module name spec tactic =
+  if do_prove_x86
+  then
+  crucible_llvm_verify_x86 module path name
+    [("BLS12_381_P", 384)]
+    false
+    spec
+    tactic
+  else
+  crucible_llvm_unsafe_assume_spec module name spec;
+let verify_x86 = verify_x86_helper "../../../build/x86/libblst.so" m;
+let verify_x86_noadx = verify_x86_helper "../../../build/x86_noadx/libblst.so" m_noadx;
+let verify_x86_recent = verify_x86_helper "../../../build/x86_recent/libblst.so" m_recent;
+let verify_x86_noadx_recent = verify_x86_helper "../../../build/x86_noadx_recent/libblst.so" m_noadx_recent;
+
+enable_what4_hash_consing;
+enable_x86_what4_hash_consing;
+
+include "correctness/helpers.saw";
+
+include "correctness/add_mod_256.saw";
+include "correctness/add_mod_384.saw";
+include "correctness/add_mod_384x384.saw";
+
+disable_what4_hash_consing;
+disable_x86_what4_hash_consing;

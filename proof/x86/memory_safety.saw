@@ -1,0 +1,47 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+enable_experimental;
+
+let x86_tactic = do {
+  print_goal;
+  w4;
+};
+
+let do_prove_x86 = true;
+let verify_x86_helper path module name spec =
+  if do_prove_x86
+  then
+  crucible_llvm_verify_x86 module path name
+    []
+    false
+    spec
+    x86_tactic
+  else
+  crucible_llvm_unsafe_assume_spec module name spec;
+let verify_x86 = verify_x86_helper "../../../build/x86/libblst.so" m;
+let verify_x86_noadx = verify_x86_helper "../../../build/x86_noadx/libblst.so" m_noadx;
+let verify_x86_recent = verify_x86_helper "../../../build/x86_recent/libblst.so" m_recent;
+let verify_x86_noadx_recent = verify_x86_helper "../../../build/x86_noadx_recent/libblst.so" m_noadx_recent;
+
+include "memory_safety/add_mod_256.saw";
+include "memory_safety/add_mod_384.saw";
+include "memory_safety/add_mod_384x384.saw";
+include "memory_safety/inverse_mod_384.saw";
+include "memory_safety/mulx_mont_256.saw";
+include "memory_safety/mulx_mont_384.saw";
+include "memory_safety/mulq_mont_256.saw";
+include "memory_safety/mulq_mont_384.saw";
+include "memory_safety/ctx_inverse_mod_384.saw";
+include "memory_safety/ctq_inverse_mod_384.saw";
+
+let assembly_overrides = concat_all
+  [ add_mod_256_overrides
+  , add_mod_384_overrides
+  , add_mod_384x384_overrides
+  , inverse_mod_384_overrides
+  , mulx_mont_256_overrides
+  , mulx_mont_384_overrides
+  ];

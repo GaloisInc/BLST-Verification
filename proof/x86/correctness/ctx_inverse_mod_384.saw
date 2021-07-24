@@ -1,0 +1,51 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+///////////////////////////////////////////////////////////////////////////////
+// Specifications
+///////////////////////////////////////////////////////////////////////////////
+
+// ct_inverse_mod_383
+let ct_inverse_mod_383_spec = do {
+  ret_ptr <- crucible_alloc vec768_type;
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384_type;
+  mod_ptr <- ptr_to_modulus384;
+  crucible_execute_func [ret_ptr, inp_ptr, mod_ptr];
+  let new_ret = {{ ctx_inverse_mod_383 inp modulus384 }};
+  crucible_points_to ret_ptr (crucible_term new_ret);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Proofs
+///////////////////////////////////////////////////////////////////////////////
+
+// Some elements of ctx_inverse_mod_383 present some performance problems for the
+// simulator. We enable some options here in order to make things easier:
+// - enable_x86_what4_hash_consing improves term sharing during simulation in
+//   some cases.
+// - set_x86_stack_base_align sets the alignment of the base of the stack
+//   allocation to 512 bytes. In the simulator's memory model, addresses are
+//   represented as an abstract base plus an offset bitvector. Since the base is
+//   abstract, we know little about the actual value of the address, making it
+//   difficult to perform bitwise operations on addresses. However, if the base
+//   is known to have a certain alignment, we know that a certain number of low
+//   bits of the address are determined entirely by the offset. This makes it
+//   possible to apply bitwise operations that only influence those bits
+//   directly to the offset. From an assurance perspective, this corresponds to
+//   a loss of some generality in the precondition describing the initial value
+//   of RSP.
+
+set_x86_stack_base_align 512;
+
+// ctx_inverse_mod_383
+verify_x86_recent "ctx_inverse_mod_383" ct_inverse_mod_383_spec do {
+  for (eval_list {{ [1..100] : [100][64] }}) (\i -> do {
+    goal_eval_unint [];
+    simplify mul_ss;
+  });
+  w4;
+};
+
+default_x86_stack_base_align;

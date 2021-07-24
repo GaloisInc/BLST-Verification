@@ -4,6 +4,7 @@ set -e
 
 Z3_URL='https://github.com/Z3Prover/z3/releases/download/z3-4.8.10/z3-4.8.10-x64-ubuntu-18.04.zip'
 YICES_URL='https://yices.csl.sri.com/releases/2.6.2/yices-2.6.2-x86_64-pc-linux-gnu-static-gmp.tar.gz'
+ABC_URL='https://saw.galois.com/builds/abc/abc-c78ee311-Linux.tar.gz'
 
 if [ $# -ne 0 ] && [ "$1" = "--latest" ]; then
   # Determine the URL of the latest SAW and Cryptol nightly
@@ -16,7 +17,8 @@ if [ $# -ne 0 ] && [ "$1" = "--latest" ]; then
   CRYPTOL_NIGHTLY=$(curl -s https://cryptol.net/builds/nightly/ | grep -oP "cryptol.*?${CRYPTOL_DATE}-Ubuntu.*?\.tar\.gz"  | head -n 1) # `curl -s` means silent; `grep -o` says print only the matched substring; `grep -P` says Perl syntax, which we use to get a lazy match (shortest) with .*?
   CRYPTOL_URL="https://cryptol.net/builds/nightly/${CRYPTOL_NIGHTLY}"
 else
-  SAW_URL="https://saw.galois.com/builds/nightly/saw-0.8.0.99-2021-06-17-Linux-x86_64.tar.gz"
+  #SAW_URL="https://saw.galois.com/builds/nightly/saw-0.8.0.99-2021-06-17-Linux-x86_64.tar.gz"
+  SAW_URL="https://saw.galois.com/builds/nightly/saw-Linux-8.10.3-7-16.zip"
   CRYPTOL_URL="https://github.com/GaloisInc/cryptol/releases/download/2.11.0/cryptol-2.11.0-Linux-x86_64.tar.gz"
 
 fi
@@ -45,13 +47,26 @@ then
     cp deps/yices/*/bin/yices-smt2 bin/yices-smt2
 fi
 
+# fetch ABC
+if [ ! -f bin/abc ]
+then
+    mkdir -p deps/abc
+    wget $ABC_URL -O deps/abc.tar.gz
+    tar -x -f deps/abc.tar.gz --one-top-level=deps/abc
+    cp deps/abc/*/bin/abc bin/abc
+fi
+
 # fetch SAW
 if [ ! -f bin/saw ]
 then
     mkdir -p deps/saw
-    wget $SAW_URL -O deps/saw.tar.gz
-    tar -x -f deps/saw.tar.gz --one-top-level=deps/saw
-    cp deps/saw/*/bin/saw bin/saw
+    #wget $SAW_URL -O deps/saw.tar.gz
+    #tar -x -f deps/saw.tar.gz --one-top-level=deps/saw
+    #cp deps/saw/*/bin/saw bin/saw
+    wget $SAW_URL -O deps/saw.zip
+    unzip deps/saw.zip -d deps/saw
+    cp deps/saw/saw bin/saw
+    chmod +x bin/saw
 fi
 
 # fetch Cryptol

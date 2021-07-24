@@ -1,0 +1,806 @@
+module implementation::x86::inverse where
+
+import implementation::Types
+import implementation::x86::helpers
+
+__smulx_383_n_shift_by_31
+  : Vec384 // a, stored at low offsets of rsi
+  -> Vec384 // b, stored at high offsets of rsi
+  -> [64] // f0
+  -> [64] // g0
+  -> (Vec384, [64], [64])
+__smulx_383_n_shift_by_31 a b f0 g0 = result
+  where
+    [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0] = a
+    r14_0 = 0
+    rdx_0 = f0
+    rcx_0 = g0
+    rbx_0 = rdx_0
+    rax_1 = rdx_0
+    rax_2 = sar rax_1 0x3f
+    rbp_3 = 0
+    (cf_4, rbp_4) = sub rbp_3 rax_2
+    rdx_5 = rdx_0 ^ rax_2
+    (cf_6, rdx_6) = add rdx_5 rbp_4
+    r8_7 = r8_0 ^ rax_2
+    r9_8 = r9_0 ^ rax_2
+    r10_9 = r10_0 ^ rax_2
+    r11_10 = r11_0 ^ rax_2
+    r12_11 = r12_0 ^ rax_2
+    rax_12 = rax_2 ^ r13_0
+    (cf_13, r8_13) = add r8_7 rbp_4
+    (cf_14, r9_14) = adc r9_8 0 cf_13
+    (cf_15, r10_15) = adc r10_9 0 cf_14
+    (cf_16, r11_16) = adc r11_10 0 cf_15
+    (cf_17, r12_17) = adc r12_11 0 cf_16
+    (cf_18, rax_18) = adc rax_12 0 cf_17
+    (rbp_19, r8_19) = mulx r8_13 rdx_6
+    (r13_20, r9_20) = mulx r9_14 rdx_6
+    (cf_21, r9_21) = add r9_20 rbp_19
+    (rbp_22, r10_22) = mulx r10_15 rdx_6
+    (cf_23, r10_23) = adc r10_22 r13_20 cf_21
+    (r13_24, r11_24) = mulx r11_16 rdx_6
+    (cf_25, r11_25) = adc r11_24 rbp_22 cf_23
+    (rbp_26, r12_26) = mulx r12_17 rdx_6
+    (cf_27, r12_27) = adc r12_26 r13_24 cf_25
+    (cf_28, rbp_28) = adc rbp_26 0 cf_27
+    (rdx_29, rax_29) = imul1 rdx_6 rax_18
+    (cf_30, rax_30) = add rax_29 rbp_28
+    (cf_31, r14_31) = adc r14_0 rdx_29 cf_30
+    rdx_32 = rcx_0
+    offload0 = r8_19
+    offload1 = r9_21
+    offload2 = r10_23
+    offload3 = r11_25
+    offload4 = r12_27
+    offload5 = rax_30
+    r8_39 = b @ 0
+    r9_40 = b @ 1
+    r10_41 = b @ 2
+    r11_42 = b @ 3
+    r12_43 = b @ 4
+    r13_44 = b @ 5
+    rax_45 = rdx_32
+    rax_46 = sar rax_45 0x3f
+    rbp_47 = 0
+    (cf_48, rbp_48) = sub rbp_47 rax_46
+    rdx_49 = rdx_32 ^ rax_46
+    (cf_50, rdx_50) = add rdx_49 rbp_48
+    r8_51 = r8_39 ^ rax_46
+    r9_52 = r9_40 ^ rax_46
+    r10_53 = r10_41 ^ rax_46
+    r11_54 = r11_42 ^ rax_46
+    r12_55 = r12_43 ^ rax_46
+    rax_56 = rax_46 ^ r13_44
+    (cf_57, r8_57) = add r8_51 rbp_48
+    (cf_58, r9_58) = adc r9_52 0 cf_57
+    (cf_59, r10_59) = adc r10_53 0 cf_58
+    (cf_60, r11_60) = adc r11_54 0 cf_59
+    (cf_61, r12_61) = adc r12_55 0 cf_60
+    (cf_62, rax_62) = adc rax_56 0 cf_61
+    (rbp_63, r8_63) = mulx r8_57 rdx_50
+    (r13_64, r9_64) = mulx r9_58 rdx_50
+    (cf_65, r9_65) = add r9_64 rbp_63
+    (rbp_66, r10_66) = mulx r10_59 rdx_50
+    (cf_67, r10_67) = adc r10_66 r13_64 cf_65
+    (r13_68, r11_68) = mulx r11_60 rdx_50
+    (cf_69, r11_69) = adc r11_68 rbp_66 cf_67
+    (rbp_70, r12_70) = mulx r12_61 rdx_50
+    (cf_71, r12_71) = adc r12_70 r13_68 cf_69
+    (cf_72, rbp_72) = adc rbp_70 0 cf_71
+    (rdx_73, rax_73) = imul1 rdx_50 rax_62
+    (cf_74, rax_74) = add rax_73 rbp_72
+    (cf_75, rdx_75) = adc rdx_73 0 cf_74
+    (cf_76, r8_76) = add r8_63 offload0
+    (cf_77, r9_77) = adc r9_65 offload1 cf_76
+    (cf_78, r10_78) = adc r10_67 offload2 cf_77
+    (cf_79, r11_79) = adc r11_69 offload3 cf_78
+    (cf_80, r12_80) = adc r12_71 offload4 cf_79
+    (cf_81, rax_81) = adc rax_74 offload5 cf_80
+    (cf_82, r14_82) = adc r14_31 rdx_75 cf_81
+    rdx_83 = rbx_0
+    r8_84 = shrd r8_76 r9_77 (zext`{64} 0x1f)
+    r9_85 = shrd r9_77 r10_78 (zext`{64} 0x1f)
+    r10_86 = shrd r10_78 r11_79 (zext`{64} 0x1f)
+    r11_87 = shrd r11_79 r12_80 (zext`{64} 0x1f)
+    r12_88 = shrd r12_80 rax_81 (zext`{64} 0x1f)
+    rax_89 = shrd rax_81 r14_82 (zext`{64} 0x1f)
+    r14_90 = sar r14_82 0x3f
+    rbp_91 = 0
+    (cf_92, rbp_92) = sub rbp_91 r14_90
+    r8_93 = r8_84 ^ r14_90
+    r9_94 = r9_85 ^ r14_90
+    r10_95 = r10_86 ^ r14_90
+    r11_96 = r11_87 ^ r14_90
+    r12_97 = r12_88 ^ r14_90
+    rax_98 = rax_89 ^ r14_90
+    (cf_99, r8_99) = add r8_93 rbp_92
+    (cf_100, r9_100) = adc r9_94 0 cf_99
+    (cf_101, r10_101) = adc r10_95 0 cf_100
+    (cf_102, r11_102) = adc r11_96 0 cf_101
+    (cf_103, r12_103) = adc r12_97 0 cf_102
+    (cf_104, rax_104) = adc rax_98 0 cf_103
+    result0 = r8_99
+    result1 = r9_100
+    result2 = r10_101
+    result3 = r11_102
+    result4 = r12_103
+    result5 = rax_104
+    rdx_111 = rdx_83 ^ r14_90
+    rcx_111 = rcx_0 ^ r14_90
+    (cf_113, rdx_113) = add rdx_111 rbp_92
+    (cf_114, rcx_114) = add rcx_111 rbp_92
+    result = ([result0, result1, result2, result3, result4, result5], rdx_113, rcx_114)
+
+__smulx_191_n_shift_by_31
+  : [3][64] // a, stored at low offsets of rsi
+  -> [3][64] // b, stored at high offsets of rsi
+  -> [64] // f0
+  -> [64] // g0
+  -> ([3][64], [64], [64])
+__smulx_191_n_shift_by_31 a b f0 g0 = result
+  where
+    [r8_0, r9_0, r10_0] = take a
+    rdx_0 = f0
+    rcx_0 = g0
+    rbx_0 = rdx_0
+    rax_1 = rdx_0
+    rax_2 = sar rax_1 0x3f
+    rbp_3 = 0
+    (cf_4, rbp_4) = sub rbp_3 rax_2
+    rdx_5 = rdx_0 ^ rax_2
+    (cf_6, rdx_6) = add rdx_5 rbp_4
+    r8_7 = r8_0 ^ rax_2
+    r9_8 = r9_0 ^ rax_2
+    rax_9 = rax_2 ^ r10_0
+    (cf_10, r8_10) = add r8_7 rbp_4
+    (cf_11, r9_11) = adc r9_8 0 cf_10
+    (cf_12, rax_12) = adc rax_9 0 cf_11
+    (rbp_13, r8_13) = mulx r8_10 rdx_6
+    (r10_14, r9_14) = mulx r9_11 rdx_6
+    (cf_15, r9_15) = add r9_14 rbp_13
+    (cf_16, r10_16) = adc r10_14 0 cf_15
+    (rdx_17, rax_17) = imul1 rdx_6 rax_12
+    (cf_18, r10_18) = add r10_16 rax_17
+    (cf_19, rdx_19) = adc rdx_17 0 cf_18
+    r14_20 = rdx_19
+    rdx_21 = rcx_0
+    r11_22 = b @ 0
+    r12_23 = b @ 1
+    r13_24 = b @ 2
+    rax_25 = rdx_21
+    rax_26 = sar rax_25 0x3f
+    rbp_27 = 0
+    (cf_28, rbp_28) = sub rbp_27 rax_26
+    rdx_29 = rdx_21 ^ rax_26
+    (cf_30, rdx_30) = add rdx_29 rbp_28
+    r11_31 = r11_22 ^ rax_26
+    r12_32 = r12_23 ^ rax_26
+    rax_33 = rax_26 ^ r13_24
+    (cf_34, r11_34) = add r11_31 rbp_28
+    (cf_35, r12_35) = adc r12_32 0 cf_34
+    (cf_36, rax_36) = adc rax_33 0 cf_35
+    (rbp_37, r11_37) = mulx r11_34 rdx_30
+    (r13_38, r12_38) = mulx r12_35 rdx_30
+    (cf_39, r12_39) = add r12_38 rbp_37
+    (cf_40, r13_40) = adc r13_38 0 cf_39
+    (rdx_41, rax_41) = imul1 rdx_30 rax_36
+    (cf_42, r13_42) = add r13_40 rax_41
+    (cf_43, rdx_43) = adc rdx_41 0 cf_42
+    (cf_44, r11_44) = add r11_37 r8_13
+    (cf_45, r12_45) = adc r12_39 r9_15 cf_44
+    (cf_46, r13_46) = adc r13_42 r10_18 cf_45
+    (cf_47, r14_47) = adc r14_20 rdx_43 cf_46
+    rdx_48 = rbx_0
+    r11_49 = shrd r11_44 r12_45 (zext`{64} 0x1f)
+    r12_50 = shrd r12_45 r13_46 (zext`{64} 0x1f)
+    r13_51 = shrd r13_46 r14_47 (zext`{64} 0x1f)
+    r14_52 = sar r14_47 0x3f
+    rbp_53 = 0
+    (cf_54, rbp_54) = sub rbp_53 r14_52
+    r11_55 = r11_49 ^ r14_52
+    r12_56 = r12_50 ^ r14_52
+    r13_57 = r13_51 ^ r14_52
+    (cf_58, r11_58) = add r11_55 rbp_54
+    (cf_59, r12_59) = adc r12_56 0 cf_58
+    (cf_60, r13_60) = adc r13_57 0 cf_59
+    result0 = r11_58
+    result1 = r12_59
+    result2 = r13_60
+    rdx_64 = rdx_48 ^ r14_52
+    rcx_65 = rcx_0 ^ r14_52
+    (cf_66, rdx_66) = add rdx_64 rbp_54
+    (cf_67, rcx_67) = add rcx_65 rbp_54
+    result = ([result0, result1, result2], rdx_66, rcx_67)
+
+__smulx_383x63
+  : Vec384 // u, stored at low offsets of rsi
+  -> Vec384 // v, stored at high offsets of rsi
+  -> [64] // f0
+  -> [64] // g0
+  -> Vec384
+__smulx_383x63 u v f0 g0 = result
+  where
+    [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0] = u
+    rdx_0 = f0
+    rcx_0 = g0
+    rbp_1 = rdx_0
+    rbp_2 = sar rbp_1 0x3f
+    rax_3 = 0
+    (cf_4, rax_4) = sub rax_3 rbp_2
+    rdx_5 = rdx_0 ^ rbp_2
+    (cf_6, rdx_6) = add rdx_5 rax_4
+    r8_7 = r8_0 ^ rbp_2
+    r9_8 = r9_0 ^ rbp_2
+    r10_9 = r10_0 ^ rbp_2
+    r11_10 = r11_0 ^ rbp_2
+    r12_11 = r12_0 ^ rbp_2
+    r13_12 = r13_0 ^ rbp_2
+    (cf_13, r8_13) = add r8_7 rax_4
+    (cf_14, r9_14) = adc r9_8 0 cf_13
+    (cf_15, r10_15) = adc r10_9 0 cf_14
+    (cf_16, r11_16) = adc r11_10 0 cf_15
+    (cf_17, r12_17) = adc r12_11 0 cf_16
+    (cf_18, r13_18) = adc r13_12 0 cf_17
+    (rbp_19, r8_19) = mulx r8_13 rdx_6
+    (rax_20, r9_20) = mulx r9_14 rdx_6
+    (cf_21, r9_21) = add r9_20 rbp_19
+    (rbp_22, r10_22) = mulx r10_15 rdx_6
+    (cf_23, r10_23) = adc r10_22 rax_20 cf_21
+    (rax_24, r11_24) = mulx r11_16 rdx_6
+    (cf_25, r11_25) = adc r11_24 rbp_22 cf_23
+    (rbp_26, r12_26) = mulx r12_17 rdx_6
+    (cf_27, r12_27) = adc r12_26 rax_24 cf_25
+    (rax_28, r13_28) = mulx r13_18 rdx_6
+    rdx_29 = rcx_0
+    (cf_30, r13_30) = adc r13_28 rbp_26 cf_27
+    offload0 = r8_19
+    offload1 = r9_21
+    offload2 = r10_23
+    offload3 = r11_25
+    offload4 = r12_27
+    offload5 = r13_30
+    r8_37 = v @ 0
+    r9_38 = v @ 1
+    r10_39 = v @ 2
+    r11_40 = v @ 3
+    r12_41 = v @ 4
+    r13_42 = v @ 5
+    rbp_43 = rdx_29
+    rbp_44 = sar rbp_43 0x3f
+    rax_45 = 0
+    (cf_46, rax_46) = sub rax_45 rbp_44
+    rdx_47 = rdx_29 ^ rbp_44
+    (cf_48, rdx_48) = add rdx_47 rax_46
+    r8_49 = r8_37 ^ rbp_44
+    r9_50 = r9_38 ^ rbp_44
+    r10_51 = r10_39 ^ rbp_44
+    r11_52 = r11_40 ^ rbp_44
+    r12_53 = r12_41 ^ rbp_44
+    r13_54 = r13_42 ^ rbp_44
+    (cf_55, r8_55) = add r8_49 rax_46
+    (cf_56, r9_56) = adc r9_50 0 cf_55
+    (cf_57, r10_57) = adc r10_51 0 cf_56
+    (cf_58, r11_58) = adc r11_52 0 cf_57
+    (cf_59, r12_59) = adc r12_53 0 cf_58
+    (cf_60, r13_60) = adc r13_54 0 cf_59
+    (rbp_61, r8_61) = mulx r8_55 rdx_48
+    (rax_62, r9_62) = mulx r9_56 rdx_48
+    (cf_63, r9_63) = add r9_62 rbp_61
+    (rbp_64, r10_64) = mulx r10_57 rdx_48
+    (cf_65, r10_65) = adc r10_64 rax_62 cf_63
+    (rax_66, r11_66) = mulx r11_58 rdx_48
+    (cf_67, r11_67) = adc r11_66 rbp_64 cf_65
+    (rbp_68, r12_68) = mulx r12_59 rdx_48
+    (cf_69, r12_69) = adc r12_68 rax_66 cf_67
+    (rax_70, r13_70) = mulx r13_60 rdx_48
+    (cf_71, r13_71) = adc r13_70 rbp_68 cf_69
+    (cf_72, r8_72) = add r8_61 offload0
+    (cf_73, r9_73) = adc r9_63 offload1 cf_72
+    (cf_74, r10_74) = adc r10_65 offload2 cf_73
+    (cf_75, r11_75) = adc r11_67 offload3 cf_74
+    (cf_76, r12_76) = adc r12_69 offload4 cf_75
+    (cf_77, r13_77) = adc r13_71 offload5 cf_76
+    result0 = r8_72
+    result1 = r9_73
+    result2 = r10_74
+    result3 = r11_75
+    result4 = r12_76
+    result5 = r13_77
+    result = [result0, result1, result2, result3, result4, result5]
+
+__smulx_767x63
+  : Vec384 // u, stored at low offsets of rsi
+  -> Vec768 // v, stored at high offsets of rsi
+  -> [64] // f0
+  -> [64] // g0
+  -> Vec768
+__smulx_767x63 u v f0 g0 = result
+  where
+    [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0] = u
+    rdx_0 = f0
+    rcx_0 = g0
+    rax_7 = rdx_0
+    rax_8 = sar rax_7 0x3f
+    rbp_9 = 0
+    (cf_10, rbp_10) = sub rbp_9 rax_8
+    rdx_14 = rdx_0 ^ rax_8
+    (cf_15, rdx_15) = add rdx_14 rbp_10
+    r8_16 = r8_0 ^ rax_8
+    r9_17 = r9_0 ^ rax_8
+    r10_18 = r10_0 ^ rax_8
+    r11_19 = r11_0 ^ rax_8
+    r12_20 = r12_0 ^ rax_8
+    rax_21 = rax_8 ^ r13_0
+    (cf_22, r8_22) = add r8_16 rbp_10
+    (cf_23, r9_23) = adc r9_17 0 cf_22
+    (cf_24, r10_24) = adc r10_18 0 cf_23
+    (cf_25, r11_25) = adc r11_19 0 cf_24
+    (cf_26, r12_26) = adc r12_20 0 cf_25
+    (cf_27, rax_27) = adc rax_21 0 cf_26
+    (rbp_28, r8_28) = mulx r8_22 rdx_15
+    (r13_29, r9_29) = mulx r9_23 rdx_15
+    (cf_30, r9_30) = add r9_29 rbp_28
+    (rbp_31, r10_31) = mulx r10_24 rdx_15
+    (cf_32, r10_32) = adc r10_31 r13_29 cf_30
+    (r13_33, r11_33) = mulx r11_25 rdx_15
+    (cf_34, r11_34) = adc r11_33 rbp_31 cf_32
+    (rbp_35, r12_35) = mulx r12_26 rdx_15
+    (cf_36, r12_36) = adc r12_35 r13_33 cf_34
+    (cf_37, rbp_37) = adc rbp_35 0 cf_36
+    (rdx_38, rax_38) = imul1 rdx_15 rax_27
+    (cf_39, rax_39) = add rax_38 rbp_37
+    (cf_40, rdx_40) = adc rdx_38 0 cf_39
+    offload0 = r8_28
+    offload1 = r9_30
+    offload2 = r10_32
+    offload3 = r11_34
+    offload4 = r12_36
+    offload5 = rax_39
+    offload6 = rdx_40
+    rdx_48 = rdx_40 >>$ 0x3f
+    offload7 = rdx_48
+    rdx_50 = rcx_0
+    rax_51 = rcx_0
+    r8_52 = v @ 0
+    r9_53 = v @ 1
+    r10_54 = v @ 2
+    r11_55 = v @ 3
+    r12_56 = v @ 4
+    r13_57 = v @ 5
+    r14_58 = v @ 6
+    r15_59 = v @ 7
+    rbx_60 = v @ 8
+    rbp_61 = v @ 9
+    rcx_62 = v @ 10
+    rdi_63 = v @ 11
+    rax_64 = sar rax_51 0x3f
+    rsi_65 = 0
+    (cf_66, rsi_66) = sub rsi_65 rax_64
+    rdx_67 = rdx_50 ^ rax_64
+    (cf_68, rdx_68) = add rdx_67 rsi_66
+    r8_69 = r8_52 ^ rax_64
+    r9_70 = r9_53 ^ rax_64
+    r10_71 = r10_54 ^ rax_64
+    r11_72 = r11_55 ^ rax_64
+    r12_73 = r12_56 ^ rax_64
+    r13_74 = r13_57 ^ rax_64
+    r14_75 = r14_58 ^ rax_64
+    r15_76 = r15_59 ^ rax_64
+    rbx_77 = rbx_60 ^ rax_64
+    rbp_78 = rbp_61 ^ rax_64
+    rcx_79 = rcx_62 ^ rax_64
+    rdi_80 = rdi_63 ^ rax_64
+    (cf_81, r8_81) = add r8_69 rsi_66
+    (cf_82, r9_82) = adc r9_70 0 cf_81
+    (cf_83, r10_83) = adc r10_71 0 cf_82
+    (cf_84, r11_84) = adc r11_72 0 cf_83
+    (cf_85, r12_85) = adc r12_73 0 cf_84
+    (cf_86, r13_86) = adc r13_74 0 cf_85
+    (cf_87, r14_87) = adc r14_75 0 cf_86
+    (cf_88, r15_88) = adc r15_76 0 cf_87
+    (cf_89, rbx_89) = adc rbx_77 0 cf_88
+    (cf_90, rbp_90) = adc rbp_78 0 cf_89
+    (cf_91, rcx_91) = adc rcx_79 0 cf_90
+    (cf_92, rdi_92) = adc rdi_80 0 cf_91
+    (rax_93, r8_93) = mulx r8_81 rdx_68
+    (rsi_94, r9_94) = mulx r9_82 rdx_68
+    (cf_95, r9_95) = add r9_94 rax_93
+    (rax_96, r10_96) = mulx r10_83 rdx_68
+    (cf_97, r10_97) = adc r10_96 rsi_94 cf_95
+    (rsi_98, r11_98) = mulx r11_84 rdx_68
+    (cf_99, r11_99) = adc r11_98 rax_96 cf_97
+    (rax_100, r12_100) = mulx r12_85 rdx_68
+    (cf_101, r12_101) = adc r12_100 rsi_98 cf_99
+    (rsi_102, r13_102) = mulx r13_86 rdx_68
+    (cf_103, r13_103) = adc r13_102 rax_100 cf_101
+    (rax_104, r14_104) = mulx r14_87 rdx_68
+    (cf_105, r14_105) = adc r14_104 rsi_102 cf_103
+    (rsi_106, r15_106) = mulx r15_88 rdx_68
+    (cf_107, r15_107) = adc r15_106 rax_104 cf_105
+    (rax_108, rbx_108) = mulx rbx_89 rdx_68
+    (cf_109, rbx_109) = adc rbx_108 rsi_106 cf_107
+    (rsi_110, rbp_110) = mulx rbp_90 rdx_68
+    (cf_111, rbp_111) = adc rbp_110 rax_108 cf_109
+    (rax_112, rcx_112) = mulx rcx_91 rdx_68
+    (cf_113, rcx_113) = adc rcx_112 rsi_110 cf_111
+    (rsi_114, rdi_114) = mulx rdi_92 rdx_68
+    (cf_117, rax_117) = adc rax_112 rdi_114 cf_113
+    (cf_118, r8_118) = add r8_93 offload0
+    (cf_119, r9_119) = adc r9_95 offload1 cf_118
+    (cf_120, r10_120) = adc r10_97 offload2 cf_119
+    (cf_121, r11_121) = adc r11_99 offload3 cf_120
+    (cf_122, r12_122) = adc r12_101 offload4 cf_121
+    (cf_123, r13_123) = adc r13_103 offload5 cf_122
+    (cf_124, r14_124) = adc r14_105 offload6 cf_123
+    rdi_125 = offload7
+    (cf_126, r15_126) = adc r15_107 rdi_125 cf_124
+    (cf_127, rbx_127) = adc rbx_109 rdi_125 cf_126
+    (cf_128, rbp_128) = adc rbp_111 rdi_125 cf_127
+    (cf_129, rcx_129) = adc rcx_113 rdi_125 cf_128
+    (cf_130, rax_130) = adc rax_117 rdi_125 cf_129
+    result0 = r8_118
+    result1 = r9_119
+    result2 = r10_120
+    result3 = r11_121
+    result4 = r12_122
+    result5 = r13_123
+    result6 = r14_124
+    result7 = r15_126
+    result8 = rbx_127
+    result9 = rbp_128
+    result10 = rcx_129
+    result11 = rax_130
+    result =
+      [ result0, result1, result2, result3, result4, result5
+      , result6, result7, result8, result9, result10, result11
+      ]
+
+__ab_approximation_31
+  : Integer // number of iterations
+  -> Vec384 // a
+  -> Vec384 // b
+  -> [4][64] // result; f0, g0, f1, g1
+__ab_approximation_31 iters a b = result
+  where
+    r9_0 = a @ 5
+    r11_0 = b @ 5
+    rbx_0 = a @ 4
+    rbp_0 = b @ 4
+    r8_0 = a @ 3
+    r10_0 = b @ 3
+    rax_1 = r9_0
+    rax_2 = rax_1 || r11_0
+    zf_2 = rax_2 == 0
+    r9_3 = cmove r9_0 rbx_0 zf_2
+    r11_4 = cmove r11_0 rbp_0 zf_2
+    rbx_5 = cmove rbx_0 r8_0 zf_2
+    r8_6 = a @ 2
+    rbp_7 = cmove rbp_0 r10_0 zf_2
+    r10_8 = b @ 2
+    rax_9 = r9_3
+    rax_10 = rax_9 || r11_4
+    zf_10 = rax_10 == 0
+    r9_11 = cmove r9_3 rbx_5 zf_10
+    r11_12 = cmove r11_4 rbp_7 zf_10
+    rbx_13 = cmove rbx_5 r8_6 zf_10
+    r8_14 = a @ 1
+    rbp_15 = cmove rbp_7 r10_8 zf_10
+    r10_16 = b @ 1
+    rax_17 = r9_11
+    rax_18 = rax_17 || r11_12
+    zf_18 = rax_18 == 0
+    r9_19 = cmove r9_11 rbx_13 zf_18
+    r11_20 = cmove r11_12 rbp_15 zf_18
+    rbx_21 = cmove rbx_13 r8_14 zf_18
+    r8_22 = a @ 0
+    rbp_23 = cmove rbp_15 r10_16 zf_18
+    r10_24 = b @ 0
+    rax_25 = r9_19
+    rax_26 = rax_25 || r11_20
+    zf_26 = rax_26 == 0
+    r9_27 = cmove r9_19 rbx_21 zf_26
+    r11_28 = cmove r11_20 rbp_23 zf_26
+    rbx_29 = cmove rbx_21 r8_22 zf_26
+    rbp_30 = cmove rbp_23 r10_24 zf_26
+    rax_31 = r9_27
+    rax_32 = rax_31 || r11_28
+    zf_33 = rax_32 == 0
+    rcx_33 = bsr rax_32
+    rcx_34 = 1 + rcx_33
+    r9_35 = cmove r9_27 rbx_29 zf_33
+    r11_36 = cmove r11_28 rbp_30 zf_33
+    rcx_37 = cmove rcx_34 rax_32 zf_33
+    rcx_38 = 0 - rcx_37
+    r9_39 = shld r9_35 rbx_29 (drop`{56} rcx_38)
+    r11_40 = shld r11_36 rbp_30 (drop`{56} rcx_38)
+    rcx_41 = r9_39
+    rcx_42 = rcx_41 || r11_40
+    rcx_43 = sar rcx_42 (zext`{64} 0x3f)
+    rcx_44 = (drop`{56} rcx_43) && zext 0x21
+    r9_45 = shr r9_39 rcx_44
+    r11_46 = shr r11_40 rcx_44
+    r8_47 = shl r8_22 rcx_44
+    r10_48 = shl r10_24 rcx_44
+    r8_49 = shrd_ret r8_22 r8_47 r9_45 rcx_44
+    r10_50 = shrd_ret r10_24 r10_48 r11_46 rcx_44
+    result = __inner_loop_31 iters r8_49 r10_50
+
+__inner_loop_31
+  : Integer // number of iterations
+  -> [64] // a
+  -> [64] // b
+  -> [4][64] // result; f0, g0, f1, g1
+__inner_loop_31 iters a_init b_init = result
+  where
+    [post_a, post_b, post_fg0, post_fg1, post_bias] = loop iters [a_init, b_init, 0x7FFFFFFF80000000, 0x800000007FFFFFFF, 0x7FFFFFFF7FFFFFFF]
+    tmp_f0 = zext`{64} (drop`{32} post_fg0)
+    tmp_g0 = shr post_fg0 0x20
+    tmp_f1 = zext`{64} (drop`{32} post_fg1)
+    tmp_g1 = shr post_fg1 0x20
+    tmp_bias = shr post_bias 0x20
+    result = [zext tmp_f0 - tmp_bias, zext tmp_g0 - tmp_bias, zext tmp_f1 - tmp_bias, zext tmp_g1 - tmp_bias]
+    loop : Integer -> [5][64] -> [5][64]
+    loop counter [a, b, fg0, fg1, bias] = loopresult
+      where
+        r8_0 = a
+        r10_0 = b
+        rcx_0 = fg0
+        r13_0 = fg1
+        r15_0 = bias
+        (cf_1, _) = sub r8_0 r10_0
+        rax_2 = r8_0
+        rbx_3 = r10_0
+        rbp_4 = rcx_0
+        r14_5 = r13_0
+        r8_6 = cmovb r8_0 r10_0 cf_1
+        r10_7 = cmovb r10_0 rax_2 cf_1
+        rcx_8 = cmovb rcx_0 r13_0 cf_1
+        r13_9 = cmovb r13_0 rbp_4 cf_1
+        (cf_10, r8_10) = sub r8_6 r10_7
+        (cf_12, rcx_12) = sub (add rcx_8 r15_0).1 r13_9
+        zf_13 = (rax_2 && zext 0x1) == 0
+        r8_14 = cmove r8_10 rax_2 zf_13
+        r10_15 = cmove r10_7 rbx_3 zf_13
+        rcx_16 = cmove rcx_12 rbp_4 zf_13
+        r13_17 = cmove r13_9 r14_5 zf_13
+        r8_18 = shr r8_14 0x01
+        (cf_19, r13_19) = add r13_17 r13_17
+        (cf_20, r13_20) = sub r13_19 r15_0
+        curcounter = counter - 1
+        curresult = [r8_18, r10_15, rcx_16, r13_20, r15_0]
+        loopresult = if curcounter == 0 then curresult else loop curcounter curresult
+
+__inner_loop_62
+  : Integer // number of iterations
+  -> [64] // a
+  -> [64] // b
+  -> [4][64] // result; f0, g0, f1, g1
+__inner_loop_62 iters a_init b_init = result
+  where
+    result = drop (loop iters [a_init, b_init, 1, 0, 0, 1])
+    loop : Integer -> [6][64] -> [6][64]
+    loop counter [a, b, f0, g0, f1, g1] = loopresult
+      where
+        r8_0 = a
+        r10_0 = b
+        rdx_0 = f0
+        rcx_0 = g0
+        r12_0 = f1
+        r13_0 = g1
+        rax_0 = 0
+        zf_2 = (r8_0 && zext 0x1) == 0
+        rbx_3 = r10_0
+        rax_4 = cmovne rax_0 r10_0 zf_2
+        (cf_5, rbx_5) = sub rbx_3 r8_0
+        rbp_6 = r8_0
+        (cf_7, r8_7) = sub r8_0 rax_4
+        r8_8 = cmovb r8_7 rbx_5 cf_7
+        r10_9 = cmovb r10_0 rbp_6 cf_7
+        rax_10 = rdx_0
+        rdx_11 = cmovb rdx_0 r12_0 cf_7
+        r12_12 = cmovb r12_0 rax_10 cf_7
+        rbx_13 = rcx_0
+        rcx_14 = cmovb rcx_0 r13_0 cf_7
+        r13_15 = cmovb r13_0 rbx_13 cf_7
+        rax_16 = 0
+        rbx_17 = 0
+        r8_18 = r8_8 >> 1
+        rbp_19 = (rbp_6 && zext 0x1) == 0
+        rax_20 = cmovne rax_16 r12_12 zf_2
+        rbx_21 = cmovne rbx_17 r13_15 zf_2
+        (cf_22, r12_22) = add r12_12 r12_12
+        (cf_23, r13_23) = add r13_15 r13_15
+        (cf_24, rdx_24) = sub rdx_11 rax_20
+        (cf_25, rcx_25) = sub rcx_14 rbx_21
+        curcounter = counter - 1
+        curresult = [r8_18, r10_9, rdx_24, rcx_25, r12_22, r13_23]
+        loopresult = if curcounter == 0 then curresult else loop curcounter curresult
+
+ctx_inverse_mod_383
+  : Vec384 // a; pointer in rsi
+  -> Vec384 // n; pointer in rdx
+  -> Vec768 // ret
+ctx_inverse_mod_383 a n = result // (earlyresult # zero) // result
+  where
+    a_2 = a
+    b_3 = n
+    loa_4 = a_2
+    lob_5 = b_3
+    [f0_6, g0_6, f1_6, g1_6] = __ab_approximation_31 31 loa_4 lob_5
+    (hia_7, f0_7, g0_7) = __smulx_383_n_shift_by_31 loa_4 lob_5 f0_6 g0_6
+    offloadu_7 = f0_7
+    (hib_8, f1_8, g1_8) = __smulx_383_n_shift_by_31 loa_4 lob_5 f1_6 g1_6
+    offloadv_8 = f1_8
+    [f0_9, g0_9, f1_9, g1_9] = __ab_approximation_31 31 hia_7 hib_8
+    (loa_10, f0_10, g0_10) = __smulx_383_n_shift_by_31 hia_7 hib_8 f0_9 g0_9
+    (lob_11, f1_11, g1_11) = __smulx_383_n_shift_by_31 hia_7 hib_8 f1_9 g1_9
+    tmp12_rax_0 = offloadu_7
+    tmp12_r11_0 = offloadv_8
+    tmp12_rbx_0 = f1_11
+    tmp12_r10_0 = tmp12_rax_0
+    (tmp12_rdx_05, tmp12_rax_05) = imul1 f0_10 tmp12_rax_0
+    tmp12_r8_1 = tmp12_rax_05
+    tmp12_rax_1 = tmp12_r11_0
+    tmp12_r9_1 = tmp12_rdx_05
+    (tmp12_rdx_2, tmp12_rax_2) = imul1 g0_10 tmp12_rax_1
+    (tmp12_cf_3, tmp12_r8_3) = add tmp12_r8_1 tmp12_rax_2
+    (tmp12_cf_4, tmp12_r9_4) = adc tmp12_r9_1 tmp12_rdx_2 tmp12_cf_3
+    tmp12_ret0 = tmp12_r8_3
+    tmp12_ret1 = tmp12_r9_4
+    tmp12_r9_5 = sar tmp12_r9_4 0x3f
+    tmp12_ret2 = tmp12_r9_5
+    tmp12_ret3 = tmp12_r9_5
+    tmp12_ret4 = tmp12_r9_5
+    tmp12_ret5 = tmp12_r9_5
+    tmp12_rax_55 = tmp12_r10_0
+    (tmp12_rdx_6, tmp12_rax_6) = imul1 tmp12_rbx_0 tmp12_rax_55
+    tmp12_r8_6 = tmp12_rax_6
+    tmp12_rax_7 = tmp12_r11_0
+    tmp12_r9_7 = tmp12_rdx_6
+    (tmp12_rdx_8, tmp12_rax_8) = imul1 g1_11 tmp12_rax_7
+    (tmp12_cf_9, tmp12_r8_9) = add tmp12_r8_6 tmp12_rax_8
+    (tmp12_cf_10, tmp12_r9_10) = adc tmp12_r9_7 tmp12_rdx_8 tmp12_cf_9
+    tmp12_ret6 = tmp12_r8_9
+    tmp12_ret7 = tmp12_r9_10
+    tmp12_r9_11 = sar tmp12_r9_10 0x3f
+    tmp12_ret8 = tmp12_r9_11
+    tmp12_ret9 = tmp12_r9_11
+    tmp12_ret10 = tmp12_r9_11
+    tmp12_ret11 = tmp12_r9_11
+    lou_12 = [tmp12_ret0, tmp12_ret1, tmp12_ret2, tmp12_ret3, tmp12_ret4, tmp12_ret5]
+    lov_12 = [tmp12_ret6, tmp12_ret7, tmp12_ret8, tmp12_ret9, tmp12_ret10, tmp12_ret11]
+    [f0_14, g0_14, f1_14, g1_14] = __ab_approximation_31 31 loa_10 lob_11
+    (hia_15, f0_15, g0_15) = __smulx_383_n_shift_by_31 loa_10 lob_11 f0_14 g0_14
+    (hib_16, f1_16, g1_16) = __smulx_383_n_shift_by_31 loa_10 lob_11 f1_14 g1_14
+    hiu_17 = __smulx_383x63 lou_12 lov_12 f0_15 g0_15
+    hiv_18 = __smulx_383x63 lou_12 lov_12 f1_16 g1_16
+    [f0_19, g0_19, f1_19, g1_19] = __ab_approximation_31 31 hia_15 hib_16
+    (loa_20, f0_20, g0_20) = __smulx_383_n_shift_by_31 hia_15 hib_16 f0_19 g0_19
+    (lob_21, f1_21, g1_21) = __smulx_383_n_shift_by_31 hia_15 hib_16 f1_19 g1_19
+    lou_22 = __smulx_383x63 hiu_17 hiv_18 f0_20 g0_20
+    lov_23 = __smulx_383x63 hiu_17 hiv_18 f1_21 g1_21
+    [f0_24, g0_24, f1_24, g1_24] = __ab_approximation_31 31 loa_20 lob_21
+    (hia_25, f0_25, g0_25) = __smulx_383_n_shift_by_31 loa_20 lob_21 f0_24 g0_24
+    (hib_26, f1_26, g1_26) = __smulx_383_n_shift_by_31 loa_20 lob_21 f1_24 g1_24
+    hiu_27 = __smulx_383x63 lou_22 lov_23 f0_25 g0_25
+    hiv_28 = __smulx_383x63 lou_22 lov_23 f1_26 g1_26
+    [f0_29, g0_29, f1_29, g1_29] = __ab_approximation_31 31 hia_25 hib_26
+    (loa_30, f0_30, g0_30) = __smulx_383_n_shift_by_31 hia_25 hib_26 f0_29 g0_29
+    (lob_31, f1_31, g1_31) = __smulx_383_n_shift_by_31 hia_25 hib_26 f1_29 g1_29
+    lou_32 = __smulx_383x63 hiu_27 hiv_28 f0_30 g0_30
+    lov_33 = __smulx_383x63 hiu_27 hiv_28 f1_31 g1_31
+    [f0_34, g0_34, f1_34, g1_34] = __ab_approximation_31 31 loa_30 lob_31
+    (hia_35, f0_35, g0_35) = __smulx_383_n_shift_by_31 loa_30 lob_31 f0_34 g0_34
+    (hib_36, f1_36, g1_36) = __smulx_383_n_shift_by_31 loa_30 lob_31 f1_34 g1_34
+    hiu_37 = __smulx_383x63 lou_32 lov_33 f0_35 g0_35
+    hiv_38 = __smulx_383x63 lou_32 lov_33 f1_36 g1_36
+    [f0_39, g0_39, f1_39, g1_39] = __ab_approximation_31 31 hia_35 hib_36
+    (loa_40, f0_40, g0_40) = __smulx_383_n_shift_by_31 hia_35 hib_36 f0_39 g0_39
+    (lob_41, f1_41, g1_41) = __smulx_383_n_shift_by_31 hia_35 hib_36 f1_39 g1_39
+    lou_42 = __smulx_383x63 hiu_37 hiv_38 f0_40 g0_40
+    lov_43 = __smulx_383x63 hiu_37 hiv_38 f1_41 g1_41
+    [f0_44, g0_44, f1_44, g1_44] = __ab_approximation_31 31 loa_40 lob_41
+    (hia_45, f0_45, g0_45) = __smulx_383_n_shift_by_31 loa_40 lob_41 f0_44 g0_44
+    (hib_46, f1_46, g1_46) = __smulx_383_n_shift_by_31 loa_40 lob_41 f1_44 g1_44
+    hiu_47 = __smulx_383x63 lou_42 lov_43 f0_45 g0_45
+    hiv_48 = __smulx_383x63 lou_42 lov_43 f1_46 g1_46
+    [f0_49, g0_49, f1_49, g1_49] = __ab_approximation_31 31 hia_45 hib_46
+    (loa_50, f0_50, g0_50) = __smulx_383_n_shift_by_31 hia_45 hib_46 f0_49 g0_49
+    (lob_51, f1_51, g1_51) = __smulx_383_n_shift_by_31 hia_45 hib_46 f1_49 g1_49
+    lou_52 = __smulx_383x63 hiu_47 hiv_48 f0_50 g0_50
+    lov_53 = __smulx_383x63 hiu_47 hiv_48 f1_51 g1_51
+    [f0_54, g0_54, f1_54, g1_54] = __ab_approximation_31 31 loa_50 lob_51
+    (hia_55, f0_55, g0_55) = __smulx_383_n_shift_by_31 loa_50 lob_51 f0_54 g0_54
+    (hib_56, f1_56, g1_56) = __smulx_383_n_shift_by_31 loa_50 lob_51 f1_54 g1_54
+    hiu_57 = __smulx_383x63 lou_52 lov_53 f0_55 g0_55
+    hiv_58 = __smulx_383x63 lou_52 lov_53 f1_56 g1_56
+    [f0_59, g0_59, f1_59, g1_59] = __ab_approximation_31 31 hia_55 hib_56
+    (loa_60, f0_60, g0_60) = __smulx_383_n_shift_by_31 hia_55 hib_56 f0_59 g0_59
+    (lob_61, f1_61, g1_61) = __smulx_383_n_shift_by_31 hia_55 hib_56 f1_59 g1_59
+    lou_62 = __smulx_383x63 hiu_57 hiv_58 f0_60 g0_60
+    lov_63 = __smulx_383x63 hiu_57 hiv_58 f1_61 g1_61
+    tmp64_r13_0 = sar (lov_63 @ 5) 0x3f
+    lov_64 = lov_63 # [tmp64_r13_0, tmp64_r13_0, tmp64_r13_0, tmp64_r13_0, tmp64_r13_0, tmp64_r13_0]
+    [f0_65, g0_65, f1_65, g1_65] = __ab_approximation_31 31 loa_60 lob_61
+    (hia_66, f0_66, g0_66) = __smulx_383_n_shift_by_31 loa_60 lob_61 f0_65 g0_65
+    (hib_67, f1_67, g1_67) = __smulx_383_n_shift_by_31 loa_60 lob_61 f1_65 g1_65
+    hiu_68 = __smulx_383x63 lou_62 (take lov_64) f0_66 g0_66
+    hiv_69 = __smulx_767x63 lou_62 lov_64 f1_67 g1_67
+    [f0_70, g0_70, f1_70, g1_70] = __ab_approximation_31 31 hia_66 hib_67
+    (loa_71, f0_71, g0_71) = __smulx_383_n_shift_by_31 hia_66 hib_67 f0_70 g0_70
+    (lob_72, f1_72, g1_72) = __smulx_383_n_shift_by_31 hia_66 hib_67 f1_70 g1_70
+    lou_73 = __smulx_383x63 hiu_68 (take hiv_69) f0_71 g0_71
+    lov_74 = __smulx_767x63 hiu_68 hiv_69 f1_72 g1_72
+    [f0_75, g0_75, f1_75, g1_75] = __ab_approximation_31 31 loa_71 lob_72
+    (hia_76, f0_76, g0_76) = __smulx_383_n_shift_by_31 loa_71 lob_72 f0_75 g0_75
+    (hib_77, f1_77, g1_77) = __smulx_383_n_shift_by_31 loa_71 lob_72 f1_75 g1_75
+    hiu_78 = __smulx_383x63 lou_73 (take lov_74) f0_76 g0_76
+    hiv_79 = __smulx_767x63 lou_73 lov_74 f1_77 g1_77
+    [f0_80, g0_80, f1_80, g1_80] = __ab_approximation_31 31 hia_76 hib_77
+    (loa_81, f0_81, g0_81) = __smulx_383_n_shift_by_31 hia_76 hib_77 f0_80 g0_80
+    (lob_82, f1_82, g1_82) = __smulx_383_n_shift_by_31 hia_76 hib_77 f1_80 g1_80
+    lou_83 = __smulx_383x63 hiu_78 (take hiv_79) f0_81 g0_81
+    lov_84 = __smulx_767x63 hiu_78 hiv_79 f1_82 g1_82
+    [f0_85, g0_85, f1_85, g1_85] = __ab_approximation_31 31 loa_81 lob_82
+    (hia_86, f0_86, g0_86) = __smulx_383_n_shift_by_31 loa_81 lob_82 f0_85 g0_85
+    (hib_87, f1_87, g1_87) = __smulx_383_n_shift_by_31 loa_81 lob_82 f1_85 g1_85
+    hiu_88 = __smulx_383x63 lou_83 (take lov_84) f0_86 g0_86
+    hiv_89 = __smulx_767x63 lou_83 lov_84 f1_87 g1_87
+    [f0_90, g0_90, f1_90, g1_90] = __ab_approximation_31 31 hia_86 hib_87
+    (loa_92, f0_92, g0_92) = __smulx_383_n_shift_by_31 hia_86 hib_87 f0_90 g0_90
+    (lob_93, f1_93, g1_93) = __smulx_383_n_shift_by_31 hia_86 hib_87 f1_90 g1_90
+    lou_94 = __smulx_383x63 hiu_88 (take hiv_89) f0_92 g0_92
+    lov_95 = __smulx_767x63 hiu_88 hiv_89 f1_93 g1_93
+    [f0_96, g0_96, f1_96, g1_96] = __ab_approximation_31 31 loa_92 lob_93
+    (hia_97, f0_97, g0_97) = __smulx_383_n_shift_by_31 loa_92 lob_93 f0_96 g0_96
+    (hib_98, f1_98, g1_98) = __smulx_383_n_shift_by_31 loa_92 lob_93 f1_96 g1_96
+    hiu_99 = __smulx_383x63 lou_94 (take lov_95) f0_97 g0_97
+    hiv_100 = __smulx_767x63 lou_94 lov_95 f1_98 g1_98
+    [f0_101, g0_101, f1_101, g1_101] = __ab_approximation_31 31 hia_97 hib_98
+    (loa_102, f0_102, g0_102) = __smulx_191_n_shift_by_31 (take`{3} hia_97) (take`{3} hib_98) f0_101 g0_101
+    (lob_103, f1_103, g1_103) = __smulx_191_n_shift_by_31 (take`{3} hia_97) (take`{3} hib_98) f1_101 g1_101
+    lou_104 = __smulx_383x63 hiu_99 (take hiv_100) f0_102 g0_102
+    lov_105 = __smulx_767x63 hiu_99 hiv_100 f1_103 g1_103
+    [f0_106, g0_106, f1_106, g1_106] = __ab_approximation_31 31 (loa_102 # drop`{3} loa_92) (lob_103 # drop`{3} lob_93)
+    (hia_107, f0_107, g0_107) = __smulx_191_n_shift_by_31 loa_102 lob_103 f0_106 g0_106
+    (hib_108, f1_108, g1_108) = __smulx_191_n_shift_by_31 loa_102 lob_103 f1_106 g1_106
+    hiu_109 = __smulx_383x63 lou_104 (take lov_105) f0_107 g0_107
+    hiv_110 = __smulx_767x63 lou_104 lov_105 f1_108 g1_108
+    [f0_111, g0_111, f1_111, g1_111] = __ab_approximation_31 31 (hia_107 # drop`{3} hia_97) (hib_108 # drop`{3} hib_98)
+    (loa_112, f0_112, g0_112) = __smulx_191_n_shift_by_31 hia_107 hib_108 f0_111 g0_111
+    (lob_113, f1_113, g1_113) = __smulx_191_n_shift_by_31 hia_107 hib_108 f1_111 g1_111
+    lou_114 = __smulx_383x63 hiu_109 (take hiv_110) f0_112 g0_112
+    lov_115 = __smulx_767x63 hiu_109 hiv_110 f1_113 g1_113
+    [f0_116, g0_116, f1_116, g1_116] = __ab_approximation_31 31 (loa_112 # drop`{3} loa_92) (lob_113 # drop`{3} lob_93)
+    (hia_117, f0_117, g0_117) = __smulx_191_n_shift_by_31 loa_112 lob_113 f0_116 g0_116
+    (hib_118, f1_118, g1_118) = __smulx_191_n_shift_by_31 loa_112 lob_113 f1_116 g1_116
+    hiu_119 = __smulx_383x63 lou_114 (take lov_115) f0_117 g0_117
+    hiv_120 = __smulx_767x63 lou_114 lov_115 f1_118 g1_118
+    earlyresult = take`{6} hiv_120
+    [f0_121, g0_121, f1_121, g1_121] = __inner_loop_62 55 (hia_117 @ 0) (hib_118 @ 0)
+    v_122 = __smulx_767x63 hiu_119 hiv_120 f1_121 g1_121
+    resultlow = take v_122
+    [r14_122, r15_122, rbx_122, rbp_122, rcx_122, rax_122] = drop v_122
+    rdx_123 = rax_122
+    tmp123_rax_0 = sar rax_122 0x3f
+    r8_123 = tmp123_rax_0 && (n @ 0)
+    r9_123 = tmp123_rax_0 && (n @ 1)
+    r10_123 = tmp123_rax_0 && (n @ 2)
+    r11_123 = tmp123_rax_0 && (n @ 3)
+    r12_123 = tmp123_rax_0 && (n @ 4)
+    rax_123 = tmp123_rax_0 && (n @ 5)
+    (tmp124_cf_0, r14_124) = add r14_122 r8_123
+    (tmp124_cf_1, r15_124) = adc r15_122 r9_123 tmp124_cf_0
+    (tmp124_cf_2, rbx_124) = adc rbx_122 r10_123 tmp124_cf_1
+    (tmp124_cf_3, rbp_124) = adc rbp_122 r11_123 tmp124_cf_2
+    (tmp124_cf_4, rcx_124) = adc rcx_122 r12_123 tmp124_cf_3
+    (tmp124_cf_5, rdx_124) = adc rdx_123 rax_123 tmp124_cf_4
+    result6 = r14_124
+    result7 = r15_124
+    result8 = rbx_124
+    result9 = rbp_124
+    result10 = rcx_124
+    result11 = rdx_124
+    result : Vec768
+    result = resultlow # [result6, result7, result8, result9, result10, result11]
