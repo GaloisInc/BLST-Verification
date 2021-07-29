@@ -137,7 +137,6 @@ restitching_rules <- for [
 , {{ \(x:[2][6][64]) -> ([x1,x2] == x where [x1,x2] = x) }}
 , {{ \(a:[2]Integer) -> ([x,y] == a where [x,y] = a) }}
 , {{ \(a:[2][6][64]) -> ([x,y] == a where [x,y] = a) }}
-, {{ \(a:[6][64]) -> ([a1,a2,a3,a4,a5,a6] == a where [a1,a2,a3,a4,a5,a6] = a) }}
 , {{
       \(x:t_Fp_2) -> (
          [[a1, a2, a3, a4, a5, a6], [b1, b2, b3, b4, b5, b6]] == fp2_rep x where
@@ -280,15 +279,6 @@ let verify_blst_core_verify_pk_in_g1_null_sig msg_len dst_len aug_len = do {
         (post_condition_script msg_len dst_len aug_len)
         (side_conditions_script msg_len dst_len aug_len));
 };
-
-    // do {
-      // print_goal;
-      // post_condition_script;
-    // }
-    // do {
-      // print_goal;
-      // side_conditions_script;
-    // });
 
 let msg_len = 32;
 let dst_len = 8;

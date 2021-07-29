@@ -57,3 +57,4 @@ include "pairing.saw";
 include "final_exp.saw";
 
 include "core_verify_pk_in_g1.saw";
+include "core_verify_pk_in_g2.saw";
