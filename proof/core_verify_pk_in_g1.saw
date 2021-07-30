@@ -116,7 +116,7 @@ miller_loop_zero_thm <- admit_cryptol {{  \x -> fp12_conjugate (miller_loop_opt_
 // Proofs
 
 // TODO:
-core_verify_pk_in_g1_impl_thm <- admit_cryptol {{ \pk sig msg dst aug -> core_verify_pk_in_g1_impl pk sig msg dst aug == core_verify_pk_in_g1 pk sig msg dst aug }};
+// core_verify_pk_in_g1_impl_thm <- admit_cryptol {{ \pk sig msg dst aug -> core_verify_pk_in_g1_impl pk sig msg dst aug == core_verify_pk_in_g1 pk sig msg dst aug }};
 
 
 let remove_ho_rules = concat
