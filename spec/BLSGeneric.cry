@@ -45,6 +45,7 @@ parameter
     // hash_to_point
     // TODO: why is this not working?
     // type DST_len: #
+    DST: [43][8]
 
     hash_to_point: {msg_len} (Hashable msg_len) =>
                [msg_len][8] -> EC::AffinePoint t_F
@@ -68,9 +69,14 @@ parameter
 //type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + DST_len))
 type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + 43))
 
+// TODO: Better name.  And maybe use instead of DST throughout?
+// TODO: Do I even need reexport_DST?
+reexport_DST = DST
+
 // TODO: Better name.  Maybe param should be _pubkey_subgroup_check and this
 // should be pubkey_subgroup_check
 reexport_pubkey_subgroup_check = pubkey_subgroup_check
+reexport_signature_subgroup_check = signature_subgroup_check
 
 // 2.3 KeyGen
 
@@ -124,7 +130,7 @@ CoreVerify(PK, message, signature) = maybe False step3 (signature_to_point signa
 CoreVerify PK message signature =
     maybe_cases (signature_to_point signature)
         False // lines 1,2
-        (\ R -> if signature_subgroup_check R == False then False  // line 3
+        (\ R -> if reexport_signature_subgroup_check R == False then False  // line 3
                 |  KeyValidate PK == False then False // line 4
                 else maybe_cases (pubkey_to_point PK)
                     False // line 5

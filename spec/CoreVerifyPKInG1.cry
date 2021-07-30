@@ -1,0 +1,10 @@
+// TODO: Belongs in implementation directory
+module CoreVerifyPKInG1 where
+
+import Parameters
+import HashToCurveE2
+import Pairing
+
+core_verify_pk_in_g1 pk sig msg dst = Fp_12.is_equal(c1, c2) where
+    c1 = bls_ate_pairing pk (hash_to_curve (msg, dst))
+    c2 = bls_ate_pairing BP sig

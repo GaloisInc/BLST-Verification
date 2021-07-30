@@ -5,7 +5,10 @@
 
 import "../spec/BLSMinimalSignatureSize.cry";
 
+/*
 let do_prove = true;
+include "proof-helpers.saw";
+*/
 
 let {{
   drop_join_reverse: {n_bits, n_bytes} (fin n_bytes, n_bits <= 8*n_bytes) => [n_bytes][8] -> [n_bits]
@@ -832,7 +835,7 @@ let BasicVerify_A_unints = (concat [
 , "pubkey_subgroup_check"
 , "pubkey_to_point_is_affine"
 , "sign_F_p"
-, "signature_subgroup_check"
+, "reexport_signature_subgroup_check"
 , "signature_to_point_is_affine"
 , "sqrt_fp"
 , "uncompress_E1"
@@ -868,10 +871,10 @@ uncompress_E1_uncompress_E1_OK_thm <- admit_cryptol (rewrite (cryptol_ss())
 // Checks for BLS12-381".
 is_in_g1_impl_thm <- admit_cryptol
   (rewrite (cryptol_ss())
-  {{ \P -> signature_subgroup_check P ==
+  {{ \P -> reexport_signature_subgroup_check P ==
            if is_point_affine_E P
            then is_in_g1_impl P
-           else apply signature_subgroup_check P }});
+           else apply reexport_signature_subgroup_check P }});
 
 fold_normalize_affine_fp_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> (Fp.normalize P.0, Fp.normalize P.1) ==
@@ -924,7 +927,9 @@ uncompress_E1_OK_on_curve <- admit_cryptol
            else apply is_point_affine E (uncompress_E1_OK x) }};
 
 // TODO: Do not use
-//denorm <- admit_cryptol {{ \x -> Fp.normalize x == x }};
+denorm <- admit_cryptol {{ \x -> Fp_2.normalize x == x }};
+
+denorm_ap <- admit_cryptol {{ \x -> normalize_affine_point Fp_2 x == x }};
 
 is_point_O_E_affine_no_abs_rev_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x y -> ((peq x Fp.field_zero) /\ (peq y Fp.field_zero)) ==
@@ -944,7 +949,6 @@ hoist_is_point_O_E'_thm <- prove_cryptol
     {{ \c p1 p2 -> is_point_O E' (if c then p1 else p2) ==
                    if c then is_point_O E' p1 else is_point_O E' p2 }}) [];
 
-// TODO: Prove
 POINTonE2_affine_abs_rep_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> POINTonE2_affine_abs (POINTonE2_affine_rep P) ==
            normalize_affine_point Fp_2 P }})
@@ -993,7 +997,7 @@ demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
         // Postcondition proof
         unfolding [ "CoreVerify"
                   , "module parameter signature_to_point"
-                  , "module parameter signature_subgroup_check"
+                  //, "module parameter signature_subgroup_check"
                   , "signature_to_point_is_affine"
                   , "maybe_cases"
                   //, "POINTonE1_affine_rep"

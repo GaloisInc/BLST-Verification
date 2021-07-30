@@ -1,5 +1,5 @@
 diff --git a/bindings/blst.h b/bindings/blst.h
-index 3a333b1..cbd3642 100644
+index 3a333b1..4fbcbbd 100644
 --- a/bindings/blst.h
 +++ b/bindings/blst.h
 @@ -168,10 +168,10 @@ bool blst_p1_is_equal(const blst_p1 *a, const blst_p1 *b);
@@ -30,6 +30,15 @@ index 3a333b1..cbd3642 100644
  const blst_p2_affine *blst_p2_affine_generator();
  
  /*
+@@ -343,7 +343,7 @@ void blst_aggregated_in_g2(blst_fp12 *out, const blst_p2_affine *signature);
+  */
+ BLST_ERROR blst_core_verify_pk_in_g1(const blst_p1_affine *pk,
+                                      const blst_p2_affine *signature,
+-                                     bool hash_or_encode,
++                                     int hash_or_encode,
+                                      const byte *msg, size_t msg_len,
+                                      const byte *DST DEFNULL,
+                                      size_t DST_len DEFNULL,
 @@ -351,7 +351,7 @@ BLST_ERROR blst_core_verify_pk_in_g1(const blst_p1_affine *pk,
                                       size_t aug_len DEFNULL);
  BLST_ERROR blst_core_verify_pk_in_g2(const blst_p2_affine *pk,

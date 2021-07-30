@@ -97,21 +97,15 @@ limb_t demo_BasicVerify_A(const byte sig[48], const byte pk[96], const byte *mes
 
   if (!demo_KeyValidate_A(pk)) return 0;
 
-  // TODO: Use KeyValidate below instead to better match the spec?
   // uncompress and check the pub key
   if (blst_p2_uncompress(&PK, pk) != BLST_SUCCESS) return 0;
-  /*
-  if (! blst_p2_affine_on_curve(&PK)) return 0;
-  if (blst_p2_affine_is_inf(&PK)) return 0;
-  if (! blst_p2_affine_in_g2(&PK)) return 0;
-  */
 
   if (blst_core_verify_pk_in_g2(&PK, &R, 1, message, message_len, demo_DST_A, 43, NULL, 0) != BLST_SUCCESS)
     return 0;
   return 1;
 };
 
-bool demo_BasicVerify_B(const byte sig[96], const byte pk[48], const byte *message, size_t message_len) {
+limb_t demo_BasicVerify_B(const byte sig[96], const byte pk[48], const byte *message, size_t message_len) {
   blst_p2_affine R;
   blst_p2 Q;
   blst_p1_affine PK;
@@ -121,18 +115,12 @@ bool demo_BasicVerify_B(const byte sig[96], const byte pk[48], const byte *messa
   if (blst_p2_affine_is_inf(&R)) return 0;
   if (! blst_p2_affine_in_g2(&R)) return 0;
 
-  // TODO: Maybe remove the above checks if the override handles error cases.
-  // Can't remove pubkey checks?  (Same goes for A variant)
+  if (!demo_KeyValidate_B(pk)) return 0;
 
   // uncompress and check the pub key
   if (blst_p1_uncompress(&PK, pk) != BLST_SUCCESS) return 0;
-  if (! blst_p1_affine_on_curve(&PK)) return 0;
-  if (blst_p1_affine_is_inf(&PK)) return 0;
-  if (! blst_p1_affine_in_g1(&PK)) return 0;
 
-
-  // TODO: fix DST string
-  if (blst_core_verify_pk_in_g1(&PK, &R, 1, message, message_len, demo_DST_A, 43, NULL, 0) != BLST_SUCCESS)
+  if (blst_core_verify_pk_in_g1(&PK, &R, 1, message, message_len, demo_DST_B, 43, NULL, 0) != BLST_SUCCESS)
     return 0;
   return 1;
 };
