@@ -275,7 +275,7 @@ is_point_O_E'_affine_rev_thm <- prove_cryptol
               Fp_2.is_equal (y, Fp_2.field_zero)) ==
              is_point_O E' (x, y) }} [];
 
-just_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \(x : EC::AffinePoint t_Fp_2) -> just x == (True, x) }}) [];
+just_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \(x : AffinePoint t_Fp_2) -> just x == (True, x) }}) [];
 
 // We assume that pubkey_subgroup_check is equivalent to is_in_g2_impl for
 // points on the curve.  This assumption is proved in Bowe "Faster Subgroup

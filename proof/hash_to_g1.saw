@@ -616,3 +616,9 @@ prove_hash_to_g1_impl_ov msg_len DST_len aug_len;
 prove_hash_to_g1_ov msg_len DST_len aug_len;
 prove_hash_to_g1_impl_ov msg_len DST_len 0;
 prove_hash_to_g1_ov msg_len DST_len 0;
+
+// Used in bls_operations.saw:
+// TODO: does not seem to work if called in bls_operations.saw
+hash_to_curve_E1_opt_impl_equiv_ov <- (prove_hash_to_curve_E1_opt_impl_equiv_thm 32 43);
+hash_to_g1_ov <- prove_hash_to_g1_ov 32 43 0;
+

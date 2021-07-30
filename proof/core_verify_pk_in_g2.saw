@@ -87,6 +87,9 @@ normalize_hash_to_curve_impl <- do {
 
 miller_loop_zero_thm <- admit_cryptol {{  \x -> fp12_conjugate (miller_loop_opt_checked x BP') == if (is_point_O E x) then Fp_12.field_unit else apply miller_loop_opt_checked x BP' }};
 
+// TODO: not sure this is true if pk or sig are invalid.
+core_verify_pk_in_g2_impl_thm <- admit_cryptol {{ \pk sig msg dst aug -> core_verify_pk_in_g2_impl pk sig msg dst aug == core_verify_pk_in_g2 pk sig msg dst aug }};
+
 // Proofs
 
 // TODO:

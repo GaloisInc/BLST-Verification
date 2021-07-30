@@ -16,10 +16,7 @@ let {{
   fp12_unit = Fp_12.field_unit
   fp12_is_equal = Fp_12.is_equal
   fp12_neg = Fp_12.neg
-<<<<<<< HEAD
   fp12_normalize = Fp_12.normalize
-=======
->>>>>>> squash for rebasing onto core_verify_impl
   fp2_mul = Fp_2.mul
   fp2_sq = Fp_2.sq
   fp2_add = Fp_2.add
@@ -45,10 +42,6 @@ readability_rewrites <- for [
 , {{ \p q -> Fp.add (p,q) == fp_add (p,q) }}
 , {{ \p -> Fp.sq p == fp_sq p }}
 , {{ \p -> Fp.neg p == fp_neg p }}
-<<<<<<< HEAD
-=======
-, {{ \p -> Fp.normalize p == fp_normalize p }}
->>>>>>> squash for rebasing onto core_verify_impl
 , {{ \p q -> Fp.div (p, q) == fp_div (p, q) }}
 , {{ Fp.field_zero == fp_zero }}
 , {{ Fp.field_unit == fp_unit }}
@@ -57,10 +50,6 @@ readability_rewrites <- for [
 , {{ \p q -> Fp_2.add (p,q) == fp2_add (p,q) }}
 , {{ \p -> Fp_2.sq p == fp2_sq p }}
 , {{ \p -> Fp_2.neg p == fp2_neg p }}
-<<<<<<< HEAD
-=======
-, {{ \p -> Fp_2.normalize p == fp2_normalize p }}
->>>>>>> squash for rebasing onto core_verify_impl
 , {{ \p q -> Fp_2.div (p, q) == fp2_div (p, q) }}
 , {{ Fp_2.field_zero == fp2_zero }}
 , {{ Fp_2.field_unit == fp2_unit }}
@@ -73,12 +62,9 @@ readability_rewrites <- for [
 , {{ Fp_12.field_zero == fp12_zero }}
 , {{ Fp_12.field_unit == fp12_unit }}
 , {{ \x y -> Fp_12.is_equal (x,y) == fp12_is_equal (x,y) }}
-<<<<<<< HEAD
 , {{ \p -> Fp.normalize p == fp_normalize p }}
 , {{ \p -> Fp_2.normalize p == fp2_normalize p }}
 , {{ \p -> Fp_12.normalize p == fp12_normalize p }}
-=======
->>>>>>> squash for rebasing onto core_verify_impl
   ] (\e -> custom_prove_cryptol (rewrite (cryptol_ss ()) e) (w4_unint_z3 ["Fp","Fp_2","Fp_12"]));
 
 let print_readably =  do { // NOTE this modifies the goal
