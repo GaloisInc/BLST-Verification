@@ -27,12 +27,12 @@ core_verify_pk_in_g1_impl pk sig msg dst aug = Fp_12.is_equal(gt, Fp_12.field_un
     gtSig = fp12_conjugate (miller_loop_opt_checked BP sig)
     gt = final_exponentiation_impl (Fp_12.mul (gtSig, gtPQ))
 
-core_verify_pk_in_g1 : {msg_len,dst_len,aug_len}
-  (fin msg_len, fin dst_len, fin aug_len
-  , Expandable (msg_len+aug_len) dst_len
-  , dst_len <= 255) =>
-  AffinePoint t_Fp -> AffinePoint t_Fp_2 -> [msg_len][8] -> [dst_len][8] -> [aug_len][8] -> Bool
+/* core_verify_pk_in_g1 : {msg_len,dst_len,aug_len} */
+  /* (fin msg_len, fin dst_len, fin aug_len */
+  /* , Expandable (msg_len+aug_len) dst_len */
+  /* , dst_len <= 255) => */
+  /* AffinePoint t_Fp -> AffinePoint t_Fp_2 -> [msg_len][8] -> [dst_len][8] -> [aug_len][8] -> Bool */
 
-core_verify_pk_in_g1 pk sig msg dst aug = Fp_12.is_equal(c1, c2) where
-    c1 = bls_ate_pairing pk (hash_to_curve (aug#msg, dst))
-    c2 = bls_ate_pairing BP sig
+/* core_verify_pk_in_g1 pk sig msg dst aug = Fp_12.is_equal(c1, c2) where */
+    /* c1 = bls_ate_pairing pk (hash_to_curve (aug#msg, dst)) */
+    /* c2 = bls_ate_pairing BP sig */
