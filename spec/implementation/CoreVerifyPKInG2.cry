@@ -14,7 +14,6 @@ import implementation::PairingImpl (miller_loop_opt_checked)
 import ExpandMessage
 import Frobenius (fp12_conjugate)
 import HashToCurveE1
-import Pairing (bls_ate_pairing)
 
 core_verify_pk_in_g2_impl : {msg_len,dst_len,aug_len}
   (fin msg_len, fin dst_len, fin aug_len
