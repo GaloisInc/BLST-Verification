@@ -9,7 +9,6 @@ jobs:
       matrix:
         proof-target:
           - proof/memory_safety.saw
-          - proof/keygen.saw
           - proof/functional_proofs.saw
           - proof/correctness_add.saw
           - check
