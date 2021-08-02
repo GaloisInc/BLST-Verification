@@ -5,10 +5,7 @@
 
 import "../spec/BLSMinimalSignatureSize.cry";
 
-HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
-
 let do_prove = true;
-include "proof-helpers.saw";
 
 let {{
   drop_join_reverse: {n_bits, n_bytes} (fin n_bytes, n_bits <= 8*n_bytes) => [n_bytes][8] -> [n_bits]
@@ -975,7 +972,7 @@ let {{
 
 core_verify_pk_in_g2_impl_thm <- admit_cryptol {{ \pk sig msg dst -> core_verify_pk_in_g2_impl pk sig msg dst [] == core_verify_pk_in_g2 pk sig msg dst }};
 
-blst_core_verify_pk_in_g2_ov <- verify_blst_core_verify_pk_in_g2_null_aug 32 43;
+blst_core_verify_pk_in_g2_ov <- verify_blst_core_verify_pk_in_g2_null_aug 32 43 0;
 
 // TODO: goal 6 fails
 demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
