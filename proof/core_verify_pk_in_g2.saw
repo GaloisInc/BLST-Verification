@@ -130,7 +130,7 @@ rewrite_unit <- custom_prove_cryptol (rewrite (cryptol_ss ()) {{ fp_abs fp_unit_
 let BP'_rep = run (eval_term {{ POINTonE2_affine_rep BP' }});
 let BP'_rewrite = run (custom_prove_cryptol (rewrite (cryptol_ss ()) {{ POINTonE2_affine_abs BP'_rep == BP' }}) w4);
 
-let side_conditions_script msg_len dst_len aug_len = do {
+let side_conditions_script = do {
   rw_with (concat POINTonE1_thms POINTonE2_thms);
   unfolding ["POINTonE1_rep"];
   simplify fp12_simpset;
@@ -154,7 +154,7 @@ let side_conditions_script msg_len dst_len aug_len = do {
   w4_unint_z3 (concat core_verify_pk_in_g2_unints ["fp_rep","fp_abs"]);
 };
 
-let post_condition_script msg_len dst_len aug_len = do {
+let post_condition_script = do {
     // get rid of `abs rep` terms
     rw_with (concat POINTonE1_thms POINTonE2_thms);
     unfolding ["POINTonE1_rep"];
@@ -187,8 +187,8 @@ let verify_blst_core_verify_pk_in_g2_non_null msg_len dst_len aug_len = do {
     (concat overrides [Hash_to_G1_ov])
     (blst_core_verify_pk_in_g2_non_null_spec msg_len dst_len aug_len)
     (goal_num_ite 17
-      (post_condition_script msg_len dst_len aug_len)
-      (side_conditions_script msg_len dst_len aug_len));
+      post_condition_script
+      side_conditions_script);
 };
 
 let verify_blst_core_verify_pk_in_g2_null_aug msg_len dst_len = do {
@@ -198,8 +198,8 @@ let verify_blst_core_verify_pk_in_g2_null_aug msg_len dst_len = do {
     (concat overrides [Hash_to_G1_ov])
     (blst_core_verify_pk_in_g2_null_aug_spec msg_len dst_len)
     (goal_num_ite 17
-      (post_condition_script msg_len dst_len aug_len)
-      (side_conditions_script msg_len dst_len aug_len));
+      post_condition_script
+      side_conditions_script);
 };
 
 verify_blst_core_verify_pk_in_g2_non_null 32 43 8;
