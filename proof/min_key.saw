@@ -188,7 +188,7 @@ uncompress_E1_uncompress_E1_OK_thm <- admit_cryptol (rewrite (cryptol_ss())
            then (True, uncompress_E1_OK x)
            else apply uncompress_E1 x }});
 
-just_e1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \(x : EC::AffinePoint t_Fp) -> just x == (True, x) }}) [];
+just_e1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \(x : AffinePoint t_Fp) -> just x == (True, x) }}) [];
 
 fold_normalize_affine_fp_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> (Fp.normalize P.0, Fp.normalize P.1) ==
