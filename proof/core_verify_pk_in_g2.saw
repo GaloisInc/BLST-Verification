@@ -161,7 +161,6 @@ let side_conditions_script  msg_len dst_len aug_len = do {
   let core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds_thms = run (core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds msg_len dst_len aug_len);
   rw_with (concat core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds_thms core_verify_pk_in_g2_POINTonE1_from_Jacobian_sig_preconds);
   unfolding ["apply"];
-  print_readably;
   rw_with remove_ho_rules;
   goal_eval_unint (concat core_verify_pk_in_g2_unints ["fp_rep","fp_abs","fp_invariant"]);
   simplify fp_simpset;
