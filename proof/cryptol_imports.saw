@@ -20,6 +20,12 @@ import "../spec/implementation/CurveOperation.cry";
 import "../spec/implementation/Types.cry";
 import "../spec/implementation/Field.cry";
 
+// Key generation
+import "../spec/rfc8017.cry";
+import "../cryptol-specs/Primitive/Symmetric/KDF/HKDF256.cry";
+import "../spec/KeyGen.cry";
+import "../spec/implementation/Keygen.cry";
+
 // hashing
 import "../cryptol-specs/Primitive/Keyless/Hash/SHA256.cry";
 import "../spec/ExpandMessage.cry";
@@ -31,7 +37,6 @@ import "../spec/implementation/HashToG1.cry";
 import "../spec/implementation/HashToG2.cry";
 
 // serialization
-import "../spec/rfc8017.cry";
 import "../spec/Serialization.cry";
 import "../spec/implementation/SerializationP1.cry";
 import "../spec/implementation/SerializationP2.cry";

@@ -23,6 +23,7 @@ include "cryptol_imports.saw";
 include "algebraic-laws.saw";
 
 include "hash_to_field.saw";
+include "keygen.saw";
 include "fp_overrides.saw";
 include "vect.saw";
 include "exp.saw";
