@@ -54,7 +54,8 @@ point_to_pubkey S = join (serialize_E2 S)
 point_to_signature S = join (serialize_E1 S)
 
 // pubkey_to_point: [pubkey_len] -> Maybe (EC::AffinePoint t_F') // can fail
-//pubkey_to_point = octets_to_point_E2 // Section 2.2
+// pubkey_len = 768
+// deserialize_E2: [96][8] -> Maybe (EC::AffinePoint t_Fp_2)
 pubkey_to_point S = deserialize_E2 (split S)
 
 // signature_to_point: [signature_len] -> Maybe (EC::AffinePoint t_F) // can fail
