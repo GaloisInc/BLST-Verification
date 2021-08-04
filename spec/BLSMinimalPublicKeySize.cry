@@ -26,9 +26,9 @@ main_curve = E'
 other_curve = E
 
 // hash_to_point  BLS12381G2_XMD:SHA-256_SSWU_RO_
-type DST_len = 43
+// type DST_len = 43
 
-DST: [DST_len][8]
+DST: [43][8]
 DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
 
 hash_to_point hx = hash_to_curve (DST, hx)

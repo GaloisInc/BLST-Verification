@@ -43,7 +43,8 @@ parameter
     // H, a hash function, is always HKDF, so not listed here
 
     // hash_to_point
-    type DST_len: #
+    // TODO: why is this not working?
+    // type DST_len: #
 
     hash_to_point: {msg_len} (Hashable msg_len) =>
                [msg_len][8] -> EC::AffinePoint t_F
@@ -64,7 +65,8 @@ parameter
     pubkey_subgroup_check: EC::AffinePoint t_F' -> Bool
     signature_subgroup_check: EC::AffinePoint t_F -> Bool
 
-type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + DST_len))
+//type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + DST_len))
+type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + 43))
 
 // TODO: Better name.  Maybe param should be _pubkey_subgroup_check and this
 // should be pubkey_subgroup_check
