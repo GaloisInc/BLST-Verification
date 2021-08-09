@@ -276,6 +276,7 @@ let ec_mult_unints =
     , "precomputed_table"
     , "add_E", "add'_E", "affinify_E", "projectify_E"
     ];
+let e1_unints = ec_mult_unints;
 
 ////////////////
 

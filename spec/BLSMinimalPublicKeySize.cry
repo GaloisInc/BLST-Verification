@@ -3,74 +3,70 @@
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
-module BLSMinimalSignatureSize = BLSGeneric where
+module BLSMinimalPublicKeySize = BLSGeneric where
 
-// Suite BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_, as defined in
+// Suite BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_, as defined in
 // draft-irtf-cfrg-bls-signature-04, Secton 4.2.1 and Appendix A
 
 import Parameters
-import HashToCurveE1
+import HashToCurveE2
 import Pairing (bls_ate_pairing)
 import Serialization
 import ShortWeierstrassCurve as EC
 
 // a pairing-friendly elliptic curve
-type t_F = t_Fp // representation type for field of the primary curve (signature)
-type t_F' = t_Fp_2 // representation type for field of the secondary curve (pubkey)
+type t_F = t_Fp_2 // representation type for field of the primary curve (signature)
+type t_F' = t_Fp // representation type for field of the secondary curve (pubkey)
 type t_G = t_Fp_12  // representation type for field of the pairing result
 
-type pubkey_len = 96*8
-type signature_len  = 48*8
+type pubkey_len = 48*8
+type signature_len  = 96*8
 
-main_curve = E
-other_curve = E'
+main_curve = E'
+other_curve = E
 
-// hash_to_point  BLS12381G1_XMD:SHA-256_SSWU_RO_
+// hash_to_point  BLS12381G2_XMD:SHA-256_SSWU_RO_
 // type DST_len = 43
 
-// TODO: Make this match whatever DST string we use (what about null
-// terminator?)
 DST: [43][8]
-DST = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_"
+DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
 
-hash_to_point hx = hash_to_curve (hx, DST)
+hash_to_point hx = hash_to_curve (DST, hx)
 
 // other primitives "determined by the above parameters"
 
 P: EC::AffinePoint t_F' // base point
-P = BP'
+P = BP
 
 // pairing: (EC::AffinePoint t_F, EC::AffinePoint t_F') -> t_G
-pairing (p,q) = bls_ate_pairing p q // Section 2.2
+pairing (p,q) = bls_ate_pairing q p // Section 2.2
 
 // point_to_pubkey: EC::AffinePoint t_F' -> [pubkey_len]
 // point_to_pubkey = point_to_octets_E2 // Section 2.2 BUT
 //    draft-irtf-cfrg-pairing-friendly-curves-07 does not mention
 //    a function of this name.  So:
-point_to_pubkey S = join (serialize_E2 S)
+point_to_pubkey S = join (serialize_E1 S)
 
 // point_to_signature: EC::AffinePoint t_F -> [signature_len]
 //point_to_signature = point_to_octets_E1 // Section 2.2
-point_to_signature S = join (serialize_E1 S)
+point_to_signature S = join (serialize_E2 S)
 
 // pubkey_to_point: [pubkey_len] -> Maybe (EC::AffinePoint t_F') // can fail
-// pubkey_len = 768
-// deserialize_E2: [96][8] -> Maybe (EC::AffinePoint t_Fp_2)
-pubkey_to_point S = deserialize_E2 (split S)
+pubkey_to_point S = uncompress_E1 (split S)
+
+// signature_to_point: [signature_len] -> Maybe (EC::AffinePoint t_F) // can fail
 
 // signature_to_point: [signature_len] -> Maybe (EC::AffinePoint t_F) // can fail
 // signature_to_point = octets_to_point_E1
-// TODO: Was deserialize_E1, but types didn't line up with the expected
-// signature length
-signature_to_point S = uncompress_E1 (split S)
+signature_to_point S = deserialize_E2 (split S)
 
 // Here are the unoptimized versions of the subgroup check
 
 // pubkey_subgroup_check: EC::AffinePoint t_F' -> Bool
 pubkey_subgroup_check S =
-    EC::is_point_O E' (EC::mult E' r S)
+    EC::is_point_O E (EC::mult E r S)
 
 // signature_subgroup_check: EC::AffinePoint t_F -> Bool
 // ... more efficient versions are allowed.
 signature_subgroup_check S =
-    EC::is_point_O E (EC::mult E r S)
+    EC::is_point_O E' (EC::mult E' r S)

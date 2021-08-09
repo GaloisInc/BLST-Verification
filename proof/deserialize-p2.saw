@@ -26,7 +26,7 @@ let blst_p2_uncompress_OK_spec = do {
 };
 
 // The proof is a compostional verification, in 3 stages: first proofs about POINTonE2_Uncompress_BE,
-// themn proofs about  POINTonE2_Uncompress, and finally the proof of blst_p2_uncompress.
+// then proofs about  POINTonE2_Uncompress, and finally the proof of blst_p2_uncompress.
 
 // POINTonE2_Uncompress_BE has two different error conditions, which we deal with by having
 // three different specifications and overrides, one for each error and one for success.

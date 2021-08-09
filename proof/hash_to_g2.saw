@@ -386,7 +386,7 @@ prove_blst_hash_to_g2_abstract_postcond msg_len DST_len aug_len ;
 prove_blst_hash_to_g2_impl msg_len DST_len aug_len ;
 // and with aug_len=0 for the basic scheme:
 prove_blst_hash_to_g2_abstract_postcond msg_len DST_len 0 ;
-prove_blst_hash_to_g2_impl msg_len DST_len 0 ;
+hash_to_g2_impl_ov <- prove_blst_hash_to_g2_impl msg_len DST_len 0 ;
 
 // another value of msg_len:
 let msg_len = 69;

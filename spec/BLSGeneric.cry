@@ -9,7 +9,7 @@
 // definitions, and later defines ciphersuites that instantiate those parameters.
 //
 // This module defines the specification in terms of the parameters, using a Cryptol
-// parameterized module.  The instantiations are done in separate Cyytpol files,
+// parameterized module.  The instantiations are done in separate Crytpol files,
 // as required by the language.
 
 module BLSGeneric where
@@ -43,7 +43,8 @@ parameter
     // H, a hash function, is always HKDF, so not listed here
 
     // hash_to_point
-    type DST_len: #
+    // TODO: why is this not working?
+    // type DST_len: #
 
     hash_to_point: {msg_len} (Hashable msg_len) =>
                [msg_len][8] -> EC::AffinePoint t_F
@@ -64,7 +65,12 @@ parameter
     pubkey_subgroup_check: EC::AffinePoint t_F' -> Bool
     signature_subgroup_check: EC::AffinePoint t_F -> Bool
 
-type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + DST_len))
+//type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + DST_len))
+type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + 43))
+
+// TODO: Better name.  Maybe param should be _pubkey_subgroup_check and this
+// should be pubkey_subgroup_check
+reexport_pubkey_subgroup_check = pubkey_subgroup_check
 
 // 2.3 KeyGen
 
@@ -74,7 +80,9 @@ type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + 
 
 // 2.4 SkToPk
 
-sk_to_pk: [256] -> [pubkey_len]
+// TODO: This was 256, but the BLST sk_to_pk spec drops the first bit, so I
+// made it 255 to match.  Why do the parameter lengths differ?
+sk_to_pk: [255] -> [pubkey_len]
 sk_to_pk sk = point_to_pubkey (EC::mult other_curve sk P)
 
 
@@ -87,12 +95,15 @@ KeyValidate pk = ret where
     ret = maybe_cases xP
             False // xP is None, step 2
             (\y ->   (~ (EC::is_point_O other_curve y)) // Step 3
-                  /\ pubkey_subgroup_check y) // Step 4
+                  /\ reexport_pubkey_subgroup_check y) // Step 4
 
 // 2.6 CoreSign
 
-CoreSign: {msg_len} (Hashable msg_len) => [256] -> [msg_len][8] -> [signature_len]
-CoreSign sk message = signature where
+/* CoreSign: {msg_len} (Hashable msg_len) => [256] -> [msg_len][8] -> [signature_len] */
+/* CoreSign sk message = signature where */
+// TODO: Same note about dropped first bit...
+CoreSign: {msg_len} (Hashable msg_len) => ([255], [msg_len][8]) -> [signature_len]
+CoreSign (sk, message) = signature where
     Q = hash_to_point message
     R = EC::mult main_curve sk Q
     signature = point_to_signature R
@@ -123,4 +134,4 @@ CoreVerify PK message signature =
                               C2 = pairing (R, P)))) // line 8
 
 // TODO?
-CoreAggregateVerify: {n, msg_len} (fin n, Hashable msg_len) => [n][pubkey_len] -> [signature_len] -> [n][msg_len] -> Bool
+/* CoreAggregateVerify: {n, msg_len} (fin n, Hashable msg_len) => [n][pubkey_len] -> [signature_len] -> [n][msg_len] -> Bool */

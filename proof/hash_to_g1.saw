@@ -545,8 +545,6 @@ let prove_hash_to_curve_E1_opt_impl_equiv_thm msg_len DST_len = custom_prove_cry
     w4_unint_z3 (concat fp_unints ["HE1::iso_map","HE1::map_to_curve_simple_swu","HE1::clear_cofactor","HashToCurveE1::hash_to_field"]);
   };
 
-// The final overrides:
-
 let prove_Hash_to_G1_impl_ov msg_len DST_len aug_len = do {
   hash_to_field_fp_ov <- verify_hash_to_field_for aug_len msg_len DST_len 2; // we need two fp elements
   custom_verify
@@ -579,8 +577,6 @@ let prove_hash_to_g1_impl_ov msg_len DST_len aug_len = do {
     (w4_unint_z3 ["hash_to_curve_opt_impl"]);
 };
 
-// TODO below
-
 let prove_hash_to_g1_ov msg_len DST_len aug_len = do {
   Hash_to_G1_ov <- prove_Hash_to_G1_impl_ov msg_len DST_len aug_len;
   custom_verify //test
@@ -610,7 +606,7 @@ let DST_len= 43; // "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_" in the chosen 
 
 prove_hash_to_g1_impl_ov msg_len DST_len aug_len;
 prove_hash_to_g1_ov msg_len DST_len aug_len;
-prove_hash_to_g1_impl_ov msg_len DST_len 0;
+hash_to_g1_impl_ov <- prove_hash_to_g1_impl_ov msg_len DST_len 0;
 prove_hash_to_g1_ov msg_len DST_len 0;
 
 // another value of msg_len:
@@ -620,3 +616,9 @@ prove_hash_to_g1_impl_ov msg_len DST_len aug_len;
 prove_hash_to_g1_ov msg_len DST_len aug_len;
 prove_hash_to_g1_impl_ov msg_len DST_len 0;
 prove_hash_to_g1_ov msg_len DST_len 0;
+
+// Used in bls_operations.saw:
+// TODO: does not seem to work if called in bls_operations.saw
+hash_to_curve_E1_opt_impl_equiv_ov <- (prove_hash_to_curve_E1_opt_impl_equiv_thm 32 43);
+hash_to_g1_ov <- prove_hash_to_g1_ov 32 43 0;
+

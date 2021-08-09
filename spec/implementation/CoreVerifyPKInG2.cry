@@ -1,0 +1,28 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+module implementation::CoreVerifyPKInG2 where
+
+import Parameters (Fp_12, t_Fp, t_Fp_2, BP', E)
+import ShortWeierstrassCurve (AffinePoint, affinify)
+import implementation::PairingImpl (miller_loop_opt)
+import implementation::HashToG1 (hash_to_curve_opt_impl)
+import implementation::FinalExp (final_exponentiation_impl)
+import implementation::PairingImpl (miller_loop_opt_checked)
+import ExpandMessage
+import Frobenius (fp12_conjugate)
+import HashToCurveE1
+
+core_verify_pk_in_g2_impl : {msg_len,dst_len,aug_len}
+  (fin msg_len, fin dst_len, fin aug_len
+  , Expandable (msg_len+aug_len) dst_len
+  , dst_len <= 255) =>
+  AffinePoint t_Fp_2 -> AffinePoint t_Fp -> [msg_len][8] -> [dst_len][8] -> [aug_len][8] -> Bool
+
+core_verify_pk_in_g2_impl pk sig msg dst aug = Fp_12.is_equal(gt, Fp_12.field_unit) where
+    Q = affinify E (hash_to_curve_opt_impl (aug#msg, dst))
+    gtPQ = miller_loop_opt_checked Q pk
+    gtSig = fp12_conjugate (miller_loop_opt_checked sig BP')
+    gt = final_exponentiation_impl (Fp_12.mul (gtSig, gtPQ))

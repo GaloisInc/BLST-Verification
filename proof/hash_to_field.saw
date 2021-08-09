@@ -144,9 +144,7 @@ let verify_hash_to_field_for aug_len msg_len DST_len nelems = do {
   let len_in_bytes = eval_size {| L*nelems |};
   block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
   expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, but abc does better
-  // expand_message_ov <- admit "expand_message_xmd" (expand_message_spec len_in_bytes aug_len msg_len DST_len);
   let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov];
-  // r <- admit "hash_to_field" (hash_to_field_fp_spec nelems aug_len msg_len DST_len);
   r <- custom_verify "hash_to_field" overrides (hash_to_field_fp_spec nelems aug_len msg_len DST_len)
     (do {
       // assume_unsat;});
@@ -174,9 +172,7 @@ let verify_hash_to_field_fp2_for aug_len msg_len DST_len nelems = do {
   let len_in_bytes = eval_size {| L*2*nelems |};
   block_data_order_ovs <- make_block_data_order_ovs [aug_len, msg_len, eval_size {| (33+DST_len+1+9)+63 |}]; // last size is b_i_blocks from hash_to_field.c
   expand_message_ov <- custom_verify "expand_message_xmd" (concat bcopy_ovs (concat block_data_order_ovs [blst_sha256_emit_ov, blst_sha256_hcopy_ov])) (expand_message_spec len_in_bytes aug_len msg_len DST_len) abc; // z3 takes forever, but abc does better
-  // expand_message_ov <- admit "expand_message_xmd" (expand_message_spec len_in_bytes aug_len msg_len DST_len);
   let overrides = [expand_message_ov, limbs_from_be_bytes_ov, redc_mont_384_ov, mul_mont_384_ov];
-  // r <- admit "hash_to_field" (hash_to_field_fp2_spec nelems aug_len msg_len DST_len);
   r <- custom_verify "hash_to_field" overrides (hash_to_field_fp2_spec nelems aug_len msg_len DST_len)
     do {
       // assume_unsat;});
