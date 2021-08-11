@@ -552,7 +552,7 @@ let demo_BasicVerify_B_spec = do {
                     , message_ptr
                     , llvm_term {{ `message_len : [64] }} ];
   llvm_return (llvm_term
-      {{ bool_to_limb (BMPKS::CoreVerify (join pk, message, join sig)) }});
+      {{ bool_to_limb (BMPKS::CoreVerify (join pk) message (join sig)) }});
 };
 
 // TODO: Prove
@@ -581,6 +581,19 @@ is_point_O_E'_affine_rev_point_thm <- prove_cryptol
   {{ \P -> (Fp_2.is_equal (P.0, Fp_2.field_zero) /\
             Fp_2.is_equal (P.1, Fp_2.field_zero)) ==
            is_point_O E' P }} [];
+
+let {{
+  core_verify_pk_in_g1 pk sig msg dst = Fp_12.is_equal(c1, c2) where
+      c1 = bls_ate_pairing pk (HE2::hash_to_curve (msg, dst))
+      c2 = bls_ate_pairing BP sig
+}};
+
+// TODO: Might need guards that this isn't an error case
+core_verify_pk_in_g1_impl_thm <- admit_cryptol {{ \pk sig msg dst -> core_verify_pk_in_g1_impl pk sig msg dst [] == core_verify_pk_in_g1 pk sig msg dst }};
+
+blst_core_verify_pk_in_g1_ov <-  admit
+  "blst_core_verify_pk_in_g1"
+  (blst_core_verify_pk_in_g1_null_aug_spec 32 43);
 
 let BasicVerify_B_unints = (concat [
   "HashToCurveE2::hash_to_curve"
@@ -645,7 +658,7 @@ demo_BasicVerify_B_ov <- really_custom_verify "demo_BasicVerify_B"
                   , "BLSMinimalPublicKeySize::module parameter pubkey_to_point"
                   , "BLSMinimalPublicKeySize::pubkey_to_point"
                   , "blst_core_verify_pk_in_g1_error_precond"];
-        rw_with_1 verify_g1_eq_thm;
+        rw_with_1 core_verify_pk_in_g1_impl_thm;
         unfolding [ "core_verify_pk_in_g1"
                   , "BLSMinimalPublicKeySize::module parameter pairing"
                   , "BLSMinimalPublicKeySize::pairing"
@@ -699,15 +712,6 @@ demo_BasicVerify_B_ov <- really_custom_verify "demo_BasicVerify_B"
         unfolding [ "POINTonE2_affine_abs"
                   , "uncompress_E1_imp"
                   , "POINTonE1_affine_abs"
-                  /*
-                  , "KeyValidate"
-                  , "module parameter pubkey_to_point"
-                  , "pubkey_to_point"
-                  , "module parameter pubkey_subgroup_check"
-                  , "module parameter other_curve"
-                  , "other_curve"
-                  , "maybe_cases"
-                  */
                   , "blst_core_verify_pk_in_g1_error_precond"
                   ];
         simplify basic_ss;
