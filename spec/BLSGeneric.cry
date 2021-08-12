@@ -14,6 +14,7 @@
 
 module BLSGeneric where
 
+import Common::Field (FieldRep)
 import ShortWeierstrassCurve as EC
 import Parameters as P
 import Maybe
@@ -30,9 +31,11 @@ parameter
     type t_F: * // representation type for field of the primary curve (signature)
     type t_F': * // representation type for field of the secondary curve (pubkey)
     type t_G: * // representation type for field of the pairing result
+    G: FieldRep t_G
 
     // TODO: need equality for t_G  WHY?
     type constraint Eq t_G
+    type constraint Zero t_G  // For Maybe t_G
 
     type pubkey_len: #
     type signature_len: #
@@ -139,5 +142,36 @@ CoreVerify PK message signature =
                               C1 = pairing (Q, xP) // line 7
                               C2 = pairing (R, P)))) // line 8
 
-// TODO?
-/* CoreAggregateVerify: {n, msg_len} (fin n, Hashable msg_len) => [n][pubkey_len] -> [signature_len] -> [n][msg_len] -> Bool */
+CoreAggregateVerify: {n, msg_len} (fin n, Hashable msg_len) =>
+                     [n][pubkey_len] ->
+                     [n][msg_len][8] ->
+                     [signature_len] ->
+                     Bool
+CoreAggregateVerify PKs messages signature =
+    maybe_cases (signature_to_point signature)  // line 1
+        False                                   // line 2
+        (\R -> if reexport_signature_subgroup_check R == False
+               then False  // line 3
+               else (maybe_cases mC1 False (\C1 -> C1 == C2) where  // line 11
+                     mC1 = aggregate_loop  // lines 4-9
+                     C2 = pairing (R, P)))  // line 10
+    where
+        aggregate_loop: Maybe t_G
+        aggregate_loop = C1s ! 0 where  // lines 4-9
+            C1s = [just G.field_unit] # [ aggregate_loop_body PK message C1 |
+                                          PK <- PKs |
+                                          message <- messages |
+                                          C1 <- C1s ]
+
+        aggregate_loop_body: (Hashable msg_len) =>
+                             [pubkey_len] ->
+                             [msg_len][8] ->
+                             Maybe t_G ->
+                             Maybe t_G
+        aggregate_loop_body PK message mC1 =
+            maybe_cases mC1 nothing (\C1 ->
+                if KeyValidate PK == False then nothing  // line 6
+                else maybe_cases (pubkey_to_point PK)
+                    nothing  // line 7
+                    (\ xP -> (just (G.mul (C1, (pairing (Q, xP)))) where  // line 9
+                              Q = hash_to_point message)))  // line 8

@@ -18,6 +18,7 @@ import ShortWeierstrassCurve as EC
 type t_F = t_Fp_2 // representation type for field of the primary curve (signature)
 type t_F' = t_Fp // representation type for field of the secondary curve (pubkey)
 type t_G = t_Fp_12  // representation type for field of the pairing result
+G = Fp_12
 
 type pubkey_len = 48*8
 type signature_len  = 96*8
