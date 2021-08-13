@@ -1,0 +1,22 @@
+let demo_BasicAggregateVerify_A_spec n = do {
+  global_alloc_init "demo_DST_A" {{ DST }};
+  (sig, sig_ptr) <- ptr_to_fresh_readonly "sig" compressed_E1_rep_type;
+  (pks, pks_ptr) <-
+      ptr_to_fresh_readonly "pks" (llvm_array n compressed_E2_rep_type);
+  let message_len = 32;
+  (messages, messages_ptr) <-
+      ptr_to_fresh_readonly "messages"
+                            (llvm_array n
+                                        (llvm_array message_len (llvm_int 8)));
+  // TODO: Preconditions.  Likely can lift signature preconditions from
+  // BasicVerify, and apply pk preconds to every element in pks.  Also need
+  // precond that all messages are unique
+  llvm_execute_func [ pks_ptr
+                    , messages_ptr
+                    , sig_ptr
+                    , llvm_term {{ `n : [64] }}
+                    , llvm_term {{ `message_len : [64] }} ];
+  // TODO: Postcond
+  llvm_return (llvm_term
+      {{ bool_to_limb (CoreAggregateVerify pks messages sig) }});
+};

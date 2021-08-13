@@ -1,5 +1,6 @@
 #include "blst.h"
 #include <stdio.h> // for NULL 
+#include <string.h> // for memcmp
 
 // TODO: Move
 
@@ -124,3 +125,95 @@ limb_t demo_BasicVerify_B(const byte sig[96], const byte pk[48], const byte *mes
     return 0;
   return 1;
 };
+
+// Assert no two messages are equal
+bool all_distinct(const byte **messages, size_t n, size_t message_len) {
+  for (size_t i; i < n; ++i) {
+    for (size_t j = i+1; j < n; ++j) {
+      if (memcmp(messages[i], messages[j], message_len)) return 0;
+    }
+  }
+  return 1;
+}
+
+limb_t demo_BasicAggregateVerify_A(const byte **pks,
+                                   const byte **messages,
+                                   const byte sig[48],
+                                   size_t n,
+                                   size_t message_len) {
+  if (!all_distinct(messages, n, message_len)) return 0;
+
+  // uncompress and check the sig
+  blst_p1_affine R;
+  if (blst_p1_uncompress(&R, sig) != BLST_SUCCESS) return 0;
+  if (! blst_p1_affine_on_curve(&R)) return 0;
+  if (blst_p1_affine_is_inf(&R)) return 0;
+  if (! blst_p1_affine_in_g1(&R)) return 0;
+
+  // Create aggregate verify context
+  blst_pairing ctx;
+  // TODO: Should `hash_or_encode` be 1?  It is elsewhere, so I assume it
+  // should be here too
+  blst_pairing_init(&ctx, 1, demo_DST_A, 43);
+
+  for (size_t i = 0; i < n; ++i) {
+    const byte* pk = pks[i];
+    // Check and Uncompress PK
+    // TODO: Do I have to do these checks?  Or does BLST do them internally?
+    if (!demo_KeyValidate_A(pk)) return 0;
+    blst_p2_affine PK;
+    if (blst_p2_uncompress(&PK, pk) != BLST_SUCCESS) return 0;
+
+    // Aggregate
+    if (blst_pairing_aggregate_pk_in_g2(&ctx,
+                                        &PK,
+                                        i ? NULL : &R,
+                                        messages[i],
+                                        message_len,
+                                        NULL,
+                                        0) != BLST_SUCCESS) return 0;
+  }
+  blst_pairing_commit(&ctx);
+  return blst_pairing_finalverify(&ctx, NULL);
+}
+
+limb_t demo_BasicAggregateVerify_B(const byte **pks,
+                                   const byte **messages,
+                                   const byte sig[96],
+                                   size_t n,
+                                   size_t message_len) {
+  if (!all_distinct(messages, n, message_len)) return 0;
+
+  // uncompress and check the sig
+  blst_p2_affine R;
+  if (blst_p2_uncompress(&R, sig) != BLST_SUCCESS) return 0;
+  if (! blst_p2_affine_on_curve(&R)) return 0;
+  if (blst_p2_affine_is_inf(&R)) return 0;
+  if (! blst_p2_affine_in_g2(&R)) return 0;
+
+  // Create aggregate verify context
+  blst_pairing ctx;
+  // TODO: Should `hash_or_encode` be 1?  It is elsewhere, so I assume it
+  // should be here too
+  blst_pairing_init(&ctx, 1, demo_DST_B, 43);
+
+  for (size_t i = 0; i < n; ++i) {
+    const byte* pk = pks[i];
+    // Check and Uncompress PK
+    // TODO: Do I have to do these checks?  Or does BLST do them internally?
+    if (!demo_KeyValidate_B(pk)) return 0;
+    blst_p1_affine PK;
+    if (blst_p1_uncompress(&PK, pk) != BLST_SUCCESS) return 0;
+
+    // Aggregate
+    if (blst_pairing_aggregate_pk_in_g1(&ctx,
+                                        &PK,
+                                        i ? NULL : &R,
+                                        messages[i],
+                                        message_len,
+                                        NULL,
+                                        0) != BLST_SUCCESS) return 0;
+  }
+  blst_pairing_commit(&ctx);
+  return blst_pairing_finalverify(&ctx, NULL);
+}
