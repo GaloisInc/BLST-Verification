@@ -1,0 +1,33 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+enable_experimental;
+
+m <- llvm_load_module "../build/llvm_bulk_addition/libblst.a.bc";
+
+include "helpers.saw";
+include "list_utils.saw";
+include "types.saw";
+
+let do_prove = false;
+
+include "proof-helpers.saw";
+include "cryptol_imports.saw";
+include "fp_overrides.saw";
+
+// let's start with points on E1
+
+
+// NOTE: the argument points are actually affine points where the Z coordinate
+// is used as scratch space for the computation. So this part may not need to be
+// initialized
+let POINTonE1s_accumulate_spec n = do {
+  (sum, sum_ptr) <- ptr_to_fresh "sum" (llvm_struct "struct.POINTonE1");
+  (points, points_ptr) <- ptr_to_fresh "points" (llvm_array n (llvm_struct "struct.POINTonE1"));
+  llvm_execute_func [sum_ptr, points_ptr, crucible_term {{`n:[64]}}];
+};
+
+let do_prove=true;
+_ <- verify "POINTonE1s_accumulate" [] (POINTonE1s_accumulate_spec 2);
