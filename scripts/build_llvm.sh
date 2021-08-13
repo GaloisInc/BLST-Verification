@@ -36,3 +36,4 @@ build llvm blst '-D__ADX__'
 build llvm_noadx blst
 build llvm_recent blst_recent '-D__ADX__'
 build llvm_noadx_recent blst_recent
+build llvm_bulk_addition blst_bulk_addition '-D__ADX__'
