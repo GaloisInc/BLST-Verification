@@ -15,19 +15,41 @@ let do_prove = false;
 
 include "proof-helpers.saw";
 include "cryptol_imports.saw";
+include "vect.saw";
 include "fp_overrides.saw";
+include "curve_operations.saw";
 
 // let's start with points on E1
 
 
-// NOTE: the argument points are actually affine points where the Z coordinate
+// TODO: the argument points are actually affine points where the Z coordinate
 // is used as scratch space for the computation. So this part may not need to be
-// initialized
+// initialized. How do we express that though? It seems that we'd need to use
+// points_to_untyped repeatedly
 let POINTonE1s_accumulate_spec n = do {
   (sum, sum_ptr) <- ptr_to_fresh "sum" (llvm_struct "struct.POINTonE1");
+  llvm_precond {{ POINTonE1_invariant sum }};
   (points, points_ptr) <- ptr_to_fresh "points" (llvm_array n (llvm_struct "struct.POINTonE1"));
+  llvm_precond {{ all POINTonE1_invariant points }};
   llvm_execute_func [sum_ptr, points_ptr, crucible_term {{`n:[64]}}];
 };
 
+let vec_is_zero_spec_ = do {
+  // p <- llvm_fresh_var "p" POINTonE1_affine_type;
+  (p,p_ptr) <- ptr_to_fresh "p" POINTonE1_type;
+  // (p, p_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 3 vec384_type);
+  // p <- llvm_fresh_var "p" (llvm_array 3 vec384_type);
+  // p_ptr <- llvm_alloc (llvm_array 2 vec384_type);
+  // llvm_points_to_untyped p_ptr (crucible_term p);
+  // crucible_precond {{ fp_invariant (p@(0:[1])) /\ fp_invariant (p@(1:[1])) }};
+  crucible_precond {{ fp_invariant p.0 /\ fp_invariant p.1 }};
+  crucible_execute_func [p_ptr, crucible_term {{ (96:Size_t) }}];
+  // crucible_return (crucible_term {{ if fp_abs (p@(0:[1])) == Fp.field_zero /\ fp_abs (p@(1:[1])) == Fp.field_zero then 1 else (0:Limb) }});
+  crucible_return (crucible_term {{ if fp_abs p.0 == Fp.field_zero /\ fp_abs p.1 == Fp.field_zero then 1 else (0:Limb) }});
+  };
+
+vec_is_zero_ov_ <- test "vec_is_zero" [] vec_is_zero_spec_;
+// vec_is_zero_ov_ <- admit "vec_is_zero" vec_is_zero_spec_;
+
 let do_prove=true;
-_ <- verify "POINTonE1s_accumulate" [] (POINTonE1s_accumulate_spec 2);
+_ <- verify "POINTonE1s_accumulate" (concat_all [curve_operations_e1_ovs, vec_overrides, fp_overrides, [vec_is_zero_ov_]]) (POINTonE1s_accumulate_spec 2);
