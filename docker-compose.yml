@@ -6,6 +6,7 @@ services:
       - ./build:/workdir/build:rw
       - ./blst:/workdir/blst:ro
       - ./blst_recent:/workdir/blst_recent:ro
+      - ./blst_recent:/workdir/blst_bulk_addition:ro
       - ./cryptol-specs:/workdir/cryptol-specs:ro
       - ./proof:/workdir/proof:ro
       - ./spec:/workdir/spec:ro
