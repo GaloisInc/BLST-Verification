@@ -150,11 +150,11 @@ limb_t demo_BasicAggregateVerify_A(const byte **pks,
   if (blst_p1_affine_is_inf(&R)) return 0;
   if (! blst_p1_affine_in_g1(&R)) return 0;
 
-  /*
   // Create aggregate verify context
   blst_pairing ctx;
   blst_pairing_init(&ctx, 1, demo_DST_A, 43);
 
+  /*
   for (size_t i = 0; i < n; ++i) {
     const byte* pk = pks[i];
     // Check and Uncompress PK

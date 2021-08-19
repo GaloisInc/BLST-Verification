@@ -780,7 +780,7 @@ let verify_A_sig_preconds sig = do {
   llvm_precond {{ signature_to_point_is_affine sig }};
   // TODO: Maybe drop this precond vv
   crucible_precond {{ uncompress_E1_x_fp sig != Fp.field_zero }};
-}
+};
 
 let demo_BasicVerify_A_spec = do {
   global_alloc_init "demo_DST_A" {{ DST }};
@@ -981,7 +981,7 @@ core_verify_pk_in_g2_impl_thm <- admit_cryptol {{ \pk sig msg dst -> core_verify
 
 blst_core_verify_pk_in_g2_ov <- verify_blst_core_verify_pk_in_g2_null_aug 32 43 0;
 
-demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
+demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
   [ POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
   , POINTonE1_affine_on_curve_ov
   , vec_is_zero_2fp_ov

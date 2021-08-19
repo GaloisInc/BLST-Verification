@@ -631,7 +631,7 @@ let BasicVerify_B_unints = (concat [
 , "uncompress_E2_imp"
 ] []); //(concat ec_mult_unints e2_unints));
 
-demo_BasicVerify_B_ov <- really_custom_verify "demo_BasicVerify_B"
+demo_BasicVerify_B_ov <- custom_verify "demo_BasicVerify_B"
   [ POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
   , POINTonE2_affine_on_curve_ov
   , vec_is_zero_2fp_ov
