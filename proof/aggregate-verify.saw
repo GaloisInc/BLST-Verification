@@ -1,3 +1,27 @@
+let {{
+  // TODO: Define
+  all_distinct: {n, m} [n][m][8] -> Bit
+  all_distinct messages = undefined
+}};
+
+let all_distinct_spec n = do {
+  let message_len = 32;
+  (messages, messages_ptr) <-
+      ptr_to_fresh_readonly "messages"
+                            (llvm_array n
+                                        (llvm_array message_len (llvm_int 8)));
+  llvm_execute_func [ messages_ptr
+                    , llvm_term {{ `n : [64] }}
+                    , llvm_term {{ `message_len : [64] }} ];
+  llvm_return (llvm_term {{ bool_to_limb (all_distinct messages) }});
+};
+
+// TODO: What should n be?
+let aggregate_n = 3;
+
+// TODO: Prove
+all_distinct_ov <- admit "all_distinct" (all_distinct_spec 3);
+
 let demo_BasicAggregateVerify_A_spec n = do {
   global_alloc_init "demo_DST_A" {{ DST }};
   (sig, sig_ptr) <- ptr_to_fresh_readonly "sig" compressed_E1_rep_type;
@@ -8,15 +32,66 @@ let demo_BasicAggregateVerify_A_spec n = do {
       ptr_to_fresh_readonly "messages"
                             (llvm_array n
                                         (llvm_array message_len (llvm_int 8)));
+  verify_A_sig_preconds sig;
   // TODO: Preconditions.  Likely can lift signature preconditions from
   // BasicVerify, and apply pk preconds to every element in pks.  Also need
-  // precond that all messages are unique
+  // precond that all messages are unique (Or to integrate that into postcond)
   llvm_execute_func [ pks_ptr
                     , messages_ptr
                     , sig_ptr
                     , llvm_term {{ `n : [64] }}
                     , llvm_term {{ `message_len : [64] }} ];
   // TODO: Postcond
+  /*
   llvm_return (llvm_term
       {{ bool_to_limb (CoreAggregateVerify pks messages sig) }});
+      */
 };
+
+demo_BasicAggregateVerify_A_ov <- really_custom_verify
+  "demo_BasicAggregateVerify_A"
+  [ all_distinct_ov
+  , POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
+  , POINTonE1_affine_on_curve_ov
+  , vec_is_zero_2fp_ov
+  , blst_p1_affine_in_g1_ov ]
+  (demo_BasicAggregateVerify_A_spec aggregate_n)
+  do {
+    // Precondition proof(s)
+    unfolding [ "POINTonE1_affine_abs"
+              , "uncompress_E1_imp"
+              , "POINTonE2_affine_abs"
+              , "blst_core_verify_pk_in_g2_error_precond"
+              ];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    simplify basic_ss;
+    rw_with [ hoist_POINTonE1_affine_rep
+            , hoist_POINTonE1_affine_invariant
+            , hoist_POINTonE2_affine_rep
+            , hoist_POINTonE2_affine_invariant
+            , affine_inv_affine_rep_e2_thm
+            , zero_lt_one_thm
+            , intLe_sym_thm
+            , affine_inv_affine_rep_e1_thm ];
+    rw_with structural_rewrites;
+    simplify basic_ss;
+    rw_with [ fold_POINTonE1_affine_invariant
+            , fold_POINTonE2_affine_invariant
+            , hoist_POINTonE1_affine_invariant
+            , hoist_POINTonE2_affine_invariant
+            , affine_inv_affine_rep_e2_thm
+            , fold_POINTonE2_affine_abs_thm
+            , hoist_POINTonE2_affine_abs_thm
+            , hoist_is_point_O_E'_thm
+            , POINTonE2_affine_abs_rep_thm
+            , is_point_O_KeyValidate_thm
+            , normalize_uncompress_E2_OK_thm
+            , affine_inv_affine_rep_e1_thm ];
+    //rw_with_1 is_point_O_affine_rev_thm;
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with remove_ho_rules;
+    print_goal;
+    w4_unint_z3 (concat ["all_distinct"] BasicVerify_A_unints);
+  };
