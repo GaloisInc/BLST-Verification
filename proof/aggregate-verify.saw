@@ -36,10 +36,10 @@ let demo_BasicAggregateVerify_A_spec n = do {
   // TODO: Preconditions.  Likely can lift signature preconditions from
   // BasicVerify, and apply pk preconds to every element in pks.  Also need
   // precond that all messages are unique (Or to integrate that into postcond)
-  llvm_execute_func [ pks_ptr
+  llvm_execute_func [ llvm_term {{ `n : [64] }}
+                    , pks_ptr
                     , messages_ptr
                     , sig_ptr
-                    , llvm_term {{ `n : [64] }}
                     , llvm_term {{ `message_len : [64] }} ];
   // TODO: Postcond
   /*
@@ -54,7 +54,8 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
   , POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
   , POINTonE1_affine_on_curve_ov
   , vec_is_zero_2fp_ov
-  , blst_p1_affine_in_g1_ov ]
+  , blst_p1_affine_in_g1_ov
+  , demo_KeyValidate_A_ov ]
   (demo_BasicAggregateVerify_A_spec aggregate_n)
   do {
     // Precondition proof(s)

@@ -136,10 +136,10 @@ limb_t all_distinct(const byte **messages, size_t n, size_t message_len) {
   return 1;
 }
 
-limb_t demo_BasicAggregateVerify_A(const byte **pks,
+limb_t demo_BasicAggregateVerify_A(size_t n,
+                                   const byte pks[n][48],
                                    const byte **messages,
                                    const byte sig[48],
-                                   size_t n,
                                    size_t message_len) {
   if (!all_distinct(messages, n, message_len)) return 0;
 
@@ -154,12 +154,12 @@ limb_t demo_BasicAggregateVerify_A(const byte **pks,
   blst_pairing ctx;
   blst_pairing_init(&ctx, 1, demo_DST_A, 43);
 
-  /*
   for (size_t i = 0; i < n; ++i) {
     const byte* pk = pks[i];
     // Check and Uncompress PK
     // TODO: Do I have to do these checks?  Or does BLST do them internally?
     if (!demo_KeyValidate_A(pk)) return 0;
+    /*
     blst_p2_affine PK;
     if (blst_p2_uncompress(&PK, pk) != BLST_SUCCESS) return 0;
 
@@ -171,7 +171,9 @@ limb_t demo_BasicAggregateVerify_A(const byte **pks,
                                         message_len,
                                         NULL,
                                         0) != BLST_SUCCESS) return 0;
+                                        */
   }
+  /*
   blst_pairing_commit(&ctx);
   return blst_pairing_finalverify(&ctx, NULL);
   */

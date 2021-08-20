@@ -782,6 +782,13 @@ let verify_A_sig_preconds sig = do {
   crucible_precond {{ uncompress_E1_x_fp sig != Fp.field_zero }};
 };
 
+let verify_A_pk_preconds pk = do {
+  crucible_precond {{ uncompress_E2_imp pk != nothing }};
+  // TODO: Maybe drop this precond vv
+  crucible_precond {{ ~((pk@0)@1) }};
+  llvm_precond {{ pubkey_to_point_is_affine pk }};
+};
+
 let demo_BasicVerify_A_spec = do {
   global_alloc_init "demo_DST_A" {{ DST }};
   (sig, sig_ptr) <- ptr_to_fresh_readonly "sig" compressed_E1_rep_type;
@@ -789,11 +796,8 @@ let demo_BasicVerify_A_spec = do {
   let message_len = 32;
   (message, message_ptr) <-
       ptr_to_fresh_readonly "message" (llvm_array message_len (llvm_int 8));
-  crucible_precond {{ uncompress_E2_imp pk != nothing }};
-  // TODO: Maybe drop this precond vv
-  crucible_precond {{ ~((pk@0)@1) }};
-  llvm_precond {{ pubkey_to_point_is_affine pk }};
   verify_A_sig_preconds sig;
+  verify_A_pk_preconds pk;
   llvm_execute_func [ sig_ptr
                     , pk_ptr
                     , message_ptr
@@ -981,7 +985,7 @@ core_verify_pk_in_g2_impl_thm <- admit_cryptol {{ \pk sig msg dst -> core_verify
 
 blst_core_verify_pk_in_g2_ov <- verify_blst_core_verify_pk_in_g2_null_aug 32 43 0;
 
-demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
+demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
   [ POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
   , POINTonE1_affine_on_curve_ov
   , vec_is_zero_2fp_ov
