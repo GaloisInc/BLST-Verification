@@ -137,7 +137,7 @@ limb_t all_distinct(const byte **messages, size_t n, size_t message_len) {
 }
 
 limb_t demo_BasicAggregateVerify_A(size_t n,
-                                   const byte pks[n][48],
+                                   const byte pks[n][96],
                                    const byte **messages,
                                    const byte sig[48],
                                    size_t message_len) {
@@ -159,10 +159,11 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
     // Check and Uncompress PK
     // TODO: Do I have to do these checks?  Or does BLST do them internally?
     if (!demo_KeyValidate_A(pk)) return 0;
-    /*
+
     blst_p2_affine PK;
     if (blst_p2_uncompress(&PK, pk) != BLST_SUCCESS) return 0;
 
+    /*
     // Aggregate
     if (blst_pairing_aggregate_pk_in_g2(&ctx,
                                         &PK,

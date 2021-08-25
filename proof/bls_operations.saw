@@ -253,13 +253,18 @@ demo_SkToPk_A_ov <- custom_verify "demo_SkToPk_A"
                         e2_unints);
   };
 
+let {{
+  // TODO: Rename to indicate this is actually the KeyValidate precond
+  verify_A_pk_precond: [96][8] -> Bool
+  verify_A_pk_precond pk = (uncompress_E2_imp pk != nothing) /\
+                           (~((pk@0)@1)) /\
+                           pubkey_to_point_is_affine pk
+}};
+
+
 let demo_KeyValidate_A_spec = do {
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
-  crucible_precond {{ uncompress_E2_imp inp != nothing }};
-  // TODO: Maybe drop this precond vv
-  crucible_precond {{ ~((inp@0)@1) }};
-  //llvm_precond {{ is_point_affine E' ((pubkey_to_point (join inp)).1) }};
-  llvm_precond {{ pubkey_to_point_is_affine inp }};
+  llvm_precond {{ verify_A_pk_precond inp }};
   llvm_execute_func [ in_ptr ];
   llvm_return (llvm_term {{ bool_to_limb (KeyValidate (join inp)) }});
 };
@@ -361,6 +366,7 @@ demo_KeyValidate_A_ov <- custom_verify "demo_KeyValidate_A"
               , "POINTonE2_affine_abs"
               , "other_curve"
               , "pubkey_to_point"
+              , "verify_A_pk_precond"
               , "reexport_pubkey_subgroup_check"
               , "module parameter pubkey_subgroup_check"];
     simplify (addsimp is_point_affine_E'_thm empty_ss);
@@ -797,7 +803,8 @@ let demo_BasicVerify_A_spec = do {
   (message, message_ptr) <-
       ptr_to_fresh_readonly "message" (llvm_array message_len (llvm_int 8));
   verify_A_sig_preconds sig;
-  verify_A_pk_preconds pk;
+  llvm_precond {{ verify_A_pk_precond pk }};
+  //verify_A_pk_preconds pk;
   llvm_execute_func [ sig_ptr
                     , pk_ptr
                     , message_ptr
@@ -985,7 +992,7 @@ core_verify_pk_in_g2_impl_thm <- admit_cryptol {{ \pk sig msg dst -> core_verify
 
 blst_core_verify_pk_in_g2_ov <- verify_blst_core_verify_pk_in_g2_null_aug 32 43 0;
 
-demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
+demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
   [ POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
   , POINTonE1_affine_on_curve_ov
   , vec_is_zero_2fp_ov

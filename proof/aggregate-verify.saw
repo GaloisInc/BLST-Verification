@@ -20,7 +20,7 @@ let all_distinct_spec n = do {
 let aggregate_n = 3;
 
 // TODO: Prove
-all_distinct_ov <- admit "all_distinct" (all_distinct_spec 3);
+all_distinct_ov <- admit "all_distinct" (all_distinct_spec aggregate_n);
 
 let demo_BasicAggregateVerify_A_spec n = do {
   global_alloc_init "demo_DST_A" {{ DST }};
@@ -33,6 +33,12 @@ let demo_BasicAggregateVerify_A_spec n = do {
                             (llvm_array n
                                         (llvm_array message_len (llvm_int 8)));
   verify_A_sig_preconds sig;
+  llvm_precond {{ all verify_A_pk_precond pks }};
+  /*
+  llvm_precond {{ verify_A_pk_precond (pks@0) }};
+  llvm_precond {{ verify_A_pk_precond (pks@1) }};
+  llvm_precond {{ verify_A_pk_precond (pks@2) }};
+  */
   // TODO: Preconditions.  Likely can lift signature preconditions from
   // BasicVerify, and apply pk preconds to every element in pks.  Also need
   // precond that all messages are unique (Or to integrate that into postcond)
@@ -55,7 +61,8 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
   , POINTonE1_affine_on_curve_ov
   , vec_is_zero_2fp_ov
   , blst_p1_affine_in_g1_ov
-  , demo_KeyValidate_A_ov ]
+  , demo_KeyValidate_A_ov
+  , blst_p2_uncompress_OK_ov ]
   (demo_BasicAggregateVerify_A_spec aggregate_n)
   do {
     // Precondition proof(s)
