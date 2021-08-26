@@ -56,13 +56,16 @@ let demo_BasicAggregateVerify_A_spec n = do {
 
 demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
-  [ all_distinct_ov
-  , POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
-  , POINTonE1_affine_on_curve_ov
-  , vec_is_zero_2fp_ov
-  , blst_p1_affine_in_g1_ov
-  , demo_KeyValidate_A_ov
-  , blst_p2_uncompress_OK_ov ]
+  (concat vec_overrides
+          [ all_distinct_ov
+          , POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
+          , POINTonE1_affine_on_curve_ov
+          , blst_p1_affine_in_g1_ov
+          , demo_KeyValidate_A_ov
+          , blst_p2_uncompress_OK_ov
+          // ovs used in pairing aggregate:
+          , POINTonE1_in_G1_ov
+          ])
   (demo_BasicAggregateVerify_A_spec aggregate_n)
   do {
     // Precondition proof(s)

@@ -147,8 +147,8 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
   blst_p1_affine R;
   if (blst_p1_uncompress(&R, sig) != BLST_SUCCESS) return 0;
   if (! blst_p1_affine_on_curve(&R)) return 0;
-  if (blst_p1_affine_is_inf(&R)) return 0;
-  if (! blst_p1_affine_in_g1(&R)) return 0;
+  if (blst_p1_affine_is_inf(&R)) return 0;  // TODO: Checked in aggregate.c:108
+  if (! blst_p1_affine_in_g1(&R)) return 0; // TODO: Checked in aggregate.c:111
 
   // Create aggregate verify context
   blst_pairing ctx;
@@ -163,7 +163,6 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
     blst_p2_affine PK;
     if (blst_p2_uncompress(&PK, pk) != BLST_SUCCESS) return 0;
 
-    /*
     // Aggregate
     if (blst_pairing_aggregate_pk_in_g2(&ctx,
                                         &PK,
@@ -172,7 +171,6 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
                                         message_len,
                                         NULL,
                                         0) != BLST_SUCCESS) return 0;
-                                        */
   }
   /*
   blst_pairing_commit(&ctx);
