@@ -10,9 +10,9 @@ let all_distinct_spec n = do {
       ptr_to_fresh_readonly "messages"
                             (llvm_array n
                                         (llvm_array message_len (llvm_int 8)));
-  llvm_execute_func [ messages_ptr
-                    , llvm_term {{ `n : [64] }}
-                    , llvm_term {{ `message_len : [64] }} ];
+  llvm_execute_func [ llvm_term {{ `n : [64] }}
+                    , llvm_term {{ `message_len : [64] }} 
+                    , messages_ptr ];
   llvm_return (llvm_term {{ bool_to_limb (all_distinct messages) }});
 };
 
@@ -43,10 +43,10 @@ let demo_BasicAggregateVerify_A_spec n = do {
   // BasicVerify, and apply pk preconds to every element in pks.  Also need
   // precond that all messages are unique (Or to integrate that into postcond)
   llvm_execute_func [ llvm_term {{ `n : [64] }}
+                    , llvm_term {{ `message_len : [64] }}
                     , pks_ptr
                     , messages_ptr
-                    , sig_ptr
-                    , llvm_term {{ `message_len : [64] }} ];
+                    , sig_ptr ];
   // TODO: Postcond
   /*
   llvm_return (llvm_term

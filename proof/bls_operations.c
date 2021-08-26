@@ -127,7 +127,7 @@ limb_t demo_BasicVerify_B(const byte sig[96], const byte pk[48], const byte *mes
 };
 
 // Assert no two messages are equal
-limb_t all_distinct(const byte **messages, size_t n, size_t message_len) {
+limb_t all_distinct(size_t n, size_t message_len, const byte messages[n][message_len]) {
   for (size_t i; i < n; ++i) {
     for (size_t j = i+1; j < n; ++j) {
       if (memcmp(messages[i], messages[j], message_len)) return 0;
@@ -137,11 +137,11 @@ limb_t all_distinct(const byte **messages, size_t n, size_t message_len) {
 }
 
 limb_t demo_BasicAggregateVerify_A(size_t n,
+                                   size_t message_len,
                                    const byte pks[n][96],
-                                   const byte **messages,
-                                   const byte sig[48],
-                                   size_t message_len) {
-  if (!all_distinct(messages, n, message_len)) return 0;
+                                   const byte messages[n][message_len],
+                                   const byte sig[48]) {
+  if (!all_distinct(n, message_len, messages)) return 0;
 
   // uncompress and check the sig
   blst_p1_affine R;
@@ -181,6 +181,7 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
   return 1;
 }
 
+/*
 limb_t demo_BasicAggregateVerify_B(const byte **pks,
                                    const byte **messages,
                                    const byte sig[96],
@@ -221,3 +222,4 @@ limb_t demo_BasicAggregateVerify_B(const byte **pks,
   blst_pairing_commit(&ctx);
   return blst_pairing_finalverify(&ctx, NULL);
 }
+*/
