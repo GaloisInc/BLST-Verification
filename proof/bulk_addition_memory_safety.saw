@@ -21,45 +21,28 @@ include "curve_operations.saw";
 
 // let's start with points on E1
 
-
-// TODO: the argument points are actually affine points where the Z coordinate
-// is used as scratch space for the computation. So this part may not need to be
-// initialized. How do we express that though? It seems that we'd need to use
-// points_to_untyped repeatedly
-let POINTonE1s_accumulate_spec n = do {
-  (sum, sum_ptr) <- ptr_to_fresh "sum" (llvm_struct "struct.POINTonE1");
-  llvm_precond {{ POINTonE1_invariant sum }};
-  (points, points_ptr) <- ptr_to_fresh "points" (llvm_array n (llvm_struct "struct.POINTonE1"));
-  llvm_precond {{ all POINTonE1_invariant points }};
-  llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n:[64]}}];
-};
-
 // here we assume that the first pointer points to an array and the second is
-// null. Moreover, sum is initially point_O
+// null.
 let POINTonE1s_add_spec_1 n = do {
-  // sum_ptr <- alloc_init POINTonE1_type (llvm_term {{ zero:POINTonE1_t }});
   (sum, sum_ptr) <- ptr_to_fresh "sum" POINTonE1_type;
-  // llvm_points_to sum_ptr (llvm_term {{ point_O E }});
+  // sum_ptr <- llvm_alloc POINTonE1_type;
+  // llvm_points_to sum_ptr (llvm_term {{ POINTonE1_rep (projectify E (point_O E)) }});
   points_ptr <- llvm_alloc (llvm_array 2 (llvm_pointer POINTonE1_affine_type));
-  // (points, points_ptr) <- ptr_to_fresh "points" (llvm_array 2 (llvm_pointer POINTonE1_affine_type));
   (array, array_ptr) <- ptr_to_fresh "array" (llvm_array n POINTonE1_affine_type);
   llvm_points_to (llvm_elem points_ptr 0) array_ptr;
   llvm_points_to (llvm_elem points_ptr 1) llvm_null;
-  // llvm_precond {{ all POINTonE1_affine_invariant points }};
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n:[64]}}];
 };
 
+// here points is of length 3, where the first two are pointers to points
 let POINTonE1s_add_spec_2 = do {
-  // sum_ptr <- alloc_init POINTonE1_type (llvm_term {{ zero:POINTonE1_t }});
   (sum, sum_ptr) <- ptr_to_fresh "sum" POINTonE1_type;
-  // llvm_points_to sum_ptr (llvm_term {{ point_O E }});
-  points_ptr <- llvm_alloc (llvm_array 2 (llvm_pointer POINTonE1_affine_type));
-  // (points, points_ptr) <- ptr_to_fresh "points" (llvm_array 2 (llvm_pointer POINTonE1_affine_type));
+  points_ptr <- llvm_alloc (llvm_array 3 (llvm_pointer POINTonE1_affine_type));
   (p1, p1_ptr) <- ptr_to_fresh "p1" POINTonE1_affine_type;
-  // p2 <- llvm_alloc POINTonE1_affine_type;
+  (p2, p2_ptr) <- ptr_to_fresh "p2" POINTonE1_affine_type;
   llvm_points_to (llvm_elem points_ptr 0) p1_ptr;
-  llvm_points_to (llvm_elem points_ptr 1) llvm_null;
-  // llvm_precond {{ all POINTonE1_affine_invariant points }};
+  llvm_points_to (llvm_elem points_ptr 1) p2_ptr;
+  llvm_points_to (llvm_elem points_ptr 2) llvm_null;
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`1:[64]}}];
 };
 
@@ -107,18 +90,15 @@ vec_zero_144_ov <- admit "vec_zero" (vec_zero_spec 144);
 
 let vec_copy_spec_ = do {
   ret_ptr <- llvm_alloc POINTonE1_affine_type;
-  // p_ptr <- llvm_alloc POINTonE1_affine_type;
-  // TODO: this fails
   (p,p_ptr) <- ptr_to_fresh_readonly "p" POINTonE1_affine_type;
   llvm_execute_func [ret_ptr, p_ptr, llvm_term {{96:Size_t }}];
-  llvm_points_to ret_ptr (llvm_term {{(zero:[6][64],zero:[6][64])}});
+  llvm_points_to ret_ptr (llvm_term p);
+  // llvm_points_to ret_ptr (llvm_term {{(zero:[6][64],zero:[6][64])}});
 };
 
-// vec_copy_ov_ <- test "vec_copy" [] vec_copy_spec_;
 vec_copy_ov_ <- admit "vec_copy" vec_copy_spec_;
 
 let do_prove=true;
-// _ <- verify "POINTonE1s_accumulate" (concat_all [curve_operations_e1_ovs, vec_overrides, fp_overrides, [vec_is_zero_ov_]]) (POINTonE1s_accumulate_spec 2);
 
 _ <- verify "blst_p1s_add" (concat_all [curve_operations_e1_ovs, fp_overrides, [vec_copy_ov_, vec_is_zero_ov_, vec_zero_144_ov]]) (POINTonE1s_add_spec_1 2);
 
