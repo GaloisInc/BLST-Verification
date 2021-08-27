@@ -48,7 +48,7 @@ let POINTonE1s_add_spec_2 = do {
   llvm_precond {{ POINTonE1_invariant sum }};
   llvm_precond {{ POINTonE1_affine_invariant p1 }};
   llvm_precond {{ POINTonE1_affine_invariant p2 }};
-  llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`1:[64]}}];
+  llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`2:[64]}}];
 };
 
 let vec_is_zero_spec_ = do {
