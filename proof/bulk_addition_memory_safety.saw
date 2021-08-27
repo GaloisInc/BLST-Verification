@@ -31,6 +31,8 @@ let POINTonE1s_add_spec_1 n = do {
   (array, array_ptr) <- ptr_to_fresh "array" (llvm_array n POINTonE1_affine_type);
   llvm_points_to (llvm_elem points_ptr 0) array_ptr;
   llvm_points_to (llvm_elem points_ptr 1) llvm_null;
+  llvm_precond {{ POINTonE1_invariant sum }};
+  llvm_precond {{ all POINTonE1_affine_invariant array }};
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n:[64]}}];
 };
 
@@ -43,35 +45,20 @@ let POINTonE1s_add_spec_2 = do {
   llvm_points_to (llvm_elem points_ptr 0) p1_ptr;
   llvm_points_to (llvm_elem points_ptr 1) p2_ptr;
   llvm_points_to (llvm_elem points_ptr 2) llvm_null;
+  llvm_precond {{ POINTonE1_invariant sum }};
+  llvm_precond {{ POINTonE1_affine_invariant p1 }};
+  llvm_precond {{ POINTonE1_affine_invariant p2 }};
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`1:[64]}}];
 };
 
-// let POINTonE1s_add_spec_1 n = do {
-  // sum_ptr <- llvm_alloc POINTonE1_affine_type;
-  // llvm_points_to sum_ptr (llvm_term {{ point_O E }});
-  // points_ptr <- llvm_alloc (llvm_array 2 (llvm_pointer POINTonE1_affine_type));
-  // array_ptr <- llvm_alloc (llvm_array n (llvm_pointer POINTonE1_affine_type));
-  // llvm_points_to (llvm_elem points_ptr 0) array_ptr;
-  // llvm_points_to (llvm_elem points_ptr 1) llvm_null;
-  // llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n:[64]}}];
-// };
-
 let vec_is_zero_spec_ = do {
-  // p <- llvm_fresh_var "p" POINTonE1_affine_type;
   (p,p_ptr) <- ptr_to_fresh "p" POINTonE1_type;
-  // (p, p_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 3 vec384_type);
-  // p <- llvm_fresh_var "p" (llvm_array 3 vec384_type);
-  // p_ptr <- llvm_alloc (llvm_array 2 vec384_type);
-  // llvm_points_to_untyped p_ptr (llvm_term p);
-  // llvm_precond {{ fp_invariant (p@(0:[1])) /\ fp_invariant (p@(1:[1])) }};
   llvm_precond {{ fp_invariant p.0 /\ fp_invariant p.1 }};
   llvm_execute_func [p_ptr, llvm_term {{ (96:Size_t) }}];
-  // llvm_return (llvm_term {{ if fp_abs (p@(0:[1])) == Fp.field_zero /\ fp_abs (p@(1:[1])) == Fp.field_zero then 1 else (0:Limb) }});
   llvm_return (llvm_term {{ if fp_abs p.0 == Fp.field_zero /\ fp_abs p.1 == Fp.field_zero then 1 else (0:Limb) }});
   };
 
 vec_is_zero_ov_ <- test "vec_is_zero" [] vec_is_zero_spec_;
-// vec_is_zero_ov_ <- admit "vec_is_zero" vec_is_zero_spec_;
 
 let vec_zero_spec n = do {
   p_ptr <- llvm_alloc (llvm_array n (llvm_int 8));
@@ -81,25 +68,17 @@ let vec_zero_spec n = do {
 
 vec_zero_144_ov <- admit "vec_zero" (vec_zero_spec 144);
 
-// let vec_copy_spec_ = do {
-  // ret_ptr <- llvm_alloc POINTonE1_type;
-  // (p,p_ptr) <- ptr_to_fresh_readonly "p" vec384x_type;
-  // llvm_execute_func [ret_ptr, p_ptr, llvm_term {{96:Size_t }}];
-  // llvm_points_to_untyped ret_ptr (llvm_term p);
-// };
-
 let vec_copy_spec_ = do {
   ret_ptr <- llvm_alloc POINTonE1_affine_type;
   (p,p_ptr) <- ptr_to_fresh_readonly "p" POINTonE1_affine_type;
   llvm_execute_func [ret_ptr, p_ptr, llvm_term {{96:Size_t }}];
   llvm_points_to ret_ptr (llvm_term p);
-  // llvm_points_to ret_ptr (llvm_term {{(zero:[6][64],zero:[6][64])}});
 };
 
 vec_copy_ov_ <- admit "vec_copy" vec_copy_spec_;
 
 let do_prove=true;
 
-_ <- verify "blst_p1s_add" (concat_all [curve_operations_e1_ovs, fp_overrides, [vec_copy_ov_, vec_is_zero_ov_, vec_zero_144_ov]]) (POINTonE1s_add_spec_1 2);
+_ <- verify "blst_p1s_add" (concat_all [fp_overrides, [POINTonE1_dadd_affine_alias_ov, vec_copy_ov_, vec_is_zero_ov_, vec_zero_144_ov]]) (POINTonE1s_add_spec_1 2);
 
-_ <- verify "blst_p1s_add" (concat_all [curve_operations_e1_ovs, fp_overrides, [vec_copy_ov_, vec_is_zero_ov_, vec_zero_144_ov]]) (POINTonE1s_add_spec_2);
+_ <- verify "blst_p1s_add" (concat_all [fp_overrides, [POINTonE1_dadd_affine_alias_ov, vec_copy_ov_, vec_is_zero_ov_, vec_zero_144_ov]]) (POINTonE1s_add_spec_2);
