@@ -17,9 +17,11 @@ include "proof-helpers.saw";
 include "cryptol_imports.saw";
 include "vect.saw";
 include "fp_overrides.saw";
+include "fp2_overrides.saw";
 include "curve_operations.saw";
+include "curve_operations_e2.saw";
 
-// let's start with points on E1
+// first we do memory safety
 
 // here we assume that the first pointer points to an array and the second is
 // null.
@@ -33,6 +35,19 @@ let POINTonE1s_add_spec_1 n = do {
   llvm_points_to (llvm_elem points_ptr 1) llvm_null;
   llvm_precond {{ POINTonE1_invariant sum }};
   llvm_precond {{ all POINTonE1_affine_invariant array }};
+  llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n:[64]}}];
+};
+
+let POINTonE2s_add_spec_1 n = do {
+  (sum, sum_ptr) <- ptr_to_fresh "sum" POINTonE2_type;
+  // sum_ptr <- llvm_alloc POINTonE2_type;
+  // llvm_points_to sum_ptr (llvm_term {{ POINTonE2_rep (projectify E (point_O E)) }});
+  points_ptr <- llvm_alloc (llvm_array 2 (llvm_pointer POINTonE2_affine_type));
+  (array, array_ptr) <- ptr_to_fresh "array" (llvm_array n POINTonE2_affine_type);
+  llvm_points_to (llvm_elem points_ptr 0) array_ptr;
+  llvm_points_to (llvm_elem points_ptr 1) llvm_null;
+  llvm_precond {{ POINTonE2_invariant sum }};
+  llvm_precond {{ all POINTonE2_affine_invariant array }};
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n:[64]}}];
 };
 
@@ -51,14 +66,37 @@ let POINTonE1s_add_spec_2 = do {
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`2:[64]}}];
 };
 
-let vec_is_zero_spec_ = do {
+let POINTonE2s_add_spec_2 = do {
+  (sum, sum_ptr) <- ptr_to_fresh "sum" POINTonE2_type;
+  points_ptr <- llvm_alloc (llvm_array 3 (llvm_pointer POINTonE2_affine_type));
+  (p1, p1_ptr) <- ptr_to_fresh "p1" POINTonE2_affine_type;
+  (p2, p2_ptr) <- ptr_to_fresh "p2" POINTonE2_affine_type;
+  llvm_points_to (llvm_elem points_ptr 0) p1_ptr;
+  llvm_points_to (llvm_elem points_ptr 1) p2_ptr;
+  llvm_points_to (llvm_elem points_ptr 2) llvm_null;
+  llvm_precond {{ POINTonE2_invariant sum }};
+  llvm_precond {{ POINTonE2_affine_invariant p1 }};
+  llvm_precond {{ POINTonE2_affine_invariant p2 }};
+  llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`1:[64]}}];
+};
+
+// we use the following overrides
+
+let vec_is_zero_E1_spec_ = do {
   (p,p_ptr) <- ptr_to_fresh "p" POINTonE1_type;
-  llvm_precond {{ fp_invariant p.0 /\ fp_invariant p.1 }};
   llvm_execute_func [p_ptr, llvm_term {{ (96:Size_t) }}];
   llvm_return (llvm_term {{ if fp_abs p.0 == Fp.field_zero /\ fp_abs p.1 == Fp.field_zero then 1 else (0:Limb) }});
   };
 
-vec_is_zero_ov_ <- test "vec_is_zero" [] vec_is_zero_spec_;
+vec_is_zero_E1_ov_ <- test "vec_is_zero" [] vec_is_zero_E1_spec_;
+
+let vec_is_zero_E2_spec_ = do {
+  (p,p_ptr) <- ptr_to_fresh "p" POINTonE2_type;
+  llvm_execute_func [p_ptr, llvm_term {{ 192:Size_t }}];
+  llvm_return (llvm_term {{ if fp2_abs p.0 == Fp_2.field_zero /\ fp2_abs p.1 == Fp_2.field_zero then 1 else (0:Limb) }});
+  };
+
+vec_is_zero_E2_ov_ <- test "vec_is_zero" [] vec_is_zero_E2_spec_;
 
 let vec_zero_spec n = do {
   p_ptr <- llvm_alloc (llvm_array n (llvm_int 8));
@@ -67,18 +105,32 @@ let vec_zero_spec n = do {
 };
 
 vec_zero_144_ov <- admit "vec_zero" (vec_zero_spec 144);
+vec_zero_288_ov <- admit "vec_zero" (vec_zero_spec 288);
 
-let vec_copy_spec_ = do {
+let vec_copy_E1_spec_ = do {
   ret_ptr <- llvm_alloc POINTonE1_affine_type;
   (p,p_ptr) <- ptr_to_fresh_readonly "p" POINTonE1_affine_type;
   llvm_execute_func [ret_ptr, p_ptr, llvm_term {{96:Size_t }}];
   llvm_points_to ret_ptr (llvm_term p);
 };
 
-vec_copy_ov_ <- admit "vec_copy" vec_copy_spec_;
+vec_copy_E1_ov_ <- admit "vec_copy" vec_copy_E1_spec_;
 
-let do_prove=true;
+let vec_copy_E2_spec_ = do {
+  ret_ptr <- llvm_alloc POINTonE2_affine_type;
+  (p,p_ptr) <- ptr_to_fresh_readonly "p" POINTonE2_affine_type;
+  llvm_execute_func [ret_ptr, p_ptr, llvm_term {{192:Size_t }}];
+  llvm_points_to ret_ptr (llvm_term p);
+};
 
-_ <- verify "blst_p1s_add" (concat_all [fp_overrides, [POINTonE1_dadd_affine_alias_ov, vec_copy_ov_, vec_is_zero_ov_, vec_zero_144_ov]]) (POINTonE1s_add_spec_1 2);
+vec_copy_E2_ov_ <- admit "vec_copy" vec_copy_E2_spec_;
 
-_ <- verify "blst_p1s_add" (concat_all [fp_overrides, [POINTonE1_dadd_affine_alias_ov, vec_copy_ov_, vec_is_zero_ov_, vec_zero_144_ov]]) (POINTonE1s_add_spec_2);
+// now the memory safety proofs:
+
+_ <- verify "blst_p1s_add" (concat_all [fp_overrides, [POINTonE1_dadd_affine_alias_ov, vec_copy_E1_ov_, vec_is_zero_E1_ov_, vec_zero_144_ov]]) (POINTonE1s_add_spec_1 2);
+
+_ <- verify "blst_p1s_add" (concat_all [fp_overrides, [POINTonE1_dadd_affine_alias_ov, vec_copy_E1_ov_, vec_is_zero_E1_ov_, vec_zero_144_ov]]) (POINTonE1s_add_spec_2);
+
+_ <- verify "blst_p2s_add" (concat_all [fp2_overrides, fp_overrides, curve_operations_e2_ovs, [vec_copy_E2_ov_, vec_is_zero_E2_ov_, vec_zero_288_ov, vec_zero_144_ov]]) (POINTonE2s_add_spec_1 2);
+
+_ <- verify "blst_p2s_add" (concat_all [fp2_overrides, fp_overrides, curve_operations_e2_ovs, [vec_copy_E2_ov_, vec_is_zero_E2_ov_, vec_zero_288_ov, vec_zero_144_ov]]) (POINTonE2s_add_spec_2);
