@@ -54,18 +54,32 @@ let demo_BasicAggregateVerify_A_spec n = do {
       */
 };
 
+let msg_len = 32;
+let dst_len = 43;
+let aug_len = 0;
+
+Hash_to_G1_ov <- prove_Hash_to_G1_impl_ov msg_len dst_len aug_len;
+
+normalize_hash_to_curve_opt_impl_rws <-
+  normalize_hash_to_curve_impl_thms msg_len dst_len aug_len;
+
+hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms <-
+  core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds msg_len dst_len aug_len;
+
 demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
-  (concat vec_overrides
-          [ all_distinct_ov
-          , POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
-          , POINTonE1_affine_on_curve_ov
-          , blst_p1_affine_in_g1_ov
-          , demo_KeyValidate_A_ov
-          , blst_p2_uncompress_OK_ov
-          // ovs used in pairing aggregate:
-          , POINTonE1_in_G1_ov
-          ])
+  (foldr concat [vec_fp2_overrides, vec_overrides]
+                [ all_distinct_ov
+                , POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
+                , POINTonE1_affine_on_curve_ov
+                , blst_p1_affine_in_g1_ov
+                , demo_KeyValidate_A_ov
+                , blst_p2_uncompress_OK_ov
+                // ovs used in pairing aggregate:
+                , POINTonE1_in_G1_ov
+                , Hash_to_G1_ov
+                , POINTonE1_from_Jacobian_alias_ov
+                ])
   (demo_BasicAggregateVerify_A_spec aggregate_n)
   do {
     // Precondition proof(s)
@@ -99,6 +113,13 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             , is_point_O_KeyValidate_thm
             , normalize_uncompress_E2_OK_thm
             , affine_inv_affine_rep_e1_thm ];
+    rw_with POINTonE1_base_thms;
+    unfolding ["POINTonE1_rep"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with fp_rep_thms;
+    rw_with normalize_hash_to_curve_opt_impl_rws;
+    rw_with hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms;
     //rw_with_1 is_point_O_affine_rev_thm;
     simplify basic_ss;
     simplify (cryptol_ss());
