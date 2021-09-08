@@ -16,8 +16,10 @@ let all_distinct_spec n = do {
   llvm_return (llvm_term {{ bool_to_limb (all_distinct messages) }});
 };
 
-// TODO: What should n be?
-let aggregate_n = 3;
+// TODO: What should n be?  2 and 8 have good coverage.  Maybe just those two?
+// There's an argument to be made for 16 as well, which hits an additional
+// branch.  9 will also hit an additional branch in pairing_commit
+let aggregate_n = 2;
 
 // TODO: Prove
 all_distinct_ov <- admit "all_distinct" (all_distinct_spec aggregate_n);
@@ -66,7 +68,17 @@ normalize_hash_to_curve_opt_impl_rws <-
 hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms <-
   core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds msg_len dst_len aug_len;
 
-demo_BasicAggregateVerify_A_ov <- really_custom_verify
+unfold_all_POINTonE2_affine_invariant_2_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \x1 x2 -> all POINTonE2_affine_invariant [x1, x2] ==
+               (POINTonE2_affine_invariant x1 /\
+                POINTonE2_affine_invariant x2) }}) [];
+
+unfold_all_POINTonE1_affine_invariant_2_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \x1 x2 -> all POINTonE1_affine_invariant [x1, x2] ==
+               (POINTonE1_affine_invariant x1 /\
+                POINTonE1_affine_invariant x2) }}) [];
+
+demo_BasicAggregateVerify_A_ov <- custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides]
                 [ all_distinct_ov
@@ -80,6 +92,8 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                 , Hash_to_G1_ov
                 , POINTonE1_from_Jacobian_alias_ov
                 , vec_copy_2fp_ov
+                // ovs used in blst_pairing_commit:
+                , miller_loop_n_2_ov
                 ])
   (demo_BasicAggregateVerify_A_spec aggregate_n)
   do {
@@ -113,6 +127,8 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             , POINTonE2_affine_abs_rep_thm
             , is_point_O_KeyValidate_thm
             , normalize_uncompress_E2_OK_thm
+            , unfold_all_POINTonE1_affine_invariant_2_thm
+            , unfold_all_POINTonE2_affine_invariant_2_thm
             , affine_inv_affine_rep_e1_thm ];
     rw_with POINTonE1_base_thms;
     unfolding ["POINTonE1_rep"];
