@@ -7,7 +7,7 @@ enable_experimental;
 
 m <- llvm_load_module "../build/llvm_bulk_addition/libblst.a.bc";
 
-let do_prove=true;
+let do_prove=false;
 
 include "helpers.saw";
 include "list_utils.saw";
@@ -127,10 +127,19 @@ vec_copy_E2_ov_ <- admit "vec_copy" vec_copy_E2_spec_;
 
 // now the memory safety proofs:
 
-_ <- verify "blst_p1s_add" (concat_all [fp_overrides, [POINTonE1_dadd_affine_alias_ov, vec_copy_E1_ov_, vec_is_zero_E1_ov_, vec_zero_144_ov]]) (POINTonE1s_add_spec_1 2);
+// first trying out with 2 points, which does not exercise the interesting parts
+// of the code:
 
-_ <- verify "blst_p1s_add" (concat_all [fp_overrides, [POINTonE1_dadd_affine_alias_ov, vec_copy_E1_ov_, vec_is_zero_E1_ov_, vec_zero_144_ov]]) (POINTonE1s_add_spec_2);
+let do_prove=true;
 
-_ <- verify "blst_p2s_add" (concat_all [fp2_overrides, fp_overrides, curve_operations_e2_ovs, [vec_copy_E2_ov_, vec_is_zero_E2_ov_, vec_zero_288_ov, vec_zero_144_ov]]) (POINTonE2s_add_spec_1 2);
+_ <- verify "blst_p1s_add" (concat_all [fp_overrides, [POINTonE1_dadd_affine_alias_ov, vec_is_zero_E1_ov_, vec_zero_144_ov]]) (POINTonE1s_add_spec_1 2);
 
-_ <- verify "blst_p2s_add" (concat_all [fp2_overrides, fp_overrides, curve_operations_e2_ovs, [vec_copy_E2_ov_, vec_is_zero_E2_ov_, vec_zero_288_ov, vec_zero_144_ov]]) (POINTonE2s_add_spec_2);
+_ <- verify "blst_p1s_add" (concat_all [fp_overrides, [POINTonE1_dadd_affine_alias_ov, vec_is_zero_E1_ov_, vec_zero_144_ov]]) (POINTonE1s_add_spec_2);
+
+_ <- verify "blst_p2s_add" (concat_all [fp2_overrides, fp_overrides, curve_operations_e2_ovs, [vec_is_zero_E2_ov_, vec_zero_288_ov, vec_zero_144_ov]]) (POINTonE2s_add_spec_1 2);
+
+_ <- verify "blst_p2s_add" (concat_all [fp2_overrides, fp_overrides, curve_operations_e2_ovs, [vec_is_zero_E2_ov_, vec_zero_288_ov, vec_zero_144_ov]]) (POINTonE2s_add_spec_2);
+
+// TODO: now the interesting stuff:
+
+_ <- verify "blst_p1s_add" (concat_all [fp_overrides, [POINTonE1_dadd_affine_alias_ov, vec_is_zero_E1_ov_, vec_zero_144_ov]]) (POINTonE1s_add_spec_1 16);
