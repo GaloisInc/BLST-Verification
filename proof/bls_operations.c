@@ -173,10 +173,7 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
                                         0) != BLST_SUCCESS) return 0;
   }
   blst_pairing_commit(&ctx);
-  /*
   return blst_pairing_finalverify(&ctx, NULL);
-  */
-  return 1;
 }
 
 /*

@@ -78,7 +78,40 @@ unfold_all_POINTonE1_affine_invariant_2_thm <- prove_cryptol (rewrite (cryptol_s
                (POINTonE1_affine_invariant x1 /\
                 POINTonE1_affine_invariant x2) }}) [];
 
-demo_BasicAggregateVerify_A_ov <- custom_verify
+normalize_affine_fp_pair0_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \P -> (Fp.normalize P.0) == (normalize_affine_point Fp P).0 }}) [];
+
+normalize_affine_fp_pair1_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \P -> (Fp.normalize P.1) == (normalize_affine_point Fp P).1 }}) [];
+
+hoist_fp_invariant <- prove_cryptol
+  (rewrite (cryptol_ss())
+    {{ \c x1 x2 -> fp_invariant (if c then x1 else x2) ==
+                   if c then fp_invariant x1 else fp_invariant x2 }})
+  ["fp_invariant"];
+
+hoist_fp_abs <- prove_cryptol
+  (rewrite (cryptol_ss())
+    {{ \c x1 x2 -> fp_abs (if c then x1 else x2) ==
+                   if c then fp_abs x1 else fp_abs x2 }})
+  ["fp_abs"];
+
+hoist_is_point_projective_E_z_thm <- prove_cryptol
+  (rewrite (cryptol_ss())
+    {{ \c x y z1 z2 -> is_point_projective E (x, y, if c then z1 else z2) ==
+                       if c
+                       then is_point_projective E (x, y, z1)
+                       else is_point_projective E (x, y, z2) }}) [];
+
+// TODO: Is this true?  Z==1 should indicate that the point is already affine.
+// So if it's on the curve in projective coordinates shouldn't it also be on
+// the curve in affine coordinates?  Prove?
+is_point_projective_E_affine_thm <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \x y -> is_point_projective E (x, y, Fp.field_unit) ==
+             is_point_affine E (x, y) }});
+
+
+demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides]
                 [ all_distinct_ov
@@ -94,6 +127,8 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
                 , vec_copy_2fp_ov
                 // ovs used in blst_pairing_commit:
                 , miller_loop_n_2_ov
+                // ovs used in blst_pairing_finalverify:
+                , POINTonE1_from_Jacobian_ov
                 ])
   (demo_BasicAggregateVerify_A_spec aggregate_n)
   do {
@@ -140,7 +175,27 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     //rw_with_1 is_point_O_affine_rev_thm;
     simplify basic_ss;
     simplify (cryptol_ss());
+    unfolding [ "POINTonE1_invariant"
+              , "POINTonE1_affine_rep"
+              , "select"
+              , "POINTonE1_abs" ];
+    //hoist_ifs_in_goal;
+    rw_with fp_rep_thms;
+    rw_with [ normalize_affine_fp_pair0_thm
+            , hoist_fp_invariant
+            , hoist_fp_abs
+            , normalize_affine_fp_pair1_thm
+            , one_mont_p_invariant_thm
+            , one_mont_p_abs_thm
+            , hoist_is_point_projective_E_z_thm
+            , is_point_projective_E_affine_thm
+            , normalize_uncompress_E1_OK_thm];
+    rw_with fp_rep_thms;
+    simplify basic_ss;
+    simplify (cryptol_ss());
     rw_with remove_ho_rules;
+    //print_readably;
     print_goal;
-    w4_unint_z3 (concat ["all_distinct"] BasicVerify_A_unints);
+    w4_unint_z3 (concat [ "all_distinct" ]
+                        BasicVerify_A_unints);
   };
