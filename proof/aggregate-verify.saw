@@ -129,6 +129,7 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                 , miller_loop_n_2_ov
                 // ovs used in blst_pairing_finalverify:
                 , POINTonE1_from_Jacobian_ov
+                , miller_loop_n_1_ov
                 ])
   (demo_BasicAggregateVerify_A_spec aggregate_n)
   do {
@@ -179,7 +180,7 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
               , "POINTonE1_affine_rep"
               , "select"
               , "POINTonE1_abs" ];
-    //hoist_ifs_in_goal;
+    hoist_ifs_in_goal;
     rw_with fp_rep_thms;
     rw_with [ normalize_affine_fp_pair0_thm
             , hoist_fp_invariant
