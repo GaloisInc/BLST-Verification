@@ -2,6 +2,10 @@ let {{
   // TODO: Define
   all_distinct: {n, m} [n][m][8] -> Bit
   all_distinct messages = undefined
+  AGGR_MIN_SIG        = 0x00000001
+  AGGR_SIGN_SET       = 0x00000010
+  AGGR_GT_SET         = 0x00000020
+  AGGR_HASH_OR_ENCODE = 0x00000040
 }};
 
 let all_distinct_spec n = do {
@@ -23,6 +27,25 @@ let aggregate_n = 2;
 
 // TODO: Prove
 all_distinct_ov <- admit "all_distinct" (all_distinct_spec aggregate_n);
+
+let blst_pairing_finalverify_spec = do {
+  /*
+  (ctx, ctx_ptr) <- ptr_to_fresh_readonly "ctx"
+                                          (llvm_struct "struct.blst_pairing");
+                                          */
+  ctx_ptr <- llvm_alloc_readonly (llvm_struct "struct.blst_pairing_st");
+  AggrSign <- llvm_fresh_var "AggrSign" POINTonE1_type;
+  llvm_precond {{ POINTonE1_invariant AggrSign }};
+  crucible_precond {{ is_point_projective E (POINTonE1_abs AggrSign) }}; // on the curve
+  crucible_precond {{ ~(Fp.is_equal ((fp_abs (AggrSign.2)), Fp.field_zero)) }};
+  llvm_points_to (llvm_elem ctx_ptr 0)
+                 (llvm_term {{ AGGR_HASH_OR_ENCODE
+                            || AGGR_MIN_SIG
+                            || AGGR_SIGN_SET
+                            || AGGR_GT_SET }});
+  llvm_points_to (llvm_elem ctx_ptr 5) (llvm_term AggrSign);
+  llvm_execute_func [ ctx_ptr, llvm_null ];
+};
 
 let demo_BasicAggregateVerify_A_spec n = do {
   global_alloc_init "demo_DST_A" {{ DST }};
@@ -110,10 +133,19 @@ is_point_projective_E_affine_thm <- admit_cryptol (rewrite (cryptol_ss())
   {{ \x y -> is_point_projective E (x, y, Fp.field_unit) ==
              is_point_affine E (x, y) }});
 
+blst_pairing_finalverify_ov <- really_custom_verify
+  "blst_pairing_finalverify"
+  [POINTonE1_from_Jacobian_ov]
+  blst_pairing_finalverify_spec
+  do {
+    print_goal;
+    w4_unint_z3 (concat [ "all_distinct" ]
+                        BasicVerify_A_unints);
+  };
 
-demo_BasicAggregateVerify_A_ov <- really_custom_verify
+demo_BasicAggregateVerify_A_ov <- custom_verify
   "demo_BasicAggregateVerify_A"
-  (foldr concat [vec_fp2_overrides, vec_overrides]
+  (foldr concat [vec_fp2_overrides, vec_overrides/*, mul_fp12_ovs*/]
                 [ all_distinct_ov
                 , POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
                 , POINTonE1_affine_on_curve_ov
@@ -128,8 +160,12 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                 // ovs used in blst_pairing_commit:
                 , miller_loop_n_2_ov
                 // ovs used in blst_pairing_finalverify:
+                /*
                 , POINTonE1_from_Jacobian_ov
                 , miller_loop_n_1_ov
+                , conjugate_fp12_ov
+                , final_exp_ov
+                */
                 ])
   (demo_BasicAggregateVerify_A_spec aggregate_n)
   do {
@@ -192,6 +228,7 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             , is_point_projective_E_affine_thm
             , normalize_uncompress_E1_OK_thm];
     rw_with fp_rep_thms;
+    //rw_with fp12_rep_thms;
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with remove_ho_rules;

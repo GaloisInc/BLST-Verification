@@ -40,7 +40,7 @@ index 3a333b1..72b6c1c 100644
 +#endif
 +
 +typedef union { blst_p1 e1; blst_p1 e2; } AggregatedSignature;
-+typedef struct {
++typedef struct blst_pairing_st {
 +    unsigned int ctrl;
 +    unsigned int nelems;
 +    const void *DST;
