@@ -34,6 +34,8 @@ let blst_pairing_finalverify_spec = do {
                                           (llvm_struct "struct.blst_pairing");
                                           */
   ctx_ptr <- llvm_alloc_readonly (llvm_struct "struct.blst_pairing_st");
+  GT <- llvm_fresh_var "GT" vec384fp12_type;
+  llvm_precond {{ fp12_invariant GT }};
   AggrSign <- llvm_fresh_var "AggrSign" POINTonE1_type;
   llvm_precond {{ POINTonE1_invariant AggrSign }};
   crucible_precond {{ is_point_projective E (POINTonE1_abs AggrSign) }}; // on the curve
@@ -43,6 +45,7 @@ let blst_pairing_finalverify_spec = do {
                             || AGGR_MIN_SIG
                             || AGGR_SIGN_SET
                             || AGGR_GT_SET }});
+  llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term GT);
   llvm_points_to (llvm_elem ctx_ptr 5) (llvm_term AggrSign);
   llvm_execute_func [ ctx_ptr, llvm_null ];
 };
@@ -135,9 +138,10 @@ is_point_projective_E_affine_thm <- admit_cryptol (rewrite (cryptol_ss())
 
 blst_pairing_finalverify_ov <- really_custom_verify
   "blst_pairing_finalverify"
-  [ POINTonE1_from_Jacobian_ov
-  , conjugate_fp12_ov
-  , miller_loop_n_1_ov ]
+  (concat mul_fp12_ovs
+          [ POINTonE1_from_Jacobian_ov
+          , conjugate_fp12_ov
+          , miller_loop_n_1_ov])
   blst_pairing_finalverify_spec
   do {
     rw_with fp12_rep_thms;
