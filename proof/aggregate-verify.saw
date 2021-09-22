@@ -133,12 +133,15 @@ is_point_projective_E_affine_thm <- admit_cryptol (rewrite (cryptol_ss())
   {{ \x y -> is_point_projective E (x, y, Fp.field_unit) ==
              is_point_affine E (x, y) }});
 
-blst_pairing_finalverify_ov <- custom_verify
+blst_pairing_finalverify_ov <- really_custom_verify
   "blst_pairing_finalverify"
   [ POINTonE1_from_Jacobian_ov
+  , conjugate_fp12_ov
   , miller_loop_n_1_ov ]
   blst_pairing_finalverify_spec
   do {
+    rw_with fp12_rep_thms;
+    rw_with [affine_inv_affine_rep_e1_thm];
     print_goal;
     w4_unint_z3 (concat [ "all_distinct" ]
                         BasicVerify_A_unints);
