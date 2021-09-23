@@ -142,11 +142,16 @@ blst_pairing_finalverify_ov <- really_custom_verify
           [ POINTonE1_from_Jacobian_ov
           , conjugate_fp12_ov
           , final_exp_alias_ov
+          , vec_is_equal_fp2_ov
           , miller_loop_n_1_ov])
   blst_pairing_finalverify_spec
   do {
     rw_with fp12_rep_thms;
-    rw_with [affine_inv_affine_rep_e1_thm];
+    rw_with [affine_inv_affine_rep_e1_thm, one_mont_px_invariant_thm];
+    unfolding ["fp12_rep", "fp6_rep"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with fp2_rep_thms;
     print_goal;
     w4_unint_z3 (concat [ "all_distinct" ]
                         BasicVerify_A_unints);
