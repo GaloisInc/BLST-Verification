@@ -141,6 +141,7 @@ blst_pairing_finalverify_ov <- really_custom_verify
   (concat mul_fp12_ovs
           [ POINTonE1_from_Jacobian_ov
           , conjugate_fp12_ov
+          , final_exp_alias_ov
           , miller_loop_n_1_ov])
   blst_pairing_finalverify_spec
   do {
