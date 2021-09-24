@@ -136,6 +136,26 @@ is_point_projective_E_affine_thm <- admit_cryptol (rewrite (cryptol_ss())
   {{ \x y -> is_point_projective E (x, y, Fp.field_unit) ==
              is_point_affine E (x, y) }});
 
+// For vec_is_zero(GT[0][1], sizeof(GT) - sizeof(GT[0][0])) in final verify
+let vec_is_zero_5fp2_spec = do {
+  (a, a_ptr) <- ptr_to_fresh_readonly "a" (llvm_array 5 vec384x_type);
+  crucible_precond {{ (  fp2_invariant a0
+                      /\ fp2_invariant a1
+                      /\ fp2_invariant a2
+                      /\ fp2_invariant a3
+                      /\ fp2_invariant a4 ) where [a0,a1,a2,a3,a4] = a }};
+  crucible_execute_func [a_ptr, crucible_term {{ (480:Size_t) }}]; // Non-portable
+  crucible_return (crucible_term {{
+    (if (  (Fp_2.is_equal (fp2_abs a0, Fp_2.field_zero))
+        /\ (Fp_2.is_equal (fp2_abs a1, Fp_2.field_zero))
+        /\ (Fp_2.is_equal (fp2_abs a2, Fp_2.field_zero))
+        /\ (Fp_2.is_equal (fp2_abs a3, Fp_2.field_zero))
+        /\ (Fp_2.is_equal (fp2_abs a4, Fp_2.field_zero))
+        ) then 1 else (0:Limb)) where [a0,a1,a2,a3,a4] = a }});
+  };
+
+vec_is_zero_5fp2_ov <- test "vec_is_zero" []  vec_is_zero_5fp2_spec;
+
 blst_pairing_finalverify_ov <- really_custom_verify
   "blst_pairing_finalverify"
   (concat mul_fp12_ovs
@@ -143,6 +163,7 @@ blst_pairing_finalverify_ov <- really_custom_verify
           , conjugate_fp12_ov
           , final_exp_alias_ov
           , vec_is_equal_fp2_ov
+          , vec_is_zero_5fp2_ov
           , miller_loop_n_1_ov])
   blst_pairing_finalverify_spec
   do {
@@ -152,8 +173,17 @@ blst_pairing_finalverify_ov <- really_custom_verify
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with fp2_rep_thms;
+    rw_with remove_ho_rules;
     print_goal;
-    w4_unint_z3 (concat [ "all_distinct" ]
+    w4_unint_z3 (concat [ "all_distinct"
+                        , "POINTonE1_abs"
+                        , "POINTonE1_invariant"
+                        , "is_point_projective_E"
+                        , "fp_abs"
+                        , "final_exponentiation_impl"
+                        , "fp12_conjugate"
+                        , "miller_loop_opt_checked"
+                        , "fp12_abs" ]
                         BasicVerify_A_unints);
   };
 
