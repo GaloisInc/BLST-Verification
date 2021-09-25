@@ -6,6 +6,23 @@ let {{
   AGGR_SIGN_SET       = 0x00000010
   AGGR_GT_SET         = 0x00000020
   AGGR_HASH_OR_ENCODE = 0x00000040
+  finalverify: ProjectivePoint t_Fp -> t_Fp_12 -> Bit
+  finalverify e1 ctx_GT = is_head_one /\ is_tail_zero where
+    e1_affine = affinify E e1
+    // TODO: BP' is BLS12_381_G2?
+    GT0 = miller_loop_opt_checked e1_affine (POINTonE2_affine_abs (G2.0, G2.1))
+    GT1 = fp12_conjugate GT0
+    GT2 = Fp_12.mul (GT1, ctx_GT)
+    GT3 = fp12_rep (final_exponentiation_impl GT2)
+    [[a0, a1, a2], [a3, a4, a5]] = GT3
+    // TODO: Might want to create a function "fp12_is_one" that does this last
+    // check so that it can be used in both the spec and the proof
+    is_head_one = Fp_2.is_equal (fp2_abs a0, fp2_abs one_mont_px)
+    is_tail_zero = Fp_2.is_equal (fp2_abs a1, Fp_2.field_zero)
+                /\ Fp_2.is_equal (fp2_abs a2, Fp_2.field_zero)
+                /\ Fp_2.is_equal (fp2_abs a3, Fp_2.field_zero)
+                /\ Fp_2.is_equal (fp2_abs a4, Fp_2.field_zero)
+                /\ Fp_2.is_equal (fp2_abs a5, Fp_2.field_zero)
 }};
 
 let all_distinct_spec n = do {
@@ -48,6 +65,8 @@ let blst_pairing_finalverify_spec = do {
   llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term GT);
   llvm_points_to (llvm_elem ctx_ptr 5) (llvm_term AggrSign);
   llvm_execute_func [ ctx_ptr, llvm_null ];
+  llvm_return (llvm_term {{ bool_to_limb (finalverify (POINTonE1_abs AggrSign)
+                                                      (fp12_abs GT)) }});
 };
 
 let demo_BasicAggregateVerify_A_spec n = do {
@@ -169,12 +188,17 @@ blst_pairing_finalverify_ov <- really_custom_verify
   do {
     rw_with fp12_rep_thms;
     rw_with [affine_inv_affine_rep_e1_thm, one_mont_px_invariant_thm];
-    unfolding ["fp12_rep", "fp6_rep"];
+    unfolding ["fp12_rep", "fp6_rep", "finalverify", "G2", "one_mont_px"];
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with fp2_rep_thms;
+    rw_with fp12_normalization_thms;
+    rw_with POINTonE1_base_thms;
+    rw_with [ normalize_miller_loop_opt_checked_thm
+            , normalize_affinify_thm ];
     rw_with remove_ho_rules;
     print_goal;
+    //print_readably;
     w4_unint_z3 (concat [ "all_distinct"
                         , "POINTonE1_abs"
                         , "POINTonE1_invariant"
@@ -183,6 +207,8 @@ blst_pairing_finalverify_ov <- really_custom_verify
                         , "final_exponentiation_impl"
                         , "fp12_conjugate"
                         , "miller_loop_opt_checked"
+                        , "Fp"
+                        , "Fp_2"
                         , "fp12_abs" ]
                         BasicVerify_A_unints);
   };
