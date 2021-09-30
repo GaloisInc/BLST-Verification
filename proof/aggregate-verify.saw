@@ -95,10 +95,8 @@ let demo_BasicAggregateVerify_A_spec n = do {
                     , messages_ptr
                     , sig_ptr ];
   // TODO: Postcond
-  /*
   llvm_return (llvm_term
-      {{ bool_to_limb (CoreAggregateVerify pks messages sig) }});
-      */
+      {{ bool_to_limb (CoreAggregateVerify (split`{n} (join (join pks))) messages (join sig)) }});
 };
 
 let msg_len = 32;
