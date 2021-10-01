@@ -24,6 +24,7 @@ include "exp.saw";
 // include "exp2.saw";
 
 // first we do memory safety
+// case we could consider are n=3 (<16), n=16, n=17, n=2049, n=2064, n=2065
 
 // here we assume that the first pointer points to an array and the second is
 // null.
@@ -98,9 +99,71 @@ let POINTonE1s_accumulate_16_spec = do { // TODO: can we do this generically for
   new_sum <- llvm_fresh_var "new_POINTonE1_accumulate_sum" POINTonE1_type;
   llvm_postcond {{ POINTonE1_invariant new_sum }};
   llvm_points_to sum_ptr (llvm_term new_sum );
-  new_points <- llvm_fresh_var "new_POINTonE1_accumulate_points" (llvm_array 16 POINTonE1_type);
-  llvm_postcond {{ all POINTonE1_invariant new_points }};
-  llvm_points_to points_ptr (llvm_term new_points);
+  // we don't care about points, as it won't be used anymore
+};
+
+let POINTonE1s_accumulate_17_spec = do { // TODO: can we do this generically for any n?
+  (sum, sum_ptr) <- ptr_to_fresh "sum" POINTonE1_type;
+  // points is an array of POINTonE1_type where the Z component of each point is
+  // uninitialized
+  points_ptr <- llvm_alloc (llvm_array 17 POINTonE1_type);
+  point_1 <- llvm_fresh_var "point_1" POINTonE1_affine_type;
+  point_2 <- llvm_fresh_var "point_2" POINTonE1_affine_type;
+  point_3 <- llvm_fresh_var "point_3" POINTonE1_affine_type;
+  point_4 <- llvm_fresh_var "point_4" POINTonE1_affine_type;
+  point_5 <- llvm_fresh_var "point_5" POINTonE1_affine_type;
+  point_6 <- llvm_fresh_var "point_6" POINTonE1_affine_type;
+  point_7 <- llvm_fresh_var "point_7" POINTonE1_affine_type;
+  point_8 <- llvm_fresh_var "point_8" POINTonE1_affine_type;
+  point_9 <- llvm_fresh_var "point_9" POINTonE1_affine_type;
+  point_10 <- llvm_fresh_var "point_10" POINTonE1_affine_type;
+  point_11 <- llvm_fresh_var "point_11" POINTonE1_affine_type;
+  point_12 <- llvm_fresh_var "point_12" POINTonE1_affine_type;
+  point_13 <- llvm_fresh_var "point_13" POINTonE1_affine_type;
+  point_14 <- llvm_fresh_var "point_14" POINTonE1_affine_type;
+  point_15 <- llvm_fresh_var "point_15" POINTonE1_affine_type;
+  point_16 <- llvm_fresh_var "point_16" POINTonE1_affine_type;
+  point_17 <- llvm_fresh_var "point_17" POINTonE1_affine_type;
+  llvm_points_to_untyped (llvm_elem points_ptr 0) (llvm_term point_1);
+  llvm_points_to_untyped (llvm_elem points_ptr 1) (llvm_term point_2);
+  llvm_points_to_untyped (llvm_elem points_ptr 2) (llvm_term point_3);
+  llvm_points_to_untyped (llvm_elem points_ptr 3) (llvm_term point_4);
+  llvm_points_to_untyped (llvm_elem points_ptr 4) (llvm_term point_5);
+  llvm_points_to_untyped (llvm_elem points_ptr 5) (llvm_term point_6);
+  llvm_points_to_untyped (llvm_elem points_ptr 6) (llvm_term point_7);
+  llvm_points_to_untyped (llvm_elem points_ptr 7) (llvm_term point_8);
+  llvm_points_to_untyped (llvm_elem points_ptr 8) (llvm_term point_9);
+  llvm_points_to_untyped (llvm_elem points_ptr 9) (llvm_term point_10);
+  llvm_points_to_untyped (llvm_elem points_ptr 10) (llvm_term point_11);
+  llvm_points_to_untyped (llvm_elem points_ptr 11) (llvm_term point_12);
+  llvm_points_to_untyped (llvm_elem points_ptr 12) (llvm_term point_13);
+  llvm_points_to_untyped (llvm_elem points_ptr 13) (llvm_term point_14);
+  llvm_points_to_untyped (llvm_elem points_ptr 14) (llvm_term point_15);
+  llvm_points_to_untyped (llvm_elem points_ptr 15) (llvm_term point_16);
+  llvm_points_to_untyped (llvm_elem points_ptr 16) (llvm_term point_17);
+  llvm_precond {{ POINTonE1_invariant sum }};
+  llvm_precond {{ POINTonE1_affine_invariant point_1 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_2 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_3 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_4 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_5 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_6 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_7 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_8 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_9 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_10 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_11 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_12 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_13 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_14 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_15 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_16 }};
+  llvm_precond {{ POINTonE1_affine_invariant point_17 }};
+  llvm_execute_func [sum_ptr, points_ptr, llvm_term {{ 17:[64] }}];
+  new_sum <- llvm_fresh_var "new_POINTonE1_accumulate_sum" POINTonE1_type;
+  llvm_postcond {{ POINTonE1_invariant new_sum }};
+  llvm_points_to sum_ptr (llvm_term new_sum );
+  // we don't care about points, as it won't be used anymore
 };
 
 let POINTonE1_head_spec = do {
@@ -279,7 +342,25 @@ do {
   w4;
 };
 
-_ <- custom_verify "blst_p1s_add" (concat_all [vec_overrides, [POINTonE1s_accumulate_16_ov, vec_zero_144_ov]]) (blst_p1s_add_spec_1 16)
+POINTonE1s_accumulate_17_ov <- custom_verify "POINTonE1s_accumulate" (concat_all [fp_overrides, vec_overrides, [POINTonE1_head_ov, POINTonE1_head_null_ov, POINTonE1_tail_ov, POINTonE1_tail_ov_2, POINTonE1_tail_ov_3, reciprocal_fp_ov, POINTonE1_dadd_affine_alias_ov, vec_zero_144_ov, reciprocal_fp_alias_ov]]) POINTonE1s_accumulate_17_spec
+do {
+  unfolding ["select","POINTonE1_affine_invariant","POINTonE1_invariant"];
+  print_goal;
+  goal_eval_unint fp_unints;
+  simplify fp_simpset;
+  w4;
+};
+
+blst_p1s_add_16_ov <- custom_verify "blst_p1s_add" (concat_all [vec_overrides, [POINTonE1s_accumulate_16_ov, vec_zero_144_ov]]) (blst_p1s_add_spec_1 16)
+do {
+  unfolding ["select","POINTonE1_affine_invariant","POINTonE1_invariant"];
+  print_goal;
+  goal_eval_unint fp_unints;
+  simplify fp_simpset;
+  w4;
+};
+
+blst_p1s_add_17_ov <- custom_verify "blst_p1s_add" (concat_all [vec_overrides, [POINTonE1s_accumulate_17_ov, vec_zero_144_ov]]) (blst_p1s_add_spec_1 17)
 do {
   unfolding ["select","POINTonE1_affine_invariant","POINTonE1_invariant"];
   print_goal;
