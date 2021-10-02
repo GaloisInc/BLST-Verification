@@ -8,6 +8,7 @@ enable_experimental;
 m <- llvm_load_module "../build/llvm_bulk_addition/libblst.a.bc";
 
 let do_prove=false;
+// NOTE: this has to remain false at this point because the imported proofs do not work on the blst version that we use here
 
 include "helpers.saw";
 include "list_utils.saw";
@@ -25,14 +26,12 @@ include "exp.saw";
 
 // first we do memory safety for points on E1
 // NOTE: we assume that the code has been patched to set stride to 32 (SAW can't handle 2048)
-// case we could consider are n=3 (<16), n=16, n=17, n=32, n=33, n=48, n=49
+// we consider n=3 (<16), n=16, n=17, n=32, n=33, n=48, n=49
 
 // here we assume that the first pointer points to an array and the second is
 // null.
 let blst_p1s_add_spec_1 n = do {
   (sum, sum_ptr) <- ptr_to_fresh "sum" POINTonE1_type;
-  // sum_ptr <- llvm_alloc POINTonE1_type;
-  // llvm_points_to sum_ptr (llvm_term {{ POINTonE1_rep (projectify E (point_O E)) }});
   points_ptr <- llvm_alloc (llvm_array 2 (llvm_pointer POINTonE1_affine_type));
   (array, array_ptr) <- ptr_to_fresh "array" (llvm_array n POINTonE1_affine_type);
   llvm_points_to (llvm_elem points_ptr 0) array_ptr;
@@ -40,6 +39,21 @@ let blst_p1s_add_spec_1 n = do {
   llvm_precond {{ POINTonE1_invariant sum }};
   llvm_precond {{ all POINTonE1_affine_invariant array }};
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n:[64]}}];
+};
+
+// here we have a first lonely point, and then the rest of the points in an array
+let blst_p1s_add_spec_2 n = do {
+  (sum, sum_ptr) <- ptr_to_fresh "sum" POINTonE1_type;
+  (point_1, point_1_ptr) <- ptr_to_fresh "point_1" POINTonE1_affine_type;
+  points_ptr <- llvm_alloc (llvm_array 3 (llvm_pointer POINTonE1_affine_type));
+  (array, array_ptr) <- ptr_to_fresh "array" (llvm_array n POINTonE1_affine_type);
+  llvm_points_to (llvm_elem points_ptr 0) point_1_ptr;
+  llvm_points_to (llvm_elem points_ptr 1) array_ptr;
+  llvm_points_to (llvm_elem points_ptr 2) llvm_null;
+  llvm_precond {{ POINTonE1_invariant sum }};
+  llvm_precond {{ POINTonE1_affine_invariant point_1 }};
+  llvm_precond {{ all POINTonE1_affine_invariant array }};
+  llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n+1:[64]}}];
 };
 
 let POINTonE1s_accumulate_16_spec = do { // TODO: can we do this generically for any n?
@@ -791,27 +805,6 @@ let POINTonE1_tail_spec_3 = do {
   llvm_points_to_untyped D_ptr (llvm_term new_POINTonE1_tail_D);
 };
 
-let blst_p2s_add_spec_1 n = do {
-  (sum, sum_ptr) <- ptr_to_fresh "sum" POINTonE2_type;
-  points_ptr <- llvm_alloc (llvm_array 2 (llvm_pointer POINTonE2_affine_type));
-  (array, array_ptr) <- ptr_to_fresh "array" (llvm_array n POINTonE2_affine_type);
-  llvm_points_to (llvm_elem points_ptr 0) array_ptr;
-  llvm_points_to (llvm_elem points_ptr 1) llvm_null;
-  llvm_precond {{ POINTonE2_invariant sum }};
-  llvm_precond {{ all POINTonE2_affine_invariant array }};
-  llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n:[64]}}];
-};
-
-let blst_p1s_add_spec_2 n = do {
-  (sum, sum_ptr) <- ptr_to_fresh "sum" POINTonE1_type;
-  points_ptr <- llvm_alloc (llvm_array n (llvm_pointer POINTonE1_affine_type));
-  llvm_points_to (llvm_elem points_ptr n) llvm_null;
-  llvm_precond {{ POINTonE1_invariant sum }};
-  llvm_precond {{ POINTonE1_affine_invariant p1 }};
-  llvm_precond {{ POINTonE1_affine_invariant p2 }};
-  llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`2:[64]}}];
-};
-
 // we use the following additional overrides:
 
 let vec_zero_spec n = do {
@@ -825,10 +818,7 @@ vec_zero_288_ov <- admit "vec_zero" (vec_zero_spec 288);
 
 // now the memory safety proofs:
 
-let do_prove=true;
-
-// trivial case:
-_ <- verify "blst_p1s_add" (concat_all [fp_overrides, vec_overrides, [reciprocal_fp_ov, POINTonE1_dadd_affine_alias_ov, vec_zero_144_ov, reciprocal_fp_alias_ov]]) (blst_p1s_add_spec_1 4);
+let do_prove=false;
 
 // POINTonE1_head_ov <- admit "POINTonE1_head" POINTonE1_head_spec;
 
@@ -931,7 +921,16 @@ do {
   w4;
 };
 
-blst_p1s_add_16_ov <- custom_verify "blst_p1s_add" (concat_all [vec_overrides, [POINTonE1s_accumulate_16_ov, vec_zero_144_ov]]) (blst_p1s_add_spec_1 16)
+blst_p1s_add_16_ov <- really_custom_verify "blst_p1s_add" (concat_all [vec_overrides, [POINTonE1s_accumulate_16_ov, vec_zero_144_ov]]) (blst_p1s_add_spec_1 16)
+do {
+  unfolding ["select","POINTonE1_affine_invariant","POINTonE1_invariant"];
+  goal_eval_unint fp_unints;
+  simplify fp_simpset;
+  w4;
+};
+
+// TODO:
+_ <- really_custom_verify "blst_p1s_add" (concat_all [vec_overrides, [POINTonE1s_accumulate_16_ov, vec_zero_144_ov]]) (blst_p1s_add_spec_2 15)
 do {
   unfolding ["select","POINTonE1_affine_invariant","POINTonE1_invariant"];
   goal_eval_unint fp_unints;
@@ -978,3 +977,17 @@ do {
   simplify fp_simpset;
   w4;
 };
+
+// now for E2:
+
+let blst_p2s_add_spec_1 n = do {
+  (sum, sum_ptr) <- ptr_to_fresh "sum" POINTonE2_type;
+  points_ptr <- llvm_alloc (llvm_array 2 (llvm_pointer POINTonE2_affine_type));
+  (array, array_ptr) <- ptr_to_fresh "array" (llvm_array n POINTonE2_affine_type);
+  llvm_points_to (llvm_elem points_ptr 0) array_ptr;
+  llvm_points_to (llvm_elem points_ptr 1) llvm_null;
+  llvm_precond {{ POINTonE2_invariant sum }};
+  llvm_precond {{ all POINTonE2_affine_invariant array }};
+  llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n:[64]}}];
+};
+
