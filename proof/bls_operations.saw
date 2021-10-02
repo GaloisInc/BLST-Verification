@@ -40,6 +40,8 @@ let {{
     maybe_cases (signature_to_point (join sig))
       False
       (\y -> is_point_affine E y)
+
+  F_prod_Fp_12 = F_prod Fp_12
 }};
 
 same_point_affine_E_thm <- prove_cryptol
@@ -502,6 +504,9 @@ e1_scalar_mult_not_bad_O_thm <- admit_cryptol (rewrite (cryptol_ss())
                                         (affinify E (hash_to_curve_opt_impl x)))) &&
                   ~(is_bad_O_form_E P)) }});
 
+F_prod_Fp_12_thm <- really_prove_cryptol
+  {{ \[x, y] -> F_prod Fp_12 [x, y] == F_prod_Fp_12 [x, y] }} [];
+
 let remove_ho_rules = concat
   [ point_add_fp2_thm, point_dadd_fp2_thm, point_double_fp2_thm, point_neg_fp2_thm
    , point_add_affine_fp2_thm, point_dadd_affine_fp2_thm
@@ -513,6 +518,7 @@ let remove_ho_rules = concat
    , point_add_affine_fp_thm, point_dadd_affine_fp_thm
    , add_E_thm, add'_E_thm, affinify_E_thm,  projectify_E_thm
    , is_point_affine_E_thm, is_point_projective_E_thm, is_point_O_E_thm, point_O_E_thm
+   , F_prod_Fp_12_thm
    ];
 
 
