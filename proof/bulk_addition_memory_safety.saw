@@ -22,7 +22,7 @@ include "fp2_overrides.saw";
 include "curve_operations.saw";
 include "curve_operations_e2.saw";
 include "exp.saw";
-include "exp2.saw";
+include "exp2_for_bulk_add.saw";
 
 let do_prove=true;
 
