@@ -36,7 +36,7 @@ index 3a333b1..72b6c1c 100644
  #else
 -typedef struct {} blst_pairing;
 +#ifndef N_MAX
-+# define N_MAX 8
++# define N_MAX 2
 +#endif
 +
 +typedef union { blst_p1 e1; blst_p2 e2; } AggregatedSignature;
