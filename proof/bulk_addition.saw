@@ -375,6 +375,8 @@ let POINTonE2_tail_spec_3 = do {
 
 let overrides = (concat_all [fp_overrides, fp2_overrides, vec_overrides, vec_fp2_overrides, [mul_by_3_fp2_alias_1_2_ov, reciprocal_fp2_alias_1_2_ov, reciprocal_fp2_ov, POINTonE2_dadd_affine_alias_1_2_ov, vec_zero_288_ov]]);
 
+let do_prove = true;
+
 POINTonE2_head_ov <- custom_verify "POINTonE2_head" overrides POINTonE2_head_spec
 do {
   unfolding ["select"];
@@ -482,5 +484,3 @@ do {
   simplify fp_simpset;
   w4;
 };
-
-let do_prove=true;
