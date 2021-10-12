@@ -12,6 +12,7 @@ jobs:
           - proof/functional_proofs.saw
           - proof/correctness_add.saw
           - check
+          - proof/bulk_addition.saw
     steps:
       - uses: actions/checkout@v2
         with:
