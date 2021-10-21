@@ -192,7 +192,7 @@ def pathname_to_uri(p):
 def show_method_summaries_html_1(s, f = sys.stdout):
     '''Shows which assumptions are used (even if via some intermediary)'''
     print ('<html><body><table>', file=f)
-    print ('<tr> <th> loc </th> <th> assumptions used</th></tr>', file=f)
+    print ('<tr> <th> description </th> <th> assumptions used</th></tr>', file=f)
     uris = [pathname_to_uri(e['loc']) for e in s]
     G = summary_event_digraph(s).transitive_closure()
     for i, e in enumerate(s):
