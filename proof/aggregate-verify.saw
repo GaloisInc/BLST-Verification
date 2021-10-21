@@ -40,7 +40,7 @@ let all_distinct_spec n = do {
 // TODO: What should n be?  2 and 8 have good coverage.  Maybe just those two?
 // There's an argument to be made for 16 as well, which hits an additional
 // branch.  9 will also hit an additional branch in pairing_commit
-let aggregate_n = 2;
+let aggregate_n = 5;
 
 // TODO: Prove
 all_distinct_ov <- admit "all_distinct" (all_distinct_spec aggregate_n);
@@ -70,6 +70,51 @@ let blst_pairing_finalverify_spec = do {
   llvm_return (llvm_term {{ bool_to_limb (finalverify (POINTonE1_abs AggrSign)
                                                       (fp12_abs GT)) }});
 };
+
+let blst_pairing_aggregate_pk_in_g2_null_sig_spec = do {
+  ctx_ptr <- llvm_alloc (llvm_struct "struct.blst_pairing_st");
+  //
+  // ctx->ctrl must have AGGR_HASH_OR_ENCODE set, but we leave the rest
+  // uninterpreted
+  ctx_ctrl <- llvm_fresh_var "ctx.ctrl" (llvm_int 32);
+  llvm_precond {{ (ctx_ctrl && AGGR_HASH_OR_ENCODE) != 0 }};
+  llvm_points_to (llvm_elem ctx_ptr 0) (llvm_term ctx_ctrl);
+  //
+  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" POINTonE2_affine_type;
+  // TODO: Do I need this if keyvalidate is a precond?
+  llvm_precond {{ POINTonE2_affine_invariant pk }};
+  //
+  let msg_len = 32;
+  (msg, msg_ptr) <-
+      ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+      // TODO: Definitely need some preconds
+  llvm_execute_func [ ctx_ptr
+                    , pk_ptr
+                    , llvm_null
+                    , msg_ptr
+                    , llvm_term {{ `msg_len : [64] }}
+                    , llvm_null
+                    , llvm_term {{ 0 : [64] }} ];
+  // TODO: Postcond
+};
+
+Hash_to_G1_ov <- prove_Hash_to_G1_impl_ov msg_len dst_len aug_len;
+
+blst_pairing_aggregate_pk_in_g2_null_sig_ov <- really_custom_verify
+  "blst_pairing_aggregate_pk_in_g2"
+  // TODO: This set does not include ovs needed for sig portion!
+  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
+                [ Hash_to_G1_ov
+                , POINTonE1_from_Jacobian_alias_ov
+                , vec_copy_2fp_ov
+                , miller_loop_n_2_ov ])
+  blst_pairing_aggregate_pk_in_g2_null_sig_spec
+  do {
+    unfolding ["POINTonE2_affine_invariant"];
+    print_goal;
+    w4_unint_z3 BasicVerify_A_unints;
+  };
+
 
 let demo_BasicAggregateVerify_A_spec n = do {
   global_alloc_init "demo_DST_A" {{ DST }};
@@ -107,8 +152,6 @@ let msg_len = 32;
 let dst_len = 43;
 let aug_len = 0;
 
-Hash_to_G1_ov <- prove_Hash_to_G1_impl_ov msg_len dst_len aug_len;
-
 normalize_hash_to_curve_opt_impl_rws <-
   normalize_hash_to_curve_impl_thms msg_len dst_len aug_len;
 
@@ -124,6 +167,22 @@ unfold_all_POINTonE1_affine_invariant_2_thm <- prove_cryptol (rewrite (cryptol_s
   {{ \x1 x2 -> all POINTonE1_affine_invariant [x1, x2] ==
                (POINTonE1_affine_invariant x1 /\
                 POINTonE1_affine_invariant x2) }}) [];
+
+unfold_all_POINTonE2_affine_invariant_5_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \x1 x2 x3 x4 x5 -> all POINTonE2_affine_invariant [x1, x2, x3, x4, x5] ==
+                        (POINTonE2_affine_invariant x1 /\
+                         POINTonE2_affine_invariant x2 /\
+                         POINTonE2_affine_invariant x3 /\
+                         POINTonE2_affine_invariant x4 /\
+                         POINTonE2_affine_invariant x5) }}) [];
+
+unfold_all_POINTonE1_affine_invariant_5_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \x1 x2 x3 x4 x5 -> all POINTonE1_affine_invariant [x1, x2, x3, x4, x5] ==
+                        (POINTonE1_affine_invariant x1 /\
+                         POINTonE1_affine_invariant x2 /\
+                         POINTonE1_affine_invariant x3 /\
+                         POINTonE1_affine_invariant x4 /\
+                         POINTonE1_affine_invariant x5) }}) [];
 
 normalize_affine_fp_pair0_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> (Fp.normalize P.0) == (normalize_affine_point Fp P).0 }}) [];
@@ -224,7 +283,9 @@ let map_size_2_term = parse_core "\\(f : ((Vec 6 (Vec 64 Bool)) * (Vec 6 (Vec 64
 unfold_map <- admit_cryptol (rewrite (cryptol_ss())
   {{ \f xs -> (map_size_2_term f xs) == ([f x1, f x2] where [x1, x2] = xs) }});
 
-demo_BasicAggregateVerify_A_ov <- really_custom_verify
+// Even though it isn't hit in the n=2 case, the mul_fp12_ovs cause trouble
+// TODO: Disabling mul in commit fixed this, but it shouldn't be hit anyway...
+demo_BasicAggregateVerify_A_ov <- custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides/*, mul_fp12_ovs*/]
                 [ all_distinct_ov
@@ -295,6 +356,8 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                 , normalize_uncompress_E2_OK_thm
                 , unfold_all_POINTonE1_affine_invariant_2_thm
                 , unfold_all_POINTonE2_affine_invariant_2_thm
+                , unfold_all_POINTonE1_affine_invariant_5_thm
+                , unfold_all_POINTonE2_affine_invariant_5_thm
                 , affine_inv_affine_rep_e1_thm ];
         rw_with POINTonE1_base_thms;
         unfolding ["POINTonE1_rep"];

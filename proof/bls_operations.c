@@ -154,6 +154,10 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
   blst_pairing ctx;
   blst_pairing_init(&ctx, 1, demo_DST_A, 43);
 
+  // Idea:  Break this out into a function that processes MAX_N elements, and
+  // specify that function.  That may be a good middle ground between verifying
+  // aggregate_pk_in_g2 individually (which could be painful to properly
+  // capture the effects on the context) and this which produces large goals.
   for (size_t i = 0; i < n; ++i) {
     const byte* pk = pks[i];
     // Check and Uncompress PK
