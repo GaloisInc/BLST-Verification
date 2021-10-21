@@ -9,6 +9,7 @@
 
 import json
 import sys
+import re
 
 class DiGraph():
     '''Barely-functional version.'''
@@ -179,12 +180,14 @@ def show_assumptions_file(s, fname=None):
 # goes to https://github.com/GaloisInc/BLST-Verification/blob/main/proof/foo.saw#Lnnn
 
 def pathname_to_uri(p):
-    a = p.split('/')[-1]
-    b = a.split(':')
-    if len(b) < 2:
+    a = p.split(':')
+    b = re.findall(r'proof/(.*)', a[0])
+    if len(a) < 2:
         # raise Exception('Too few colons in %s => %s'%(p,a))
         return None
-    return 'https://github.com/GaloisInc/BLST-Verification/blob/main/proof/%s#L%s'%(b[0], b[1])
+    if len(b) == 0:
+        return None
+    return 'https://github.com/GaloisInc/BLST-Verification/blob/main/proof/%s#L%s'%(b[0], a[1])
 
 def show_method_summaries_html_1(s, f = sys.stdout):
     '''Shows which assumptions are used (even if via some intermediary)'''
