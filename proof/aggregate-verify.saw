@@ -3,6 +3,7 @@ let {{
   all_distinct: {n, m} [n][m][8] -> Bit
   all_distinct messages = undefined
   AGGR_MIN_SIG        = 0x00000001
+  AGGR_MIN_PK         = 0x00000002
   AGGR_SIGN_SET       = 0x00000010
   AGGR_GT_SET         = 0x00000020
   AGGR_HASH_OR_ENCODE = 0x00000040
@@ -76,20 +77,19 @@ let blst_pairing_finalverify_spec = do {
                                                       (fp12_abs GT)) }});
 };
 
-let blst_pairing_aggregate_pk_in_g2_null_sig_spec = do {
+// TODO: non-null sig version (can fix nelems to 0 for that case)
+let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems = do {
   ctx_ptr <- llvm_alloc (llvm_struct "struct.blst_pairing_st");
   //
-  // ctx->ctrl must have AGGR_HASH_OR_ENCODE set, but we leave the rest
-  // uninterpreted
+  // ctx->ctrl must have AGGR_HASH_OR_ENCODE set and AGGR_MIN_PK unset, but we
+  // leave the rest uninterpreted
   ctx_ctrl <- llvm_fresh_var "ctx.ctrl" (llvm_int 32);
   llvm_precond {{ (ctx_ctrl && AGGR_HASH_OR_ENCODE) != 0 }};
+  llvm_precond {{ (ctx_ctrl && AGGR_MIN_PK) == 0 }};
   llvm_points_to (llvm_elem ctx_ptr 0) (llvm_term ctx_ctrl);
   //
-  // ctx.nelems is in the range [0, N_MAX)
-  ctx_nelems <- llvm_fresh_var "ctx.nelems" (llvm_int 32);
-  llvm_precond {{ 0 <= ctx_nelems }};
-  llvm_precond {{ ctx_nelems < `N_MAX }};
-  llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term ctx_nelems);
+  // Set ctx.nelems
+  llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ `ctx_nelems : [32] }});
   //
   dst_ptr <- llvm_alloc_readonly (llvm_array dst_len (llvm_int 8));
   llvm_points_to dst_ptr (llvm_term {{ DST }});
@@ -115,6 +115,12 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec = do {
                     , llvm_null
                     , llvm_term {{ 0 : [64] }} ];
   // TODO: Postcond
+  // TODO: Start with postconds for nelems, Q, and P (in that order)
+  if eval_bool {{ `ctx_nelems == (`N_MAX - 1) }}
+    then llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ 0 : [32] }})
+    else llvm_points_to (llvm_elem ctx_ptr 1)
+                        (llvm_term {{ `ctx_nelems + 1 : [32]}});
+  llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }});
 };
 
 Hash_to_G1_ov <- prove_Hash_to_G1_impl_ov msg_len dst_len aug_len;
@@ -125,7 +131,8 @@ hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms <-
 normalize_hash_to_curve_opt_impl_rws <-
   normalize_hash_to_curve_impl_thms msg_len dst_len aug_len;
 
-blst_pairing_aggregate_pk_in_g2_null_sig_ov <- really_custom_verify
+// TODO: Proof for n_elems = 1
+blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- really_custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -133,7 +140,7 @@ blst_pairing_aggregate_pk_in_g2_null_sig_ov <- really_custom_verify
                 , POINTonE1_from_Jacobian_alias_ov
                 , vec_copy_2fp_ov
                 , miller_loop_n_2_ov ])
-  blst_pairing_aggregate_pk_in_g2_null_sig_spec
+  (blst_pairing_aggregate_pk_in_g2_null_sig_spec 0)
   do {
     unfolding ["POINTonE2_affine_invariant"];
     simplify basic_ss;
