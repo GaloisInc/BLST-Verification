@@ -120,6 +120,14 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems = do {
     then llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ 0 : [32] }})
     else llvm_points_to (llvm_elem ctx_ptr 1)
                         (llvm_term {{ `ctx_nelems + 1 : [32]}});
+  // ctx.Q[ctx.nelems] == pk
+  llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) ctx_nelems) (llvm_term pk);
+  // ctx.P[ctx.nelems] == POINTonE1_affine_rep (affinify E (hash_to_curve_opt_impl (msg, DST)))
+  llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) ctx_nelems)
+                 (llvm_term {{ POINTonE1_affine_rep
+                                 (affinify
+                                   E
+                                   (hash_to_curve_opt_impl (msg, DST))) }});
   llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }});
 };
 
@@ -142,7 +150,8 @@ blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- really_custom_verify
                 , miller_loop_n_2_ov ])
   (blst_pairing_aggregate_pk_in_g2_null_sig_spec 0)
   do {
-    unfolding ["POINTonE2_affine_invariant"];
+    unfolding [ "POINTonE2_affine_invariant"
+              , "BLSMinimalSignatureSize::DST" ];
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with POINTonE1_base_thms;
@@ -152,9 +161,12 @@ blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- really_custom_verify
     rw_with fp_rep_thms;
     rw_with normalize_hash_to_curve_opt_impl_rws;
     rw_with hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms;
+    rw_with remove_ho_rules;
     print_goal;
     //print_readably;
-    w4_unint_z3 BasicVerify_A_unints;
+    w4_unint_z3 (concat [ "affinify_E"
+                        , "hash_to_curve_opt_impl" ]
+                        BasicVerify_A_unints);
   };
 
 
