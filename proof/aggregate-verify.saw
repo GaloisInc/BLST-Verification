@@ -25,6 +25,10 @@ let {{
                 /\ Fp_2.is_equal (fp2_abs a5, Fp_2.field_zero)
 }};
 
+let msg_len = 32;
+let dst_len = 43;
+let aug_len = 0;
+
 let all_distinct_spec n = do {
   let message_len = 32;
   (messages, messages_ptr) <-
@@ -80,7 +84,15 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec = do {
   llvm_precond {{ (ctx_ctrl && AGGR_HASH_OR_ENCODE) != 0 }};
   llvm_points_to (llvm_elem ctx_ptr 0) (llvm_term ctx_ctrl);
   //
+  dst_ptr <- llvm_alloc_readonly (llvm_array dst_len (llvm_int 8));
+  llvm_points_to dst_ptr (llvm_term {{ DST }});
+  llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
+  llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
+  //
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" POINTonE2_affine_type;
+  llvm_precond {{ ~(Fp_2.is_equal (fp2_abs x, Fp_2.field_zero) /\
+                    Fp_2.is_equal (fp2_abs y, Fp_2.field_zero))
+                  where (x, y) = pk }};
   // TODO: Do I need this if keyvalidate is a precond?
   llvm_precond {{ POINTonE2_affine_invariant pk }};
   //
@@ -111,6 +123,8 @@ blst_pairing_aggregate_pk_in_g2_null_sig_ov <- really_custom_verify
   blst_pairing_aggregate_pk_in_g2_null_sig_spec
   do {
     unfolding ["POINTonE2_affine_invariant"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
     print_goal;
     w4_unint_z3 BasicVerify_A_unints;
   };
