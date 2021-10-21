@@ -112,6 +112,12 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec = do {
 
 Hash_to_G1_ov <- prove_Hash_to_G1_impl_ov msg_len dst_len aug_len;
 
+hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms <-
+  core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds msg_len dst_len aug_len;
+
+normalize_hash_to_curve_opt_impl_rws <-
+  normalize_hash_to_curve_impl_thms msg_len dst_len aug_len;
+
 blst_pairing_aggregate_pk_in_g2_null_sig_ov <- really_custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   // TODO: This set does not include ovs needed for sig portion!
@@ -125,7 +131,15 @@ blst_pairing_aggregate_pk_in_g2_null_sig_ov <- really_custom_verify
     unfolding ["POINTonE2_affine_invariant"];
     simplify basic_ss;
     simplify (cryptol_ss());
+    rw_with POINTonE1_base_thms;
+    unfolding ["POINTonE1_rep"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with fp_rep_thms;
+    rw_with normalize_hash_to_curve_opt_impl_rws;
+    rw_with hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms;
     print_goal;
+    //print_readably;
     w4_unint_z3 BasicVerify_A_unints;
   };
 
@@ -161,16 +175,6 @@ let demo_BasicAggregateVerify_A_spec n = do {
       {{ bool_to_limb (CoreAggregateVerify (split`{n} (join (join pks))) messages (join sig)) }});
       */
 };
-
-let msg_len = 32;
-let dst_len = 43;
-let aug_len = 0;
-
-normalize_hash_to_curve_opt_impl_rws <-
-  normalize_hash_to_curve_impl_thms msg_len dst_len aug_len;
-
-hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms <-
-  core_verify_pk_in_g2_POINTonE1_from_Jacobian_hash_preconds msg_len dst_len aug_len;
 
 unfold_all_POINTonE2_affine_invariant_2_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x1 x2 -> all POINTonE2_affine_invariant [x1, x2] ==
