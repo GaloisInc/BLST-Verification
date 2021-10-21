@@ -28,6 +28,7 @@ let {{
 let msg_len = 32;
 let dst_len = 43;
 let aug_len = 0;
+let N_MAX = 2;
 
 let all_distinct_spec n = do {
   let message_len = 32;
@@ -83,6 +84,12 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec = do {
   ctx_ctrl <- llvm_fresh_var "ctx.ctrl" (llvm_int 32);
   llvm_precond {{ (ctx_ctrl && AGGR_HASH_OR_ENCODE) != 0 }};
   llvm_points_to (llvm_elem ctx_ptr 0) (llvm_term ctx_ctrl);
+  //
+  // ctx.nelems is in the range [0, N_MAX)
+  ctx_nelems <- llvm_fresh_var "ctx.nelems" (llvm_int 32);
+  llvm_precond {{ 0 <= ctx_nelems }};
+  llvm_precond {{ ctx_nelems < `N_MAX }};
+  llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term ctx_nelems);
   //
   dst_ptr <- llvm_alloc_readonly (llvm_array dst_len (llvm_int 8));
   llvm_points_to dst_ptr (llvm_term {{ DST }});
