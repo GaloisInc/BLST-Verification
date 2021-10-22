@@ -78,7 +78,7 @@ let blst_pairing_finalverify_spec = do {
 };
 
 // TODO: non-null sig version (can fix nelems to 0 for that case)
-let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems = do {
+let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
   ctx_ptr <- llvm_alloc (llvm_struct "struct.blst_pairing_st");
   //
   // ctx->ctrl must have AGGR_HASH_OR_ENCODE set and AGGR_MIN_PK unset, but we
@@ -86,6 +86,9 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems = do {
   ctx_ctrl <- llvm_fresh_var "ctx.ctrl" (llvm_int 32);
   llvm_precond {{ (ctx_ctrl && AGGR_HASH_OR_ENCODE) != 0 }};
   llvm_precond {{ (ctx_ctrl && AGGR_MIN_PK) == 0 }};
+  if aggr_gt_set
+    then llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) != 0 }}
+    else llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) == 0 }};
   llvm_points_to (llvm_elem ctx_ptr 0) (llvm_term ctx_ctrl);
   //
   // Set ctx.nelems
@@ -95,6 +98,20 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems = do {
   llvm_points_to dst_ptr (llvm_term {{ DST }});
   llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
   llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
+  ctx_GT <- llvm_fresh_var "ctx.GT" vec384fp12_type;
+  llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT);
+  ctx_Q0 <- llvm_fresh_var "ctx.Q0" POINTonE2_affine_type;
+  ctx_P0 <- llvm_fresh_var "ctx.P0" POINTonE1_affine_type;
+  llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) 0) (llvm_term ctx_Q0);
+  llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) 0) (llvm_term ctx_P0);
+  //
+  // Constrain ctx.P and ctx.Q if approaching N_MAX
+  if eval_bool {{ `ctx_nelems == (`N_MAX - 1) }}
+  then do {
+    // TODO: This only works when N_MAX == 2
+    llvm_precond {{ POINTonE2_affine_invariant ctx_Q0 }};
+    llvm_precond {{ POINTonE1_affine_invariant ctx_P0 }};
+  } else do { return (); };
   //
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" POINTonE2_affine_type;
   llvm_precond {{ ~(Fp_2.is_equal (fp2_abs x, Fp_2.field_zero) /\
@@ -114,20 +131,43 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems = do {
                     , llvm_term {{ `msg_len : [64] }}
                     , llvm_null
                     , llvm_term {{ 0 : [64] }} ];
-  // TODO: Postcond
-  // TODO: Start with postconds for nelems, Q, and P (in that order)
+  let P = {{ POINTonE1_affine_rep
+               (affinify E (hash_to_curve_opt_impl (msg, DST))) }};
   if eval_bool {{ `ctx_nelems == (`N_MAX - 1) }}
-    then llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ 0 : [32] }})
-    else llvm_points_to (llvm_elem ctx_ptr 1)
-                        (llvm_term {{ `ctx_nelems + 1 : [32]}});
-  // ctx.Q[ctx.nelems] == pk
-  llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) ctx_nelems) (llvm_term pk);
-  // ctx.P[ctx.nelems] == POINTonE1_affine_rep (affinify E (hash_to_curve_opt_impl (msg, DST)))
-  llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) ctx_nelems)
-                 (llvm_term {{ POINTonE1_affine_rep
-                                 (affinify
-                                   E
-                                   (hash_to_curve_opt_impl (msg, DST))) }});
+  then do {
+    llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ 0 : [32] }});
+    llvm_points_to (llvm_elem ctx_ptr 0)
+                   (llvm_term {{ ctx_ctrl || AGGR_GT_SET  || AGGR_MIN_SIG }});
+    if aggr_gt_set
+    then do {
+      // TODO: postcond
+      return ();
+    } else do {
+      llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term
+        {{ fp12_rep (F_prod Fp_12
+                            [ miller_loop_opt (POINTonE1_affine_abs ctx_P0)
+                                              (POINTonE2_affine_abs ctx_Q0)
+                            , miller_loop_opt (POINTonE1_affine_abs P)
+                                              (POINTonE2_affine_abs pk) ]) }});
+    };
+  } else do {
+    llvm_points_to (llvm_elem ctx_ptr 1)
+                   (llvm_term {{ `ctx_nelems + 1 : [32]}});
+    // These postconditions on Q and P are true in the commit case too, but it
+    // doesn't matter because they've already been processed in that case, so
+    // we ignore them to simplify the proof.
+    // ctx.Q[ctx.nelems] == pk
+    llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) ctx_nelems) (llvm_term pk);
+    // ctx.P[ctx.nelems] == POINTonE1_affine_rep (affinify E (hash_to_curve_opt_impl (msg, DST)))
+    llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) ctx_nelems)
+                   (llvm_term P);
+    // GT is unchanged
+    llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT);
+  };
+  // DST and dst_len are unchanged
+  llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
+  llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
+  // TODO: Prove AggrSign is unchanged
   llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }});
 };
 
@@ -139,7 +179,6 @@ hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms <-
 normalize_hash_to_curve_opt_impl_rws <-
   normalize_hash_to_curve_impl_thms msg_len dst_len aug_len;
 
-// TODO: Proof for n_elems = 1
 blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- really_custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   // TODO: This set does not include ovs needed for sig portion!
@@ -148,7 +187,8 @@ blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- really_custom_verify
                 , POINTonE1_from_Jacobian_alias_ov
                 , vec_copy_2fp_ov
                 , miller_loop_n_2_ov ])
-  (blst_pairing_aggregate_pk_in_g2_null_sig_spec 0)
+  // AGGR_GT_SET will always be set in null_sig case for N_MAX == 2
+  (blst_pairing_aggregate_pk_in_g2_null_sig_spec 0 true)
   do {
     unfolding [ "POINTonE2_affine_invariant"
               , "BLSMinimalSignatureSize::DST" ];
@@ -165,6 +205,64 @@ blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- really_custom_verify
     print_goal;
     //print_readably;
     w4_unint_z3 (concat [ "affinify_E"
+                        , "hash_to_curve_opt_impl" ]
+                        BasicVerify_A_unints);
+  };
+
+unfold_all_POINTonE2_affine_invariant_2_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \x1 x2 -> all POINTonE2_affine_invariant [x1, x2] ==
+               (POINTonE2_affine_invariant x1 /\
+                POINTonE2_affine_invariant x2) }}) [];
+
+unfold_all_POINTonE1_affine_invariant_2_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \x1 x2 -> all POINTonE1_affine_invariant [x1, x2] ==
+               (POINTonE1_affine_invariant x1 /\
+                POINTonE1_affine_invariant x2) }}) [];
+
+// TODO: This needs to look more like map_size_1_term
+let map_size_2_term = parse_core "\\(f : ((Vec 6 (Vec 64 Bool)) * (Vec 6 (Vec 64 Bool))) -> (Integer * Integer)) -> \\(y : Vec 2 ((Vec 6 (Vec 64 Bool)) * (Vec 6 (Vec 64 Bool)))) -> map ((Vec 6 (Vec 64 Bool)) * (Vec 6 (Vec 64 Bool))) (Integer * Integer) f 2 y";
+
+unfold_map <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \f xs -> (map_size_2_term f xs) == ([f x1, f x2] where [x1, x2] = xs) }});
+
+// A proof for the first time n == N_MAX (AGGR_GT_SET is unset)
+blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- really_custom_verify
+  "blst_pairing_aggregate_pk_in_g2"
+  // TODO: This set does not include ovs needed for sig portion!
+  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
+                [ Hash_to_G1_ov
+                , POINTonE1_from_Jacobian_alias_ov
+                , vec_copy_2fp_ov
+                , miller_loop_n_2_ov ])
+  (blst_pairing_aggregate_pk_in_g2_null_sig_spec 1 false)
+  do {
+    // BEGIN N == 2 specific
+    rw_with [ unfold_all_POINTonE1_affine_invariant_2_thm
+            , unfold_all_POINTonE2_affine_invariant_2_thm ];
+    unfolding [ "Cryptol::map" ];
+    rw_with [unfold_map];
+    // END N == 2 specific
+    unfolding [ "POINTonE2_affine_invariant"
+              , "BLSMinimalSignatureSize::DST" ];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with POINTonE1_base_thms;
+    unfolding ["POINTonE1_rep"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with fp_rep_thms;
+    rw_with normalize_hash_to_curve_opt_impl_rws;
+    rw_with hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms;
+    // BEGIN N == 2 specific
+    rw_with [normalize_affinify_thm, F_prod_Fp_12_thm];
+    // END N == 2 specific
+    rw_with remove_ho_rules;
+    print_goal;
+    //print_readably;
+    w4_unint_z3 (concat [ "affinify_E"
+                        , "fp12_rep"
+                        , "F_prod_Fp_12"
+                        , "miller_loop_opt"
                         , "hash_to_curve_opt_impl" ]
                         BasicVerify_A_unints);
   };
@@ -201,16 +299,6 @@ let demo_BasicAggregateVerify_A_spec n = do {
       {{ bool_to_limb (CoreAggregateVerify (split`{n} (join (join pks))) messages (join sig)) }});
       */
 };
-
-unfold_all_POINTonE2_affine_invariant_2_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \x1 x2 -> all POINTonE2_affine_invariant [x1, x2] ==
-               (POINTonE2_affine_invariant x1 /\
-                POINTonE2_affine_invariant x2) }}) [];
-
-unfold_all_POINTonE1_affine_invariant_2_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \x1 x2 -> all POINTonE1_affine_invariant [x1, x2] ==
-               (POINTonE1_affine_invariant x1 /\
-                POINTonE1_affine_invariant x2) }}) [];
 
 unfold_all_POINTonE2_affine_invariant_5_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x1 x2 x3 x4 x5 -> all POINTonE2_affine_invariant [x1, x2, x3, x4, x5] ==
@@ -320,12 +408,6 @@ blst_pairing_finalverify_ov <- custom_verify
                         , "fp12_abs" ]
                         BasicVerify_A_unints);
   };
-
-// TODO: This needs to look more like map_size_1_term
-let map_size_2_term = parse_core "\\(f : ((Vec 6 (Vec 64 Bool)) * (Vec 6 (Vec 64 Bool))) -> (Integer * Integer)) -> \\(y : Vec 2 ((Vec 6 (Vec 64 Bool)) * (Vec 6 (Vec 64 Bool)))) -> map ((Vec 6 (Vec 64 Bool)) * (Vec 6 (Vec 64 Bool))) (Integer * Integer) f 2 y";
-
-unfold_map <- admit_cryptol (rewrite (cryptol_ss())
-  {{ \f xs -> (map_size_2_term f xs) == ([f x1, f x2] where [x1, x2] = xs) }});
 
 // Even though it isn't hit in the n=2 case, the mul_fp12_ovs cause trouble
 // TODO: Disabling mul in commit fixed this, but it shouldn't be hit anyway...
