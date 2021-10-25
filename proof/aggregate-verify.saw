@@ -86,9 +86,6 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
   ctx_ctrl <- llvm_fresh_var "ctx.ctrl" (llvm_int 32);
   llvm_precond {{ (ctx_ctrl && AGGR_HASH_OR_ENCODE) != 0 }};
   llvm_precond {{ (ctx_ctrl && AGGR_MIN_PK) == 0 }};
-  if aggr_gt_set
-    then llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) != 0 }}
-    else llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) == 0 }};
   llvm_points_to (llvm_elem ctx_ptr 0) (llvm_term ctx_ctrl);
   //
   // Set ctx.nelems
@@ -99,6 +96,11 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
   llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
   llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
   ctx_GT <- llvm_fresh_var "ctx.GT" vec384fp12_type;
+  if aggr_gt_set
+    then do {
+      llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) != 0 }};
+      llvm_precond {{ fp12_invariant ctx_GT }};
+    } else llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) == 0 }};
   llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT);
   ctx_Q0 <- llvm_fresh_var "ctx.Q0" POINTonE2_affine_type;
   ctx_P0 <- llvm_fresh_var "ctx.P0" POINTonE1_affine_type;
@@ -186,7 +188,7 @@ hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms <-
 normalize_hash_to_curve_opt_impl_rws <-
   normalize_hash_to_curve_impl_thms msg_len dst_len aug_len;
 
-blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- really_custom_verify
+blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -233,7 +235,8 @@ unfold_map <- admit_cryptol (rewrite (cryptol_ss())
   {{ \f xs -> (map_size_2_term f xs) == ([f x1, f x2] where [x1, x2] = xs) }});
 
 // A proof for the first time n == N_MAX (AGGR_GT_SET is unset)
-blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- really_custom_verify
+// TODO: Prove n-th commit case (AGGR_GT_SET is set)
+blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -263,6 +266,46 @@ blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- really_custom_veri
     // BEGIN N == 2 specific
     rw_with [normalize_affinify_thm, F_prod_Fp_12_thm];
     // END N == 2 specific
+    rw_with remove_ho_rules;
+    print_goal;
+    //print_readably;
+    w4_unint_z3 (concat [ "affinify_E"
+                        , "fp12_rep"
+                        , "F_prod_Fp_12"
+                        , "miller_loop_opt"
+                        , "hash_to_curve_opt_impl" ]
+                        BasicVerify_A_unints);
+  };
+
+blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov <- really_custom_verify
+  "blst_pairing_aggregate_pk_in_g2"
+  // TODO: This set does not include ovs needed for sig portion!
+  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
+                [ Hash_to_G1_ov
+                , POINTonE1_from_Jacobian_alias_ov
+                , vec_copy_2fp_ov
+                , miller_loop_n_2_ov ])
+  (blst_pairing_aggregate_pk_in_g2_null_sig_spec 1 true)
+  do {
+    rw_with [ unfold_all_POINTonE1_affine_invariant_2_thm
+            , unfold_all_POINTonE2_affine_invariant_2_thm ];
+    unfolding [ "Cryptol::map" ];
+    rw_with [unfold_map];
+    unfolding [ "POINTonE2_affine_invariant"
+              , "BLSMinimalSignatureSize::DST" ];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with POINTonE1_base_thms;
+    unfolding ["POINTonE1_rep"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with fp_rep_thms;
+    rw_with normalize_hash_to_curve_opt_impl_rws;
+    rw_with hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms;
+    rw_with [normalize_affinify_thm, F_prod_Fp_12_thm];
+    // BEGIN nth_commit specific
+    rw_with fp12_rep_thms;
+    // END nth_commit specific
     rw_with remove_ho_rules;
     print_goal;
     //print_readably;
