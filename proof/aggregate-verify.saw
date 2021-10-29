@@ -189,7 +189,7 @@ hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms <-
 normalize_hash_to_curve_opt_impl_rws <-
   normalize_hash_to_curve_impl_thms msg_len dst_len aug_len;
 
-blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- really_custom_verify
+blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -237,7 +237,7 @@ unfold_map <- admit_cryptol (rewrite (cryptol_ss())
 
 // A proof for the first time n == N_MAX (AGGR_GT_SET is unset)
 // TODO: Prove n-th commit case (AGGR_GT_SET is set)
-blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- really_custom_verify
+blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -278,7 +278,7 @@ blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- really_custom_veri
                         BasicVerify_A_unints);
   };
 
-blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov <- really_custom_verify
+blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -318,6 +318,113 @@ blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov <- really_custom_verify
                         BasicVerify_A_unints);
   };
 
+let blst_pairing_aggregate_pk_in_g2_sig_spec = do {
+  ctx_ptr <- llvm_alloc (llvm_struct "struct.blst_pairing_st");
+  //
+  // ctx->ctrl must have AGGR_HASH_OR_ENCODE set and AGGR_MIN_PK unset, but we
+  // leave the rest uninterpreted
+  ctx_ctrl <- llvm_fresh_var "ctx.ctrl" (llvm_int 32);
+  llvm_precond {{ (ctx_ctrl && AGGR_HASH_OR_ENCODE) != 0 }};
+  llvm_precond {{ (ctx_ctrl && AGGR_MIN_PK) == 0 }};
+  llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) == 0 }};
+  llvm_precond {{ (ctx_ctrl && AGGR_SIGN_SET) == 0 }};
+  llvm_points_to (llvm_elem ctx_ptr 0) (llvm_term ctx_ctrl);
+  //
+  // Set ctx.nelems
+  llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ 0 : [32] }});
+  //
+  dst_ptr <- llvm_alloc_readonly (llvm_array dst_len (llvm_int 8));
+  llvm_points_to dst_ptr (llvm_term {{ DST }});
+  llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
+  llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
+  ctx_GT <- llvm_fresh_var "ctx.GT" vec384fp12_type;
+  llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT);
+  // Technically AggrSign is a POINTonE1 here, but because it's a union type
+  // with POINTonE2, it occupies the same space as a POINTonE2.  We only need
+  // to prove that AggrSign is unchanged, so we don't care about this
+  // difference and just use a POINTonE2 to simplify things.
+  ctx_AggrSign <- llvm_fresh_var "ctx.AggrSign" POINTonE2_type;
+  llvm_points_to (llvm_elem ctx_ptr 5) (llvm_term ctx_AggrSign);
+  //
+  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" POINTonE2_affine_type;
+  llvm_precond {{ ~(Fp_2.is_equal (fp2_abs x, Fp_2.field_zero) /\
+                    Fp_2.is_equal (fp2_abs y, Fp_2.field_zero))
+                  where (x, y) = pk }};
+  // TODO: Do I need this if keyvalidate is a precond?
+  llvm_precond {{ POINTonE2_affine_invariant pk }};
+  //
+  (sig, sig_ptr) <- ptr_to_fresh_readonly "sig" POINTonE1_affine_type;
+  llvm_precond {{ ~ (is_point_O E (POINTonE1_affine_abs sig)) }};
+  llvm_precond {{ POINTonE1_affine_invariant sig }};
+  llvm_precond {{ is_point_affine E (POINTonE1_affine_abs sig) }};
+  llvm_precond {{ is_in_g1_impl (POINTonE1_affine_abs sig) }};
+  // TODO: This handles vec_is_zero, but I think there are rewrite rules to
+  // derive is_point_O from (or to) this, which might make for a better spec,
+  // and an uglier proof.
+  llvm_precond {{ ~(Fp.is_equal (fp_abs x, Fp.field_zero) /\
+                    Fp.is_equal (fp_abs y, Fp.field_zero))
+                  where (x, y) = sig }};
+  //
+  let msg_len = 32;
+  (msg, msg_ptr) <-
+      ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  llvm_execute_func [ ctx_ptr
+                    , pk_ptr
+                    , sig_ptr
+                    , msg_ptr
+                    , llvm_term {{ `msg_len : [64] }}
+                    , llvm_null
+                    , llvm_term {{ 0 : [64] }} ];
+  llvm_points_to (llvm_elem ctx_ptr 0)
+                 (llvm_term {{ ctx_ctrl || AGGR_SIGN_SET  || AGGR_MIN_SIG }});
+  let P = {{ POINTonE1_affine_rep
+               (affinify E (hash_to_curve_opt_impl (msg, DST))) }};
+  llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ 1 : [32]}});
+  // These postconditions on Q and P are true in the commit case too, but it
+  // doesn't matter because they've already been processed in that case, so
+  // we ignore them to simplify the proof.
+  // ctx.Q[ctx.nelems] == pk
+  llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) 0) (llvm_term pk);
+  // ctx.P[ctx.nelems] == POINTonE1_affine_rep (affinify E (hash_to_curve_opt_impl (msg, DST)))
+  llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) 0) (llvm_term P);
+  // GT is unchanged
+  llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT);
+  // DST, dst_len, and AggrSign are unchanged
+  llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
+  llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
+  // TODO: AggrSign spec
+  llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }});
+};
+
+blst_pairing_aggregate_pk_in_g2_sig_ov <- really_custom_verify
+  "blst_pairing_aggregate_pk_in_g2"
+  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
+                [ Hash_to_G1_ov
+                , POINTonE1_from_Jacobian_alias_ov
+                , POINTonE1_in_G1_ov
+                , vec_copy_2fp_ov
+                , miller_loop_n_2_ov ])
+  blst_pairing_aggregate_pk_in_g2_sig_spec
+  do {
+    unfolding [ "POINTonE2_affine_invariant"
+              , "POINTonE1_affine_invariant"
+              , "BLSMinimalSignatureSize::DST" ];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with POINTonE1_base_thms;
+    unfolding ["POINTonE1_rep"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with fp_rep_thms;
+    rw_with normalize_hash_to_curve_opt_impl_rws;
+    rw_with hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms;
+    rw_with remove_ho_rules;
+    print_goal;
+    //print_readably;
+    w4_unint_z3 (concat [ "affinify_E"
+                        , "hash_to_curve_opt_impl" ]
+                        BasicVerify_A_unints);
+  };
 
 let demo_BasicAggregateVerify_A_spec n = do {
   global_alloc_init "demo_DST_A" {{ DST }};
