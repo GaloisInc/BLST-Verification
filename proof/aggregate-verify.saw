@@ -392,7 +392,11 @@ let blst_pairing_aggregate_pk_in_g2_sig_spec = do {
   // DST, dst_len, and AggrSign are unchanged
   llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
   llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
-  // TODO: AggrSign spec
+  // AggrSign contains FROM_AFFINE(sig).  Untyped because AggrSign is a union
+  // of POINTonE1 and POINTonE2
+  llvm_points_to_untyped
+      (llvm_elem ctx_ptr 5)
+      (llvm_term {{ [ sig.0, sig.1, one_mont_p ] }});
   llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }});
 };
 
