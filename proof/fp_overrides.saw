@@ -65,16 +65,17 @@ let binop_spec name llvm_type inv rep abs op = do {
   (y, y_ptr) <- ptr_to_fresh_readonly "y" llvm_type;
   crucible_precond {{ inv x /\ inv y }};
   crucible_execute_func [ret_ptr, x_ptr, y_ptr];
-  if use_abs_method
+  res <- if use_abs_method
   then do {
     ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
-    crucible_points_to ret_ptr (crucible_term ret);
-    crucible_postcond {{inv ret }};
     crucible_postcond {{ abs ret == op (abs x, abs y) }};
+    return ret;
     }
   else if use_concrete_method
-  then crucible_points_to ret_ptr (crucible_term {{ rep (op (abs x, abs y)) }})
-  else crucible_points_to ret_ptr (crucible_term {{ op x y }});
+  then return {{ rep (op (abs x, abs y)) }}
+  else return {{ op x y }};
+  crucible_points_to ret_ptr (crucible_term res);
+  crucible_postcond {{ inv res }};
 };
 
 let binop_alias_1_2_spec name llvm_type inv rep abs op = do {
@@ -82,16 +83,17 @@ let binop_alias_1_2_spec name llvm_type inv rep abs op = do {
   (y, y_ptr) <- ptr_to_fresh_readonly "y" llvm_type;
   crucible_precond {{ inv x /\ inv y }};
   crucible_execute_func [x_ptr, x_ptr, y_ptr];
-  if use_abs_method
+  res <- if use_abs_method
   then do {
     ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
-    crucible_points_to x_ptr (crucible_term ret);
-    crucible_postcond {{inv ret }};
     crucible_postcond {{ abs ret == op (abs x, abs y) }};
+    return ret;
     }
   else if use_concrete_method
-  then crucible_points_to x_ptr (crucible_term {{ rep (op (abs x, abs y)) }})
-  else crucible_points_to x_ptr (crucible_term {{ op x y }});
+  then return {{ rep (op (abs x, abs y)) }}
+  else return {{ op x y }};
+  crucible_points_to x_ptr (crucible_term res);
+  crucible_postcond {{ inv res }};
 };
 
 // generic binary operation specification, pass-by-reference, aliasing return with second arg
@@ -101,14 +103,18 @@ let binop_alias_1_3_spec name llvm_type inv rep abs op = do {
   (y, y_ptr) <- ptr_to_fresh "y" llvm_type;
   crucible_precond {{ inv x /\ inv y }};
   crucible_execute_func [y_ptr, x_ptr, y_ptr];
-  crucible_points_to y_ptr (crucible_term {{ rep (op (abs x, abs y)) }});
+  let res = {{ rep (op (abs x, abs y)) }};
+  crucible_points_to y_ptr (crucible_term res);
+  crucible_postcond {{ inv res }};
 };
 
 let binop_alias_1_2_3_spec name llvm_type inv rep abs op = do {
   (x, x_ptr) <- ptr_to_fresh "x" llvm_type;
   crucible_precond {{ inv x }};
   crucible_execute_func [x_ptr, x_ptr, x_ptr];
-  crucible_points_to x_ptr (crucible_term {{ rep (op (abs x, abs x)) }});
+  let res = {{ rep (op (abs x, abs x)) }};
+  crucible_points_to x_ptr (crucible_term res);
+  crucible_postcond {{ inv res }};
 };
 
 ////////////////////////////////////////////////////////////////
@@ -122,9 +128,11 @@ let binop_alias_1_2_3_spec name llvm_type inv rep abs op = do {
 
 fp_rep_thms <- for
   [ {{ \x -> fp_invariant (fp_rep x) == True }}
+  , {{ \x -> fp_invariant (fp_normalize x) == True }}
   , {{ \x -> fp_rep (fp_abs x) == if fp_invariant x then x else fp_normalize x}}
   //, {{ \x -> fp_rep (fp_abs x) == fp_normalize x}} // maybe consider this version of rep_abs?
   , {{ \x -> fp_abs (fp_rep x) == Fp.normalize x }}
+  , {{ \x -> Fp.normalize (fp_abs x) == fp_abs x }}
   ] admit_cryptol;
 
 // a conditional rewrite for normalization.  This uses "apply" to avoid having
