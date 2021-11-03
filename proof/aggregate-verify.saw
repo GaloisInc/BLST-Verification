@@ -189,7 +189,7 @@ hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms <-
 normalize_hash_to_curve_opt_impl_rws <-
   normalize_hash_to_curve_impl_thms msg_len dst_len aug_len;
 
-blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- custom_verify
+blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- really_custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -337,19 +337,9 @@ let blst_pairing_aggregate_pk_in_g2_sig_spec = do {
   llvm_points_to dst_ptr (llvm_term {{ DST }});
   llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
   llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
-  ctx_GT <- llvm_fresh_var "ctx.GT" vec384fp12_type;
-  llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT);
-  // Technically AggrSign is a POINTonE1 here, but because it's a union type
-  // with POINTonE2, it occupies the same space as a POINTonE2.  We only need
-  // to prove that AggrSign is unchanged, so we don't care about this
-  // difference and just use a POINTonE2 to simplify things.
-  ctx_AggrSign <- llvm_fresh_var "ctx.AggrSign" POINTonE2_type;
-  llvm_points_to (llvm_elem ctx_ptr 5) (llvm_term ctx_AggrSign);
   //
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" POINTonE2_affine_type;
-  llvm_precond {{ ~(Fp_2.is_equal (fp2_abs x, Fp_2.field_zero) /\
-                    Fp_2.is_equal (fp2_abs y, Fp_2.field_zero))
-                  where (x, y) = pk }};
+  llvm_precond {{ ~(is_point_O E' (POINTonE2_affine_abs pk)) }};
   // TODO: Do I need this if keyvalidate is a precond?
   llvm_precond {{ POINTonE2_affine_invariant pk }};
   //
@@ -387,9 +377,7 @@ let blst_pairing_aggregate_pk_in_g2_sig_spec = do {
   llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) 0) (llvm_term pk);
   // ctx.P[ctx.nelems] == POINTonE1_affine_rep (affinify E (hash_to_curve_opt_impl (msg, DST)))
   llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) 0) (llvm_term P);
-  // GT is unchanged
-  llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT);
-  // DST, dst_len, and AggrSign are unchanged
+  // DST, and dst_len are unchanged
   llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
   llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
   // AggrSign contains FROM_AFFINE(sig).  Untyped because AggrSign is a union
@@ -412,6 +400,10 @@ blst_pairing_aggregate_pk_in_g2_sig_ov <- really_custom_verify
   do {
     unfolding [ "POINTonE2_affine_invariant"
               , "POINTonE1_affine_invariant"
+              , "is_point_O"
+              , "same_point_affine"
+              , "point_O"
+              , "POINTonE2_affine_abs"
               , "BLSMinimalSignatureSize::DST" ];
     simplify basic_ss;
     simplify (cryptol_ss());
@@ -573,7 +565,8 @@ blst_pairing_finalverify_ov <- custom_verify
 
 // Even though it isn't hit in the n=2 case, the mul_fp12_ovs cause trouble
 // TODO: Disabling mul in commit fixed this, but it shouldn't be hit anyway...
-demo_BasicAggregateVerify_A_ov <- custom_verify
+// TODO: Re-enable commit
+demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides/*, mul_fp12_ovs*/]
                 [ all_distinct_ov
@@ -591,6 +584,13 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
                 , miller_loop_n_2_ov
                 // ovs used in blst_pairing_finalverify:
                 , blst_pairing_finalverify_ov
+                // Pairing aggregate ovs
+                /*
+                , blst_pairing_aggregate_pk_in_g2_null_sig_0_ov
+                , blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov
+                , blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov
+                */
+                , blst_pairing_aggregate_pk_in_g2_sig_ov
                 /*
                 , POINTonE1_from_Jacobian_ov
                 , miller_loop_n_1_ov
@@ -708,7 +708,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
             simplify basic_ss;
             simplify (cryptol_ss());
             rw_with [unfold_map];
-            print_goal;
+            print_readably;
             w4_unint_z3 (concat [ "all_distinct" ]
                                 BasicVerify_A_unints);
           }));

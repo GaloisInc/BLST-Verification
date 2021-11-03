@@ -158,7 +158,7 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
   // specify that function.  That may be a good middle ground between verifying
   // aggregate_pk_in_g2 individually (which could be painful to properly
   // capture the effects on the context) and this which produces large goals.
-  for (size_t i = 0; i < n; ++i) {
+  for (size_t i = 0; i < 1/*n*/; ++i) {
     const byte* pk = pks[i];
     // Check and Uncompress PK
     // TODO: Do I have to do these checks?  Or does BLST do them internally?
@@ -176,8 +176,12 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
                                         NULL,
                                         0) != BLST_SUCCESS) return 0;
   }
+  // TODO: Re-enable commit
+  /*
   blst_pairing_commit(&ctx);
   return blst_pairing_finalverify(&ctx, NULL);
+  */
+  return 1;
 }
 
 /*
