@@ -95,21 +95,22 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
   llvm_points_to dst_ptr (llvm_term {{ DST }});
   llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
   llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
-  ctx_GT <- llvm_fresh_var "ctx.GT" vec384fp12_type;
+  ctx_GT <- if aggr_gt_set
+            then llvm_fresh_var "ctx.GT" vec384fp12_type
+            else return {{ undefined }};
   if aggr_gt_set
     then do {
       llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) != 0 }};
       llvm_precond {{ fp12_invariant ctx_GT }};
+      llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT);
     } else llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) == 0 }};
-  llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT);
   ctx_Q0 <- llvm_fresh_var "ctx.Q0" POINTonE2_affine_type;
   ctx_P0 <- llvm_fresh_var "ctx.P0" POINTonE1_affine_type;
   // Technically AggrSign is a POINTonE1 here, but because it's a union type
-  // with POINTonE2, it occupies the same space as a POINTonE2.  We only need
-  // to prove that AggrSign is unchanged, so we don't care about this
-  // difference and just use a POINTonE2 to simplify things.
-  ctx_AggrSign <- llvm_fresh_var "ctx.AggrSign" POINTonE2_type;
-  llvm_points_to (llvm_elem ctx_ptr 5) (llvm_term ctx_AggrSign);
+  // with POINTonE2, it occupies the same space as a POINTonE2.  Therefore, we
+  // must use llvm_points_to_untyped
+  ctx_AggrSign <- llvm_fresh_var "ctx.AggrSign" POINTonE1_type;
+  llvm_points_to_untyped (llvm_elem ctx_ptr 5) (llvm_term ctx_AggrSign);
   llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) 0) (llvm_term ctx_Q0);
   llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) 0) (llvm_term ctx_P0);
   //
@@ -122,9 +123,7 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
   } else do { return (); };
   //
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" POINTonE2_affine_type;
-  llvm_precond {{ ~(Fp_2.is_equal (fp2_abs x, Fp_2.field_zero) /\
-                    Fp_2.is_equal (fp2_abs y, Fp_2.field_zero))
-                  where (x, y) = pk }};
+  llvm_precond {{ ~(is_point_O E' (POINTonE2_affine_abs pk)) }};
   // TODO: Do I need this if keyvalidate is a precond?
   llvm_precond {{ POINTonE2_affine_invariant pk }};
   //
@@ -157,6 +156,7 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
       llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term
         {{ fp12_rep (Fp_12.mul (fp12_abs ctx_GT, fp12_abs GT)) }});
     } else do {
+      // GT is unchanged
       llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term GT);
     };
   } else do {
@@ -170,13 +170,11 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
     // ctx.P[ctx.nelems] == POINTonE1_affine_rep (affinify E (hash_to_curve_opt_impl (msg, DST)))
     llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) ctx_nelems)
                    (llvm_term P);
-    // GT is unchanged
-    llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT);
   };
   // DST, dst_len, and AggrSign are unchanged
   llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
   llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
-  llvm_points_to (llvm_elem ctx_ptr 5) (llvm_term ctx_AggrSign);
+  llvm_points_to_untyped (llvm_elem ctx_ptr 5) (llvm_term ctx_AggrSign);
   // TODO: Prove AggrSign is unchanged
   llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }});
 };
@@ -201,6 +199,10 @@ blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- really_custom_verify
   (blst_pairing_aggregate_pk_in_g2_null_sig_spec 0 true)
   do {
     unfolding [ "POINTonE2_affine_invariant"
+              , "is_point_O"
+              , "same_point_affine"
+              , "point_O"
+              , "POINTonE2_affine_abs"
               , "BLSMinimalSignatureSize::DST" ];
     simplify basic_ss;
     simplify (cryptol_ss());
@@ -237,7 +239,7 @@ unfold_map <- admit_cryptol (rewrite (cryptol_ss())
 
 // A proof for the first time n == N_MAX (AGGR_GT_SET is unset)
 // TODO: Prove n-th commit case (AGGR_GT_SET is set)
-blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- custom_verify
+blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- really_custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -254,6 +256,10 @@ blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- custom_verify
     rw_with [unfold_map];
     // END N == 2 specific
     unfolding [ "POINTonE2_affine_invariant"
+              , "is_point_O"
+              , "same_point_affine"
+              , "point_O"
+              , "POINTonE2_affine_abs"
               , "BLSMinimalSignatureSize::DST" ];
     simplify basic_ss;
     simplify (cryptol_ss());
@@ -278,7 +284,7 @@ blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- custom_verify
                         BasicVerify_A_unints);
   };
 
-blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov <- custom_verify
+blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov <- really_custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -293,6 +299,10 @@ blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov <- custom_verify
     unfolding [ "Cryptol::map" ];
     rw_with [unfold_map];
     unfolding [ "POINTonE2_affine_invariant"
+              , "is_point_O"
+              , "same_point_affine"
+              , "point_O"
+              , "POINTonE2_affine_abs"
               , "BLSMinimalSignatureSize::DST" ];
     simplify basic_ss;
     simplify (cryptol_ss());
@@ -388,7 +398,7 @@ let blst_pairing_aggregate_pk_in_g2_sig_spec = do {
   llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }});
 };
 
-blst_pairing_aggregate_pk_in_g2_sig_ov <- really_custom_verify
+blst_pairing_aggregate_pk_in_g2_sig_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ Hash_to_G1_ov
@@ -587,9 +597,9 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                 // Pairing aggregate ovs
                 /*
                 , blst_pairing_aggregate_pk_in_g2_null_sig_0_ov
-                , blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov
                 , blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov
                 */
+                , blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov
                 , blst_pairing_aggregate_pk_in_g2_sig_ov
                 /*
                 , POINTonE1_from_Jacobian_ov
