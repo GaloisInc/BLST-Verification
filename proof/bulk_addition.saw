@@ -30,14 +30,36 @@ include "print_readably.saw";
 import "../spec/BulkAddition.cry";
 
 let {{
-bulk_addition_POINTonE1_head : POINTonE1_affine_t -> POINTonE1_affine_t -> Fp_rep_t -> (POINTonE1_t, POINTonE1_t)
-bulk_addition_POINTonE1_head a b acc = (POINTonE1_rep a', POINTonE1_rep b')
+bulk_addition_POINTonE1_head : POINTonE1_affine_t -> POINTonE1_affine_t -> Fp_rep_t -> [2]POINTonE1_t
+bulk_addition_POINTonE1_head a b acc = [POINTonE1_rep a', POINTonE1_rep b']
   where
     (a', b') = bulk_addition_head_imp Fp (POINTonE1_affine_abs a) (POINTonE1_affine_abs b) (fp_abs acc)
-bulk_addition_POINTonE2_head : POINTonE2_affine_t -> POINTonE2_affine_t -> Fp_2_rep_t -> (POINTonE2_t, POINTonE2_t)
-bulk_addition_POINTonE2_head a b acc = (POINTonE2_rep a', POINTonE2_rep b')
+bulk_addition_POINTonE2_head : POINTonE2_affine_t -> POINTonE2_affine_t -> Fp_2_rep_t -> [2]POINTonE2_t
+bulk_addition_POINTonE2_head a b acc = [POINTonE2_rep a', POINTonE2_rep b']
   where
     (a', b') = bulk_addition_head_imp Fp_2 (POINTonE2_affine_abs a) (POINTonE2_affine_abs b) (fp2_abs acc)
+
+bulk_addition_head_fp = bulk_addition_head_imp Fp
+bulk_addition_tail_fp = bulk_addition_tail Fp
+bulk_addition_tail_bz_fp = bulk_addition_tail_bz Fp
+stuff_fp =
+  { field = Fp
+  , bulk_addition_head_fn = bulk_addition_head_fp
+  , bulk_addition_tail_fn = bulk_addition_tail_fp
+  , bulk_addition_tail_bz_fn = bulk_addition_tail_bz_fp
+  , point_dadd_affine_fn = point_dadd_affine_fp
+  }
+
+bulk_addition_head_fp2 = bulk_addition_head_imp Fp_2
+bulk_addition_tail_fp2 = bulk_addition_tail Fp_2
+bulk_addition_tail_bz_fp2 = bulk_addition_tail_bz Fp_2
+stuff_fp2 =
+  { field = Fp_2
+  , bulk_addition_head_fn = bulk_addition_head_fp2
+  , bulk_addition_tail_fn = bulk_addition_tail_fp2
+  , bulk_addition_tail_bz_fn = bulk_addition_tail_bz_fp2
+  , point_dadd_affine_fn = point_dadd_affine_fp2
+  }
 }};
 
 
@@ -55,24 +77,26 @@ let blst_p1s_add_spec_1 n = do {
   llvm_points_to (llvm_elem points_ptr 1) llvm_null;
   llvm_precond {{ all POINTonE1_affine_invariant array }};
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n:[64]}}];
-  let sum = {{ POINTonE1_rep (bulk_accumulate Fp (0, 0, 0) (map POINTonE1_affine_abs array)) }};
+  let sum = {{ POINTonE1_rep (bulk_accumulate stuff_fp (Fp.field_zero, Fp.field_zero, Fp.field_zero) (map POINTonE1_affine_abs array)) }};
   llvm_postcond {{ POINTonE1_invariant sum }};
   llvm_points_to sum_ptr (llvm_term sum);
 };
 
 // here we have a first lonely point, and then the rest of the points in an array
 let blst_p1s_add_spec_2 n = do {
-  (sum, sum_ptr) <- ptr_to_fresh "sum" POINTonE1_type;
+  sum_ptr <- llvm_alloc POINTonE1_type;
   (point_1, point_1_ptr) <- ptr_to_fresh "point_1" POINTonE1_affine_type;
   points_ptr <- llvm_alloc (llvm_array 3 (llvm_pointer POINTonE1_affine_type));
   (array, array_ptr) <- ptr_to_fresh "array" (llvm_array n POINTonE1_affine_type);
   llvm_points_to (llvm_elem points_ptr 0) point_1_ptr;
   llvm_points_to (llvm_elem points_ptr 1) array_ptr;
   llvm_points_to (llvm_elem points_ptr 2) llvm_null;
-  llvm_precond {{ POINTonE1_invariant sum }};
   llvm_precond {{ POINTonE1_affine_invariant point_1 }};
   llvm_precond {{ all POINTonE1_affine_invariant array }};
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n+1:[64]}}];
+  let sum = {{ POINTonE1_rep (bulk_accumulate stuff_fp (Fp.field_zero, Fp.field_zero, Fp.field_zero) (map POINTonE1_affine_abs ([point_1] # array))) }};
+  llvm_postcond {{ POINTonE1_invariant sum }};
+  llvm_points_to sum_ptr (llvm_term sum);
 };
 
 let POINTonE1_head_spec = do {
@@ -86,10 +110,9 @@ let POINTonE1_head_spec = do {
   llvm_precond {{ POINTonE1_affine_invariant B }};
   llvm_precond {{ fp_invariant mul_acc }};
   llvm_execute_func [AB_ptr, mul_acc_ptr];
-  let {{ (A', B') = bulk_addition_POINTonE1_head A B mul_acc }};
-  llvm_postcond {{ POINTonE1_invariant A' }};
-  llvm_postcond {{ POINTonE1_invariant B' }};
-  llvm_points_to AB_ptr (llvm_term {{ [A', B'] }});
+  let AB' = {{ bulk_addition_POINTonE1_head A B mul_acc }};
+  llvm_postcond {{ all POINTonE1_invariant AB' }};
+  llvm_points_to AB_ptr (llvm_term AB');
 };
 
 let POINTonE1_head_null_spec = do {
@@ -101,19 +124,16 @@ let POINTonE1_head_null_spec = do {
   llvm_precond {{ POINTonE1_affine_invariant A }};
   llvm_precond {{ POINTonE1_affine_invariant B }};
   llvm_execute_func [AB_ptr, llvm_null];
-  let {{ (A', B') = bulk_addition_POINTonE1_head A B (fp_rep Fp.field_unit) }};
-  llvm_postcond {{ POINTonE1_invariant A' }};
-  llvm_postcond {{ POINTonE1_invariant B' }};
-  llvm_points_to AB_ptr (llvm_term {{ [A', B'] }});
+  let AB' = {{ bulk_addition_POINTonE1_head A B (fp_rep Fp.field_unit) }};
+  llvm_postcond {{ all POINTonE1_invariant AB' }};
+  llvm_points_to AB_ptr (llvm_term AB');
 };
 
 let POINTonE1_tail_spec = do {
   D_ptr <- llvm_alloc POINTonE1_type;
   AB_ptr <- llvm_alloc (llvm_array 2 POINTonE1_type);
   A <- llvm_fresh_var "A" POINTonE1_type;
-  let {{ (a_x, a_y, _a_z) = A }};
   B <- llvm_fresh_var "B" POINTonE1_type;
-  let {{ (b_x, b_y, b_z) = B }};
   llvm_points_to (llvm_elem AB_ptr 0) (llvm_term A);
   llvm_points_to (llvm_elem AB_ptr 1) (llvm_term B);
   (lambda, lambda_ptr) <- ptr_to_fresh "lambda" vec384_type;
@@ -122,25 +142,21 @@ let POINTonE1_tail_spec = do {
   llvm_precond {{ fp_invariant lambda }};
   llvm_execute_func [D_ptr, AB_ptr, lambda_ptr];
 
-  let D = {{ POINTonE1_affine_rep (bulk_addition_tail Fp (POINTonE1_affine_abs (a_x, a_y)) (POINTonE1_abs B) (fp_abs lambda)) }};
+  let D = {{ POINTonE1_affine_rep (bulk_addition_tail Fp (POINTonE1_affine_abs (A.0, A.1)) (POINTonE1_abs B) (fp_abs lambda)) }};
   llvm_postcond {{ POINTonE1_affine_invariant D }};
   llvm_points_to_at_type D_ptr POINTonE1_affine_type (llvm_term D);
 
-  llvm_points_to (llvm_elem AB_ptr 0) (llvm_term A);
+  llvm_points_to (llvm_elem (llvm_elem AB_ptr 0) 2) (llvm_term {{ A.2 }});
 
-  let b_z' = {{ fp_rep (bulk_addition_tail_bz Fp (fp_abs b_z)) }};
+  let b_z' = {{ fp_rep (bulk_addition_tail_bz Fp (fp_abs B.2)) }};
   llvm_postcond {{ fp_invariant b_z' }};
-  llvm_points_to (llvm_elem AB_ptr 1) (llvm_term {{ (b_x, b_y, b_z') }});
-
-  llvm_points_to lambda_ptr (llvm_term {{ fp_rep (Fp.mul ((fp_abs lambda), (fp_abs b_y))) }});
+  llvm_points_to (llvm_elem (llvm_elem AB_ptr 1) 2) (llvm_term b_z');
 };
 
 let POINTonE1_tail_spec_2 = do {
   AB_ptr <- llvm_alloc (llvm_array 2 POINTonE1_type);
   A <- llvm_fresh_var "A" POINTonE1_type;
-  let {{ (a_x, a_y, _a_z) = A }};
   B <- llvm_fresh_var "B" POINTonE1_type;
-  let {{ (b_x, b_y, b_z) = B }};
   llvm_points_to (llvm_elem AB_ptr 0) (llvm_term A);
   llvm_points_to (llvm_elem AB_ptr 1) (llvm_term B);
   (lambda, lambda_ptr) <- ptr_to_fresh "lambda" vec384_type;
@@ -149,71 +165,63 @@ let POINTonE1_tail_spec_2 = do {
   llvm_precond {{ fp_invariant lambda }};
   llvm_execute_func [llvm_elem AB_ptr 1, AB_ptr, lambda_ptr];
 
-  let D = {{ POINTonE1_affine_rep (bulk_addition_tail Fp (POINTonE1_affine_abs (a_x, a_y)) (POINTonE1_abs B) (fp_abs lambda)) }};
+  let D = {{ POINTonE1_affine_rep (bulk_addition_tail Fp (POINTonE1_affine_abs (A.0, A.1)) (POINTonE1_abs B) (fp_abs lambda)) }};
   llvm_postcond {{ POINTonE1_affine_invariant D }};
   llvm_points_to_at_type (llvm_elem AB_ptr 1) POINTonE1_affine_type (llvm_term D);
 
-  llvm_points_to (llvm_elem AB_ptr 0) (llvm_term A);
+  llvm_points_to (llvm_elem (llvm_elem AB_ptr 0) 2) (llvm_term {{ A.2 }});
 
-  let b_z' = {{ fp_rep (bulk_addition_tail_bz Fp (fp_abs b_z)) }};
+  let b_z' = {{ fp_rep (bulk_addition_tail_bz Fp (fp_abs B.2)) }};
   llvm_postcond {{ fp_invariant b_z' }};
-  llvm_points_to (llvm_elem (llvm_elem AB_ptr 1) 2) (llvm_term {{ b_z' }});
-
-  llvm_points_to lambda_ptr (llvm_term {{ fp_rep (Fp.mul ((fp_abs lambda), (fp_abs b_y))) }});
+  llvm_points_to (llvm_elem (llvm_elem AB_ptr 1) 2) (llvm_term b_z');
 };
 
 let POINTonE1_tail_spec_3 = do {
   D_ptr <- llvm_alloc POINTonE1_type;
   AB_ptr <- llvm_alloc (llvm_array 2 POINTonE1_type);
   A <- llvm_fresh_var "A" POINTonE1_type;
-  let {{ (a_x, a_y, a_z) = A }};
   B <- llvm_fresh_var "B" POINTonE1_type;
-  let {{ (b_x, b_y, b_z) = B }};
   llvm_points_to (llvm_elem AB_ptr 0) (llvm_term A);
   llvm_points_to (llvm_elem AB_ptr 1) (llvm_term B);
   llvm_precond {{ POINTonE1_invariant A }};
   llvm_precond {{ POINTonE1_invariant B }};
   llvm_execute_func [D_ptr, AB_ptr, (llvm_elem (llvm_elem AB_ptr 0) 2)];
 
-  let D = {{ POINTonE1_affine_rep (bulk_addition_tail Fp (POINTonE1_affine_abs (a_x, a_y)) (POINTonE1_abs B) (fp_abs a_z)) }};
+  let D = {{ POINTonE1_affine_rep (bulk_addition_tail Fp (POINTonE1_affine_abs (A.0, A.1)) (POINTonE1_abs B) (fp_abs A.2)) }};
   llvm_postcond {{ POINTonE1_affine_invariant D }};
   llvm_points_to_at_type D_ptr POINTonE1_affine_type (llvm_term D);
-
-  llvm_points_to (llvm_elem AB_ptr 0) (llvm_term {{ (a_x, a_y, fp_rep (Fp.mul ((fp_abs a_z), (fp_abs b_y)))) }});
-
-  let b_z' = {{ fp_rep (bulk_addition_tail_bz Fp (fp_abs b_z)) }};
-  llvm_postcond {{ fp_invariant b_z' }};
-  llvm_points_to (llvm_elem AB_ptr 1) (llvm_term {{ (b_x, b_y, b_z') }});
 };
 
 // now for E2:
 
 let blst_p2s_add_spec_1 n = do {
-  (sum, sum_ptr) <- ptr_to_fresh "sum" POINTonE2_type;
+  sum_ptr <- llvm_alloc POINTonE2_type;
   points_ptr <- llvm_alloc (llvm_array 2 (llvm_pointer POINTonE2_affine_type));
   (array, array_ptr) <- ptr_to_fresh "array" (llvm_array n POINTonE2_affine_type);
   llvm_points_to (llvm_elem points_ptr 0) array_ptr;
   llvm_points_to (llvm_elem points_ptr 1) llvm_null;
-  llvm_precond {{ POINTonE2_invariant sum }};
   llvm_precond {{ all POINTonE2_affine_invariant array }};
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n:[64]}}];
-  new_sum <- llvm_fresh_var "new_blst_p2s_add_sum" POINTonE2_type;
-  llvm_points_to sum_ptr (llvm_term new_sum );
+  let sum = {{ POINTonE2_rep (bulk_accumulate stuff_fp2 (Fp_2.field_zero, Fp_2.field_zero, Fp_2.field_zero) (map POINTonE2_affine_abs ([point_1] # array))) }};
+  llvm_postcond {{ POINTonE2_invariant sum }};
+  llvm_points_to sum_ptr (llvm_term sum);
 };
 
 // here we have a first lonely point, and then the rest of the points in an array
 let blst_p2s_add_spec_2 n = do {
-  (sum, sum_ptr) <- ptr_to_fresh "sum" POINTonE2_type;
+  sum_ptr <- llvm_alloc POINTonE2_type;
   (point_1, point_1_ptr) <- ptr_to_fresh "point_1" POINTonE2_affine_type;
   points_ptr <- llvm_alloc (llvm_array 3 (llvm_pointer POINTonE2_affine_type));
   (array, array_ptr) <- ptr_to_fresh "array" (llvm_array n POINTonE2_affine_type);
   llvm_points_to (llvm_elem points_ptr 0) point_1_ptr;
   llvm_points_to (llvm_elem points_ptr 1) array_ptr;
   llvm_points_to (llvm_elem points_ptr 2) llvm_null;
-  llvm_precond {{ POINTonE2_invariant sum }};
   llvm_precond {{ POINTonE2_affine_invariant point_1 }};
   llvm_precond {{ all POINTonE2_affine_invariant array }};
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n+1:[64]}}];
+  let sum = {{ POINTonE2_rep (bulk_accumulate stuff_fp2 (Fp_2.field_zero, Fp_2.field_zero, Fp_2.field_zero) (map POINTonE2_affine_abs ([point_1] # array))) }};
+  llvm_postcond {{ POINTonE2_invariant sum }};
+  llvm_points_to sum_ptr (llvm_term sum);
 };
 
 let POINTonE2_head_spec = do {
@@ -227,10 +235,9 @@ let POINTonE2_head_spec = do {
   llvm_precond {{ POINTonE2_affine_invariant B }};
   llvm_precond {{ fp2_invariant mul_acc }};
   llvm_execute_func [AB_ptr, mul_acc_ptr];
-  let {{ (A', B') = bulk_addition_POINTonE2_head A B mul_acc }};
-  llvm_postcond {{ POINTonE2_invariant A' }};
-  llvm_postcond {{ POINTonE2_invariant B' }};
-  llvm_points_to_untyped AB_ptr (llvm_term {{ [A', B'] }});
+  let AB' = {{ bulk_addition_POINTonE2_head A B mul_acc }};
+  llvm_postcond {{ all POINTonE2_invariant AB' }};
+  llvm_points_to_untyped AB_ptr (llvm_term AB');
 };
 
 let POINTonE2_head_null_spec = do {
@@ -242,54 +249,16 @@ let POINTonE2_head_null_spec = do {
   llvm_precond {{ POINTonE2_affine_invariant A }};
   llvm_precond {{ POINTonE2_affine_invariant B }};
   llvm_execute_func [AB_ptr, llvm_null];
-  let {{ (A', B') = bulk_addition_POINTonE2_head A B (fp2_rep Fp_2.field_unit) }};
-  llvm_postcond {{ POINTonE2_invariant A' }};
-  llvm_postcond {{ POINTonE2_invariant B' }};
-  llvm_points_to_untyped AB_ptr (llvm_term {{ [A', B'] }});
+  let AB' = {{ bulk_addition_POINTonE2_head A B (fp2_rep Fp_2.field_unit) }};
+  llvm_postcond {{ all POINTonE2_invariant AB' }};
+  llvm_points_to_untyped AB_ptr (llvm_term AB');
 };
-
-//let POINTonE2_head_spec' = do {
-//  // TODO: is untyped necessary?
-//  AB_ptr <- llvm_alloc (llvm_array 2 POINTonE2_type);
-//  A <- llvm_fresh_var "A" POINTonE2_affine_type;
-//  B <- llvm_fresh_var "B" POINTonE2_affine_type;
-//  llvm_points_to_untyped (llvm_elem AB_ptr 0) (llvm_term A);
-//  llvm_points_to_untyped (llvm_elem AB_ptr 1) (llvm_term B);
-//  (mul_acc, mul_acc_ptr) <- ptr_to_fresh "mul_acc" vec384x_type;
-//  llvm_precond {{ POINTonE2_affine_invariant A }};
-//  llvm_precond {{ POINTonE2_affine_invariant B }};
-//  llvm_precond {{ fp2_invariant mul_acc }};
-//  llvm_execute_func [AB_ptr, mul_acc_ptr];
-//  new_POINTonE2_head_AB <- llvm_fresh_var "new_POINTonE2_head_AB" (llvm_array 2 POINTonE2_type);
-//  llvm_postcond {{ all POINTonE2_invariant new_POINTonE2_head_AB }};
-//  llvm_points_to_untyped AB_ptr (llvm_term new_POINTonE2_head_AB);
-//  new_POINTonE2_head_mul_acc <- llvm_fresh_var "new_POINTonE2_head_mul_acc" vec384x_type;
-//  llvm_postcond {{ fp2_invariant new_POINTonE2_head_mul_acc }};
-//  llvm_points_to_untyped mul_acc_ptr (llvm_term new_POINTonE2_head_mul_acc);
-//};
-//
-//let POINTonE2_head_null_spec = do {
-//  // (AB, AB_ptr) <- ptr_to_fresh "AB" (llvm_array 2 POINTonE2_type);
-//  AB_ptr <- llvm_alloc (llvm_array 2 POINTonE2_type);
-//  A <- llvm_fresh_var "A" POINTonE2_affine_type;
-//  B <- llvm_fresh_var "B" POINTonE2_affine_type;
-//  llvm_points_to_untyped (llvm_elem AB_ptr 0) (llvm_term A);
-//  llvm_points_to_untyped (llvm_elem AB_ptr 1) (llvm_term B);
-//  llvm_precond {{ POINTonE2_affine_invariant A }};
-//  llvm_precond {{ POINTonE2_affine_invariant B }};
-//  llvm_execute_func [AB_ptr, llvm_null];
-//  new_POINTonE2_head_null_AB <- llvm_fresh_var "new_POINTonE2_head_null_AB" (llvm_array 2 POINTonE2_type);
-//  llvm_postcond {{ all POINTonE2_invariant new_POINTonE2_head_null_AB }};
-//  llvm_points_to_untyped AB_ptr (llvm_term new_POINTonE2_head_null_AB);
-//};
 
 let POINTonE2_tail_spec = do {
   D_ptr <- llvm_alloc POINTonE2_type;
   AB_ptr <- llvm_alloc (llvm_array 2 POINTonE2_type);
   A <- llvm_fresh_var "A" POINTonE2_type;
-  let {{ (a_x, a_y, _a_z) = A }};
   B <- llvm_fresh_var "B" POINTonE2_type;
-  let {{ (b_x, b_y, b_z) = B }};
   llvm_points_to (llvm_elem AB_ptr 0) (llvm_term A);
   llvm_points_to (llvm_elem AB_ptr 1) (llvm_term B);
   (lambda, lambda_ptr) <- ptr_to_fresh "lambda" vec768_type;
@@ -298,11 +267,13 @@ let POINTonE2_tail_spec = do {
   llvm_precond {{ fp2_invariant lambda }};
   llvm_execute_func [D_ptr, AB_ptr, lambda_ptr];
 
-  let D = {{ POINTonE2_affine_rep (bulk_addition_tail Fp_2 (POINTonE2_affine_abs (a_x, a_y)) (POINTonE2_abs B) (fp2_abs lambda)) }};
+  let D = {{ POINTonE2_affine_rep (bulk_addition_tail Fp_2 (POINTonE2_affine_abs (A.0, A.1)) (POINTonE2_abs B) (fp2_abs lambda)) }};
   llvm_postcond {{ POINTonE2_affine_invariant D }};
   llvm_points_to_at_type D_ptr POINTonE2_affine_type (llvm_term D);
 
-  let b_z' = {{ fp2_rep (bulk_addition_tail_bz Fp_2 (fp2_abs b_z)) }};
+  llvm_points_to (llvm_elem (llvm_elem AB_ptr 0) 2) (llvm_term {{ A.2 }});
+
+  let b_z' = {{ fp2_rep (bulk_addition_tail_bz Fp_2 (fp2_abs B.2)) }};
   llvm_postcond {{ fp2_invariant b_z' }};
   llvm_points_to (llvm_elem (llvm_elem AB_ptr 1) 2) (llvm_term {{ b_z' }});
 };
@@ -321,11 +292,13 @@ let POINTonE2_tail_spec_2 = do {
   llvm_precond {{ fp2_invariant lambda }};
   llvm_execute_func [llvm_elem AB_ptr 1, AB_ptr, lambda_ptr];
 
-  let D = {{ POINTonE2_affine_rep (bulk_addition_tail Fp_2 (POINTonE2_affine_abs (a_x, a_y)) (POINTonE2_abs B) (fp2_abs lambda)) }};
+  let D = {{ POINTonE2_affine_rep (bulk_addition_tail Fp_2 (POINTonE2_affine_abs (A.0, A.1)) (POINTonE2_abs B) (fp2_abs lambda)) }};
   llvm_postcond {{ POINTonE2_affine_invariant D }};
   llvm_points_to_at_type (llvm_elem AB_ptr 1) POINTonE2_affine_type (llvm_term D);
 
-  let b_z' = {{ fp2_rep (bulk_addition_tail_bz Fp_2 (fp2_abs b_z)) }};
+  llvm_points_to (llvm_elem (llvm_elem AB_ptr 0) 2) (llvm_term {{ A.2 }});
+
+  let b_z' = {{ fp2_rep (bulk_addition_tail_bz Fp_2 (fp2_abs B.2)) }};
   llvm_postcond {{ fp2_invariant b_z' }};
   llvm_points_to (llvm_elem (llvm_elem AB_ptr 1) 2) (llvm_term {{ b_z' }});
 };
@@ -334,22 +307,16 @@ let POINTonE2_tail_spec_3 = do {
   D_ptr <- llvm_alloc POINTonE2_type;
   AB_ptr <- llvm_alloc (llvm_array 2 POINTonE2_type);
   A <- llvm_fresh_var "A" POINTonE2_type;
-  let {{ (a_x, a_y, a_z) = A }};
   B <- llvm_fresh_var "B" POINTonE2_type;
-  let {{ (b_x, b_y, b_z) = B }};
   llvm_points_to (llvm_elem AB_ptr 0) (llvm_term A);
   llvm_points_to (llvm_elem AB_ptr 1) (llvm_term B);
   llvm_precond {{ POINTonE2_invariant A }};
   llvm_precond {{ POINTonE2_invariant B }};
   llvm_execute_func [D_ptr, AB_ptr, (llvm_elem (llvm_elem AB_ptr 0) 2)];
 
-  let D = {{ POINTonE2_affine_rep (bulk_addition_tail Fp_2 (POINTonE2_affine_abs (a_x, a_y)) (POINTonE2_abs B) (fp2_abs a_z)) }};
+  let D = {{ POINTonE2_affine_rep (bulk_addition_tail Fp_2 (POINTonE2_affine_abs (A.0, A.1)) (POINTonE2_abs B) (fp2_abs A.2)) }};
   llvm_postcond {{ POINTonE2_affine_invariant D }};
   llvm_points_to_at_type D_ptr POINTonE2_affine_type (llvm_term D);
-
-  let b_z' = {{ fp2_rep (bulk_addition_tail_bz Fp_2 (fp2_abs b_z)) }};
-  llvm_postcond {{ fp2_invariant b_z' }};
-  llvm_points_to (llvm_elem (llvm_elem AB_ptr 1) 2) (llvm_term {{ b_z' }});
 };
 
 // we use the following additional overrides:
@@ -363,6 +330,9 @@ let vec_zero_spec n = do {
 
 vec_zero_144_ov <- admit "vec_zero" (vec_zero_spec 144);
 vec_zero_288_ov <- admit "vec_zero" (vec_zero_spec 288);
+
+
+let do_prove=true;
 
 // now the memory safety proofs:
 
@@ -407,12 +377,14 @@ do {
   w4_unint_z3 ["to_Fp", "from_Fp"];
 };
 
+let do_prove=false;
+
+
 // now the top-level proofs:
 
 foo_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x -> to_Fp (from_Fp (x % `p)) == x % `p }}) [];
 bar_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ from_Fp 0 == 0 }}) [];
 
-//enable_what4_hash_consing;
 
 blst_p1s_add_3_ov <- custom_verify "blst_p1s_add" (concat_all [vec_overrides, fp_overrides, [POINTonE1_dadd_affine_alias_ov, vec_zero_144_ov]]) (blst_p1s_add_spec_1 3)
 do {
@@ -444,91 +416,58 @@ let overrides = (concat_all [fp_overrides, vec_overrides, [POINTonE1_head_ov, PO
 
 let do_prove=true;
 
-disable_what4_hash_consing;
+bulk_addition_head_fp_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> bulk_addition_head_imp Fp x y z == bulk_addition_head_fp x y z }}) [];
+bulk_addition_tail_fp_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> bulk_addition_tail Fp x y z == bulk_addition_tail_fp x y z }}) [];
+bulk_addition_tail_bz_fp_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x -> bulk_addition_tail_bz Fp x == bulk_addition_tail_bz_fp x }}) [];
 
-blst_p1s_add_16_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 16)
-do {
-  //unfolding ["bulk_accumulate", "bulk_accumulate_even", "bulk_accumulate_loop_1", "bulk_accumulate_loop_2", "bulk_accumulate_small"];
-  //print_goal;
-  //simplify (addsimps [point_dadd_affine_fp_thm] empty_ss);
-  //print_goal;
-  //goal_eval_unint (concat ["point_dadd_affine_fp", "to_Fp", "from_Fp"] fp_unints);
-  //print_goal;
+abs_rep_thm <- admit_cryptol (rewrite (cryptol_ss()) {{ \x -> fp_abs (fp_rep x) == Fp.normalize x }});
+
+normalize_bulk_addition_head_1_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> Fp.normalize (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).0.0 == (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).0.0 }}) ["to_Fp"];
+normalize_bulk_addition_head_1_1_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> Fp.normalize (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).0.0 == (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).0.0 }}) [];
+normalize_bulk_addition_head_1_2_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> Fp.normalize (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).0.1 == (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).0.1 }}) ["to_Fp"];
+normalize_bulk_addition_head_1_2_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> Fp.normalize (bulk_addition_head_fp x y z).0.2 == (bulk_addition_head_fp x y z).0.2 }}) [];
+normalize_bulk_addition_head_2_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> Fp.normalize (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).1.0 == (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).1.0 }}) ["to_Fp"];
+normalize_bulk_addition_head_2_2_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> Fp.normalize (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).1.1 == (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).1.1 }}) ["to_Fp"];
+normalize_bulk_addition_head_2_2_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> Fp.normalize (bulk_addition_head_fp x y z).1.2 == (bulk_addition_head_fp x y z).1.2 }}) [];
+
+normalize_bulk_addition_tail_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 y2 z -> Fp.normalize (bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, Fp.normalize y2) z).0 == (bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, Fp.normalize y2) z).0 }}) [];
+normalize_bulk_addition_tail_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 y2 z -> Fp.normalize (bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, Fp.normalize y2) z).1 == (bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, Fp.normalize y2) z).1 }}) [];
+
+normalize_point_dadd_affine_fp_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> Fp.normalize (point_dadd_affine_fp x y).0 == (point_dadd_affine_fp x y).0 }}) [];
+normalize_point_dadd_affine_fp_2_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> Fp.normalize (point_dadd_affine_fp x y).1 == (point_dadd_affine_fp x y).1 }}) [];
+normalize_point_dadd_affine_fp_2_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> Fp.normalize (point_dadd_affine_fp x y).2 == (point_dadd_affine_fp x y).2 }}) [];
+
+let bvEq_384 = parse_core "\\(x y : Vec 384 Bool) -> bvEq 384 x y";
+foobar_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x -> (bvEq_384 x x) == True }}) [];
+
+let blst_p1s_add_tactic = do {
+  unfolding ["bulk_addition_POINTonE1_head"];
+  simplify (addsimps [bulk_addition_head_fp_thm, bulk_addition_tail_fp_thm, bulk_addition_tail_bz_fp_thm, point_dadd_affine_fp_thm, reciprocal_div_fp_thm] empty_ss);
+  goal_eval_unint (concat ["bulk_addition_head_fp", "bulk_addition_tail_fp", "bulk_addition_tail_bz_fp",  "point_dadd_affine_fp"] fp_unints);
+  simplify (addsimps [abs_rep_thm] empty_ss);
+  simplify (addsimps [normalize_bulk_addition_tail_1_thm, normalize_bulk_addition_tail_2_thm] empty_ss);
+  simplify (addsimps [normalize_bulk_addition_head_1_1_thm, normalize_bulk_addition_head_1_2_1_thm, normalize_bulk_addition_head_1_2_2_thm, normalize_bulk_addition_head_2_1_thm, normalize_bulk_addition_head_2_2_1_thm, normalize_bulk_addition_head_2_2_2_thm] empty_ss);
+  simplify (addsimps [normalize_point_dadd_affine_fp_1_thm, normalize_point_dadd_affine_fp_2_1_thm, normalize_point_dadd_affine_fp_2_2_thm] empty_ss); 
   simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] fp_simpset);
-  //print_goal;
-  goal_eval_unint (concat ["to_Fp", "from_Fp"] fp_unints);
-  //print_goal;
-  simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] fp_simpset);
-  //simplify (addsimps readability_rewrites cleanup_simpset);
-  print_goal;
-  goal_eval_unint ["to_Fp", "from_Fp"];
-  print_goal;
-  simplify (addsimps [foo_thm, bar_thm] empty_ss);
-  print_goal;
-  goal_eval_unint ["to_Fp", "from_Fp"];
-  print_goal;
-  //offline_w4_unint_z3 ["to_Fp", "from_Fp"] "foo";
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-  //goal_eval;
-  //print_goal;
-  //w4;
+  simplify (addsimps [foobar_thm] empty_ss);
+  w4_unint_z3 ["bulk_addition_head_fp", "bulk_addition_tail_fp", "bulk_addition_tail_bz_fp",  "point_dadd_affine_fp", "to_Fp", "from_Fp"];
 };
 
-let do_prove = false;
+blst_p1s_add_16_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 16) blst_p1s_add_tactic;
 
-_ <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_2 15) // this adds 16 points
-do {
-  unfolding ["select","POINTonE1_affine_invariant","POINTonE1_invariant"];
-  goal_eval_unint fp_unints;
-  simplify fp_simpset;
-  //w4;
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
+_ <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_2 15) blst_p1s_add_tactic; // this adds 16 points
 
-blst_p1s_add_17_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 17)
-do {
-  unfolding ["select","POINTonE1_affine_invariant","POINTonE1_invariant"];
-  goal_eval_unint fp_unints;
-  simplify fp_simpset;
-  //w4;
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
+blst_p1s_add_17_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 17) blst_p1s_add_tactic;
 
-blst_p1s_add_32_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 32)
-do {
-  unfolding ["select","POINTonE1_affine_invariant","POINTonE1_invariant"];
-  goal_eval_unint fp_unints;
-  simplify fp_simpset;
-  //w4;
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
+let do_prove=false;
 
-blst_p1s_add_33_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 33)
-do {
-  unfolding ["select","POINTonE1_affine_invariant","POINTonE1_invariant"];
-  goal_eval_unint fp_unints;
-  simplify fp_simpset;
-  //w4;
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
+blst_p1s_add_32_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 32) blst_p1s_add_tactic;
 
-blst_p1s_add_48_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 48)
-do {
-  unfolding ["select","POINTonE1_affine_invariant","POINTonE1_invariant"];
-  goal_eval_unint fp_unints;
-  simplify fp_simpset;
-  //w4;
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
+blst_p1s_add_33_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 33) blst_p1s_add_tactic;
 
-blst_p1s_add_49_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 49)
-do {
-  unfolding ["select","POINTonE1_affine_invariant","POINTonE1_invariant"];
-  goal_eval_unint fp_unints;
-  simplify fp_simpset;
-  //w4;
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
+blst_p1s_add_48_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 48) blst_p1s_add_tactic;
+
+blst_p1s_add_49_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 49) blst_p1s_add_tactic;
 
 
 let do_prove = true;

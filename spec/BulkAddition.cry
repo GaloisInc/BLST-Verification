@@ -168,6 +168,14 @@ head_inverse_tail' C a b = c where
 
 // accumulate
 
+type BulkAdditionStuff t =
+  { field : FieldRep t
+  , bulk_addition_head_fn : (t,t) -> (t,t) -> t -> ((t,t,t), (t,t,t))
+  , bulk_addition_tail_fn : (t,t) -> (t,t,t) -> t -> (t,t)
+  , bulk_addition_tail_bz_fn : t -> t
+  , point_dadd_affine_fn : ProjectivePoint t -> AffinePoint t  -> ProjectivePoint t
+  }
+
 // The accumulate function starts with while loop that halves the length
 // of the array at each iteration.  Inside that loop are  two other loops, first
 // calling HEAD on pairs of points, the second calling TAIL, and with some plumbing
@@ -209,44 +217,44 @@ bulk_accumulate_0 C sum' points =
   // where junk = [ point_O C ] # junk
 */
 
-bulk_accumulate: {n, t} (fin n, Eq t) => FieldRep t -> (t,t,t) -> [n] (t,t)  -> (t,t,t)
-bulk_accumulate F sum' points =
+bulk_accumulate: {n, t} (fin n, Eq t) => BulkAdditionStuff t -> (t,t,t) -> [n] (t,t)  -> (t,t,t)
+bulk_accumulate C sum' points =
   if `n < 16
-  then bulk_accumulate_small F sum' points
+  then bulk_accumulate_small C sum' points
   else if (`n%2) == 1
-  then bulk_accumulate`{n/2} F (point_dadd_affine F sum' (points@0)) (bulk_accumulate_even`{n/2} F (tail (coerceSize points)))
-  else bulk_accumulate`{n/2} F sum' (bulk_accumulate_even`{n/2} F (coerceSize points))
+  then bulk_accumulate`{n/2} C (C.point_dadd_affine_fn sum' (points@0)) (bulk_accumulate_even`{n/2} C (tail (coerceSize points)))
+  else bulk_accumulate`{n/2} C sum' (bulk_accumulate_even`{n/2} C (coerceSize points))
 
-bulk_accumulate_small: {n, t} (fin n) => FieldRep t -> (t,t,t) -> [n] (t,t)  -> (t,t,t)
-bulk_accumulate_small F sum' points = sums!0 where
-  sums = [sum'] # [point_dadd_affine F x p | x <- sums | p <- points]
+bulk_accumulate_small: {n, t} (fin n) => BulkAdditionStuff t -> (t,t,t) -> [n] (t,t)  -> (t,t,t)
+bulk_accumulate_small C sum' points = sums!0 where
+  sums = [sum'] # [C.point_dadd_affine_fn x p | x <- sums | p <- points]
 
 // ... body of the while loop, after the "n /= 2" line
 bulk_accumulate_even_0: {n, t} (fin n) => EllipticCurve t -> (t,t) -> [2*n] (t,t)  -> (t,t)
 bulk_accumulate_even_0 C sum' points = undefined
 
-bulk_accumulate_even: {n, t} (fin n, Eq t) => FieldRep t -> [2*n] (t,t)  -> [n](t,t)
-bulk_accumulate_even F points = dst where
+bulk_accumulate_even: {n, t} (fin n, Eq t) => BulkAdditionStuff t -> [2*n] (t,t)  -> [n](t,t)
+bulk_accumulate_even C points = dst where
   points':  [n] ((t,t,t), (t,t,t))
-  points' = bulk_accumulate_loop_1 F points
+  points' = bulk_accumulate_loop_1 C points
   // the Montgomery trick part
   last_pair: ((t,t,t), (t,t,t))
   //last_pair = ([(z,z)] # points')!0 // type checker does not know n >= 1
   //z = (z0,z0,z0) // : (t,t,t)
   //z0 = C.base_field.field_zero // : t
   last_pair = (atLeastOne points')!0
-  last_inv = F.div (F.field_unit, last_pair.0.2)
-  dst = bulk_accumulate_loop_2 F points' last_inv
+  last_inv = C.field.div (C.field.field_unit, last_pair.0.2)
+  dst = bulk_accumulate_loop_2 C points' last_inv
 
 // First loop: run adjacent pairs through the HEAD function
 // this results in an accumulated product in the .Z fields of the even-numbered points
 // (The "a"s in the a/b splitting), and individual denominator values in the Z fields
 // of the odd-numbered points.
 // The c code modifies the points array in place, effectively resulting in a [2*n] (t,t,t)
-bulk_accumulate_loop_1: {n, t} (fin n, Eq t) => FieldRep t -> [2*n] (t,t)  -> [n] ((t,t,t), (t,t,t))
-bulk_accumulate_loop_1 F points = points' where
-  points' = [bulk_addition_head_imp F a b mul_ac | [a,b] <- split points | mul_ac <- mul_acs]
-  mul_acs = [F.field_unit] # [ma | ((_,_,ma), _) <- points' ]
+bulk_accumulate_loop_1: {n, t} (fin n, Eq t) => BulkAdditionStuff t -> [2*n] (t,t)  -> [n] ((t,t,t), (t,t,t))
+bulk_accumulate_loop_1 C points = points' where
+  points' = [C.bulk_addition_head_fn a b mul_ac | [a,b] <- split points | mul_ac <- mul_acs]
+  mul_acs = [C.field.field_unit] # [ma | ((_,_,ma), _) <- points' ]
 
 // second loop ` for (dst = points, i = n; --i;) ...`
 //  runs reversed through the points array.  There are two effects:
@@ -254,19 +262,19 @@ bulk_accumulate_loop_1 F points = points' where
 // "b" points, the other using these inverses in the TAIL part of the
 // point addition. We use 
 
-bulk_accumulate_loop_2: {n, t} (fin n, Eq t) => FieldRep t -> [n] ((t,t,t),(t,t,t))  -> t -> [n](t,t)
-bulk_accumulate_loop_2 F point_pairs last_inv = dst where
-  // dst = [bulk_addition_tail F (ax,ay) b (F.mul(i, az)) | ((ax,ay,az),b) <- point_pairs | i <- inverses']
-  dst = [bulk_addition_tail F (ax,ay) b i | ((ax,ay,az),b) <- point_pairs | i <- inverses']
+bulk_accumulate_loop_2: {n, t} (fin n, Eq t) => BulkAdditionStuff t -> [n] ((t,t,t),(t,t,t))  -> t -> [n](t,t)
+bulk_accumulate_loop_2 C point_pairs last_inv = dst where
+  // dst = [C.bulk_addition_tail_fn (ax,ay) b (C.field.mul(i, az)) | ((ax,ay,az),b) <- point_pairs | i <- inverses']
+  dst = [C.bulk_addition_tail_fn (ax,ay) b i | ((ax,ay,az),b) <- point_pairs | i <- inverses']
   inverses': [max 1 n] t
   // mostly the same code as in `inverses`
   products = [az | ((_,_,az),_) <- point_pairs]
   xs = [bz | (_,(_,_,bz)) <- point_pairs]
   iprods: [max 1 n] t
-  iprods = [F.mul (x, i) | i <- tail iprods | x <- tail (atLeastOne xs)]
-           # [F.div(F.field_unit, products!0) ]
+  iprods = [C.field.mul (i, C.bulk_addition_tail_bz_fn x) | i <- tail iprods | x <- tail (atLeastOne xs)]
+           # [C.field.div(C.field.field_unit, products!0) ]
   // iprods@i == xs@(i+1) * iprods@(i+1) == inverse (products@i)
-  inverses' = [iprods@0] # [F.mul(p, i) | p <- products | i <- tail iprods]
+  inverses' = [iprods@0] # [C.field.mul(i, p) | i <- tail iprods | p <- products]
   // inverses'@i == products@(i-1) * iprods@i == inverse (xs@i)
 
 bulk_accumulate_inverses: {n, t} (fin n, Eq t) => FieldRep t -> [n] ((t,t,t),(t,t,t))  -> t -> [_]t

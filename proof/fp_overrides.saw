@@ -300,6 +300,9 @@ fp_alg_thms <- for
   , {{ Fp.neg Fp.field_zero == Fp.field_zero }} // -0 = 0
   ] (\ t -> prove_cryptol t []);
 
+reciprocal_div_fp_thm <- admit_cryptol {{ \x -> inverse_fp x ==  Fp.div (Fp.field_unit, x) }};
+
+
 ////////////////////////////////////////////////////////////////
 //
 // Overrides for the fp_operations
