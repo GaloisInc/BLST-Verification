@@ -115,6 +115,9 @@ fp2_is_equal_elim_thm <- prove_cryptol {{ \x y -> Fp_2.is_equal (x,y) == (x==y) 
 fp2_normalize_ite_thm <- hoist {{fp2_normalize}} ["fp2_normalize"];
 fp2_abs_normalize_ite_thm <- hoist {{Fp_2.normalize}} ["Fp_2"];
 
+fp2_zero_abs_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp2_abs [0, 0] == Fp_2.field_zero }}) [];
+fp2_zero_rep_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp2_rep Fp_2.field_zero == [0, 0] }}) [];
+
 one_mont_fp2_abs_thm <- prove_cryptol (rewrite (cryptol_ss ())
   {{ fp2_abs [0x15f65ec3fa80e4935c071a97a256ec6d77ce5853705257455f48985753c758baebf4000bc40c0002760900000002fffd, 0] == Fp_2.field_unit }}) [];
 one_mont_fp2_rep_thm <- prove_cryptol (rewrite (cryptol_ss ())
@@ -226,6 +229,8 @@ fp2_alg_thms <- for
   , {{ \ x y -> Fp_2.neg (Fp_2.add (x, y)) == Fp_2.add (Fp_2.neg x, Fp_2.neg y) }} // push neg inside a sum
   , {{ Fp_2.neg Fp_2.field_zero == Fp_2.field_zero }} // -0 = 0
   ] (\ t -> prove_cryptol t []);
+
+reciprocal_div_fp2_thm <- admit_cryptol {{ \x -> inverse_fp2 x ==  Fp_2.div (Fp_2.field_unit, x) }};
 
 fp_inv_fp2_rep_thms <- for [0,1]
   (\ i -> custom_prove_cryptol (rewrite (cryptol_ss()) {{ \ x -> fp_invariant ((fp2_rep x) @ (`i:[1])) == True }})

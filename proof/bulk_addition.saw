@@ -63,7 +63,7 @@ stuff_fp2 =
 }};
 
 
-// first we do memory safety for points on E1
+// first for E1
 // NOTE: we assume that the code has been patched to set stride to 32 (SAW can't handle 2048)
 // we consider n=3 (<16), n=16, n=17, n=32, n=33, n=48, n=49
 
@@ -202,7 +202,7 @@ let blst_p2s_add_spec_1 n = do {
   llvm_points_to (llvm_elem points_ptr 1) llvm_null;
   llvm_precond {{ all POINTonE2_affine_invariant array }};
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n:[64]}}];
-  let sum = {{ POINTonE2_rep (bulk_accumulate stuff_fp2 (Fp_2.field_zero, Fp_2.field_zero, Fp_2.field_zero) (map POINTonE2_affine_abs array)) }};
+  let sum = {{ POINTonE2_rep (bulk_add`{32} stuff_fp2 (Fp_2.field_zero, Fp_2.field_zero, Fp_2.field_zero) (map POINTonE2_affine_abs array)) }};
   llvm_postcond {{ POINTonE2_invariant sum }};
   llvm_points_to sum_ptr (llvm_term sum);
 };
@@ -219,7 +219,7 @@ let blst_p2s_add_spec_2 n = do {
   llvm_precond {{ POINTonE2_affine_invariant point_1 }};
   llvm_precond {{ all POINTonE2_affine_invariant array }};
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n+1:[64]}}];
-  let sum = {{ POINTonE2_rep (bulk_accumulate stuff_fp2 (Fp_2.field_zero, Fp_2.field_zero, Fp_2.field_zero) (map POINTonE2_affine_abs ([point_1] # array))) }};
+  let sum = {{ POINTonE2_rep (bulk_add`{32} stuff_fp2 (Fp_2.field_zero, Fp_2.field_zero, Fp_2.field_zero) (map POINTonE2_affine_abs ([point_1] # array))) }};
   llvm_postcond {{ POINTonE2_invariant sum }};
   llvm_points_to sum_ptr (llvm_term sum);
 };
@@ -319,6 +319,7 @@ let POINTonE2_tail_spec_3 = do {
   llvm_points_to_at_type D_ptr POINTonE2_affine_type (llvm_term D);
 };
 
+
 // we use the following additional overrides:
 
 let vec_zero_spec n = do {
@@ -327,94 +328,15 @@ let vec_zero_spec n = do {
   llvm_points_to p_ptr (llvm_term {{ zero:[n][8] }});
 };
 
-
 vec_zero_144_ov <- admit "vec_zero" (vec_zero_spec 144);
 vec_zero_288_ov <- admit "vec_zero" (vec_zero_spec 288);
 
 
-let do_prove=true;
-
 // now the proofs:
-
-let overrides = concat_all [fp_overrides, vec_overrides, [mul_by_3_fp_alias_1_2_ov, reciprocal_fp_ov, POINTonE1_dadd_affine_alias_ov, vec_zero_144_ov, reciprocal_fp_alias_ov]];
-
-POINTonE1_head_ov <- custom_verify "POINTonE1_head" overrides POINTonE1_head_spec
-do {
-  goal_eval_unint fp_unints;
-  simplify (addsimps [fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
-
-POINTonE1_head_null_ov <- custom_verify "POINTonE1_head" overrides POINTonE1_head_null_spec
-do {
-  goal_eval_unint fp_unints;
-  simplify (addsimps [fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
-
-
-POINTonE1_tail_ov <- custom_verify "POINTonE1_tail" overrides POINTonE1_tail_spec
-do {
-  goal_eval_unint fp_unints;
-  simplify (addsimps [fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
-
-POINTonE1_tail_ov_2 <- custom_verify "POINTonE1_tail" overrides POINTonE1_tail_spec_2
-do {
-  goal_eval_unint fp_unints;
-  simplify (addsimps [fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
-
-POINTonE1_tail_ov_3 <- custom_verify "POINTonE1_tail" overrides POINTonE1_tail_spec_3
-do {
-  goal_eval_unint fp_unints;
-  simplify (addsimps [fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
-  simplify (addsimps readability_rewrites cleanup_simpset);
-  print_goal;
-  //offline_w4_unint_z3 ["to_Fp", "from_Fp"] "foo";
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
-
-let do_prove=false;
-
-
-// now the top-level proofs:
+let do_prove=true;
 
 foo_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x -> to_Fp (from_Fp (x % `p)) == x % `p }}) [];
 bar_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ from_Fp 0 == 0 }}) [];
-
-
-blst_p1s_add_3_ov <- custom_verify "blst_p1s_add" (concat_all [vec_overrides, fp_overrides, [POINTonE1_dadd_affine_alias_ov, vec_zero_144_ov]]) (blst_p1s_add_spec_1 3)
-do {
-  //unfolding ["bulk_accumulate", "bulk_accumulate_even", "bulk_accumulate_loop_1", "bulk_accumulate_loop_2", "bulk_accumulate_small"];
-  //print_goal;
-  //simplify (addsimps [point_dadd_affine_fp_thm] empty_ss);
-  //print_goal;
-  //goal_eval_unint (concat ["point_dadd_affine_fp", "to_Fp", "from_Fp"] fp_unints);
-  //print_goal;
-  simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] fp_simpset);
-  print_goal;
-  goal_eval_unint (concat ["to_Fp", "from_Fp"] fp_unints);
-  print_goal;
-  simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] fp_simpset);
-  simplify (addsimps readability_rewrites cleanup_simpset);
-  print_goal;
-  goal_eval_unint ["to_Fp", "from_Fp"];
-  simplify (addsimps [foo_thm, bar_thm] empty_ss);
-  goal_eval_unint ["to_Fp", "from_Fp"];
-  print_goal;
-  //offline_w4_unint_z3 ["to_Fp", "from_Fp"] "foo";
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-  //goal_eval;
-  //print_goal;
-  //w4;
-};
-
-let overrides = (concat_all [fp_overrides, vec_overrides, [POINTonE1_head_ov, POINTonE1_head_null_ov, POINTonE1_tail_ov, POINTonE1_tail_ov_2, POINTonE1_tail_ov_3, reciprocal_fp_ov, POINTonE1_dadd_affine_alias_ov, vec_zero_144_ov, reciprocal_fp_alias_ov]]);
-
-let do_prove=true;
 
 bulk_addition_head_fp_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> bulk_addition_head_imp Fp x y z == bulk_addition_head_fp x y z }}) [];
 bulk_addition_tail_fp_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> bulk_addition_tail Fp x y z == bulk_addition_tail_fp x y z }}) [];
@@ -422,26 +344,10 @@ bulk_addition_tail_bz_fp_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x -> b
 
 abs_rep_thm <- admit_cryptol (rewrite (cryptol_ss()) {{ \x -> fp_abs (fp_rep x) == Fp.normalize x }});
 
-normalize_bulk_addition_head_1_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> Fp.normalize (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).0.0 == (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).0.0 }}) ["to_Fp"];
-normalize_bulk_addition_head_1_2_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> Fp.normalize (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).0.1 == (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).0.1 }}) ["to_Fp"];
-normalize_bulk_addition_head_1_2_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> Fp.normalize (bulk_addition_head_fp x y z).0.2 == (bulk_addition_head_fp x y z).0.2 }}) [];
-normalize_bulk_addition_head_2_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> Fp.normalize (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).1.0 == (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).1.0 }}) ["to_Fp"];
-normalize_bulk_addition_head_2_2_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> Fp.normalize (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).1.1 == (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).1.1 }}) ["to_Fp"];
-normalize_bulk_addition_head_2_2_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> Fp.normalize (bulk_addition_head_fp x y z).1.2 == (bulk_addition_head_fp x y z).1.2 }}) [];
+normalize_bulk_addition_head_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z == bulk_addition_head_fp (x0, x1) (y0, y1) z }}) [];
 normalize_bulk_addition_head_mul_acc_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> bulk_addition_head_fp x y (Fp.normalize z) == bulk_addition_head_fp x y z }}) [];
 normalize_bulk_addition_head_B_Z_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> Fp.normalize (bulk_addition_head_fp x y z).1.2 == (bulk_addition_head_fp x y z).1.2 }}) [];
-
-normalize_bulk_addition_head_1_1_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).0.0 == Fp.normalize (bulk_addition_head_fp (x0, x1) (y0, y1) z).0.0 }}) [];
-normalize_bulk_addition_head_1_2_1_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).0.1 == Fp.normalize (bulk_addition_head_fp (x0, x1) (y0, y1) z).0.1 }}) [];
-//normalize_bulk_addition_head_1_2_2_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).0.2 == Fp.normalize (bulk_addition_head_fp (x0, x1) (y0, y1) z).0.2 }}) [];
-normalize_bulk_addition_head_1_2_2_thm' <- admit_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).0.2 == Fp.normalize (bulk_addition_head_fp (x0, x1) (y0, y1) z).0.2 }});
-normalize_bulk_addition_head_2_1_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).1.0 == Fp.normalize (bulk_addition_head_fp (x0, x1) (y0, y1) z).1.0 }}) [];
-normalize_bulk_addition_head_2_2_1_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).1.1 == Fp.normalize (bulk_addition_head_fp (x0, x1) (y0, y1) z).1.1 }}) [];
-normalize_bulk_addition_head_2_2_2_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).1.2 == Fp.normalize (bulk_addition_head_fp (x0, x1) (y0, y1) z).1.2 }}) [];
-
-normalize_bulk_addition_tail_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 y2 z -> (bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, y2) z).0 == Fp.normalize (bulk_addition_tail_fp (x0, x1) (y0, y1, y2) z).0 }}) [];
-normalize_bulk_addition_tail_2_thm <- admit_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 y2 z -> (bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, y2) z).1 == Fp.normalize (bulk_addition_tail_fp (x0, x1) (y0, y1, y2) z).1 }});
-//normalize_bulk_addition_tail_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 y2 z -> (bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, y2) z).1 == Fp.normalize (bulk_addition_tail_fp (x0, x1) (y0, y1, y2) z).1 }}) [];
+normalize_bulk_addition_tail_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 y2 z -> bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, y2) z == bulk_addition_tail_fp (x0, x1) (y0, y1, y2) z }}) [];
 
 normalize_point_dadd_affine_fp_foo_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y0 y1 -> point_dadd_affine_fp x (Fp.normalize y0, Fp.normalize y1) == point_dadd_affine_fp x (y0, y1) }}) [];
 normalize_point_dadd_affine_fp_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> Fp.normalize (point_dadd_affine_fp x y).0 == (point_dadd_affine_fp x y).0 }}) [];
@@ -451,186 +357,119 @@ normalize_point_dadd_affine_fp_2_2_thm <- prove_cryptol (rewrite (cryptol_ss()) 
 let bvEq_384 = parse_core "\\(x y : Vec 384 Bool) -> bvEq 384 x y";
 foobar_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x -> (bvEq_384 x x) == True }}) [];
 
+bulk_addition_head_fp2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> bulk_addition_head_imp Fp_2 x y z == bulk_addition_head_fp2 x y z }}) [];
+bulk_addition_tail_fp2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> bulk_addition_tail Fp_2 x y z == bulk_addition_tail_fp2 x y z }}) [];
+bulk_addition_tail_bz_fp2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x -> bulk_addition_tail_bz Fp_2 x == bulk_addition_tail_bz_fp2 x }}) [];
+
+abs_rep_fp2_thm <- admit_cryptol (rewrite (cryptol_ss()) {{ \x -> fp2_abs (fp2_rep x) == Fp_2.normalize x }});
+
+normalize_bulk_addition_head_fp2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> bulk_addition_head_fp2 (Fp_2.normalize x0, Fp_2.normalize x1) (Fp_2.normalize y0, Fp_2.normalize y1) z == bulk_addition_head_fp2 (x0, x1) (y0, y1) z }}) [];
+normalize_bulk_addition_head_fp2_mul_acc_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> bulk_addition_head_fp2 x y (Fp_2.normalize z) == bulk_addition_head_fp2 x y z }}) [];
+normalize_bulk_addition_head_fp2_B_Z_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> Fp_2.normalize (bulk_addition_head_fp2 x y z).1.2 == (bulk_addition_head_fp2 x y z).1.2 }}) [];
+normalize_bulk_addition_tail_fp2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 y2 z -> bulk_addition_tail_fp2 (Fp_2.normalize x0, Fp_2.normalize x1) (Fp_2.normalize y0, Fp_2.normalize y1, y2) z == bulk_addition_tail_fp2 (x0, x1) (y0, y1, y2) z }}) [];
+
+normalize_point_dadd_affine_fp2_foo_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y0 y1 -> point_dadd_affine_fp2 x (Fp_2.normalize y0, Fp_2.normalize y1) == point_dadd_affine_fp2 x (y0, y1) }}) [];
+normalize_point_dadd_affine_fp2_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> Fp_2.normalize (point_dadd_affine_fp2 x y).0 == (point_dadd_affine_fp2 x y).0 }}) [];
+normalize_point_dadd_affine_fp2_2_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> Fp_2.normalize (point_dadd_affine_fp2 x y).1 == (point_dadd_affine_fp2 x y).1 }}) [];
+normalize_point_dadd_affine_fp2_2_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> Fp_2.normalize (point_dadd_affine_fp2 x y).2 == (point_dadd_affine_fp2 x y).2 }}) [];
+
+
+// E1 proofs
+
+let overrides = concat_all [fp_overrides, vec_overrides, [mul_by_3_fp_alias_1_2_ov, reciprocal_fp_ov, POINTonE1_dadd_affine_alias_ov, vec_zero_144_ov, reciprocal_fp_alias_ov]];
+
+let POINTonE1_head_tactic = do {
+  goal_eval_unint fp_unints;
+  simplify (addsimps [fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
+  w4_unint_z3 ["to_Fp", "from_Fp"];
+};
+
+POINTonE1_head_ov <- custom_verify "POINTonE1_head" overrides POINTonE1_head_spec POINTonE1_head_tactic;
+POINTonE1_head_null_ov <- custom_verify "POINTonE1_head" overrides POINTonE1_head_null_spec POINTonE1_head_tactic;
+
+let POINTonE1_tail_tactic = do {
+  goal_eval_unint fp_unints;
+  simplify (addsimps [fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
+  w4_unint_z3 ["to_Fp", "from_Fp"];
+};
+
+POINTonE1_tail_ov <- custom_verify "POINTonE1_tail" overrides POINTonE1_tail_spec POINTonE1_tail_tactic;
+POINTonE1_tail_ov_2 <- custom_verify "POINTonE1_tail" overrides POINTonE1_tail_spec_2 POINTonE1_tail_tactic;
+POINTonE1_tail_ov_3 <- custom_verify "POINTonE1_tail" overrides POINTonE1_tail_spec_3 POINTonE1_tail_tactic;
+
+// now the top-level proofs:
+
+let blst_p1s_add_overrides = (concat_all [fp_overrides, vec_overrides, [POINTonE1_head_ov, POINTonE1_head_null_ov, POINTonE1_tail_ov, POINTonE1_tail_ov_2, POINTonE1_tail_ov_3, reciprocal_fp_ov, reciprocal_fp_alias_ov, POINTonE1_dadd_affine_alias_ov, vec_zero_144_ov]]);
+
 let blst_p1s_add_tactic = do {
   unfolding ["bulk_addition_POINTonE1_head"];
   simplify (addsimps [bulk_addition_head_fp_thm, bulk_addition_tail_fp_thm, bulk_addition_tail_bz_fp_thm, point_dadd_affine_fp_thm, reciprocal_div_fp_thm] empty_ss);
   goal_eval_unint (concat ["bulk_addition_head_fp", "bulk_addition_tail_fp", "bulk_addition_tail_bz_fp",  "point_dadd_affine_fp"] fp_unints);
   simplify (addsimps [abs_rep_thm] empty_ss);
-  simplify (addsimps [normalize_bulk_addition_head_1_1_thm', normalize_bulk_addition_head_1_2_1_thm', normalize_bulk_addition_head_1_2_2_thm', normalize_bulk_addition_head_2_1_thm', normalize_bulk_addition_head_2_2_1_thm', normalize_bulk_addition_head_2_2_2_thm', normalize_bulk_addition_head_mul_acc_thm, normalize_bulk_addition_head_B_Z_thm, normalize_bulk_addition_tail_1_thm, normalize_bulk_addition_tail_2_thm, normalize_point_dadd_affine_fp_foo_thm, normalize_point_dadd_affine_fp_1_thm, normalize_point_dadd_affine_fp_2_1_thm, normalize_point_dadd_affine_fp_2_2_thm] empty_ss);
-  //simplify (addsimps [normalize_bulk_addition_head_1_1_thm, normalize_bulk_addition_head_1_2_1_thm, normalize_bulk_addition_head_1_2_2_thm, normalize_bulk_addition_head_2_1_thm, normalize_bulk_addition_head_2_2_1_thm, normalize_bulk_addition_head_2_2_2_thm] empty_ss);
+  simplify (addsimps [normalize_bulk_addition_head_thm, normalize_bulk_addition_head_mul_acc_thm, normalize_bulk_addition_head_B_Z_thm, normalize_bulk_addition_tail_thm, normalize_point_dadd_affine_fp_foo_thm, normalize_point_dadd_affine_fp_1_thm, normalize_point_dadd_affine_fp_2_1_thm, normalize_point_dadd_affine_fp_2_2_thm] empty_ss);
   simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] fp_simpset);
-  print_goal;
   simplify (addsimps [foobar_thm] empty_ss);
   w4_unint_z3 ["bulk_addition_head_fp", "bulk_addition_tail_fp", "bulk_addition_tail_bz_fp",  "point_dadd_affine_fp", "to_Fp", "from_Fp"];
 };
 
-blst_p1s_add_16_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 16) blst_p1s_add_tactic;
-
-_ <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_2 15) blst_p1s_add_tactic; // this adds 16 points
-
-blst_p1s_add_17_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 17) blst_p1s_add_tactic;
-
-blst_p1s_add_32_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 32) blst_p1s_add_tactic;
-
-blst_p1s_add_33_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 33) blst_p1s_add_tactic;
-
-blst_p1s_add_48_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 48) blst_p1s_add_tactic;
-
-blst_p1s_add_49_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 49) blst_p1s_add_tactic;
+blst_p1s_add_3_ov <- custom_verify "blst_p1s_add" blst_p1s_add_overrides (blst_p1s_add_spec_1 3) blst_p1s_add_tactic;
+blst_p1s_add_16_ov <- custom_verify "blst_p1s_add" blst_p1s_add_overrides (blst_p1s_add_spec_1 16) blst_p1s_add_tactic;
+_ <- custom_verify "blst_p1s_add" blst_p1s_add_overrides (blst_p1s_add_spec_2 15) blst_p1s_add_tactic; // this adds 16 points
+blst_p1s_add_17_ov <- custom_verify "blst_p1s_add" blst_p1s_add_overrides (blst_p1s_add_spec_1 17) blst_p1s_add_tactic;
+blst_p1s_add_32_ov <- custom_verify "blst_p1s_add" blst_p1s_add_overrides (blst_p1s_add_spec_1 32) blst_p1s_add_tactic;
+blst_p1s_add_33_ov <- custom_verify "blst_p1s_add" blst_p1s_add_overrides (blst_p1s_add_spec_1 33) blst_p1s_add_tactic;
+blst_p1s_add_48_ov <- custom_verify "blst_p1s_add" blst_p1s_add_overrides (blst_p1s_add_spec_1 48) blst_p1s_add_tactic;
+blst_p1s_add_49_ov <- custom_verify "blst_p1s_add" blst_p1s_add_overrides (blst_p1s_add_spec_1 49) blst_p1s_add_tactic;
 
 
-let do_prove = true;
+// E2 proofs
 
 let overrides = (concat_all [fp_overrides, fp2_overrides, vec_overrides, vec_fp2_overrides, [mul_by_3_fp2_alias_1_2_ov, reciprocal_fp2_alias_1_2_ov, reciprocal_fp2_ov, POINTonE2_dadd_affine_alias_1_2_ov, vec_zero_288_ov]]);
 
-POINTonE2_head_ov <- custom_verify "POINTonE2_head" overrides POINTonE2_head_spec
-do {
+let POINTonE2_head_tactic = do {
   goal_eval_unint (concat fp_unints fp2_unints);
-  simplify (addsimps [] (addsimps fp2_alg_thms fp2_simpset));
+  simplify (addsimps fp2_alg_thms fp2_simpset);
   goal_eval_unint fp_unints;
   simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
   w4_unint_z3 ["to_Fp", "from_Fp"];
 };
 
-POINTonE2_head_null_ov <- custom_verify "POINTonE2_head" overrides POINTonE2_head_null_spec
-do {
+POINTonE2_head_ov <- custom_verify "POINTonE2_head" overrides POINTonE2_head_spec POINTonE2_head_tactic;
+POINTonE2_head_null_ov <- custom_verify "POINTonE2_head" overrides POINTonE2_head_null_spec POINTonE2_head_tactic;
+
+let POINTonE2_tail_tactic = do {
   goal_eval_unint (concat fp_unints fp2_unints);
-  simplify (addsimps [] (addsimps fp2_alg_thms fp2_simpset));
+  simplify (addsimps fp2_alg_thms fp2_simpset);
   goal_eval_unint fp_unints;
   simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
   w4_unint_z3 ["to_Fp", "from_Fp"];
 };
 
-POINTonE2_tail_ov <- custom_verify "POINTonE2_tail" overrides POINTonE2_tail_spec
-do {
-  goal_eval_unint (concat fp_unints fp2_unints);
-  simplify (addsimps [] (addsimps fp2_alg_thms fp2_simpset));
-  goal_eval_unint fp_unints;
-  simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
-
-POINTonE2_tail_ov_2 <- custom_verify "POINTonE2_tail" overrides POINTonE2_tail_spec_2
-do {
-  goal_eval_unint (concat fp_unints fp2_unints);
-  simplify (addsimps [] (addsimps fp2_alg_thms fp2_simpset));
-  goal_eval_unint fp_unints;
-  simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
-
-POINTonE2_tail_ov_3 <- custom_verify "POINTonE2_tail" overrides POINTonE2_tail_spec_3
-do {
-  goal_eval_unint (concat fp_unints fp2_unints);
-  simplify (addsimps [] (addsimps fp2_alg_thms fp2_simpset));
-  goal_eval_unint fp_unints;
-  simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
-  //simplify (addsimps readability_rewrites cleanup_simpset);
-  //print_goal;
-  //offline_w4_unint_z3 ["to_Fp", "from_Fp"] "foo";
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
+POINTonE2_tail_ov <- custom_verify "POINTonE2_tail" overrides POINTonE2_tail_spec POINTonE2_tail_tactic;
+POINTonE2_tail_ov_2 <- custom_verify "POINTonE2_tail" overrides POINTonE2_tail_spec_2 POINTonE2_tail_tactic;
+POINTonE2_tail_ov_3 <- custom_verify "POINTonE2_tail" overrides POINTonE2_tail_spec_3 POINTonE2_tail_tactic;
 
 // now the top-level proofs:
 
-blst_p2s_add_3_ov <- custom_verify "blst_p2s_add" (concat_all [vec_overrides, vec_fp2_overrides, fp_overrides, fp2_overrides, [vec_zero_288_ov, vec_copy_POINTonE2_affine_ov, vec_select_alias_1_2_POINTonE2_ov]]) (blst_p2s_add_spec_1 3)
-do {
-  unfolding ["select","POINTonE2_affine_invariant","POINTonE2_invariant"];
-  goal_eval_unint fp_unints;
-  simplify fp_simpset;
-  //w4;
-  w4_unint_z3 ["to_Fp", "from_Fp"];
+let blst_p2s_add_overrides = (concat_all [fp_overrides, fp2_overrides, vec_overrides, vec_fp2_overrides, [POINTonE2_head_ov, POINTonE2_head_null_ov, POINTonE2_tail_ov, POINTonE2_tail_ov_2, POINTonE2_tail_ov_3, reciprocal_fp2_ov, reciprocal_fp2_alias_1_2_ov, POINTonE2_dadd_affine_alias_1_2_ov, vec_zero_288_ov, vec_copy_POINTonE2_affine_ov, vec_select_alias_1_2_POINTonE2_ov]]);
+
+let blst_p2s_add_tactic = do {
+  unfolding ["bulk_addition_POINTonE2_head"];
+  simplify (addsimps [bulk_addition_head_fp2_thm, bulk_addition_tail_fp2_thm, bulk_addition_tail_bz_fp2_thm, point_dadd_affine_fp2_thm, reciprocal_div_fp2_thm] (cryptol_ss ()));
+  goal_eval_unint (concat ["bulk_addition_head_fp2", "bulk_addition_tail_fp2", "bulk_addition_tail_bz_fp2",  "point_dadd_affine_fp2"] fp2_unints);
+  simplify (addsimps [abs_rep_fp2_thm] empty_ss);
+  simplify (addsimps [normalize_bulk_addition_head_fp2_thm, normalize_bulk_addition_head_fp2_mul_acc_thm, normalize_bulk_addition_head_fp2_B_Z_thm, normalize_bulk_addition_tail_fp2_thm, normalize_point_dadd_affine_fp2_foo_thm, normalize_point_dadd_affine_fp2_1_thm, normalize_point_dadd_affine_fp2_2_1_thm, normalize_point_dadd_affine_fp2_2_2_thm] empty_ss);
+  simplify (addsimps [fp2_zero_abs_thm, fp2_zero_rep_thm, one_mont_fp2_abs_thm, one_mont_fp2_rep_thm] fp2_simpset);
+  simplify (addsimps [foobar_thm] empty_ss);
+  w4_unint_z3 ["bulk_addition_head_fp2", "bulk_addition_tail_fp2", "bulk_addition_tail_bz_fp2",  "point_dadd_affine_fp2", "to_Fp", "from_Fp"];
 };
 
-let overrides = (concat_all [fp_overrides, fp2_overrides, vec_overrides, vec_fp2_overrides, [POINTonE2_head_ov, POINTonE2_head_null_ov, POINTonE2_tail_ov, POINTonE2_tail_ov_2, POINTonE2_tail_ov_3, reciprocal_fp2_ov, reciprocal_fp2_alias_1_2_ov, POINTonE2_dadd_affine_alias_1_2_ov, vec_zero_288_ov, vec_copy_POINTonE2_affine_ov, vec_select_alias_1_2_POINTonE2_ov]]);
+blst_p2s_add_3_ov <- custom_verify "blst_p2s_add" blst_p2s_add_overrides (blst_p2s_add_spec_1 3) blst_p2s_add_tactic;
+blst_p2s_add_16_ov <- custom_verify "blst_p2s_add" blst_p2s_add_overrides (blst_p2s_add_spec_1 16) blst_p2s_add_tactic;
+_ <- custom_verify "blst_p2s_add" blst_p2s_add_overrides (blst_p2s_add_spec_2 15) blst_p2s_add_tactic; // this adds 16 points
+blst_p2s_add_17_ov <- custom_verify "blst_p2s_add" blst_p2s_add_overrides (blst_p2s_add_spec_1 17) blst_p2s_add_tactic;
+blst_p2s_add_32_ov <- custom_verify "blst_p2s_add" blst_p2s_add_overrides (blst_p2s_add_spec_1 32) blst_p2s_add_tactic;
+blst_p2s_add_33_ov <- custom_verify "blst_p2s_add" blst_p2s_add_overrides (blst_p2s_add_spec_1 33) blst_p2s_add_tactic;
+blst_p2s_add_48_ov <- custom_verify "blst_p2s_add" blst_p2s_add_overrides (blst_p2s_add_spec_1 48) blst_p2s_add_tactic;
+blst_p2s_add_49_ov <- custom_verify "blst_p2s_add" blst_p2s_add_overrides (blst_p2s_add_spec_1 49) blst_p2s_add_tactic;
 
-blst_p2s_add_16_ov <- custom_verify "blst_p2s_add" overrides (blst_p2s_add_spec_1 16)
-do {
-  unfolding ["select","POINTonE2_affine_invariant","POINTonE2_invariant"];
-  goal_eval_unint fp_unints;
-  simplify fp_simpset;
-  //w4;
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
-
-_ <- custom_verify "blst_p2s_add" overrides (blst_p2s_add_spec_2 15) // this adds 16 points
-do {
-  unfolding ["select","POINTonE2_affine_invariant","POINTonE2_invariant"];
-  goal_eval_unint fp_unints;
-  simplify fp_simpset;
-  //w4;
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
-
-blst_p2s_add_17_ov <- custom_verify "blst_p2s_add" overrides (blst_p2s_add_spec_1 17)
-do {
-  unfolding ["select","POINTonE2_affine_invariant","POINTonE2_invariant"];
-  goal_eval_unint fp_unints;
-  simplify fp_simpset;
-  //w4;
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
-
-blst_p2s_add_32_ov <- custom_verify "blst_p2s_add" overrides (blst_p2s_add_spec_1 32)
-do {
-  unfolding ["select","POINTonE2_affine_invariant","POINTonE2_invariant"];
-  goal_eval_unint fp_unints;
-  simplify fp_simpset;
-  //w4;
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
-
-blst_p2s_add_33_ov <- custom_verify "blst_p2s_add" overrides (blst_p2s_add_spec_1 33)
-do {
-  unfolding ["select","POINTonE2_affine_invariant","POINTonE2_invariant"];
-  goal_eval_unint fp_unints;
-  simplify fp_simpset;
-  //w4;
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
-
-blst_p2s_add_48_ov <- custom_verify "blst_p2s_add" overrides (blst_p2s_add_spec_1 48)
-do {
-  unfolding ["select","POINTonE2_affine_invariant","POINTonE2_invariant"];
-  goal_eval_unint fp_unints;
-  simplify fp_simpset;
-  //w4;
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
-
-blst_p2s_add_49_ov <- custom_verify "blst_p2s_add" overrides (blst_p2s_add_spec_1 49)
-do {
-  unfolding ["select","POINTonE2_affine_invariant","POINTonE2_invariant"];
-  goal_eval_unint fp_unints;
-  simplify fp_simpset;
-  //w4;
-  w4_unint_z3 ["to_Fp", "from_Fp"];
-};
-
-let do_prove=true;
-
-llvm_compositional_extract m "POINTonE1_head" "POINTonE1_head_null_term"
-  overrides
-  true
-  POINTonE1_head_null_spec
-  do {
-    unfolding ["select"];
-    goal_eval_unint fp_unints;
-    simplify fp_simpset;
-    w4;
-  };
-
-prove (quickcheck 10) {{ \A B -> POINTonE1_abs ((POINTonE1_head_null_term A B)@0) == bulk_addition_head_a Fp (POINTonE1_affine_abs A) (POINTonE1_affine_abs B) zero }};
-
-llvm_compositional_extract m "POINTonE1_head" "POINTonE1_head_term"
-  overrides
-  true
-  POINTonE1_head_spec
-  do {
-    unfolding ["select"];
-    goal_eval_unint fp_unints;
-    simplify fp_simpset;
-    w4;
-  };
-
-prove (quickcheck 10) {{ \A B -> POINTonE1_abs ((POINTonE1_head_null_term A B)@0) == bulk_addition_head_a Fp (POINTonE1_affine_abs A) (POINTonE1_affine_abs B) zero }};
