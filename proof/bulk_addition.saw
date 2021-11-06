@@ -77,7 +77,7 @@ let blst_p1s_add_spec_1 n = do {
   llvm_points_to (llvm_elem points_ptr 1) llvm_null;
   llvm_precond {{ all POINTonE1_affine_invariant array }};
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n:[64]}}];
-  let sum = {{ POINTonE1_rep (bulk_accumulate stuff_fp (Fp.field_zero, Fp.field_zero, Fp.field_zero) (map POINTonE1_affine_abs array)) }};
+  let sum = {{ POINTonE1_rep (bulk_add`{32} stuff_fp (Fp.field_zero, Fp.field_zero, Fp.field_zero) (map POINTonE1_affine_abs array)) }};
   llvm_postcond {{ POINTonE1_invariant sum }};
   llvm_points_to sum_ptr (llvm_term sum);
 };
@@ -94,7 +94,7 @@ let blst_p1s_add_spec_2 n = do {
   llvm_precond {{ POINTonE1_affine_invariant point_1 }};
   llvm_precond {{ all POINTonE1_affine_invariant array }};
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n+1:[64]}}];
-  let sum = {{ POINTonE1_rep (bulk_accumulate stuff_fp (Fp.field_zero, Fp.field_zero, Fp.field_zero) (map POINTonE1_affine_abs ([point_1] # array))) }};
+  let sum = {{ POINTonE1_rep (bulk_add`{32} stuff_fp (Fp.field_zero, Fp.field_zero, Fp.field_zero) (map POINTonE1_affine_abs ([point_1] # array))) }};
   llvm_postcond {{ POINTonE1_invariant sum }};
   llvm_points_to sum_ptr (llvm_term sum);
 };
@@ -202,7 +202,7 @@ let blst_p2s_add_spec_1 n = do {
   llvm_points_to (llvm_elem points_ptr 1) llvm_null;
   llvm_precond {{ all POINTonE2_affine_invariant array }};
   llvm_execute_func [sum_ptr, points_ptr, llvm_term {{`n:[64]}}];
-  let sum = {{ POINTonE2_rep (bulk_accumulate stuff_fp2 (Fp_2.field_zero, Fp_2.field_zero, Fp_2.field_zero) (map POINTonE2_affine_abs ([point_1] # array))) }};
+  let sum = {{ POINTonE2_rep (bulk_accumulate stuff_fp2 (Fp_2.field_zero, Fp_2.field_zero, Fp_2.field_zero) (map POINTonE2_affine_abs array)) }};
   llvm_postcond {{ POINTonE2_invariant sum }};
   llvm_points_to sum_ptr (llvm_term sum);
 };
@@ -334,7 +334,7 @@ vec_zero_288_ov <- admit "vec_zero" (vec_zero_spec 288);
 
 let do_prove=true;
 
-// now the memory safety proofs:
+// now the proofs:
 
 let overrides = concat_all [fp_overrides, vec_overrides, [mul_by_3_fp_alias_1_2_ov, reciprocal_fp_ov, POINTonE1_dadd_affine_alias_ov, vec_zero_144_ov, reciprocal_fp_alias_ov]];
 
@@ -423,16 +423,27 @@ bulk_addition_tail_bz_fp_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x -> b
 abs_rep_thm <- admit_cryptol (rewrite (cryptol_ss()) {{ \x -> fp_abs (fp_rep x) == Fp.normalize x }});
 
 normalize_bulk_addition_head_1_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> Fp.normalize (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).0.0 == (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).0.0 }}) ["to_Fp"];
-normalize_bulk_addition_head_1_1_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> Fp.normalize (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).0.0 == (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).0.0 }}) [];
 normalize_bulk_addition_head_1_2_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> Fp.normalize (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).0.1 == (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).0.1 }}) ["to_Fp"];
 normalize_bulk_addition_head_1_2_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> Fp.normalize (bulk_addition_head_fp x y z).0.2 == (bulk_addition_head_fp x y z).0.2 }}) [];
 normalize_bulk_addition_head_2_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> Fp.normalize (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).1.0 == (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).1.0 }}) ["to_Fp"];
 normalize_bulk_addition_head_2_2_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> Fp.normalize (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).1.1 == (bulk_addition_head_fp (fp_abs x0, fp_abs x1) (fp_abs y0, fp_abs y1) z).1.1 }}) ["to_Fp"];
 normalize_bulk_addition_head_2_2_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> Fp.normalize (bulk_addition_head_fp x y z).1.2 == (bulk_addition_head_fp x y z).1.2 }}) [];
+normalize_bulk_addition_head_mul_acc_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> bulk_addition_head_fp x y (Fp.normalize z) == bulk_addition_head_fp x y z }}) [];
+normalize_bulk_addition_head_B_Z_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> Fp.normalize (bulk_addition_head_fp x y z).1.2 == (bulk_addition_head_fp x y z).1.2 }}) [];
 
-normalize_bulk_addition_tail_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 y2 z -> Fp.normalize (bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, Fp.normalize y2) z).0 == (bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, Fp.normalize y2) z).0 }}) [];
-normalize_bulk_addition_tail_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 y2 z -> Fp.normalize (bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, Fp.normalize y2) z).1 == (bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, Fp.normalize y2) z).1 }}) [];
+normalize_bulk_addition_head_1_1_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).0.0 == Fp.normalize (bulk_addition_head_fp (x0, x1) (y0, y1) z).0.0 }}) [];
+normalize_bulk_addition_head_1_2_1_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).0.1 == Fp.normalize (bulk_addition_head_fp (x0, x1) (y0, y1) z).0.1 }}) [];
+//normalize_bulk_addition_head_1_2_2_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).0.2 == Fp.normalize (bulk_addition_head_fp (x0, x1) (y0, y1) z).0.2 }}) [];
+normalize_bulk_addition_head_1_2_2_thm' <- admit_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).0.2 == Fp.normalize (bulk_addition_head_fp (x0, x1) (y0, y1) z).0.2 }});
+normalize_bulk_addition_head_2_1_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).1.0 == Fp.normalize (bulk_addition_head_fp (x0, x1) (y0, y1) z).1.0 }}) [];
+normalize_bulk_addition_head_2_2_1_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).1.1 == Fp.normalize (bulk_addition_head_fp (x0, x1) (y0, y1) z).1.1 }}) [];
+normalize_bulk_addition_head_2_2_2_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 z -> (bulk_addition_head_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1) z).1.2 == Fp.normalize (bulk_addition_head_fp (x0, x1) (y0, y1) z).1.2 }}) [];
 
+normalize_bulk_addition_tail_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 y2 z -> (bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, y2) z).0 == Fp.normalize (bulk_addition_tail_fp (x0, x1) (y0, y1, y2) z).0 }}) [];
+normalize_bulk_addition_tail_2_thm <- admit_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 y2 z -> (bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, y2) z).1 == Fp.normalize (bulk_addition_tail_fp (x0, x1) (y0, y1, y2) z).1 }});
+//normalize_bulk_addition_tail_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x0 x1 y0 y1 y2 z -> (bulk_addition_tail_fp (Fp.normalize x0, Fp.normalize x1) (Fp.normalize y0, Fp.normalize y1, y2) z).1 == Fp.normalize (bulk_addition_tail_fp (x0, x1) (y0, y1, y2) z).1 }}) [];
+
+normalize_point_dadd_affine_fp_foo_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y0 y1 -> point_dadd_affine_fp x (Fp.normalize y0, Fp.normalize y1) == point_dadd_affine_fp x (y0, y1) }}) [];
 normalize_point_dadd_affine_fp_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> Fp.normalize (point_dadd_affine_fp x y).0 == (point_dadd_affine_fp x y).0 }}) [];
 normalize_point_dadd_affine_fp_2_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> Fp.normalize (point_dadd_affine_fp x y).1 == (point_dadd_affine_fp x y).1 }}) [];
 normalize_point_dadd_affine_fp_2_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> Fp.normalize (point_dadd_affine_fp x y).2 == (point_dadd_affine_fp x y).2 }}) [];
@@ -445,10 +456,10 @@ let blst_p1s_add_tactic = do {
   simplify (addsimps [bulk_addition_head_fp_thm, bulk_addition_tail_fp_thm, bulk_addition_tail_bz_fp_thm, point_dadd_affine_fp_thm, reciprocal_div_fp_thm] empty_ss);
   goal_eval_unint (concat ["bulk_addition_head_fp", "bulk_addition_tail_fp", "bulk_addition_tail_bz_fp",  "point_dadd_affine_fp"] fp_unints);
   simplify (addsimps [abs_rep_thm] empty_ss);
-  simplify (addsimps [normalize_bulk_addition_tail_1_thm, normalize_bulk_addition_tail_2_thm] empty_ss);
-  simplify (addsimps [normalize_bulk_addition_head_1_1_thm, normalize_bulk_addition_head_1_2_1_thm, normalize_bulk_addition_head_1_2_2_thm, normalize_bulk_addition_head_2_1_thm, normalize_bulk_addition_head_2_2_1_thm, normalize_bulk_addition_head_2_2_2_thm] empty_ss);
-  simplify (addsimps [normalize_point_dadd_affine_fp_1_thm, normalize_point_dadd_affine_fp_2_1_thm, normalize_point_dadd_affine_fp_2_2_thm] empty_ss); 
+  simplify (addsimps [normalize_bulk_addition_head_1_1_thm', normalize_bulk_addition_head_1_2_1_thm', normalize_bulk_addition_head_1_2_2_thm', normalize_bulk_addition_head_2_1_thm', normalize_bulk_addition_head_2_2_1_thm', normalize_bulk_addition_head_2_2_2_thm', normalize_bulk_addition_head_mul_acc_thm, normalize_bulk_addition_head_B_Z_thm, normalize_bulk_addition_tail_1_thm, normalize_bulk_addition_tail_2_thm, normalize_point_dadd_affine_fp_foo_thm, normalize_point_dadd_affine_fp_1_thm, normalize_point_dadd_affine_fp_2_1_thm, normalize_point_dadd_affine_fp_2_2_thm] empty_ss);
+  //simplify (addsimps [normalize_bulk_addition_head_1_1_thm, normalize_bulk_addition_head_1_2_1_thm, normalize_bulk_addition_head_1_2_2_thm, normalize_bulk_addition_head_2_1_thm, normalize_bulk_addition_head_2_2_1_thm, normalize_bulk_addition_head_2_2_2_thm] empty_ss);
   simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] fp_simpset);
+  print_goal;
   simplify (addsimps [foobar_thm] empty_ss);
   w4_unint_z3 ["bulk_addition_head_fp", "bulk_addition_tail_fp", "bulk_addition_tail_bz_fp",  "point_dadd_affine_fp", "to_Fp", "from_Fp"];
 };
@@ -458,8 +469,6 @@ blst_p1s_add_16_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_
 _ <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_2 15) blst_p1s_add_tactic; // this adds 16 points
 
 blst_p1s_add_17_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 17) blst_p1s_add_tactic;
-
-let do_prove=false;
 
 blst_p1s_add_32_ov <- custom_verify "blst_p1s_add" overrides (blst_p1s_add_spec_1 32) blst_p1s_add_tactic;
 
@@ -524,7 +533,7 @@ do {
 
 // now the top-level proofs:
 
-blst_p1s_add_3_ov <- custom_verify "blst_p2s_add" (concat_all [vec_overrides, vec_fp2_overrides, fp_overrides, fp2_overrides, [vec_zero_288_ov, vec_copy_POINTonE2_affine_ov, vec_select_alias_1_2_POINTonE2_ov]]) (blst_p2s_add_spec_1 3)
+blst_p2s_add_3_ov <- custom_verify "blst_p2s_add" (concat_all [vec_overrides, vec_fp2_overrides, fp_overrides, fp2_overrides, [vec_zero_288_ov, vec_copy_POINTonE2_affine_ov, vec_select_alias_1_2_POINTonE2_ov]]) (blst_p2s_add_spec_1 3)
 do {
   unfolding ["select","POINTonE2_affine_invariant","POINTonE2_invariant"];
   goal_eval_unint fp_unints;

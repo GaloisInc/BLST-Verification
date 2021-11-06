@@ -74,19 +74,22 @@ inverse_functionality F xs =
     mem i xs' = (map ((==) i) xs') != zero
     test_inverses F' xs' = [F'.mul(x,i) | x <- xs' | i <- inverses F' xs']
 
+eq_F : {t} (Eq t) => FieldRep t -> t -> t -> Bool
+eq_F F x y = F.normalize x == F.normalize y
+
 // HEAD
 
 // ... as implemented
 bulk_addition_head_imp: {t} (Eq t) => FieldRep t -> (t,t) -> (t,t) -> t -> ((t,t,t), (t,t,t))
 bulk_addition_head_imp F (x1,y1) (x2,y2) mul_acc = ((ax_1, ay_1, az_2), (bx_1, by_1, bz_2)) where
-  inf = (x1==F.field_zero /\ y1==F.field_zero) \/ (x2==F.field_zero /\ y2==F.field_zero)
+  inf = (eq_F F x1 F.field_zero /\ eq_F F y1 F.field_zero) \/ (eq_F F x2 F.field_zero /\ eq_F F y2 F.field_zero)
   bz = F.sub (x2, x1)
   bx = F.add (x2, x1)
   az = F.add (y2, y1)
   by_0 = F.sub (y2, y1)
 
-  cond = bz == F.field_zero // if test, x2 == x1
-  inf_1 = if cond then az == F.field_zero else inf 
+  cond = eq_F F bz F.field_zero // if test, x2 == x1
+  inf_1 = if cond then eq_F F az F.field_zero else inf
   bx_1 = if cond then if inf_1 then az else bx else bx
   by_1 = if cond then mul_by_3 F (F.sq x1) else by_0
   bz_1 = if cond then az else bz
@@ -125,7 +128,7 @@ bulk_addition_head_b F (x1,y1) (x2,y2) =
 
 bulk_addition_tail: {t} (Eq t) => FieldRep t -> (t,t) -> (t,t,t) -> t -> (t,t)
 bulk_addition_tail F (ax, ay) (bx,by_0,bz) lam =
-    if bz == F.field_zero then (ax, ay) else (dx, dy) where
+    if eq_F F bz F.field_zero then (ax, ay) else (dx, dy) where
     lam_a = F.mul(lam, by_0)
     llam = F.sq lam_a
     dx = F.sub (llam, bx)
@@ -134,7 +137,7 @@ bulk_addition_tail F (ax, ay) (bx,by_0,bz) lam =
 // the B->Z result does not depend on A or LAM
 bulk_addition_tail_bz: {t} (Eq t) => FieldRep t -> t -> t
 bulk_addition_tail_bz F bz =
-    if bz == F.field_zero then F.field_unit else bz
+    if eq_F F bz F.field_zero then F.field_unit else bz
 
 // TODO: semi-correctness: head, inverse, tail give the correct addition formula.
 
@@ -242,7 +245,7 @@ bulk_accumulate_even C points = dst where
   //last_pair = ([(z,z)] # points')!0 // type checker does not know n >= 1
   //z = (z0,z0,z0) // : (t,t,t)
   //z0 = C.base_field.field_zero // : t
-  last_pair = (atLeastOne points')!0
+  last_pair = points'!0
   last_inv = C.field.div (C.field.field_unit, last_pair.0.2)
   dst = bulk_accumulate_loop_2 C points' last_inv
 
@@ -298,4 +301,9 @@ bulk_accumulate_inverses F point_pairs last_inv = inverses' where
 //    n' = n / 2
 //    pointss = [points] #
 //    points' = foldl
+
+bulk_add : {m, n, t} (fin m, fin n, Eq t) => BulkAdditionStuff t -> (t, t, t) -> [n](t, t) -> (t, t, t)
+bulk_add C sum_acc points = if `n == 0
+  then sum_acc
+  else bulk_add`{m} C (bulk_accumulate C sum_acc (take`{min m n} points)) (drop`{min m n} points)
 
