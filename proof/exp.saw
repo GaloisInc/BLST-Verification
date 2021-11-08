@@ -130,9 +130,28 @@ let reciprocal_fp_spec = do {
     crucible_points_to out_ptr (crucible_term {{ fp_rep (inverse_fp (fp_abs inp)) }});
     };
 
+let reciprocal_fp_alias_spec = do {
+    (inp, inp_ptr) <- ptr_to_fresh "inp" vec384_type;
+    crucible_precond {{ fp_invariant inp }};
+    crucible_execute_func [inp_ptr, inp_ptr];
+    // crucible_points_to out_ptr (crucible_term {{ fp_rep (fp_exp (fp_abs inp) (`p-2)) }});
+    // crucible_points_to out_ptr (crucible_term {{ fp_rep (Fp.div (Fp.field_unit, fp_abs inp)) }});
+    crucible_points_to inp_ptr (crucible_term {{ fp_rep (inverse_fp (fp_abs inp)) }});
+    };
+
 reciprocal_fp_ov <- custom_verify "reciprocal_fp"
                     ovs_for_reciprocal
                     reciprocal_fp_spec
+                    do {
+                      simplify (addsimp recip_fp_algebra_thm empty_ss);
+                      unfolding ["sqr_n_mul"];
+                      simplify fp_exp_simps;
+                      w4_unint_z3 (concat ["fp_exp"] fp_unints);
+                      };
+
+reciprocal_fp_alias_ov <- custom_verify "reciprocal_fp"
+                    ovs_for_reciprocal
+                    reciprocal_fp_alias_spec
                     do {
                       simplify (addsimp recip_fp_algebra_thm empty_ss);
                       unfolding ["sqr_n_mul"];

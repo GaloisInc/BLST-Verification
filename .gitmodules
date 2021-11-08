@@ -7,3 +7,6 @@
 [submodule "blst_patched"]
 	path = blst_recent
 	url = git@github.com:supranational/blst.git
+[submodule "blst_bulk_addition"]
+	path = blst_bulk_addition
+	url = git@github.com:supranational/blst.git

@@ -9,7 +9,14 @@ build () {
         cd "build/$1"
 
         if [ "$2" = blst ]; then
-            for p in ../../patches/*
+            for p in ../../patches/blst/*
+            do
+                patch -f -p1 -t < "$p" # -f to prevent patch from automatically enabling option -R when it thinks it should
+            done
+        fi
+
+        if [ "$2" = blst_bulk_addition ]; then
+            for p in ../../patches/blst_bulk_addition/*
             do
                 patch -f -p1 -t < "$p" # -f to prevent patch from automatically enabling option -R when it thinks it should
             done
@@ -36,3 +43,4 @@ build llvm blst '-D__ADX__'
 build llvm_noadx blst
 build llvm_recent blst_recent '-D__ADX__'
 build llvm_noadx_recent blst_recent
+build llvm_bulk_addition blst_bulk_addition '-D__ADX__'

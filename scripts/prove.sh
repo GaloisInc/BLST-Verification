@@ -8,7 +8,7 @@ err_handler() {
 trap err_handler EXIT
 
 argfiles=$1
-defaultfiles="proof/memory_safety.saw proof/functional_proofs.saw proof/correctness_add.saw"
+defaultfiles="proof/memory_safety.saw proof/functional_proofs.saw proof/correctness_add.saw proof/bulk_addition.saw"
 files="${argfiles:=$defaultfiles}"
 
 for f in $files; do

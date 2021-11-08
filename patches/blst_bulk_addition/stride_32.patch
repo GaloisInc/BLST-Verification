@@ -1,0 +1,13 @@
+diff --git a/src/bulk_addition.c b/src/bulk_addition.c
+index d9a1d4b..92f1817 100644
+--- a/src/bulk_addition.c
++++ b/src/bulk_addition.c
+@@ -145,7 +145,7 @@ static void ptype##s_accumulate(ptype *sum, ptype points[], size_t n) \
+ void prefix##s_add(ptype *sum, ptype##_affine *points[], size_t npoints) \
+ { \
+     /* Performance with 288K scratch is within 1-2-3% from optimal */ \
+-    const size_t stride = sizeof(ptype)==sizeof(POINTonE1) ? 2048 : 1024; \
++    const size_t stride = sizeof(ptype)==sizeof(POINTonE1) ? 32 : 32; \
+     ptype *scratch = alloca((npoints > stride ? stride : npoints) * \
+                             sizeof(ptype)); \
+     const ptype##_affine *point = NULL; \

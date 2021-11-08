@@ -1,0 +1,14 @@
+/*
+ * Copyright (c) 2020 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+// Bulk addition lives in a version of blst that is newer than the one for which the exp2 proofs work.
+// So, here we just assume that the newer version of reciprocal_fp2 is correct.
+
+let fp2_unop_spec name op = unop_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
+let fp2_unop_alias_1_2_spec name op = unop_alias_1_2_spec name vec384x_type {{fp2_invariant}} {{fp2_rep}} {{fp2_abs}} op;
+
+reciprocal_fp2_ov <- admit "reciprocal_fp2" (fp2_unop_spec "reciprocal_fp2" {{ inverse_fp2 }});
+
+reciprocal_fp2_alias_1_2_ov <- admit "reciprocal_fp2" (fp2_unop_alias_1_2_spec "reciprocal_fp2" {{ inverse_fp2 }});

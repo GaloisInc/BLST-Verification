@@ -9,8 +9,8 @@ build () {
         cd "build/$1"
 
         if [ "$2" = blst ]; then
-            patch -f -p1 -t < ../../patches/noxmmptr.patch
-            patch -f -p1 -t < ../../patches/sgn0_pty_mod_384x.patch
+            patch -f -p1 -t < ../../patches/blst/noxmmptr.patch
+            patch -f -p1 -t < ../../patches/blst/sgn0_pty_mod_384x.patch
         fi
 
         export CFLAGS="-g -fPIC -Wall -Wextra -Werror $3"

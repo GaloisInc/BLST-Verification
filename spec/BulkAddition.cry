@@ -1,0 +1,284 @@
+import Common::Field
+import FieldExtras
+import ShortWeierstrassCurve
+import PrimeField // for testing, remove
+
+// Test setup
+
+F37 = prime_field`{37}
+C1: EllipticCurve (Z 37)
+C1 = { base_field= F37, a = 0, b = 4 }
+
+// C1, like the BLS curves E and E', has no rational points with y==0.
+
+p1: AffinePoint (Z 37)
+p1 = (2,7) // was (1,6), for F31
+// p1 generates the 39-element group of rational points
+
+p2: AffinePoint (Z 37)
+p2 = (16,20) // was (5,6)
+// p2 = 10*p1
+
+q1: AffinePoint (Z 37)
+q1 = (24, 29) // q1 generates a group of 13 elements, not including (0,2)
+
+// ... also with a representation with junk elements
+F37' = prime_field_bv`{6} 37
+C1': EllipticCurve [6]
+C1' = { base_field= F37', a = 0, b = 4 }
+
+p1': AffinePoint [6]
+p1' = (2,7)
+
+p2': AffinePoint [6]
+p2' = (16,20)
+
+q1': AffinePoint [6]
+q1' = (24,29)
+
+// end test setup
+
+/* Montgomery's trick allows the calculation of the inverses of several
+   field values while only computing one inverse.
+
+   The basic idea, for two values a and b, is to compute (ab)^(-1), then we get
+   a^(-1) = b*(ab)^{-1}   and   b^(-1) = a*(ab)^{-1}
+
+  for 4 values, it works like this.
+  1. From [a,b,c,d], we form the products [a, ab, abc, abcd]
+  2. Compute (abcd)^(-1)
+  3. Get [a^(-1), (ab)^(-1), (abc)^(-1), (abcd)^(-1)] by starting with the last
+     value, and getting each earlier value by a multiplication
+  4. Get [a^(-1),  b^(-1), c^(-1), d^(-1)] by multiplication with the
+     appropriate products, e.g. c^(-1) = (ab) * (abc)^(-1)
+
+ If any of the input values is 0, the whole thing fails.
+*/
+
+inverses: {n, t} (fin n, n >= 1) => FieldRep t -> [n]t -> [n]t
+inverses F xs = results where
+  products = [xs@0] # [F.mul (p, x) | p <- products | x <- tail xs ]
+  // products@i == product (take`{i} xs)
+  iprods = [F.mul (x, i) | i <- tail`{n-1} iprods | x <- tail xs]
+           # [F.div(F.field_unit, products!0) ]
+  // iprods@i == xs@(i+1) * iprods@(i+1) == inverse (products@i)
+  results = [iprods@0] # [F.mul(p, i) | p <- products | i <- tail iprods]
+  // results@i == products@(i-1) * iprods@i == inverse (xs@i)
+
+// correctness property
+inverse_functionality: {n, t} (fin n, n >= 1, Eq t) => FieldRep t -> [n]t -> Bool
+inverse_functionality F xs =
+  (mem F.field_zero (map F.normalize xs)) \/ test_inverses F xs == map (\ x -> F.field_unit) xs
+  where
+    mem i xs' = (map ((==) i) xs') != zero
+    test_inverses F' xs' = [F'.mul(x,i) | x <- xs' | i <- inverses F' xs']
+
+// HEAD
+
+// ... as implemented
+bulk_addition_head_imp: {t} (Eq t) => FieldRep t -> (t,t) -> (t,t) -> t -> ((t,t,t), (t,t,t))
+bulk_addition_head_imp F (x1,y1) (x2,y2) mul_acc = ((ax_1, ay_1, az_2), (bx_1, by_1, bz_2)) where
+  inf = (x1==F.field_zero /\ y1==F.field_zero) \/ (x2==F.field_zero /\ y2==F.field_zero)
+  bz = F.sub (x2, x1)
+  bx = F.add (x2, x1)
+  az = F.add (y2, y1)
+  by = F.sub (y2, y1)
+
+  cond =  bz == F.field_zero // if test, x2 == x1
+  inf_1 = if cond then az == F.field_zero else inf 
+  bx_1 = if cond  then if inf_1 then az else bx else bx
+  by_1 = if cond then mul_by_3 F (F.sq x1) else by
+  bz_1 = if cond then az else bz
+
+  ax_1 = if inf_1 then bx_1 else x1
+  ay_1 = if inf_1 then az else y1
+  az_1 = if inf_1 then F.field_unit else bz_1
+  bz_2 = if inf_1 then F.field_zero else bz_1
+  az_2 = F.mul (az_1, mul_acc)
+
+// The HEAD function computes half of point addition, up to the point that
+// an inverse is needed.  See comments in `bulk_addition.c` for a description of the
+// 6 elements of the result.  Those comments suggest this function:
+
+bulk_addition_head: {t} (Eq t) => FieldRep t -> (t,t) -> (t,t) -> t -> ((t,t,t), (t,t,t))
+bulk_addition_head F A B mul_acc = (bulk_addition_head_a F A B mul_acc,  bulk_addition_head_b F A B)
+
+bulk_addition_head_a: {t} (Eq t) => FieldRep t -> (t,t) -> (t,t) -> t -> (t,t,t)
+bulk_addition_head_a F (x1,y1) (x2,y2) mul_acc =
+  if x1 == x2 /\ y1 == y2
+  then (x1, y1, mul_by_2 F (F.mul (y1, mul_acc)))
+  else if x1 == x2 /\ y1 == F.neg(y2)
+  then (F.field_zero, F.field_zero, mul_acc)
+  else (x1, y1, (F.mul (F.sub (x2, x1), mul_acc)))
+
+bulk_addition_head_b: {t} (Eq t) => FieldRep t -> (t,t) -> (t,t) -> (t,t,t)
+bulk_addition_head_b F (x1,y1) (x2,y2) =
+  if x1 == x2 /\ y1 == y2
+  then (mul_by_2 F x1, mul_by_3 F (F.sq x1), mul_by_2 F y1)
+  else if x1 == x2 /\ y1 == F.neg(y2)
+  then (F.field_zero, mul_by_3 F (F.sq x1), F.field_zero)
+  else (F.add (x2, x1), F.sub(y2, y1), F.sub (x2, x1))
+// ... however, this disagrees with the code, which handles (0,0) specially (as it must)
+
+// TAIL produces two results, D and B->Z
+
+bulk_addition_tail: {t} (Eq t) => FieldRep t -> (t,t) -> (t,t,t) -> t -> (t,t)
+bulk_addition_tail F (ax, ay) (bx,by,bz) lam =
+    if bz == F.field_zero then (ax, ay) else (dx, dy)  where
+    lam_a = F.mul(lam, by)
+    llam = F.sq lam_a
+    dx = F.sub (llam, bx)
+    dy = F.sub (F.mul(F.sub(ax, dx), lam_a), ay)
+
+// the B->Z result does not depend on A or LAM
+bulk_addition_tail_bz: {t} (Eq t) => FieldRep t -> t -> t
+bulk_addition_tail_bz F bz =
+    if bz == F.field_zero then F.field_unit else bz
+
+// TODO: semi-correctness: head, inverse, tail give the correct addition formula.
+
+// NOTE: in the A==B case, must know that y != 0, i.e., there are no
+// points (x,0) on the curve.  given the equation y^2 = x^3 + 4 for E,
+// that's saying that -4 is not a cube (which is true); given the
+// equation y^2 = x^3+4(u+1) for E', it says that -4(u+1) is not a
+// cube.  This is also true.  Both assertions are easily checked; when q-1 is divisible by 3,
+// then if x is a cube modulo q we have  x^((q-1)//3) = 1.  Both p and p^2
+// are 1 more than a multiple of 3.
+
+// Now if (ax,ay,az), (bx,by,bz) = bulk_addition_head F a b m
+// and lam = inverse F bz
+// and c = bulk_addition_tail F (ax,ay) (bx,by,bz) lam
+// then c == add C a b
+
+head_inverse_tail: {t} (Eq t) => EllipticCurve t -> AffinePoint t -> AffinePoint t -> AffinePoint t
+head_inverse_tail C a b = c where
+          F = C.base_field
+          ((ax,ay,az), (bx,by,bz)) = bulk_addition_head F a b F.field_unit
+          lam = F.div (F.field_unit, az)
+          c = bulk_addition_tail F (ax,ay) (bx,by,bz) lam
+
+// corrected version:
+head_inverse_tail': {t} (Eq t) => EllipticCurve t -> AffinePoint t -> AffinePoint t -> AffinePoint t
+head_inverse_tail' C a b = c where
+          F = C.base_field
+          ((ax,ay,az), (bx,by,bz)) = bulk_addition_head_imp F a b F.field_unit
+          lam = if az == F.field_zero then F.field_unit else F.div (F.field_unit, az)
+          c = bulk_addition_tail F (ax,ay) (bx,by,bz) lam
+
+// accumulate
+
+// The accumulate function starts with while loop that halves the length
+// of the array at each iteration.  Inside that loop are  two other loops, first
+// calling HEAD on pairs of points, the second calling TAIL, and with some plumbing
+// for the Montgomery trick.
+//
+// Following that is a simple loop for fewer than 16 points, that just adds them.
+
+
+// We struggle a bit with the Cryptol type checker here, 
+
+// One option is to use `take` and `#` to
+// make the types work out.  The `takes` will take the full list of points, and
+// all the concatenation of junk  will be discarded.  In part this is because the
+// type checker does not use the fact (n%2) == 1 in checking the "then" branch,
+// or its negation in checking the "else" branch.
+
+// See the discussion in Cryptol issue #704, which suggests this approach.
+
+// We use this in cases where the type checker cannot prove that `n` and `m` have the same value,
+// but we know they do.  e.g., `m = 2*(n//2)` when we know that `n` is even.
+coerceSize : {m,n,a} (fin n, fin m) => [m]a -> [n]a
+coerceSize xs = assert (`m == `n) "coerceSize: size mismatch" [ xs@i | i <- [0..<n] ]
+
+// ... and this when we know `n >= 1` but the type checker does not.  Note that `max 1 n` equals `n`
+// whenever `n >= 1`.  Similarly, `min 1 n` is 1 whenever `n>=1` holds.
+atLeastOne: {n,a} [n]a -> [max 1 n]a
+atLeastOne xs = (drop`{min 1 n} ([undefined] # xs))
+
+/*
+bulk_accumulate_0: {n, t} (fin n) => EllipticCurve t -> (t,t) -> [n] (t,t)  -> (t,t)
+bulk_accumulate_0 C sum' points =
+  if `n < 16
+  then bulk_accumulate_small C sum' points
+  else if (`n%2) == 1
+  // then bulk_accumulate_even`{n/2} C (add C sum' (points@0)) (take (tail (points # junk)))
+  then bulk_accumulate_even_0`{n/2} C (add C sum' (points@0)) (tail (coerceSize points))
+  // else bulk_accumulate_even`{n/2} C sum' (take points)
+  else bulk_accumulate_even_0`{n/2} C sum' (coerceSize points)
+  // where junk = [ point_O C ] # junk
+*/
+
+bulk_accumulate: {n, t} (fin n, Eq t) => EllipticCurve t -> (t,t) -> [n] (t,t)  -> (t,t)
+bulk_accumulate C sum' points =
+  if `n < 16
+  then bulk_accumulate_small C sum' points
+  else if (`n%2) == 1
+  then bulk_accumulate`{n/2} C (add C sum' (points@0)) (bulk_accumulate_even`{n/2} C (tail (coerceSize points)))
+  else bulk_accumulate`{n/2} C sum' (bulk_accumulate_even`{n/2} C (coerceSize points))
+
+bulk_accumulate_small: {n, t} (fin n) => EllipticCurve t -> (t,t) -> [n] (t,t)  -> (t,t)
+bulk_accumulate_small C sum' points = sums!0 where
+  sums = [sum'] # [add C x p | x <- sums | p <- points]
+
+// ... body of the while loop, after the "n /= 2" line
+bulk_accumulate_even_0: {n, t} (fin n) => EllipticCurve t -> (t,t) -> [2*n] (t,t)  -> (t,t)
+bulk_accumulate_even_0 C sum' points = undefined
+
+bulk_accumulate_even: {n, t} (fin n, Eq t) => EllipticCurve t -> [2*n] (t,t)  -> [n](t,t)
+bulk_accumulate_even C points = dst where
+  F = C.base_field
+  points':  [n] ((t,t,t), (t,t,t))
+  points' = bulk_accumulate_loop_1 F points
+  // the Montgomery trick part
+  last_pair: ((t,t,t), (t,t,t))
+  //last_pair = ([(z,z)] # points')!0 // type checker does not know n >= 1
+  //z = (z0,z0,z0) // : (t,t,t)
+  //z0 = C.base_field.field_zero // : t
+  last_pair = (atLeastOne points')!0
+  last_inv = F.div (F.field_unit, last_pair.0.2)
+  dst = bulk_accumulate_loop_2 F points' last_inv
+
+// First loop: run adjacent pairs through the HEAD function
+// this results in an accumulated product in the .Z fields of the even-numbered points
+// (The "a"s in the a/b splitting), and individual denominator values in the Z fields
+// of the odd-numbered points.
+// The c code modifies the points array in place, effectively resulting in a [2*n] (t,t,t)
+bulk_accumulate_loop_1: {n, t} (fin n, Eq t) => FieldRep t -> [2*n] (t,t)  -> [n] ((t,t,t), (t,t,t))
+bulk_accumulate_loop_1 F points = points' where
+  points' = [bulk_addition_head_imp F a b mul_ac | [a,b] <- split points | mul_ac <- mul_acs]
+  mul_acs = [F.field_unit] # [ma | ((_,_,ma), _) <- points' ]
+
+// second loop ` for (dst = points, i = n; --i;) ...`
+//  runs reversed through the points array.  There are two effects:
+// one is the Montgomery inverse calculation, using the z fields of the
+// "b" points, the other using these inverses in the TAIL part of the
+// point addition. We use 
+
+bulk_accumulate_loop_2: {n, t} (fin n, Eq t) => FieldRep t -> [n] ((t,t,t),(t,t,t))  -> t -> [n](t,t)
+bulk_accumulate_loop_2 F point_pairs last_inv = dst where
+  // dst = [bulk_addition_tail F (ax,ay) b (F.mul(i, az)) | ((ax,ay,az),b) <- point_pairs | i <- inverses']
+  dst = [bulk_addition_tail F (ax,ay) b i | ((ax,ay,az),b) <- point_pairs | i <- inverses']
+  inverses': [max 1 n] t
+  // mostly the same code as in `inverses`
+  products = [az | ((_,_,az),_) <- point_pairs]
+  xs = [bz | (_,(_,_,bz)) <- point_pairs]
+  iprods: [max 1 n] t
+  iprods = [F.mul (x, i) | i <- tail iprods | x <- tail (atLeastOne xs)]
+           # [F.div(F.field_unit, products!0) ]
+  // iprods@i == xs@(i+1) * iprods@(i+1) == inverse (products@i)
+  inverses' = [iprods@0] # [F.mul(p, i) | p <- products | i <- tail iprods]
+  // inverses'@i == products@(i-1) * iprods@i == inverse (xs@i)
+
+bulk_accumulate_inverses: {n, t} (fin n, Eq t) => FieldRep t -> [n] ((t,t,t),(t,t,t))  -> t -> [_]t
+bulk_accumulate_inverses F point_pairs last_inv = inverses' where
+  inverses': [max 1 n] t
+  // mostly the same code as in `inverses`
+  products = [az | ((_,_,az),_) <- point_pairs]
+  xs = [bz | (_,(_,_,bz)) <- point_pairs]
+  iprods: [max 1 n] t
+  iprods = [F.mul (x, i) | i <- tail iprods | x <- tail (atLeastOne xs)]
+           # [F.div(F.field_unit, products!0) ]
+  // iprods@i == xs@(i+1) * iprods@(i+1) == inverse (products@i)
+  inverses' = [iprods@0] # [F.mul(p, i) | p <- products | i <- tail iprods]
+  // inverses'@i == products@(i-1) * iprods@i == inverse (xs@i)
+
