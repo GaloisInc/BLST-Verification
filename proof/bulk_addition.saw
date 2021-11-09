@@ -27,6 +27,8 @@ include "exp.saw";
 include "exp2_for_bulk_add.saw";
 include "print_readably.saw";
 
+let do_prove=true;
+
 import "../spec/BulkAddition.cry";
 
 let {{
@@ -62,6 +64,34 @@ stuff_fp2 =
   }
 }};
 
+let do_prove = false;
+mod_div_Z_thm <- admit_cryptol (rewrite (cryptol_ss()) {{ \p x y -> mod_div_Z(p, x % p, y) == (x * (mod_div_Z (p, 1, y))) % p }});
+add_thm <- custom_prove_cryptol (rewrite (cryptol_ss()) {{ \a b acc -> bulk_addition_tail_fp ((bulk_addition_head_fp a b acc).0.0, (bulk_addition_head_fp a b acc).0.1) (bulk_addition_head_fp a b acc).1 (Fp.div (Fp.field_unit, (bulk_addition_tail_bz_fp (bulk_addition_head_fp a b acc).1.2))) == add E a b }}) (do { goal_eval_unint ["mod_div_Z"]; simplify (addsimps [mod_div_Z_thm] empty_ss); hoist_ifs_in_goal; goal_eval_unint ["mod_div_Z"]; print_goal; w4_unint_z3 ["mod_div_Z"]; });
+foo_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \a b acc -> Fp.mul ((Fp.div (Fp.field_unit, (bulk_addition_head_fp a b acc).0.2)), acc) == Fp.div (Fp.field_unit, (bulk_addition_tail_bz_fp (bulk_addition_head_fp a b acc).1.2)) }}) [];
+foo_thm'' <- prove_cryptol (rewrite (cryptol_ss()) {{ \a b -> (Fp.div (Fp.field_unit, (bulk_addition_head_fp a b Fp.field_unit).0.2)) == Fp.div (Fp.field_unit, (bulk_addition_tail_bz_fp (bulk_addition_head_fp a b Fp.field_unit).1.2)) }}) [];
+bar_thm' <- prove_cryptol (rewrite (cryptol_ss()) {{ \a b acc -> Fp.mul ((Fp.div (Fp.field_unit, (bulk_addition_head_fp a b acc).0.2)), (bulk_addition_tail_bz_fp (bulk_addition_head_fp a b acc).1.2)) == Fp.div (Fp.field_unit, acc) }}) [];
+point_dadd_affine_fp_add_thm <- admit_cryptol (rewrite (cryptol_ss()) {{ \x y z -> point_dadd_affine_fp x (add E y z) == point_dadd_affine_fp (point_dadd_affine_fp x y) z }});
+let do_prove = true;
+
+tuple_fp_0_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \(x : (t_Fp, t_Fp)) -> (x.0, x.1) == x }}) [];
+tuple_fp_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \(x : (t_Fp, t_Fp, t_Fp)) -> (x.0, x.1, x.2) == x }}) [];
+
+let prove_bulk_add_thm n = custom_prove_cryptol
+  (rewrite (cryptol_ss()) {{ \sum_acc (points : [n](AffinePoint t_Fp)) -> bulk_add`{32} stuff_fp sum_acc points == foldl point_dadd_affine_fp sum_acc points }})
+  (do {
+    goal_eval_unint (concat ["bulk_addition_head_fp", "bulk_addition_tail_fp", "bulk_addition_tail_bz_fp", "point_dadd_affine_fp"] fp_unints);
+    simplify (addsimps [add_thm, foo_thm', foo_thm'', bar_thm', point_dadd_affine_fp_add_thm, tuple_fp_0_thm, tuple_fp_1_thm] empty_ss);
+    simplify (addsimps readability_rewrites cleanup_simpset);
+    print_goal;
+    w4_unint_z3 ["bulk_addition_head_fp", "bulk_addition_tail_fp", "bulk_addition_tail_bz_fp",  "point_dadd_affine_fp", "mod_div_Z"];
+  });
+
+prove_bulk_add_thm 16;
+prove_bulk_add_thm 17;
+prove_bulk_add_thm 32;
+prove_bulk_add_thm 33;
+prove_bulk_add_thm 48;
+prove_bulk_add_thm 49;
 
 // first for E1
 // NOTE: we assume that the code has been patched to set stride to 32 (SAW can't handle 2048)
@@ -333,7 +363,6 @@ vec_zero_288_ov <- admit "vec_zero" (vec_zero_spec 288);
 
 
 // now the proofs:
-let do_prove=true;
 
 foo_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x -> to_Fp (from_Fp (x % `p)) == x % `p }}) [];
 bar_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ from_Fp 0 == 0 }}) [];
@@ -353,9 +382,6 @@ normalize_point_dadd_affine_fp_foo_thm <- prove_cryptol (rewrite (cryptol_ss()) 
 normalize_point_dadd_affine_fp_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> Fp.normalize (point_dadd_affine_fp x y).0 == (point_dadd_affine_fp x y).0 }}) [];
 normalize_point_dadd_affine_fp_2_1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> Fp.normalize (point_dadd_affine_fp x y).1 == (point_dadd_affine_fp x y).1 }}) [];
 normalize_point_dadd_affine_fp_2_2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y -> Fp.normalize (point_dadd_affine_fp x y).2 == (point_dadd_affine_fp x y).2 }}) [];
-
-let bvEq_384 = parse_core "\\(x y : Vec 384 Bool) -> bvEq 384 x y";
-foobar_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x -> (bvEq_384 x x) == True }}) [];
 
 bulk_addition_head_fp2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> bulk_addition_head_imp Fp_2 x y z == bulk_addition_head_fp2 x y z }}) [];
 bulk_addition_tail_fp2_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \x y z -> bulk_addition_tail Fp_2 x y z == bulk_addition_tail_fp2 x y z }}) [];
@@ -408,8 +434,7 @@ let blst_p1s_add_tactic = do {
   simplify (addsimps [abs_rep_thm] empty_ss);
   simplify (addsimps [normalize_bulk_addition_head_thm, normalize_bulk_addition_head_mul_acc_thm, normalize_bulk_addition_head_B_Z_thm, normalize_bulk_addition_tail_thm, normalize_point_dadd_affine_fp_foo_thm, normalize_point_dadd_affine_fp_1_thm, normalize_point_dadd_affine_fp_2_1_thm, normalize_point_dadd_affine_fp_2_2_thm] empty_ss);
   simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] fp_simpset);
-  simplify (addsimps [foobar_thm] empty_ss);
-  w4_unint_z3 ["bulk_addition_head_fp", "bulk_addition_tail_fp", "bulk_addition_tail_bz_fp",  "point_dadd_affine_fp", "to_Fp", "from_Fp"];
+  w4_unint_z3 ["bulk_addition_head_fp", "bulk_addition_tail_fp", "bulk_addition_tail_bz_fp",  "point_dadd_affine_fp", "mod_div_Z", "to_Fp", "from_Fp"];
 };
 
 blst_p1s_add_3_ov <- custom_verify "blst_p1s_add" blst_p1s_add_overrides (blst_p1s_add_spec_1 3) blst_p1s_add_tactic;
@@ -460,8 +485,7 @@ let blst_p2s_add_tactic = do {
   simplify (addsimps [abs_rep_fp2_thm] empty_ss);
   simplify (addsimps [normalize_bulk_addition_head_fp2_thm, normalize_bulk_addition_head_fp2_mul_acc_thm, normalize_bulk_addition_head_fp2_B_Z_thm, normalize_bulk_addition_tail_fp2_thm, normalize_point_dadd_affine_fp2_foo_thm, normalize_point_dadd_affine_fp2_1_thm, normalize_point_dadd_affine_fp2_2_1_thm, normalize_point_dadd_affine_fp2_2_2_thm] empty_ss);
   simplify (addsimps [fp2_zero_abs_thm, fp2_zero_rep_thm, one_mont_fp2_abs_thm, one_mont_fp2_rep_thm] fp2_simpset);
-  simplify (addsimps [foobar_thm] empty_ss);
-  w4_unint_z3 ["bulk_addition_head_fp2", "bulk_addition_tail_fp2", "bulk_addition_tail_bz_fp2",  "point_dadd_affine_fp2", "to_Fp", "from_Fp"];
+  w4_unint_z3 ["bulk_addition_head_fp2", "bulk_addition_tail_fp2", "bulk_addition_tail_bz_fp2",  "point_dadd_affine_fp2", "mod_div_Z", "to_Fp", "from_Fp"];
 };
 
 blst_p2s_add_3_ov <- custom_verify "blst_p2s_add" blst_p2s_add_overrides (blst_p2s_add_spec_1 3) blst_p2s_add_tactic;
