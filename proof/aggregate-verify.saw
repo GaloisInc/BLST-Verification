@@ -160,12 +160,18 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
       llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term
         {{ fp12_rep (Fp_12.mul (fp12_abs ctx_GT, fp12_abs GT)) }});
     } else do {
-      // GT is unchanged
+      // ctx->GT is set for the first time
       llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term GT);
     };
   } else do {
+    llvm_points_to (llvm_elem ctx_ptr 0)
+                   (llvm_term {{ ctx_ctrl || AGGR_MIN_SIG }});
     llvm_points_to (llvm_elem ctx_ptr 1)
                    (llvm_term {{ `ctx_nelems + 1 : [32]}});
+    // ctx->GT is unchanged (if set)
+    if aggr_gt_set
+    then llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT)
+    else return ();
     // These postconditions on Q and P are true in the commit case too, but it
     // doesn't matter because they've already been processed in that case, so
     // we ignore them to simplify the proof.
@@ -599,9 +605,7 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                 // ovs used in blst_pairing_finalverify:
                 , blst_pairing_finalverify_ov
                 // Pairing aggregate ovs
-                /*
                 , blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov
-                */
                 , blst_pairing_aggregate_pk_in_g2_null_sig_0_ov
                 , blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov
                 , blst_pairing_aggregate_pk_in_g2_sig_ov
@@ -723,7 +727,12 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             simplify (cryptol_ss());
             rw_with [unfold_map];
             print_readably;
-            w4_unint_z3 (concat [ "all_distinct" ]
+            w4_unint_z3 (concat [ "affinify_E"
+                                , "all_distinct"
+                                , "hash_to_curve_opt_impl"
+                                , "fp12_rep"
+                                , "F_prod_Fp_12"
+                                , "miller_loop_opt" ]
                                 BasicVerify_A_unints);
           }));
       }));
