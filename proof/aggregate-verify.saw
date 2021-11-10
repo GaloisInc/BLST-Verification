@@ -197,7 +197,7 @@ hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms <-
 normalize_hash_to_curve_opt_impl_rws <-
   normalize_hash_to_curve_impl_thms msg_len dst_len aug_len;
 
-blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- really_custom_verify
+blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -249,7 +249,7 @@ unfold_map <- admit_cryptol (rewrite (cryptol_ss())
 
 // A proof for the first time n == N_MAX (AGGR_GT_SET is unset)
 // TODO: Prove n-th commit case (AGGR_GT_SET is set)
-blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- really_custom_verify
+blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -294,7 +294,7 @@ blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- really_custom_veri
                         BasicVerify_A_unints);
   };
 
-blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov <- really_custom_verify
+blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
