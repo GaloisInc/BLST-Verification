@@ -588,7 +588,7 @@ blst_pairing_finalverify_ov <- custom_verify
 // TODO: Re-enable commit
 demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
-  (foldr concat [vec_fp2_overrides, vec_overrides/*, mul_fp12_ovs*/]
+  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ all_distinct_ov
                 , POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
                 , POINTonE1_affine_on_curve_ov
@@ -601,7 +601,8 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                 , POINTonE1_from_Jacobian_alias_ov
                 , vec_copy_2fp_ov
                 // ovs used in blst_pairing_commit:
-                , miller_loop_n_2_ov
+                //, miller_loop_n_2_ov
+                , miller_loop_n_1_ov
                 // ovs used in blst_pairing_finalverify:
                 , blst_pairing_finalverify_ov
                 // Pairing aggregate ovs
@@ -611,7 +612,6 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                 , blst_pairing_aggregate_pk_in_g2_sig_ov
                 /*
                 , POINTonE1_from_Jacobian_ov
-                , miller_loop_n_1_ov
                 , conjugate_fp12_ov
                 , final_exp_ov
                 */
