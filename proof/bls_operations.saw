@@ -994,6 +994,7 @@ let {{
     c2 = bls_ate_pairing sig BP'
 }};
 
+// TODO: Where did this come from?  Note 1 in pairing.saw?
 core_verify_pk_in_g2_impl_thm <- admit_cryptol {{ \pk sig msg dst -> core_verify_pk_in_g2_impl pk sig msg dst [] == core_verify_pk_in_g2 pk sig msg dst }};
 
 blst_core_verify_pk_in_g2_ov <- verify_blst_core_verify_pk_in_g2_null_aug 32 43 0;

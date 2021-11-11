@@ -468,10 +468,8 @@ let demo_BasicAggregateVerify_A_spec n = do {
                     , messages_ptr
                     , sig_ptr ];
   // TODO: Postcond
-  /*
   llvm_return (llvm_term
       {{ bool_to_limb (CoreAggregateVerify (split`{n} (join (join pks))) messages (join sig)) }});
-      */
 };
 
 unfold_all_POINTonE2_affine_invariant_5_thm <- prove_cryptol (rewrite (cryptol_ss())
@@ -694,7 +692,6 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
         rw_with fp12_rep_thms;
         simplify basic_ss;
         simplify (cryptol_ss());
-        rw_with remove_ho_rules;
         //print_readably;
         (goal_num_ite 190
           (do {
@@ -716,17 +713,23 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                                     , "verify_A_pk_precond"
                                     ]
                                     BasicVerify_A_unints);
+            rw_with remove_ho_rules;
             print_goal;
             w4_unint_z3 (concat [ "all_distinct" ]
                                 BasicVerify_A_unints);
           })
           (do {
             // Final goal
-            unfolding ["Cryptol::map"];
+            rw_with fp12_normalization_thms;
+            unfolding [ "Cryptol::map"
+                      , "BLSMinimalSignatureSize::CoreAggregateVerify"
+                      ];
             simplify basic_ss;
             simplify (cryptol_ss());
             rw_with [unfold_map];
-            print_readably;
+            rw_with remove_ho_rules;
+            //print_readably;
+            print_goal;
             w4_unint_z3 (concat [ "affinify_E"
                                 , "all_distinct"
                                 , "hash_to_curve_opt_impl"
