@@ -468,10 +468,8 @@ let demo_BasicAggregateVerify_A_spec n = do {
                     , messages_ptr
                     , sig_ptr ];
   // TODO: Postcond
-  /*
   llvm_return (llvm_term
       {{ bool_to_limb (CoreAggregateVerify (split`{n} (join (join pks))) messages (join sig)) }});
-      */
 };
 
 unfold_all_POINTonE2_affine_invariant_5_thm <- prove_cryptol (rewrite (cryptol_ss())
@@ -590,6 +588,15 @@ blst_pairing_finalverify_ov <- custom_verify
                         , "fp12_abs" ]
                         BasicVerify_A_unints);
   };
+
+// TODO: Prove
+finalverify_core_verify_thm <- admit_cryptol
+  {{ \pk sig msg dst ->
+      (finalverify sig
+                   (miller_loop_opt_checked (p.0, p.1) pk) ==
+       core_verify_pk_in_g2_impl pk (affinify E sig) msg dst []
+       where
+         p = affinify E (hash_to_curve_opt_impl (msg, dst))) }};
 
 demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
@@ -735,7 +742,19 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                       ];
             simplify basic_ss;
             simplify (cryptol_ss());
-            rw_with [unfold_map];
+            rw_with [ unfold_map
+                    , normalize_miller_loop_opt_checked_thm
+                    , finalverify_core_verify_thm
+                    , core_verify_pk_in_g2_impl_thm
+                    , normalize_affinify_thm ];
+            unfolding [ "core_verify_pk_in_g2"
+                      , "module parameter pairing"
+                      , "maybe_cases"
+                      , "module parameter P"
+                      , "P"
+                      , "pairing" ];
+            simplify basic_ss;
+            simplify (cryptol_ss());
             rw_with remove_ho_rules;
             //print_readably;
             print_goal;
