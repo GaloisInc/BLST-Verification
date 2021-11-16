@@ -763,6 +763,8 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                       , "maybe_cases"
                       , "module parameter P"
                       , "P"
+                      , "module parameter hash_to_point"
+                      , "hash_to_point"
                       , "pairing" ];
             simplify basic_ss;
             simplify (cryptol_ss());
