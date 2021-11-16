@@ -598,6 +598,15 @@ finalverify_core_verify_thm <- admit_cryptol
        where
          p = affinify E (hash_to_curve_opt_impl (msg, dst))) }};
 
+// TODO: Prove
+unfold_aggregate_loop_1_thm <- admit_cryptol
+  {{ \pks msgs ->
+      aggregate_loop pks msgs ==
+      (aggregate_loop_body pk msg (just Fp_12.field_unit)
+        where
+          [pk] = pks
+          [msg] = msgs) }};
+
 demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -746,8 +755,10 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                     , normalize_miller_loop_opt_checked_thm
                     , finalverify_core_verify_thm
                     , core_verify_pk_in_g2_impl_thm
+                    , unfold_aggregate_loop_1_thm
                     , normalize_affinify_thm ];
             unfolding [ "core_verify_pk_in_g2"
+                      , "aggregate_loop_body"
                       , "module parameter pairing"
                       , "maybe_cases"
                       , "module parameter P"
