@@ -46,7 +46,7 @@ let all_distinct_spec n = do {
 // TODO: What should n be?  2 and 8 have good coverage.  Maybe just those two?
 // There's an argument to be made for 16 as well, which hits an additional
 // branch.  9 will also hit an additional branch in pairing_commit
-let aggregate_n = 5;
+let aggregate_n = 1;
 
 // TODO: Prove
 all_distinct_ov <- admit "all_distinct" (all_distinct_spec aggregate_n);
@@ -468,8 +468,10 @@ let demo_BasicAggregateVerify_A_spec n = do {
                     , messages_ptr
                     , sig_ptr ];
   // TODO: Postcond
+  /*
   llvm_return (llvm_term
       {{ bool_to_limb (CoreAggregateVerify (split`{n} (join (join pks))) messages (join sig)) }});
+      */
 };
 
 unfold_all_POINTonE2_affine_invariant_5_thm <- prove_cryptol (rewrite (cryptol_ss())
@@ -487,6 +489,14 @@ unfold_all_POINTonE1_affine_invariant_5_thm <- prove_cryptol (rewrite (cryptol_s
                          POINTonE1_affine_invariant x3 /\
                          POINTonE1_affine_invariant x4 /\
                          POINTonE1_affine_invariant x5) }}) [];
+
+unfold_all_POINTonE2_affine_invariant_1_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+  {{ \x1 -> all POINTonE2_affine_invariant [x1] ==
+            (POINTonE2_affine_invariant x1) }}) [];
+
+unfold_all_POINTonE1_affine_invariant_1_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+  {{ \x1 -> all POINTonE1_affine_invariant [x1] ==
+            (POINTonE1_affine_invariant x1) }}) [];
 
 normalize_affine_fp_pair0_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> (Fp.normalize P.0) == (normalize_affine_point Fp P).0 }}) [];
@@ -581,9 +591,6 @@ blst_pairing_finalverify_ov <- custom_verify
                         BasicVerify_A_unints);
   };
 
-// Even though it isn't hit in the n=2 case, the mul_fp12_ovs cause trouble
-// TODO: Disabling mul in commit fixed this, but it shouldn't be hit anyway...
-// TODO: Re-enable commit
 demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -658,6 +665,8 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                 , POINTonE2_affine_abs_rep_thm
                 , is_point_O_KeyValidate_thm
                 , normalize_uncompress_E2_OK_thm
+                , unfold_all_POINTonE1_affine_invariant_1_thm
+                , unfold_all_POINTonE2_affine_invariant_1_thm
                 , unfold_all_POINTonE1_affine_invariant_2_thm
                 , unfold_all_POINTonE2_affine_invariant_2_thm
                 , unfold_all_POINTonE1_affine_invariant_5_thm
