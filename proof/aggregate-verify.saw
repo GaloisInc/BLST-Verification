@@ -607,6 +607,20 @@ unfold_aggregate_loop_1_thm <- admit_cryptol
           [pk] = pks
           [msg] = msgs) }};
 
+// TODO: Prove.  Might need to be `normalize (x, y)`?
+affinify_abs_z_1_thm <- admit_cryptol
+  {{ \p -> affinify E (p.0, p.1, Fp.field_unit) == p }};
+
+hoist_field_access_1_thm <- really_prove_cryptol
+  {{ \b (t : (Bool, AffinePoint t_Fp)) (f : (Bool, AffinePoint t_Fp)) ->
+      (if b then t else f).1 == (if b then t.1 else f.1) }} [];
+
+hoist_bls_ate_pairing_thm <- really_prove_cryptol
+  {{ \b t f x2 -> bls_ate_pairing (if b then t else f) x2 ==
+                  if b
+                  then bls_ate_pairing t x2
+                  else bls_ate_pairing f x2 }} ["bls_ate_pairing"];
+
 demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -756,6 +770,7 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                     , finalverify_core_verify_thm
                     , core_verify_pk_in_g2_impl_thm
                     , unfold_aggregate_loop_1_thm
+                    , affinify_abs_z_1_thm
                     , normalize_affinify_thm ];
             unfolding [ "core_verify_pk_in_g2"
                       , "aggregate_loop_body"
@@ -765,9 +780,20 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                       , "P"
                       , "module parameter hash_to_point"
                       , "hash_to_point"
+                      , "module parameter signature_to_point"
+                      , "signature_to_point"
                       , "pairing" ];
             simplify basic_ss;
             simplify (cryptol_ss());
+            rw_with split_join_thms;
+            rw_with [ uncompress_E1_uncompress_E1_OK_thm
+                    , hoist_field_access_1_thm
+                    , hoist_bls_ate_pairing_thm
+                    ];
+            // TODO: Remember that uncompress_E1_imp was previously
+            // unfolded for the precondition proofs, so it'll either
+            // need to be unfolded here, or not unfolded in a special
+            // goal_ite to match the term in the precondition.
             rw_with remove_ho_rules;
             //print_readably;
             print_goal;
