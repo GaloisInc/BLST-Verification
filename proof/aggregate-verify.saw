@@ -657,6 +657,15 @@ hoist_is_in_g1_impl_thm <- really_prove_cryptol (rewrite (cryptol_ss())
 fp_pair_to_point_thm <- really_prove_cryptol
   {{ \(x : AffinePoint t_Fp) -> (x.0, x.1) == x }} [];
 
+// TODO: Is this true?
+normalize_bls_ate_pairing_thm <- admit_cryptol
+  {{ \x1 x2 -> Fp_12.normalize (bls_ate_pairing x1 x2) ==
+               bls_ate_pairing x1 x2 }};
+
+hoist_fp12_normalize_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+  {{ \b t f -> Fp_12.normalize (if b then t else f) ==
+               if b then Fp_12.normalize t else Fp_12.normalize f }}) [];
+
 demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -698,7 +707,6 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
         (unfolding ["uncompress_E1_imp"]);
       });
     unfolding [ "POINTonE1_affine_abs"
-              //, "uncompress_E1_imp"
               , "POINTonE2_affine_abs"
               , "blst_core_verify_pk_in_g2_error_precond"
               ];
@@ -783,6 +791,8 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
               , "maybe_cases"
               , "module parameter P"
               , "P"
+              , "module parameter G"
+              , "G"
               , "module parameter hash_to_point"
               , "hash_to_point"
               , "module parameter signature_to_point"
@@ -809,13 +819,18 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             ];
     simplify basic_ss;
     simplify (cryptol_ss());
+    unfolding [ "just" ];
+    rw_with fp12_laws;
+    rw_with [ hoist_fp12_normalize_thm
+            , normalize_bls_ate_pairing_thm
+            ];
     // TODO: Remember that uncompress_E1_imp was previously
     // unfolded for the precondition proofs, so it'll either
     // need to be unfolded here, or not unfolded in a special
     // goal_ite to match the term in the precondition.
     rw_with remove_ho_rules;
-    //print_readably;
-    print_goal;
+    print_readably;
+    //print_goal;
     w4_unint_z3 (concat [ "affinify_E"
                         , "all_distinct"
                         , "hash_to_curve_opt_impl"
