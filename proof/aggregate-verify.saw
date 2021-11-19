@@ -634,7 +634,7 @@ hoist_bls_ate_pairing_rhs_thm <- prove_cryptol
 /*
 let at_1_768 = parse_core "\\(v : (Vec 1 (Vec 768 Bool))) -> at 1 (Vec 768 Bool) v 0";
 
-at_1_split_1_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+at_1_split_1_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \(v : [768]) -> at_1_768 (split`{1} v) == v }}) [];
   */
 
@@ -642,8 +642,20 @@ let at_1_96_8_0_core = parse_core "\\(v : (Vec 1 (Vec 96 (Vec 8 Bool)))) -> at 1
 
 let access_1_from_1_core = parse_core "\\(v : (Vec 1 (Vec 96 (Vec 8 Bool)))) -> split 96 8 Bool (at 1 (Vec 768 Bool) (split 1 768 Bool (join 96 8 Bool (join 1 96 (Vec 8 Bool) v))) 0)";
 
-access_1_from_1_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+access_1_from_1_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \v -> access_1_from_1_core v == at_1_96_8_0_core v }}) [];
+
+hoist_is_point_affine_E_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \b t f -> is_point_affine E (if b then t else f) ==
+               if b then is_point_affine E t else is_point_affine E f }}) [];
+
+hoist_is_in_g1_impl_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+  {{ \b t f -> is_in_g1_impl (if b then t else f) ==
+               if b then is_in_g1_impl t else is_in_g1_impl f }})
+  ["is_in_g1_impl"];
+
+fp_pair_to_point_thm <- really_prove_cryptol
+  {{ \(x : AffinePoint t_Fp) -> (x.0, x.1) == x }} [];
 
 demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
@@ -782,6 +794,11 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             , hoist_bls_ate_pairing_lhs_thm
             , hoist_bls_ate_pairing_rhs_thm
             , access_1_from_1_thm
+            , is_in_g1_impl_thm
+            , hoist_is_point_affine_E_thm
+            , uncompress_E1_on_curve
+            , hoist_is_in_g1_impl_thm
+            , fp_pair_to_point_thm
             ];
     simplify basic_ss;
     simplify (cryptol_ss());

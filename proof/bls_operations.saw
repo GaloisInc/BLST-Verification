@@ -271,6 +271,8 @@ let demo_KeyValidate_A_spec = do {
   llvm_return (llvm_term {{ bool_to_limb (KeyValidate (join inp)) }});
 };
 
+// TODO: Replace with uncompress_on_curve from aggregate_in_g2 proofs (more
+// powerful theorem)
 uncompress_E2_OK_on_curve <- admit_cryptol
   {{ \x -> is_point_affine E' (uncompress_E2_OK x) ==
            if uncompress_E2_imp x != nothing
@@ -892,7 +894,7 @@ uncompress_E1_uncompress_E1_OK_thm <- admit_cryptol (rewrite (cryptol_ss())
 is_in_g1_impl_thm <- admit_cryptol
   (rewrite (cryptol_ss())
   {{ \P -> reexport_signature_subgroup_check P ==
-           if is_point_affine_E P
+           if is_point_affine E P
            then is_in_g1_impl P
            else apply reexport_signature_subgroup_check P }});
 
@@ -940,6 +942,8 @@ let fp_rep_at0 = parse_core "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6
 squash_at_0_thm <- prove_cryptol
   {{ \(x : Fp_rep_t) (y : Fp_rep_t) -> (fp_rep_at0 [x, y]) == x }} [];
 
+// TODO: Replace with uncompress_on_curve from aggregate_in_g1 proofs (more
+// powerful theorem)
 uncompress_E1_OK_on_curve <- admit_cryptol
   {{ \x -> is_point_affine E (uncompress_E1_OK x) ==
            if uncompress_E1_imp x != nothing
@@ -999,7 +1003,7 @@ core_verify_pk_in_g2_impl_thm <- admit_cryptol {{ \pk sig msg dst -> core_verify
 
 blst_core_verify_pk_in_g2_ov <- verify_blst_core_verify_pk_in_g2_null_aug 32 43 0;
 
-demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
+demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
   [ POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
   , POINTonE1_affine_on_curve_ov
   , vec_is_zero_2fp_ov
