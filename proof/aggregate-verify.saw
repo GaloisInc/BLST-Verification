@@ -488,11 +488,11 @@ unfold_all_POINTonE1_affine_invariant_5_thm <- prove_cryptol (rewrite (cryptol_s
                          POINTonE1_affine_invariant x4 /\
                          POINTonE1_affine_invariant x5) }}) [];
 
-unfold_all_POINTonE2_affine_invariant_1_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+unfold_all_POINTonE2_affine_invariant_1_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x1 -> all POINTonE2_affine_invariant [x1] ==
             (POINTonE2_affine_invariant x1) }}) [];
 
-unfold_all_POINTonE1_affine_invariant_1_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+unfold_all_POINTonE1_affine_invariant_1_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x1 -> all POINTonE1_affine_invariant [x1] ==
             (POINTonE1_affine_invariant x1) }}) [];
 
@@ -611,15 +611,39 @@ unfold_aggregate_loop_1_thm <- admit_cryptol
 affinify_abs_z_1_thm <- admit_cryptol
   {{ \p -> affinify E (p.0, p.1, Fp.field_unit) == p }};
 
-hoist_field_access_1_thm <- really_prove_cryptol
+hoist_field_access_1_fp_thm <- prove_cryptol
   {{ \b (t : (Bool, AffinePoint t_Fp)) (f : (Bool, AffinePoint t_Fp)) ->
       (if b then t else f).1 == (if b then t.1 else f.1) }} [];
 
-hoist_bls_ate_pairing_thm <- really_prove_cryptol
+hoist_field_access_1_fp2_thm <- prove_cryptol
+  {{ \b (t : (Bool, AffinePoint t_Fp_2)) (f : (Bool, AffinePoint t_Fp_2)) ->
+      (if b then t else f).1 == (if b then t.1 else f.1) }} [];
+
+hoist_bls_ate_pairing_lhs_thm <- prove_cryptol
   {{ \b t f x2 -> bls_ate_pairing (if b then t else f) x2 ==
                   if b
                   then bls_ate_pairing t x2
                   else bls_ate_pairing f x2 }} ["bls_ate_pairing"];
+
+hoist_bls_ate_pairing_rhs_thm <- prove_cryptol
+  {{ \b t f x1 -> bls_ate_pairing x1 (if b then t else f) ==
+                  if b
+                  then bls_ate_pairing x1 t
+                  else bls_ate_pairing x1 f }} ["bls_ate_pairing"];
+
+/*
+let at_1_768 = parse_core "\\(v : (Vec 1 (Vec 768 Bool))) -> at 1 (Vec 768 Bool) v 0";
+
+at_1_split_1_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+  {{ \(v : [768]) -> at_1_768 (split`{1} v) == v }}) [];
+  */
+
+let at_1_96_8_0_core = parse_core "\\(v : (Vec 1 (Vec 96 (Vec 8 Bool)))) -> at 1 (Vec 96 (Vec 8 Bool)) v 0";
+
+let access_1_from_1_core = parse_core "\\(v : (Vec 1 (Vec 96 (Vec 8 Bool)))) -> split 96 8 Bool (at 1 (Vec 768 Bool) (split 1 768 Bool (join 96 8 Bool (join 1 96 (Vec 8 Bool) v))) 0)";
+
+access_1_from_1_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+  {{ \v -> access_1_from_1_core v == at_1_96_8_0_core v }}) [];
 
 demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
@@ -782,14 +806,23 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                       , "hash_to_point"
                       , "module parameter signature_to_point"
                       , "signature_to_point"
+                      , "module parameter pubkey_to_point"
+                      , "pubkey_to_point"
                       , "pairing" ];
             simplify basic_ss;
             simplify (cryptol_ss());
+            //rw_with_1 at_1_split_1_thm;
             rw_with split_join_thms;
             rw_with [ uncompress_E1_uncompress_E1_OK_thm
-                    , hoist_field_access_1_thm
-                    , hoist_bls_ate_pairing_thm
+                    , deserialize_E2_uncompress_E2_OK_thm
+                    , hoist_field_access_1_fp_thm
+                    , hoist_field_access_1_fp2_thm
+                    , hoist_bls_ate_pairing_lhs_thm
+                    , hoist_bls_ate_pairing_rhs_thm
+                    , access_1_from_1_thm
                     ];
+            simplify basic_ss;
+            simplify (cryptol_ss());
             // TODO: Remember that uncompress_E1_imp was previously
             // unfolded for the precondition proofs, so it'll either
             // need to be unfolded here, or not unfolded in a special
