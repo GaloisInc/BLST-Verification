@@ -690,8 +690,15 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
   (demo_BasicAggregateVerify_A_spec aggregate_n)
   do {
     // Precondition proof(s)
+    (goal_num_ite 9
+      do {
+        return ();
+      }
+      do {
+        (unfolding ["uncompress_E1_imp"]);
+      });
     unfolding [ "POINTonE1_affine_abs"
-              , "uncompress_E1_imp"
+              //, "uncompress_E1_imp"
               , "POINTonE2_affine_abs"
               , "blst_core_verify_pk_in_g2_error_precond"
               ];
