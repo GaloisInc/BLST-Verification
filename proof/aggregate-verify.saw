@@ -453,7 +453,13 @@ let demo_BasicAggregateVerify_A_spec n = do {
                             (llvm_array n
                                         (llvm_array message_len (llvm_int 8)));
   verify_A_sig_preconds sig;
-  llvm_precond {{ all verify_A_pk_precond pks }};
+  //llvm_precond {{ all verify_A_pk_precond pks }};
+  // TODO: restore all variant
+  let pk = {{ pks@0 }};
+  llvm_precond {{ verify_A_pk_precond (pks@0) }};
+  llvm_precond {{ (uncompress_E2_imp pk != nothing) }};
+  llvm_precond {{ (~((pk@0)@1)) }};
+  llvm_precond {{pubkey_to_point_is_affine pk }};
   /*
   llvm_precond {{ verify_A_pk_precond (pks@0) }};
   llvm_precond {{ verify_A_pk_precond (pks@1) }};
@@ -495,6 +501,10 @@ unfold_all_POINTonE2_affine_invariant_1_thm <- prove_cryptol (rewrite (cryptol_s
 unfold_all_POINTonE1_affine_invariant_1_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x1 -> all POINTonE1_affine_invariant [x1] ==
             (POINTonE1_affine_invariant x1) }}) [];
+
+unfold_all_verify_A_pk_precond_1_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+  {{ \x1 -> all verify_A_pk_precond [x1] ==
+            (verify_A_pk_precond x1) }}) ["verify_A_pk_precond"];
 
 normalize_affine_fp_pair0_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> (Fp.normalize P.0) == (normalize_affine_point Fp P).0 }}) [];
@@ -654,6 +664,13 @@ hoist_is_in_g1_impl_thm <- really_prove_cryptol (rewrite (cryptol_ss())
                if b then is_in_g1_impl t else is_in_g1_impl f }})
   ["is_in_g1_impl"];
 
+let at_split_join_join_core = parse_core "\\(v : (Vec 1 (Vec 96 (Vec 8 Bool)))) -> at 1 (Vec 768 Bool) (split 1 768 Bool (join 96 8 Bool (join 1 96 (Vec 8 Bool) v))) 0";
+
+//let join_96_8_bool = parse_core "join 96 8 Bool";
+
+at_split_join_join_is_join_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+  {{ \v -> at_split_join_join_core v == join`{96, 8} (at_1_96_8_0_core v) }}) [];
+
 fp_pair_to_point_thm <- really_prove_cryptol
   {{ \(x : AffinePoint t_Fp) -> (x.0, x.1) == x }} [];
 
@@ -665,6 +682,14 @@ normalize_bls_ate_pairing_thm <- admit_cryptol
 hoist_fp12_normalize_thm <- really_prove_cryptol (rewrite (cryptol_ss())
   {{ \b t f -> Fp_12.normalize (if b then t else f) ==
                if b then Fp_12.normalize t else Fp_12.normalize f }}) [];
+
+fp12_is_equal_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+  {{ \x y -> Fp_12.is_equal (x, y) == (x == y) }}) [];
+
+// TODO: Remove.  Add as a precond if this works
+bad_all_distinct_thm <- admit_cryptol {{ \x -> all_distinct x == True }};
+
+bad_is_in_g1_impl_thm <- admit_cryptol {{ \x -> is_in_g1_impl x == True }};
 
 demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
@@ -740,9 +765,11 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             , unfold_all_POINTonE2_affine_invariant_2_thm
             , unfold_all_POINTonE1_affine_invariant_5_thm
             , unfold_all_POINTonE2_affine_invariant_5_thm
+            // TODO: Need different size variants of unfolding the precond
+            , unfold_all_verify_A_pk_precond_1_thm
             , affine_inv_affine_rep_e1_thm ];
     rw_with POINTonE1_base_thms;
-    unfolding ["POINTonE1_rep"];
+    unfolding ["POINTonE1_rep", "verify_A_pk_precond"];
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with fp_rep_thms;
@@ -784,6 +811,7 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             , core_verify_pk_in_g2_impl_thm
             , unfold_aggregate_loop_1_thm
             , affinify_abs_z_1_thm
+            , normalize_point_O_E'_thm
             , normalize_affinify_thm ];
     unfolding [ "core_verify_pk_in_g2"
               , "aggregate_loop_body"
@@ -819,11 +847,16 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             ];
     simplify basic_ss;
     simplify (cryptol_ss());
-    unfolding [ "just" ];
+    unfolding [ "just", "nothing" ];
     rw_with fp12_laws;
     rw_with [ hoist_fp12_normalize_thm
             , normalize_bls_ate_pairing_thm
+            , at_split_join_join_is_join_thm
+            , fp12_is_equal_thm
+            , bad_all_distinct_thm
             ];
+    simplify basic_ss;
+    simplify (cryptol_ss());
     // TODO: Remember that uncompress_E1_imp was previously
     // unfolded for the precondition proofs, so it'll either
     // need to be unfolded here, or not unfolded in a special
