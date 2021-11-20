@@ -460,6 +460,7 @@ let demo_BasicAggregateVerify_A_spec n = do {
   llvm_precond {{ (uncompress_E2_imp pk != nothing) }};
   llvm_precond {{ (~((pk@0)@1)) }};
   llvm_precond {{pubkey_to_point_is_affine pk }};
+  llvm_precond {{ all_distinct messages }};
   /*
   llvm_precond {{ verify_A_pk_precond (pks@0) }};
   llvm_precond {{ verify_A_pk_precond (pks@1) }};
@@ -686,11 +687,6 @@ hoist_fp12_normalize_thm <- really_prove_cryptol (rewrite (cryptol_ss())
 fp12_is_equal_thm <- really_prove_cryptol (rewrite (cryptol_ss())
   {{ \x y -> Fp_12.is_equal (x, y) == (x == y) }}) [];
 
-// TODO: Remove.  Add as a precond if this works
-bad_all_distinct_thm <- admit_cryptol {{ \x -> all_distinct x == True }};
-
-bad_is_in_g1_impl_thm <- admit_cryptol {{ \x -> is_in_g1_impl x == True }};
-
 demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -853,7 +849,6 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             , normalize_bls_ate_pairing_thm
             , at_split_join_join_is_join_thm
             , fp12_is_equal_thm
-            , bad_all_distinct_thm
             ];
     simplify basic_ss;
     simplify (cryptol_ss());
