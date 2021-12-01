@@ -43,13 +43,10 @@ let all_distinct_spec n = do {
   llvm_return (llvm_term {{ bool_to_limb (all_distinct messages) }});
 };
 
-// TODO: What should n be?  2 and 8 have good coverage.  Maybe just those two?
-// There's an argument to be made for 16 as well, which hits an additional
-// branch.  9 will also hit an additional branch in pairing_commit
-let aggregate_n = 1;
+// TODO: Prove?
+all_distinct_1_ov <- admit "all_distinct" (all_distinct_spec 1);
 
-// TODO: Prove
-all_distinct_ov <- admit "all_distinct" (all_distinct_spec aggregate_n);
+all_distinct_3_ov <- admit "all_distinct" (all_distinct_spec 3);
 
 let blst_pairing_finalverify_spec = do {
   /*
@@ -453,13 +450,7 @@ let demo_BasicAggregateVerify_A_spec n = do {
                             (llvm_array n
                                         (llvm_array message_len (llvm_int 8)));
   verify_A_sig_preconds sig;
-  //llvm_precond {{ all verify_A_pk_precond pks }};
-  // TODO: restore all variant
-  let pk = {{ pks@0 }};
-  llvm_precond {{ verify_A_pk_precond (pks@0) }};
-  llvm_precond {{ (uncompress_E2_imp pk != nothing) }};
-  llvm_precond {{ (~((pk@0)@1)) }};
-  llvm_precond {{pubkey_to_point_is_affine pk }};
+  llvm_precond {{ all verify_A_pk_precond pks }};
   llvm_precond {{ all_distinct messages }};
   /*
   llvm_precond {{ verify_A_pk_precond (pks@0) }};
@@ -687,10 +678,11 @@ hoist_fp12_normalize_thm <- really_prove_cryptol (rewrite (cryptol_ss())
 fp12_is_equal_thm <- really_prove_cryptol (rewrite (cryptol_ss())
   {{ \x y -> Fp_12.is_equal (x, y) == (x == y) }}) [];
 
+// Proof for n = 1
 demo_BasicAggregateVerify_A_ov <- really_custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
-                [ all_distinct_ov
+                [ all_distinct_1_ov
                 , POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
                 , POINTonE1_affine_on_curve_ov
                 , blst_p1_affine_in_g1_ov
@@ -717,7 +709,7 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
                 , final_exp_ov
                 */
                 ])
-  (demo_BasicAggregateVerify_A_spec aggregate_n)
+  (demo_BasicAggregateVerify_A_spec 1)
   do {
     // Precondition proof(s)
     (goal_num_ite 9
