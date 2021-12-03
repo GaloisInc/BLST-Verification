@@ -468,10 +468,8 @@ let demo_BasicAggregateVerify_A_spec n = do {
                     , messages_ptr
                     , sig_ptr ];
   // TODO: Postcond
-  /*
   llvm_return (llvm_term
       {{ bool_to_limb (CoreAggregateVerify (split`{n} (join (join pks))) messages (join sig)) }});
-*/
 };
 
 unfold_all_POINTonE2_affine_invariant_3_thm <- prove_cryptol (rewrite (cryptol_ss())
@@ -644,6 +642,7 @@ finalverify_core_verify_thm <- admit_cryptol
          p = affinify E (hash_to_curve_opt_impl (msg, dst))) }};
 
 // TODO: Prove
+// TODO: Need N=4 variant
 finalverify_ate_pairing_3_thm <- admit_cryptol
  {{ \pk1 pk2 pk3 sig m1 m2 m3 ->
     (finalverify
@@ -659,6 +658,28 @@ finalverify_ate_pairing_3_thm <- admit_cryptol
           ( bls_ate_pairing m1 pk1
           , bls_ate_pairing m2 pk2 )
         , bls_ate_pairing m3 pk3 ) ==
+      bls_ate_pairing (affinify E sig) BP')) }};
+
+finalverify_ate_pairing_4_thm <- admit_cryptol
+ {{ \pk1 pk2 pk3 pk4 sig m1 m2 m3 m4 ->
+    (finalverify
+      sig
+      (Fp_12.mul
+        ( F_prod
+            Fp_12
+            [ miller_loop_opt m1 pk1
+            , miller_loop_opt m2 pk2 ]
+        , ( F_prod
+              Fp_12
+              [ miller_loop_opt m3 pk3
+              , miller_loop_opt m4 pk4 ]))) ==
+     (Fp_12.mul
+       ( Fp_12.mul
+          ( Fp_12.mul
+            ( bls_ate_pairing m1 pk1
+            , bls_ate_pairing m2 pk2 )
+          , bls_ate_pairing m3 pk3 )
+       , bls_ate_pairing m4 pk4 ) ==
       bls_ate_pairing (affinify E sig) BP')) }};
 
 // TODO: Prove
@@ -680,6 +701,18 @@ unfold_aggregate_loop_3_thm <- admit_cryptol
         where
           [pk1, pk2, pk3] = pks
           [msg1, msg2, msg3] = msgs) }};
+
+// TODO: Prove
+unfold_aggregate_loop_4_thm <- admit_cryptol
+  {{ \pks msgs ->
+      aggregate_loop pks msgs ==
+      (aggregate_loop_body pk4 msg4
+        (aggregate_loop_body pk3 msg3
+          (aggregate_loop_body pk2 msg2
+            (aggregate_loop_body pk1 msg1 (just Fp_12.field_unit))))
+        where
+          [pk1, pk2, pk3, pk4] = pks
+          [msg1, msg2, msg3, msg4] = msgs) }};
 
 // TODO: Prove.  Might need to be `normalize (x, y)`?
 affinify_abs_z_1_thm <- admit_cryptol
@@ -1190,7 +1223,7 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
   (demo_BasicAggregateVerify_A_spec 4)
   do {
     // Precondition proof(s)
-    (goal_num_ite 160
+    (goal_num_ite 17
       do {
         return ();
       }
@@ -1276,9 +1309,9 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
     simplify (cryptol_ss());
     rw_with [ unfold_map
             , normalize_miller_loop_opt_checked_thm
-            , finalverify_ate_pairing_3_thm
+            , finalverify_ate_pairing_4_thm
             , core_verify_pk_in_g2_impl_thm
-            , unfold_aggregate_loop_3_thm
+            , unfold_aggregate_loop_4_thm
             , affinify_abs_z_1_thm
             , normalize_point_O_E'_thm
             , normalize_affinify_thm ];
