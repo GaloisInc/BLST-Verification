@@ -682,29 +682,26 @@ finalverify_ate_pairing_4_thm <- admit_cryptol
        , bls_ate_pairing m4 pk4 ) ==
       bls_ate_pairing (affinify E sig) BP')) }};
 
-// TODO: Prove
-unfold_aggregate_loop_1_thm <- admit_cryptol
-  {{ \pks msgs ->
+unfold_aggregate_loop_1_thm <- really_prove_cryptol
+  {{ \(pks : [1][96*8]) (msgs : [1][msg_len][8]) ->
       aggregate_loop pks msgs ==
         (aggregate_loop_body pk1 msg1 (just Fp_12.field_unit)
         where
           [pk1] = pks
-          [msg1] = msgs) }};
+          [msg1] = msgs) }} ["aggregate_loop_body"];
 
-// TODO: Prove
-unfold_aggregate_loop_3_thm <- admit_cryptol
-  {{ \pks msgs ->
+unfold_aggregate_loop_3_thm <- really_prove_cryptol
+  {{ \(pks : [3][96*8]) (msgs : [3][msg_len][8]) ->
       aggregate_loop pks msgs ==
       (aggregate_loop_body pk3 msg3
         (aggregate_loop_body pk2 msg2
           (aggregate_loop_body pk1 msg1 (just Fp_12.field_unit)))
         where
           [pk1, pk2, pk3] = pks
-          [msg1, msg2, msg3] = msgs) }};
+          [msg1, msg2, msg3] = msgs) }} ["aggregate_loop_body"];
 
-// TODO: Prove
-unfold_aggregate_loop_4_thm <- admit_cryptol
-  {{ \pks msgs ->
+unfold_aggregate_loop_4_thm <- really_prove_cryptol
+  {{ \(pks : [4][96*8]) (msgs : [4][msg_len][8]) ->
       aggregate_loop pks msgs ==
       (aggregate_loop_body pk4 msg4
         (aggregate_loop_body pk3 msg3
@@ -712,7 +709,7 @@ unfold_aggregate_loop_4_thm <- admit_cryptol
             (aggregate_loop_body pk1 msg1 (just Fp_12.field_unit))))
         where
           [pk1, pk2, pk3, pk4] = pks
-          [msg1, msg2, msg3, msg4] = msgs) }};
+          [msg1, msg2, msg3, msg4] = msgs) }} ["aggregate_loop_body"];
 
 // TODO: Prove.  Might need to be `normalize (x, y)`?
 affinify_abs_z_1_thm <- admit_cryptol
