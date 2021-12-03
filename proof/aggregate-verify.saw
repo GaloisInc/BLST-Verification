@@ -1,5 +1,7 @@
+/*
 let do_prove = true;
 include "proof-helpers.saw";
+*/
 
 let {{
   // TODO: Define
@@ -244,7 +246,7 @@ unfold_map <- admit_cryptol (rewrite (cryptol_ss())
   {{ \f xs -> (map_size_2_term f xs) == ([f x1, f x2] where [x1, x2] = xs) }});
 
 // A proof for the first time n == N_MAX (AGGR_GT_SET is unset)
-blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- really_custom_verify
+blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ Hash_to_G1_ov
@@ -480,21 +482,21 @@ unfold_all_verify_A_pk_precond_3_thm <- prove_cryptol (rewrite (cryptol_ss())
              verify_A_pk_precond x2 /\
              verify_A_pk_precond x3) }}) ["verify_A_pk_precond"];
 
-unfold_all_POINTonE2_affine_invariant_4_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+unfold_all_POINTonE2_affine_invariant_4_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x1 x2 x3 x4 -> all POINTonE2_affine_invariant [x1, x2, x3, x4] ==
                      (POINTonE2_affine_invariant x1 /\
                       POINTonE2_affine_invariant x2 /\
                       POINTonE2_affine_invariant x3 /\
                       POINTonE2_affine_invariant x4) }}) [];
 
-unfold_all_POINTonE1_affine_invariant_4_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+unfold_all_POINTonE1_affine_invariant_4_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x1 x2 x3 x4 -> all POINTonE1_affine_invariant [x1, x2, x3, x4] ==
                      (POINTonE1_affine_invariant x1 /\
                       POINTonE1_affine_invariant x2 /\
                       POINTonE1_affine_invariant x3 /\
                       POINTonE1_affine_invariant x4) }}) [];
 
-unfold_all_verify_A_pk_precond_4_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+unfold_all_verify_A_pk_precond_4_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x1 x2 x3 x4 -> all verify_A_pk_precond [x1, x2, x3, x4] ==
             (verify_A_pk_precond x1 /\
              verify_A_pk_precond x2 /\
@@ -619,7 +621,7 @@ blst_pairing_finalverify_ov <- custom_verify
                         BasicVerify_A_unints);
   };
 
-fp12_unit_check_with_fp2_equal_thm <- really_prove_cryptol (rewrite (cryptol_ss ())
+fp12_unit_check_with_fp2_equal_thm <- prove_cryptol (rewrite (cryptol_ss ())
   {{ \a ->
       ((  Fp_2.is_equal (fp2_abs a0, fp2_abs one_mont_px)
        /\ Fp_2.is_equal (fp2_abs a1, Fp_2.field_zero)
@@ -631,10 +633,10 @@ fp12_unit_check_with_fp2_equal_thm <- really_prove_cryptol (rewrite (cryptol_ss 
       where
         [[a0, a1, a2], [a3, a4, a5]] = a) }}) [];
 
-G2_to_BP'_thm <- really_prove_cryptol
+G2_to_BP'_thm <- prove_cryptol
   {{ POINTonE2_affine_abs (G2.0, G2.1) == BP' }} [];
 
-finalverify_core_verify_thm <- really_custom_prove_cryptol
+finalverify_core_verify_thm <- custom_prove_cryptol
   {{ \pk sig (msg : [msg_len][8]) (dst : [dst_len][8]) ->
       (finalverify sig
                    (miller_loop_opt_checked (p.0, p.1) pk) ==
@@ -703,7 +705,7 @@ finalverify_ate_pairing_4_thm <- admit_cryptol
        , bls_ate_pairing m4 pk4 ) ==
       bls_ate_pairing (affinify E sig) BP')) }};
 
-unfold_aggregate_loop_1_thm <- really_prove_cryptol
+unfold_aggregate_loop_1_thm <- prove_cryptol
   {{ \(pks : [1][96*8]) (msgs : [1][msg_len][8]) ->
       aggregate_loop pks msgs ==
         (aggregate_loop_body pk1 msg1 (just Fp_12.field_unit)
@@ -711,7 +713,7 @@ unfold_aggregate_loop_1_thm <- really_prove_cryptol
           [pk1] = pks
           [msg1] = msgs) }} ["aggregate_loop_body"];
 
-unfold_aggregate_loop_3_thm <- really_prove_cryptol
+unfold_aggregate_loop_3_thm <- prove_cryptol
   {{ \(pks : [3][96*8]) (msgs : [3][msg_len][8]) ->
       aggregate_loop pks msgs ==
       (aggregate_loop_body pk3 msg3
@@ -721,7 +723,7 @@ unfold_aggregate_loop_3_thm <- really_prove_cryptol
           [pk1, pk2, pk3] = pks
           [msg1, msg2, msg3] = msgs) }} ["aggregate_loop_body"];
 
-unfold_aggregate_loop_4_thm <- really_prove_cryptol
+unfold_aggregate_loop_4_thm <- prove_cryptol
   {{ \(pks : [4][96*8]) (msgs : [4][msg_len][8]) ->
       aggregate_loop pks msgs ==
       (aggregate_loop_body pk4 msg4
@@ -732,9 +734,8 @@ unfold_aggregate_loop_4_thm <- really_prove_cryptol
           [pk1, pk2, pk3, pk4] = pks
           [msg1, msg2, msg3, msg4] = msgs) }} ["aggregate_loop_body"];
 
-// TODO: Prove.  Might need to be `normalize (x, y)`?
-affinify_abs_z_1_thm <- admit_cryptol
-  {{ \p -> affinify E (p.0, p.1, Fp.field_unit) == p }};
+affinify_abs_z_1_thm <- really_prove_cryptol
+  {{ \p -> affinify E (p.0, p.1, Fp.field_unit) == normalize_affine_point Fp p }} [];
 
 hoist_field_access_1_fp_thm <- prove_cryptol
   {{ \b (t : (Bool, AffinePoint t_Fp)) (f : (Bool, AffinePoint t_Fp)) ->
@@ -833,7 +834,7 @@ fp12_mul_by_1_thm <- prove_cryptol
   {{ \x      -> Fp_12.mul (Fp_12.field_unit, x) == Fp_12.normalize x }} [];
 
 // Proof for n = 1
-demo_BasicAggregateVerify_A_ov <- really_custom_verify
+demo_BasicAggregateVerify_A_ov <- custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ all_distinct_1_ov
@@ -952,6 +953,7 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             , core_verify_pk_in_g2_impl_thm
             , unfold_aggregate_loop_1_thm
             , affinify_abs_z_1_thm
+            , normalize_uncompress_E1_OK_thm
             , normalize_point_O_E'_thm
             , normalize_affinify_thm ];
     unfolding [ "core_verify_pk_in_g2"
@@ -1010,7 +1012,7 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
   };
 
 // Proof for n = 3
-demo_BasicAggregateVerify_A_ov <- really_custom_verify
+demo_BasicAggregateVerify_A_ov <- custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ all_distinct_3_ov
@@ -1132,6 +1134,7 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             , core_verify_pk_in_g2_impl_thm
             , unfold_aggregate_loop_3_thm
             , affinify_abs_z_1_thm
+            , normalize_uncompress_E1_OK_thm
             , normalize_point_O_E'_thm
             , normalize_affinify_thm ];
     unfolding [ "core_verify_pk_in_g2"
@@ -1198,7 +1201,7 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
   };
 
 // Proof for n = 4
-demo_BasicAggregateVerify_A_ov <- really_custom_verify
+demo_BasicAggregateVerify_A_ov <- custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ all_distinct_4_ov
@@ -1320,6 +1323,7 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             , core_verify_pk_in_g2_impl_thm
             , unfold_aggregate_loop_4_thm
             , affinify_abs_z_1_thm
+            , normalize_uncompress_E1_OK_thm
             , normalize_point_O_E'_thm
             , normalize_affinify_thm ];
     unfolding [ "core_verify_pk_in_g2"
