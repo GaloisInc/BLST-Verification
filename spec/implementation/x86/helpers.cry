@@ -111,10 +111,10 @@ shrd_ret ret x shiftin count = if count && 63 == 0 then ret else drop ((shiftin 
 
 // Helper routines
 __sub_mod_384x384
-  : Vec768 // a; pointer in rsi
-  -> Vec768 // b; pointer in rdx
-  -> Vec384 // n; pointer in rcx
-  -> Vec768 // result; pointer in rdi
+  : Vec768_x86 // a; pointer in rsi
+  -> Vec768_x86 // b; pointer in rdx
+  -> Vec384_x86 // n; pointer in rcx
+  -> Vec768_x86 // result; pointer in rdi
 __sub_mod_384x384 a b n = result
   where
     [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0, r14_0] = take a
@@ -169,10 +169,10 @@ __sub_mod_384x384 a b n = result
     result = [result0, result1, result2, result3, result4, result5, result6, result7, result8, result9, result10, result11]
 
 __add_mod_384
-  : Vec384 // a
-  -> Vec384 // b
-  -> Vec384 // n
-  -> Vec384 // result
+  : Vec384_x86 // a
+  -> Vec384_x86 // b
+  -> Vec384_x86 // n
+  -> Vec384_x86 // result
 __add_mod_384 a b n = result
   where
     (cf_0, tmp_0) = add (a @ 0) (b @ 0)
@@ -197,10 +197,10 @@ __add_mod_384 a b n = result
     result = [result0, result1, result2, result3, result4, result5]
 
 __sub_mod_384
-  : Vec384 // a
-  -> Vec384 // b
-  -> Vec384 // n
-  -> Vec384 // result
+  : Vec384_x86 // a
+  -> Vec384_x86 // b
+  -> Vec384_x86 // n
+  -> Vec384_x86 // result
 __sub_mod_384 a b n = result
   where
     (cf_0, tmp0) = sub (a @ 0) (b @ 0)
@@ -226,9 +226,9 @@ __sub_mod_384 a b n = result
 
 __redc_tail_mont_384
   : [8][64] // acc registers
-  -> Vec768 // a; stored in rsi
-  -> Vec384 // n; pointer in rbx
-  -> Vec384 // result; stored in rdi
+  -> Vec768_x86 // a; stored in rsi
+  -> Vec384_x86 // n; pointer in rbx
+  -> Vec384_x86 // result; stored in rdi
 __redc_tail_mont_384 acc a n = result
   where
     [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = acc
@@ -267,9 +267,9 @@ __redc_tail_mont_384 acc a n = result
     result = [result0, result1, result2, result3, result4, result5]
 
 __mulx_384
- : Vec384 // a; pointer stored in rsi
- -> Vec384 // b; pointer stored in rbx
- -> Vec768 // result; stored in rdi?
+ : Vec384_x86 // a; pointer stored in rsi
+ -> Vec384_x86 // b; pointer stored in rbx
+ -> Vec768_x86 // result; stored in rdi?
 __mulx_384 a b = [result0, result1, result2, result3, result4, result5] # resulthigh
   where
     rdx_0 = b @ 0
@@ -404,8 +404,8 @@ __mulx_384 a b = [result0, result1, result2, result3, result4, result5] # result
     resulthigh = [r8_106, r9_109, r10_112, r11_115, r12_119, r13_121]
 
 __mulx_by_1_mont_384
-  : Vec384 // a; pointer stored in rsi
-  -> Vec384 // b; pointer stored in rbx
+  : Vec384_x86 // a; pointer stored in rsi
+  -> Vec384_x86 // b; pointer stored in rbx
   -> [64] // n0; stored in rcx
   -> [8][64] // result
 __mulx_by_1_mont_384 a b n0 = result
@@ -569,10 +569,10 @@ __mulx_mont_384
   -> [64] // stack[1]
   -> [64] // lo; stored in rdi
   -> [64] // hi; stored in rbp
-  -> Vec384 // a; pointer in rsi
-  -> Vec384 // b; pointer in rbx
-  -> Vec384 // n; pointer in rcx
-  -> Vec384 // result
+  -> Vec384_x86 // a; pointer in rsi
+  -> Vec384_x86 // b; pointer in rbx
+  -> Vec384_x86 // n; pointer in rcx
+  -> Vec384_x86 // result
 __mulx_mont_384 acc b0 stack1_0 lo hi a b n = result
   where
     [r8_0, r9_0, _, _, r12_0, _, r14_0, r15_0, rax_0] = acc
@@ -917,10 +917,10 @@ __mulx_mont_383_nonred
   -> [64] // stack[1]
   -> [64] // lo; stored in rdi
   -> [64] // hi; stored in rbp
-  -> Vec384 // a; pointer in rsi
-  -> Vec384 // b; pointer in rbx
-  -> Vec384 // n; pointer in rcx
-  -> Vec384 // result
+  -> Vec384_x86 // a; pointer in rsi
+  -> Vec384_x86 // b; pointer in rbx
+  -> Vec384_x86 // n; pointer in rcx
+  -> Vec384_x86 // result
 __mulx_mont_383_nonred acc b0 stack1_0 lo hi a b n = result
   where
     [r8_0, r9_0, _, _, r12_0, _, r14_0, r15_0, rax_0] = acc
