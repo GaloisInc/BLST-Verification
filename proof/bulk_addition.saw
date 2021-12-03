@@ -407,7 +407,7 @@ let overrides = concat_all [fp_overrides, vec_overrides, [mul_by_3_fp_alias_1_2_
 let POINTonE1_head_tactic = do {
   goal_eval_unint fp_unints;
   simplify (addsimps [fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
-  w4_unint_z3 ["to_Fp", "from_Fp"];
+  w4_unint_z3_using "qfnia" ["to_Fp", "from_Fp"];
 };
 
 POINTonE1_head_ov <- custom_verify "POINTonE1_head" overrides POINTonE1_head_spec POINTonE1_head_tactic;
@@ -416,7 +416,7 @@ POINTonE1_head_null_ov <- custom_verify "POINTonE1_head" overrides POINTonE1_hea
 let POINTonE1_tail_tactic = do {
   goal_eval_unint fp_unints;
   simplify (addsimps [fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
-  w4_unint_z3 ["to_Fp", "from_Fp"];
+  w4_unint_z3_using "qfnia" ["to_Fp", "from_Fp"];
 };
 
 POINTonE1_tail_ov <- custom_verify "POINTonE1_tail" overrides POINTonE1_tail_spec POINTonE1_tail_tactic;
@@ -434,7 +434,7 @@ let blst_p1s_add_tactic = do {
   simplify (addsimps [abs_rep_thm] empty_ss);
   simplify (addsimps [normalize_bulk_addition_head_thm, normalize_bulk_addition_head_mul_acc_thm, normalize_bulk_addition_head_B_Z_thm, normalize_bulk_addition_tail_thm, normalize_point_dadd_affine_fp_foo_thm, normalize_point_dadd_affine_fp_1_thm, normalize_point_dadd_affine_fp_2_1_thm, normalize_point_dadd_affine_fp_2_2_thm] empty_ss);
   simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] fp_simpset);
-  w4_unint_z3 ["bulk_addition_head_fp", "bulk_addition_tail_fp", "bulk_addition_tail_bz_fp",  "point_dadd_affine_fp", "mod_div_Z", "to_Fp", "from_Fp"];
+  w4_unint_z3_using "qfnia" ["bulk_addition_head_fp", "bulk_addition_tail_fp", "bulk_addition_tail_bz_fp",  "point_dadd_affine_fp", "mod_div_Z", "to_Fp", "from_Fp"];
 };
 
 blst_p1s_add_3_ov <- custom_verify "blst_p1s_add" blst_p1s_add_overrides (blst_p1s_add_spec_1 3) blst_p1s_add_tactic;
@@ -456,7 +456,7 @@ let POINTonE2_head_tactic = do {
   simplify (addsimps fp2_alg_thms fp2_simpset);
   goal_eval_unint fp_unints;
   simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
-  w4_unint_z3 ["to_Fp", "from_Fp"];
+  w4_unint_z3_using "qfnia" ["to_Fp", "from_Fp"];
 };
 
 POINTonE2_head_ov <- custom_verify "POINTonE2_head" overrides POINTonE2_head_spec POINTonE2_head_tactic;
@@ -467,7 +467,7 @@ let POINTonE2_tail_tactic = do {
   simplify (addsimps fp2_alg_thms fp2_simpset);
   goal_eval_unint fp_unints;
   simplify (addsimps [fp_zero_abs_thm, fp_zero_rep_thm, one_mont_p_abs_thm, one_mont_p_rep_thm] (addsimps fp_alg_thms fp_simpset));
-  w4_unint_z3 ["to_Fp", "from_Fp"];
+  w4_unint_z3_using "qfnia" ["to_Fp", "from_Fp"];
 };
 
 POINTonE2_tail_ov <- custom_verify "POINTonE2_tail" overrides POINTonE2_tail_spec POINTonE2_tail_tactic;
@@ -485,7 +485,7 @@ let blst_p2s_add_tactic = do {
   simplify (addsimps [abs_rep_fp2_thm] empty_ss);
   simplify (addsimps [normalize_bulk_addition_head_fp2_thm, normalize_bulk_addition_head_fp2_mul_acc_thm, normalize_bulk_addition_head_fp2_B_Z_thm, normalize_bulk_addition_tail_fp2_thm, normalize_point_dadd_affine_fp2_foo_thm, normalize_point_dadd_affine_fp2_1_thm, normalize_point_dadd_affine_fp2_2_1_thm, normalize_point_dadd_affine_fp2_2_2_thm] empty_ss);
   simplify (addsimps [fp2_zero_abs_thm, fp2_zero_rep_thm, one_mont_fp2_abs_thm, one_mont_fp2_rep_thm] fp2_simpset);
-  w4_unint_z3 ["bulk_addition_head_fp2", "bulk_addition_tail_fp2", "bulk_addition_tail_bz_fp2",  "point_dadd_affine_fp2", "mod_div_Z", "to_Fp", "from_Fp"];
+  w4_unint_z3_using "qfnia" ["bulk_addition_head_fp2", "bulk_addition_tail_fp2", "bulk_addition_tail_bz_fp2",  "point_dadd_affine_fp2", "mod_div_Z", "to_Fp", "from_Fp"];
 };
 
 blst_p2s_add_3_ov <- custom_verify "blst_p2s_add" blst_p2s_add_overrides (blst_p2s_add_spec_1 3) blst_p2s_add_tactic;
