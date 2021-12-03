@@ -291,7 +291,7 @@ let POINTonE2_tail_spec = do {
   B <- llvm_fresh_var "B" POINTonE2_type;
   llvm_points_to (llvm_elem AB_ptr 0) (llvm_term A);
   llvm_points_to (llvm_elem AB_ptr 1) (llvm_term B);
-  (lambda, lambda_ptr) <- ptr_to_fresh "lambda" vec768_type;
+  (lambda, lambda_ptr) <- ptr_to_fresh "lambda" vec384x_type;
   llvm_precond {{ POINTonE2_invariant A }};
   llvm_precond {{ POINTonE2_invariant B }};
   llvm_precond {{ fp2_invariant lambda }};
@@ -316,7 +316,7 @@ let POINTonE2_tail_spec_2 = do {
   let {{ (b_x, b_y, b_z) = B }};
   llvm_points_to (llvm_elem AB_ptr 0) (llvm_term A);
   llvm_points_to (llvm_elem AB_ptr 1) (llvm_term B);
-  (lambda, lambda_ptr) <- ptr_to_fresh "lambda" vec768_type;
+  (lambda, lambda_ptr) <- ptr_to_fresh "lambda" vec384x_type;
   llvm_precond {{ POINTonE2_invariant A }};
   llvm_precond {{ POINTonE2_invariant B }};
   llvm_precond {{ fp2_invariant lambda }};
