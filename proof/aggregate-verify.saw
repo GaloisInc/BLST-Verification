@@ -619,14 +619,48 @@ blst_pairing_finalverify_ov <- custom_verify
                         BasicVerify_A_unints);
   };
 
-// TODO: Prove
-finalverify_core_verify_thm <- admit_cryptol
-  {{ \pk sig msg dst ->
+fp12_unit_check_with_fp2_equal_thm <- really_prove_cryptol (rewrite (cryptol_ss ())
+  {{ \a ->
+      ((  Fp_2.is_equal (fp2_abs a0, fp2_abs one_mont_px)
+       /\ Fp_2.is_equal (fp2_abs a1, Fp_2.field_zero)
+       /\ Fp_2.is_equal (fp2_abs a2, Fp_2.field_zero)
+       /\ Fp_2.is_equal (fp2_abs a3, Fp_2.field_zero)
+       /\ Fp_2.is_equal (fp2_abs a4, Fp_2.field_zero)
+       /\ Fp_2.is_equal (fp2_abs a5, Fp_2.field_zero)) ==
+       (Fp_12.is_equal (fp12_abs a, Fp_12.field_unit))
+      where
+        [[a0, a1, a2], [a3, a4, a5]] = a) }}) [];
+
+G2_to_BP'_thm <- really_prove_cryptol
+  {{ POINTonE2_affine_abs (G2.0, G2.1) == BP' }} [];
+
+finalverify_core_verify_thm <- really_custom_prove_cryptol
+  {{ \pk sig (msg : [msg_len][8]) (dst : [dst_len][8]) ->
       (finalverify sig
                    (miller_loop_opt_checked (p.0, p.1) pk) ==
        core_verify_pk_in_g2_impl pk (affinify E sig) msg dst []
        where
-         p = affinify E (hash_to_curve_opt_impl (msg, dst))) }};
+         p = affinify E (hash_to_curve_opt_impl (msg, dst))) }}
+  do {
+    unfolding ["finalverify", "core_verify_pk_in_g2_impl"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with [fp12_unit_check_with_fp2_equal_thm];
+    rw_with fp12_rep_thms;
+    rw_with fp12_normalization_thms;
+    unfolding ["final_exponentiation_impl"];
+    rw_with [ normalize_C_expt_thm
+            , G2_to_BP'_thm ];
+    rw_with remove_ho_rules;
+    print_goal;
+    w4_unint_z3 [ "affinify_E"
+                , "C_expt"
+                , "final_exp_frobenius_map"
+                , "Fp_12"
+                , "fp12_conjugate"
+                , "hash_to_curve_opt_impl"
+                , "miller_loop_opt_checked" ];
+  };
 
 // TODO: Prove?  More likely should reference comment in pairing.saw
 finalverify_ate_pairing_3_thm <- admit_cryptol
