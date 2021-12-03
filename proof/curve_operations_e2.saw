@@ -24,7 +24,7 @@ core_rewrites <- for
   , "EqTrue (equalNat (intToNat (natToInt 1)) 1)"
   //, "EqTrue (eq Bool (intLe (natToInt 0) (natToInt 0)) True)"
   //, "EqTrue (eq Bool (intLe (natToInt 0) (natToInt 1)) True)"
-  ] (prove_core abc);
+  ] (prove_core (w4_unint_z3 []));
 
 unrip_thms_E2 <- for
   [ {{ \x -> ((([a1,a2],[b1,b2],[c1,c2]):POINTonE2_t) == x where [a1,a2] = x.0; [b1,b2] = x.1; [c1,c2] = x.2) }}
@@ -304,17 +304,17 @@ let POINTonE2_affine_on_curve_spec = do {
 
 B_E2_invariant_thm <-
   prove_cryptol (rewrite (cryptol_ss ())
-    {{fp2_invariant [[ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+    {{fp2_invariant [join [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
                      , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
-                    ,[ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+                    ,join [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
                      , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]]
        == True}}) [];
 
 B_E2_abs_thm <-
   prove_cryptol (rewrite (cryptol_ss ())
-    {{fp2_abs       [[ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+    {{fp2_abs       [join [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
                      , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
-                    ,[ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+                    ,join [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
                      , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]]
        == b' }}) [];
 

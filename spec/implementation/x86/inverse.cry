@@ -4,11 +4,11 @@ import implementation::Types
 import implementation::x86::helpers
 
 __smulx_383_n_shift_by_31
-  : Vec384 // a, stored at low offsets of rsi
-  -> Vec384 // b, stored at high offsets of rsi
+  : Vec384_x86 // a, stored at low offsets of rsi
+  -> Vec384_x86 // b, stored at high offsets of rsi
   -> [64] // f0
   -> [64] // g0
-  -> (Vec384, [64], [64])
+  -> (Vec384_x86, [64], [64])
 __smulx_383_n_shift_by_31 a b f0 g0 = result
   where
     [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0] = a
@@ -214,11 +214,11 @@ __smulx_191_n_shift_by_31 a b f0 g0 = result
     result = ([result0, result1, result2], rdx_66, rcx_67)
 
 __smulx_383x63
-  : Vec384 // u, stored at low offsets of rsi
-  -> Vec384 // v, stored at high offsets of rsi
+  : Vec384_x86 // u, stored at low offsets of rsi
+  -> Vec384_x86 // v, stored at high offsets of rsi
   -> [64] // f0
   -> [64] // g0
-  -> Vec384
+  -> Vec384_x86
 __smulx_383x63 u v f0 g0 = result
   where
     [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0] = u
@@ -310,11 +310,11 @@ __smulx_383x63 u v f0 g0 = result
     result = [result0, result1, result2, result3, result4, result5]
 
 __smulx_767x63
-  : Vec384 // u, stored at low offsets of rsi
-  -> Vec768 // v, stored at high offsets of rsi
+  : Vec384_x86 // u, stored at low offsets of rsi
+  -> Vec768_x86 // v, stored at high offsets of rsi
   -> [64] // f0
   -> [64] // g0
-  -> Vec768
+  -> Vec768_x86
 __smulx_767x63 u v f0 g0 = result
   where
     [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0] = u
@@ -458,8 +458,8 @@ __smulx_767x63 u v f0 g0 = result
 
 __ab_approximation_31
   : Integer // number of iterations
-  -> Vec384 // a
-  -> Vec384 // b
+  -> Vec384_x86 // a
+  -> Vec384_x86 // b
   -> [4][64] // result; f0, g0, f1, g1
 __ab_approximation_31 iters a b = result
   where
@@ -618,9 +618,9 @@ __inner_loop_62 iters a_init b_init = result
         loopresult = if curcounter == 0 then curresult else loop curcounter curresult
 
 ctx_inverse_mod_383
-  : Vec384 // a; pointer in rsi
-  -> Vec384 // n; pointer in rdx
-  -> Vec768 // ret
+  : Vec384_x86 // a; pointer in rsi
+  -> Vec384_x86 // n; pointer in rdx
+  -> Vec768_x86 // ret
 ctx_inverse_mod_383 a n = result // (earlyresult # zero) // result
   where
     a_2 = a
@@ -802,5 +802,5 @@ ctx_inverse_mod_383 a n = result // (earlyresult # zero) // result
     result9 = rbp_124
     result10 = rcx_124
     result11 = rdx_124
-    result : Vec768
+    result : Vec768_x86
     result = resultlow # [result6, result7, result8, result9, result10, result11]

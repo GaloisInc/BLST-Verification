@@ -63,7 +63,6 @@ let POINTonE2_from_Jacobian_alias_spec = do {
 
 // commute mul once -- use with caution!
 mul_commutes_fp2_thm <- prove_cryptol {{ \x y  -> Fp_2.mul (x, y) == apply Fp_2.mul (y,x) }} [];
-reciprocal_div_fp2_thm <- admit_cryptol {{ \x -> inverse_fp2 x ==  Fp_2.div (Fp_2.field_unit, x) }};
 
 POINTonE2_from_Jacobian_ov <- custom_verify "POINTonE2_from_Jacobian"
   (concat [reciprocal_fp2_ov] (concat vec_select_asm_ovs fp2_overrides))

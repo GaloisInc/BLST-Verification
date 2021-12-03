@@ -2,6 +2,7 @@ import Common::Field
 import FieldExtras
 import ShortWeierstrassCurve
 import PrimeField // for testing, remove
+import implementation::CurveOperation
 
 // Test setup
 
@@ -73,21 +74,28 @@ inverse_functionality F xs =
     mem i xs' = (map ((==) i) xs') != zero
     test_inverses F' xs' = [F'.mul(x,i) | x <- xs' | i <- inverses F' xs']
 
+eq_F : {t} (Eq t) => FieldRep t -> t -> t -> Bool
+eq_F F x y = F.normalize x == F.normalize y
+
 // HEAD
 
 // ... as implemented
 bulk_addition_head_imp: {t} (Eq t) => FieldRep t -> (t,t) -> (t,t) -> t -> ((t,t,t), (t,t,t))
-bulk_addition_head_imp F (x1,y1) (x2,y2) mul_acc = ((ax_1, ay_1, az_2), (bx_1, by_1, bz_2)) where
-  inf = (x1==F.field_zero /\ y1==F.field_zero) \/ (x2==F.field_zero /\ y2==F.field_zero)
+bulk_addition_head_imp F A B mul_acc = ((ax_1, ay_1, az_2), (bx_1, by_1, bz_2)) where
+  x1 = F.normalize A.0
+  y1 = F.normalize A.1
+  x2 = F.normalize B.0
+  y2 = F.normalize B.1
+  inf = (eq_F F x1 F.field_zero /\ eq_F F y1 F.field_zero) \/ (eq_F F x2 F.field_zero /\ eq_F F y2 F.field_zero)
   bz = F.sub (x2, x1)
   bx = F.add (x2, x1)
   az = F.add (y2, y1)
-  by = F.sub (y2, y1)
+  by_0 = F.sub (y2, y1)
 
-  cond =  bz == F.field_zero // if test, x2 == x1
-  inf_1 = if cond then az == F.field_zero else inf 
-  bx_1 = if cond  then if inf_1 then az else bx else bx
-  by_1 = if cond then mul_by_3 F (F.sq x1) else by
+  cond = eq_F F bz F.field_zero // if test, x2 == x1
+  inf_1 = if cond then eq_F F az F.field_zero else inf
+  bx_1 = if cond then if inf_1 then az else bx else bx
+  by_1 = if cond then mul_by_3 F (F.sq x1) else by_0
   bz_1 = if cond then az else bz
 
   ax_1 = if inf_1 then bx_1 else x1
@@ -123,17 +131,22 @@ bulk_addition_head_b F (x1,y1) (x2,y2) =
 // TAIL produces two results, D and B->Z
 
 bulk_addition_tail: {t} (Eq t) => FieldRep t -> (t,t) -> (t,t,t) -> t -> (t,t)
-bulk_addition_tail F (ax, ay) (bx,by,bz) lam =
-    if bz == F.field_zero then (ax, ay) else (dx, dy)  where
-    lam_a = F.mul(lam, by)
-    llam = F.sq lam_a
-    dx = F.sub (llam, bx)
-    dy = F.sub (F.mul(F.sub(ax, dx), lam_a), ay)
+bulk_addition_tail F A B lam = if eq_F F b_z F.field_zero then (a_x, a_y) else (d_x, d_y)
+  where
+    a_x = F.normalize A.0
+    a_y = F.normalize A.1
+    b_x = F.normalize B.0
+    b_y = F.normalize B.1
+    b_z = F.normalize B.2
+    lam' = F.mul(lam, b_y)
+    llam = F.sq lam'
+    d_x = F.sub (llam, b_x)
+    d_y = F.sub (F.mul(F.sub(a_x, d_x), lam'), a_y)
 
-// the B->Z result does not depend on A or LAM
+// the B->Z result does not depend on A or lambda
 bulk_addition_tail_bz: {t} (Eq t) => FieldRep t -> t -> t
-bulk_addition_tail_bz F bz =
-    if bz == F.field_zero then F.field_unit else bz
+bulk_addition_tail_bz F b_z =
+    if eq_F F b_z F.field_zero then F.field_unit else (F.normalize b_z)
 
 // TODO: semi-correctness: head, inverse, tail give the correct addition formula.
 
@@ -145,27 +158,35 @@ bulk_addition_tail_bz F bz =
 // then if x is a cube modulo q we have  x^((q-1)//3) = 1.  Both p and p^2
 // are 1 more than a multiple of 3.
 
-// Now if (ax,ay,az), (bx,by,bz) = bulk_addition_head F a b m
+// Now if (ax,ay,az), (bx,by_0,bz) = bulk_addition_head F a b m
 // and lam = inverse F bz
-// and c = bulk_addition_tail F (ax,ay) (bx,by,bz) lam
+// and c = bulk_addition_tail F (ax,ay) (bx,by_0,bz) lam
 // then c == add C a b
 
 head_inverse_tail: {t} (Eq t) => EllipticCurve t -> AffinePoint t -> AffinePoint t -> AffinePoint t
 head_inverse_tail C a b = c where
           F = C.base_field
-          ((ax,ay,az), (bx,by,bz)) = bulk_addition_head F a b F.field_unit
+          ((ax,ay,az), (bx,by_0,bz)) = bulk_addition_head F a b F.field_unit
           lam = F.div (F.field_unit, az)
-          c = bulk_addition_tail F (ax,ay) (bx,by,bz) lam
+          c = bulk_addition_tail F (ax,ay) (bx,by_0,bz) lam
 
 // corrected version:
 head_inverse_tail': {t} (Eq t) => EllipticCurve t -> AffinePoint t -> AffinePoint t -> AffinePoint t
 head_inverse_tail' C a b = c where
           F = C.base_field
-          ((ax,ay,az), (bx,by,bz)) = bulk_addition_head_imp F a b F.field_unit
+          ((ax,ay,az), (bx,by_0,bz)) = bulk_addition_head_imp F a b F.field_unit
           lam = if az == F.field_zero then F.field_unit else F.div (F.field_unit, az)
-          c = bulk_addition_tail F (ax,ay) (bx,by,bz) lam
+          c = bulk_addition_tail F (ax,ay) (bx,by_0,bz) lam
 
 // accumulate
+
+type BulkAdditionStuff t =
+  { field : FieldRep t
+  , bulk_addition_head_fn : (t,t) -> (t,t) -> t -> ((t,t,t), (t,t,t))
+  , bulk_addition_tail_fn : (t,t) -> (t,t,t) -> t -> (t,t)
+  , bulk_addition_tail_bz_fn : t -> t
+  , point_dadd_affine_fn : ProjectivePoint t -> AffinePoint t  -> ProjectivePoint t
+  }
 
 // The accumulate function starts with while loop that halves the length
 // of the array at each iteration.  Inside that loop are  two other loops, first
@@ -208,45 +229,44 @@ bulk_accumulate_0 C sum' points =
   // where junk = [ point_O C ] # junk
 */
 
-bulk_accumulate: {n, t} (fin n, Eq t) => EllipticCurve t -> (t,t) -> [n] (t,t)  -> (t,t)
+bulk_accumulate: {n, t} (fin n, Eq t) => BulkAdditionStuff t -> (t,t,t) -> [n] (t,t)  -> (t,t,t)
 bulk_accumulate C sum' points =
   if `n < 16
   then bulk_accumulate_small C sum' points
   else if (`n%2) == 1
-  then bulk_accumulate`{n/2} C (add C sum' (points@0)) (bulk_accumulate_even`{n/2} C (tail (coerceSize points)))
+  then bulk_accumulate`{n/2} C (C.point_dadd_affine_fn sum' (points@0)) (bulk_accumulate_even`{n/2} C (tail (coerceSize points)))
   else bulk_accumulate`{n/2} C sum' (bulk_accumulate_even`{n/2} C (coerceSize points))
 
-bulk_accumulate_small: {n, t} (fin n) => EllipticCurve t -> (t,t) -> [n] (t,t)  -> (t,t)
+bulk_accumulate_small: {n, t} (fin n) => BulkAdditionStuff t -> (t,t,t) -> [n] (t,t)  -> (t,t,t)
 bulk_accumulate_small C sum' points = sums!0 where
-  sums = [sum'] # [add C x p | x <- sums | p <- points]
+  sums = [sum'] # [C.point_dadd_affine_fn x p | x <- sums | p <- points]
 
 // ... body of the while loop, after the "n /= 2" line
 bulk_accumulate_even_0: {n, t} (fin n) => EllipticCurve t -> (t,t) -> [2*n] (t,t)  -> (t,t)
 bulk_accumulate_even_0 C sum' points = undefined
 
-bulk_accumulate_even: {n, t} (fin n, Eq t) => EllipticCurve t -> [2*n] (t,t)  -> [n](t,t)
+bulk_accumulate_even: {n, t} (fin n, Eq t) => BulkAdditionStuff t -> [2*n] (t,t)  -> [n](t,t)
 bulk_accumulate_even C points = dst where
-  F = C.base_field
   points':  [n] ((t,t,t), (t,t,t))
-  points' = bulk_accumulate_loop_1 F points
+  points' = bulk_accumulate_loop_1 C points
   // the Montgomery trick part
   last_pair: ((t,t,t), (t,t,t))
   //last_pair = ([(z,z)] # points')!0 // type checker does not know n >= 1
   //z = (z0,z0,z0) // : (t,t,t)
   //z0 = C.base_field.field_zero // : t
-  last_pair = (atLeastOne points')!0
-  last_inv = F.div (F.field_unit, last_pair.0.2)
-  dst = bulk_accumulate_loop_2 F points' last_inv
+  last_pair = points'!0
+  last_inv = C.field.div (C.field.field_unit, last_pair.0.2)
+  dst = bulk_accumulate_loop_2 C points' last_inv
 
 // First loop: run adjacent pairs through the HEAD function
 // this results in an accumulated product in the .Z fields of the even-numbered points
 // (The "a"s in the a/b splitting), and individual denominator values in the Z fields
 // of the odd-numbered points.
 // The c code modifies the points array in place, effectively resulting in a [2*n] (t,t,t)
-bulk_accumulate_loop_1: {n, t} (fin n, Eq t) => FieldRep t -> [2*n] (t,t)  -> [n] ((t,t,t), (t,t,t))
-bulk_accumulate_loop_1 F points = points' where
-  points' = [bulk_addition_head_imp F a b mul_ac | [a,b] <- split points | mul_ac <- mul_acs]
-  mul_acs = [F.field_unit] # [ma | ((_,_,ma), _) <- points' ]
+bulk_accumulate_loop_1: {n, t} (fin n, Eq t) => BulkAdditionStuff t -> [2*n] (t,t)  -> [n] ((t,t,t), (t,t,t))
+bulk_accumulate_loop_1 C points = points' where
+  points' = [C.bulk_addition_head_fn a b mul_ac | [a,b] <- split points | mul_ac <- mul_acs]
+  mul_acs = [C.field.field_unit] # [ma | ((_,_,ma), _) <- points' ]
 
 // second loop ` for (dst = points, i = n; --i;) ...`
 //  runs reversed through the points array.  There are two effects:
@@ -254,19 +274,19 @@ bulk_accumulate_loop_1 F points = points' where
 // "b" points, the other using these inverses in the TAIL part of the
 // point addition. We use 
 
-bulk_accumulate_loop_2: {n, t} (fin n, Eq t) => FieldRep t -> [n] ((t,t,t),(t,t,t))  -> t -> [n](t,t)
-bulk_accumulate_loop_2 F point_pairs last_inv = dst where
-  // dst = [bulk_addition_tail F (ax,ay) b (F.mul(i, az)) | ((ax,ay,az),b) <- point_pairs | i <- inverses']
-  dst = [bulk_addition_tail F (ax,ay) b i | ((ax,ay,az),b) <- point_pairs | i <- inverses']
+bulk_accumulate_loop_2: {n, t} (fin n, Eq t) => BulkAdditionStuff t -> [n] ((t,t,t),(t,t,t))  -> t -> [n](t,t)
+bulk_accumulate_loop_2 C point_pairs last_inv = dst where
+  // dst = [C.bulk_addition_tail_fn (ax,ay) b (C.field.mul(i, az)) | ((ax,ay,az),b) <- point_pairs | i <- inverses']
+  dst = [C.bulk_addition_tail_fn (ax,ay) b i | ((ax,ay,az),b) <- point_pairs | i <- inverses']
   inverses': [max 1 n] t
   // mostly the same code as in `inverses`
   products = [az | ((_,_,az),_) <- point_pairs]
   xs = [bz | (_,(_,_,bz)) <- point_pairs]
   iprods: [max 1 n] t
-  iprods = [F.mul (x, i) | i <- tail iprods | x <- tail (atLeastOne xs)]
-           # [F.div(F.field_unit, products!0) ]
+  iprods = [C.field.mul (i, C.bulk_addition_tail_bz_fn x) | i <- tail iprods | x <- tail (atLeastOne xs)]
+           # [C.field.div(C.field.field_unit, products!0) ]
   // iprods@i == xs@(i+1) * iprods@(i+1) == inverse (products@i)
-  inverses' = [iprods@0] # [F.mul(p, i) | p <- products | i <- tail iprods]
+  inverses' = [iprods@0] # [C.field.mul(i, p) | i <- tail iprods | p <- products]
   // inverses'@i == products@(i-1) * iprods@i == inverse (xs@i)
 
 bulk_accumulate_inverses: {n, t} (fin n, Eq t) => FieldRep t -> [n] ((t,t,t),(t,t,t))  -> t -> [_]t
@@ -281,4 +301,9 @@ bulk_accumulate_inverses F point_pairs last_inv = inverses' where
   // iprods@i == xs@(i+1) * iprods@(i+1) == inverse (products@i)
   inverses' = [iprods@0] # [F.mul(p, i) | p <- products | i <- tail iprods]
   // inverses'@i == products@(i-1) * iprods@i == inverse (xs@i)
+
+bulk_add : {m, n, t} (fin m, fin n, Eq t) => BulkAdditionStuff t -> (t, t, t) -> [n](t, t) -> (t, t, t)
+bulk_add C sum_acc points = if `n == 0
+  then sum_acc
+  else bulk_add`{m} C (bulk_accumulate C sum_acc (take`{min m n} points)) (drop`{min m n} points)
 

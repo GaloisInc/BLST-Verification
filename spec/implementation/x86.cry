@@ -10,15 +10,22 @@ mulx_mont_384x
   -> Vec384  // m
   -> [64] // n0
   -> Vec768 // result
-mulx_mont_384x a b m n0 = result
+mulx_mont_384x a b m n0 = vec768_x86_abs (mulx_mont_384x_impl (vec768_x86_rep a) (vec768_x86_rep b) (vec384_x86_rep m) n0)
+mulx_mont_384x_impl
+  : Vec768_x86 // a
+  -> Vec768_x86 // b
+  -> Vec384_x86  // m
+  -> [64] // n0
+  -> Vec768_x86 // result
+mulx_mont_384x_impl a b m n0 = result
   where
     t0 = __mulx_384 (take a) (take b)
     t1 = __mulx_384 (drop a) (drop b)
     t2 = __mulx_384 (__add_mod_384 (take b) (drop b) m) (__add_mod_384 (take a) (drop a) m)
     t2' = __sub_mod_384x384 (__sub_mod_384x384 t2 t0 m) t1 m
     t0' = __sub_mod_384x384 t0 t1 m
-    ret_re = redcx_mont_384 t0' m n0
-    ret_im = redcx_mont_384 t2' m n0
+    ret_re = redcx_mont_384_impl t0' m n0
+    ret_im = redcx_mont_384_impl t2' m n0
     result = ret_re # ret_im
 
 sqrx_mont_384x
@@ -26,13 +33,19 @@ sqrx_mont_384x
   -> Vec384  // m
   -> [64] // n0
   -> Vec768 // result
-sqrx_mont_384x a m n0 = result
+sqrx_mont_384x a m n0 = vec768_x86_abs (sqrx_mont_384x_impl (vec768_x86_rep a) (vec384_x86_rep m) n0)
+sqrx_mont_384x_impl
+  : Vec768_x86 // a
+  -> Vec384_x86  // m
+  -> [64] // n0
+  -> Vec768_x86 // result
+sqrx_mont_384x_impl a m n0 = result
   where
     t0 = __add_mod_384 (take a) (drop a) m
     t1 = __sub_mod_384 (take a) (drop a) m
-    tmp = mulx_mont_384 (take a) (drop a) m n0
+    tmp = mulx_mont_384_impl (take a) (drop a) m n0
     ret_im = __add_mod_384 tmp tmp m
-    ret_re = mulx_mont_384 t0 t1 m n0
+    ret_re = mulx_mont_384_impl t0 t1 m n0
     result = ret_re # ret_im
 
 mulx_382x
@@ -40,7 +53,13 @@ mulx_382x
   -> Vec768 // b
   -> Vec384  // m
   -> [2]Vec768 // result
-mulx_382x a b m = result
+mulx_382x a b m = map vec768_x86_abs (mulx_382x_impl (vec768_x86_rep a) (vec768_x86_rep b) (vec384_x86_rep m))
+mulx_382x_impl
+  : Vec768_x86 // a
+  -> Vec768_x86 // b
+  -> Vec384_x86  // m
+  -> [2]Vec768_x86 // result
+mulx_382x_impl a b m = result
   where
     a_re = take a
     a_im = drop a
@@ -70,7 +89,12 @@ sqrx_382x
   : Vec768 // a
   -> Vec384  // m
   -> [2]Vec768 // result
-sqrx_382x a m = result
+sqrx_382x a m = map vec768_x86_abs (sqrx_382x_impl (vec768_x86_rep a) (vec384_x86_rep m))
+sqrx_382x_impl
+  : Vec768_x86 // a
+  -> Vec384_x86  // m
+  -> [2]Vec768_x86 // result
+sqrx_382x_impl a m = result
   where
     a_re = take a
     a_im = drop a
@@ -103,16 +127,29 @@ redcx_mont_384
   -> Vec384 // m; pointer in rdx
   -> [64] // n0; passed in rcx
   -> Vec384 // result
-redcx_mont_384 a m n0 = result
+redcx_mont_384 a m n0 = vec384_x86_abs (redcx_mont_384_impl (vec768_x86_rep a) (vec384_x86_rep m) n0)
+redcx_mont_384_impl
+  : Vec768_x86 // a; pointer in rsi
+  -> Vec384_x86 // m; pointer in rdx
+  -> [64] // n0; passed in rcx
+  -> Vec384_x86 // result
+redcx_mont_384_impl a m n0 = result
   where
     acc = __mulx_by_1_mont_384 (take a) m n0
     result = __redc_tail_mont_384 acc a m
+
 fromx_mont_384
   : Vec384 // a; pointer in rsi
   -> Vec384 // m; pointer in rdx
   -> [64] // n0; passed in rcx
   -> Vec384 // result
-fromx_mont_384 a m n0 = result
+fromx_mont_384 a m n0 = vec384_x86_abs (fromx_mont_384_impl (vec384_x86_rep a) (vec384_x86_rep m) n0)
+fromx_mont_384_impl
+  : Vec384_x86 // a; pointer in rsi
+  -> Vec384_x86 // m; pointer in rdx
+  -> [64] // n0; passed in rcx
+  -> Vec384_x86 // result
+fromx_mont_384_impl a m n0 = result
   where
     
     [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = __mulx_by_1_mont_384 a m n0
@@ -141,7 +178,13 @@ sgn0x_pty_mont_384
   -> Vec384 // p; passed in rsi
   -> [64] // n0; passed in rdx
   -> [64]
-sgn0x_pty_mont_384 a p n0 = result
+sgn0x_pty_mont_384 a p n0 = sgn0x_pty_mont_384_impl (vec384_x86_rep a) (vec384_x86_rep p) n0
+sgn0x_pty_mont_384_impl
+  : Vec384_x86 // a; passed in rdi
+  -> Vec384_x86 // p; passed in rsi
+  -> [64] // n0; passed in rdx
+  -> [64]
+sgn0x_pty_mont_384_impl a p n0 = result
   where
     
     [r8_0, r9_0, r10_0, r11_0, r12_0, r13_0, r14_0, r15_0] = __mulx_by_1_mont_384 a p n0
@@ -171,7 +214,13 @@ sgn0x_pty_mont_384x
   -> Vec384 // m; passed in rsi
   -> [64] // n0; passed in rdx
   -> [64]
-sgn0x_pty_mont_384x a m n0 = result
+sgn0x_pty_mont_384x a m n0 = sgn0x_pty_mont_384x_impl (vec768_x86_rep a) (vec384_x86_rep m) n0
+sgn0x_pty_mont_384x_impl
+  : Vec768_x86 // a; passed in rdi
+  -> Vec384_x86 // m; passed in rsi
+  -> [64] // n0; passed in rdx
+  -> [64]
+sgn0x_pty_mont_384x_impl a m n0 = result
   where
     [r8_4, r9_4, r10_4, r11_4, r12_4, r13_4, r14_4, r15_4] = __mulx_by_1_mont_384 (drop a) m n0
     r12_5 = r14_4
@@ -241,7 +290,14 @@ mulx_mont_384
   -> Vec384 // m; passed in rcx
   -> [64] // n0; passed in r8
   -> Vec384 // result
-mulx_mont_384 a b m n0 = result
+mulx_mont_384 a b m n0 = vec384_x86_abs (mulx_mont_384_impl (vec384_x86_rep a) (vec384_x86_rep b) (vec384_x86_rep m) n0)
+mulx_mont_384_impl
+  : Vec384_x86 // a; passed in rsi
+  -> Vec384_x86 // b; passed in rdx
+  -> Vec384_x86 // m; passed in rcx
+  -> [64] // n0; passed in r8
+  -> Vec384_x86 // result
+mulx_mont_384_impl a b m n0 = result
   where
     (r9, r8) = mulx (a @ 0) (b @ 0)
     acc =
@@ -266,7 +322,15 @@ sqrx_n_mul_mont_383
   -> [64] // n0
   -> Vec384 // b
   -> Vec384 // result
-sqrx_n_mul_mont_383 a count m n0 b = result
+sqrx_n_mul_mont_383 a count m n0 b = vec384_x86_abs (sqrx_n_mul_mont_383_impl (vec384_x86_rep a) count (vec384_x86_rep m) n0 (vec384_x86_rep b))
+sqrx_n_mul_mont_383_impl
+  : Vec384_x86 // a
+  -> Integer  // count
+  -> Vec384_x86 // m
+  -> [64] // n0
+  -> Vec384_x86 // b
+  -> Vec384_x86 // result
+sqrx_n_mul_mont_383_impl a count m n0 b = result
   where
     mulx_mont_383_nonred x y = __mulx_mont_383_nonred [r8, r9, undefined, undefined, x @ 3, undefined, x @ 0, x @ 1, x @ 2] (y @ 0) n0 (x @ 4) (x @ 5) x y m
       where (r9, r8) = mulx (x @ 0) (y @ 0)
@@ -274,14 +338,20 @@ sqrx_n_mul_mont_383 a count m n0 b = result
       if counter == 0
       then acc
       else loop (counter - 1) (mulx_mont_383_nonred acc acc)
-    result = mulx_mont_384 (loop count a) b m n0
+    result = mulx_mont_384_impl (loop count a) b m n0
 
 sqrx_mont_382x
   : Vec768 // a; pointer in rsi
   -> Vec384  // m; pointer in rdx
   -> [64] // n0; passed in rcx
   -> Vec768 // result
-sqrx_mont_382x a m n0 = result
+sqrx_mont_382x a m n0 = vec768_x86_abs (sqrx_mont_382x_impl (vec768_x86_rep a) (vec384_x86_rep m) n0)
+sqrx_mont_382x_impl
+  : Vec768_x86 // a; pointer in rsi
+  -> Vec384_x86  // m; pointer in rdx
+  -> [64] // n0; passed in rcx
+  -> Vec768_x86 // result
+sqrx_mont_382x_impl a m n0 = result
   where
     mulx_mont_383_nonred x y = __mulx_mont_383_nonred [r8, r9, undefined, undefined, x @ 3, undefined, x @ 0, x @ 1, x @ 2] (y @ 0) n0 (x @ 4) (x @ 5) x y m
       where (r9, r8) = mulx (x @ 0) (y @ 0)
