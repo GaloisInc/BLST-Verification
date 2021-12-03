@@ -635,15 +635,15 @@ finalverify_ate_pairing_3_thm <- admit_cryptol
           , bls_ate_pairing m2 pk2 )
         , bls_ate_pairing m3 pk3 ) ==
       bls_ate_pairing (affinify E sig) BP')) }};
-      /*
-    where
-      //[msg1, msg2, msg3] = msgs
-      //[pk1, pk2, pk3] = pks
-      m1 = affinify E (hash_to_curve_opt_impl (msg1, dst))
-      m2 = affinify E (hash_to_curve_opt_impl (msg2, dst))
-      m3 = affinify E (hash_to_curve_opt_impl (msg3, dst))) }};
-      */
 
+// TODO: Prove
+unfold_aggregate_loop_1_thm <- admit_cryptol
+  {{ \pks msgs ->
+      aggregate_loop pks msgs ==
+        (aggregate_loop_body pk1 msg1 (just Fp_12.field_unit)
+        where
+          [pk1] = pks
+          [msg1] = msgs) }};
 
 // TODO: Prove
 unfold_aggregate_loop_3_thm <- admit_cryptol
@@ -713,7 +713,7 @@ at_split_join_join_is_join_thm <- prove_cryptol (rewrite (cryptol_ss())
 fp_pair_to_point_thm <- prove_cryptol
   {{ \(x : AffinePoint t_Fp) -> (x.0, x.1) == x }} [];
 
-normalize_bls_ate_pairing_thm <- really_custom_prove_cryptol
+normalize_bls_ate_pairing_thm <- custom_prove_cryptol
   {{ \x1 x2 -> Fp_12.normalize (bls_ate_pairing x1 x2) ==
                bls_ate_pairing x1 x2 }}
   do {
@@ -723,7 +723,7 @@ normalize_bls_ate_pairing_thm <- really_custom_prove_cryptol
     rw_with [ k_expt_C_expt_thm, normalize_C_expt_thm ];
     print_goal;
     w4_unint_z3 ["C_expt", "final_exp_frobenius_map", "ate_pairing'"];
-  }
+  };
 
 hoist_fp12_normalize_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \b t f -> Fp_12.normalize (if b then t else f) ==
@@ -736,24 +736,24 @@ let ugly_at_0_core = parse_core "\\ (v : (Vec 3 (Vec 96 (Vec 8 Bool)))) -> split
 
 let at_3_96_8_0_core = parse_core "\\(v : (Vec 3 (Vec 96 (Vec 8 Bool)))) -> at 3 (Vec 96 (Vec 8 Bool)) v 0";
 
-simplify_ugly_at_0_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+simplify_ugly_at_0_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \v -> ugly_at_0_core v == at_3_96_8_0_core v }}) [];
 
 let ugly_at_1_core = parse_core "\\ (v : (Vec 3 (Vec 96 (Vec 8 Bool)))) -> split 96 8 Bool (at 3 (Vec 768 Bool) (split 3 768 Bool (join 288 8 Bool (join 3 96 (Vec 8 Bool) v))) 1)";
 
 let at_3_96_8_1_core = parse_core "\\(v : (Vec 3 (Vec 96 (Vec 8 Bool)))) -> at 3 (Vec 96 (Vec 8 Bool)) v 1";
 
-simplify_ugly_at_1_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+simplify_ugly_at_1_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \v -> ugly_at_1_core v == at_3_96_8_1_core v }}) [];
 
 let ugly_at_2_core = parse_core "\\ (v : (Vec 3 (Vec 96 (Vec 8 Bool)))) -> split 96 8 Bool (at 3 (Vec 768 Bool) (split 3 768 Bool (join 288 8 Bool (join 3 96 (Vec 8 Bool) v))) 2)";
 
 let at_3_96_8_2_core = parse_core "\\(v : (Vec 3 (Vec 96 (Vec 8 Bool)))) -> at 3 (Vec 96 (Vec 8 Bool)) v 2";
 
-simplify_ugly_at_2_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+simplify_ugly_at_2_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \v -> ugly_at_2_core v == at_3_96_8_2_core v }}) [];
 
-fp12_mul_by_1_thm <- really_prove_cryptol
+fp12_mul_by_1_thm <- prove_cryptol
   {{ \x      -> Fp_12.mul (Fp_12.field_unit, x) == Fp_12.normalize x }} [];
 
 // Proof for n = 1
