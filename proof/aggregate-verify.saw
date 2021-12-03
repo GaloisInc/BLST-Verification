@@ -1,3 +1,6 @@
+let do_prove = true;
+include "proof-helpers.saw";
+
 let {{
   // TODO: Define
   all_distinct: {n, m} [n][m][8] -> Bit
@@ -10,14 +13,11 @@ let {{
   finalverify: ProjectivePoint t_Fp -> t_Fp_12 -> Bit
   finalverify e1 ctx_GT = is_head_one /\ is_tail_zero where
     e1_affine = affinify E e1
-    // TODO: BP' is BLS12_381_G2?
     GT0 = miller_loop_opt_checked e1_affine (POINTonE2_affine_abs (G2.0, G2.1))
     GT1 = fp12_conjugate GT0
     GT2 = Fp_12.mul (GT1, ctx_GT)
     GT3 = fp12_rep (final_exponentiation_impl GT2)
     [[a0, a1, a2], [a3, a4, a5]] = GT3
-    // TODO: Might want to create a function "fp12_is_one" that does this last
-    // check so that it can be used in both the spec and the proof
     is_head_one = Fp_2.is_equal (fp2_abs a0, fp2_abs one_mont_px)
     is_tail_zero = Fp_2.is_equal (fp2_abs a1, Fp_2.field_zero)
                 /\ Fp_2.is_equal (fp2_abs a2, Fp_2.field_zero)
@@ -76,7 +76,6 @@ let blst_pairing_finalverify_spec = do {
                                                       (fp12_abs GT)) }});
 };
 
-// TODO: non-null sig version (can fix nelems to 0 for that case)
 let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
   ctx_ptr <- llvm_alloc (llvm_struct "struct.blst_pairing_st");
   //
@@ -118,7 +117,6 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
   // Constrain ctx.P and ctx.Q if approaching N_MAX
   if eval_bool {{ `ctx_nelems == (`N_MAX - 1) }}
   then do {
-    // TODO: This only works when N_MAX == 2
     llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) 0) (llvm_term ctx_Q0);
     llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) 0) (llvm_term ctx_P0);
     llvm_precond {{ POINTonE2_affine_invariant ctx_Q0 }};
@@ -133,7 +131,6 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
   let msg_len = 32;
   (msg, msg_ptr) <-
       ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
-      // TODO: Definitely need some preconds
   llvm_execute_func [ ctx_ptr
                     , pk_ptr
                     , llvm_null
@@ -184,7 +181,6 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
   llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
   llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
   llvm_points_to_untyped (llvm_elem ctx_ptr 5) (llvm_term ctx_AggrSign);
-  // TODO: Prove AggrSign is unchanged
   llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }});
 };
 
@@ -198,7 +194,6 @@ normalize_hash_to_curve_opt_impl_rws <-
 
 blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g2"
-  // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ Hash_to_G1_ov
                 , POINTonE1_from_Jacobian_alias_ov
@@ -240,17 +235,17 @@ unfold_all_POINTonE1_affine_invariant_2_thm <- prove_cryptol (rewrite (cryptol_s
                (POINTonE1_affine_invariant x1 /\
                 POINTonE1_affine_invariant x2) }}) [];
 
-// TODO: This needs to look more like map_size_1_term
 let map_size_2_term = parse_core "\\(f : ((Vec 6 (Vec 64 Bool)) * (Vec 6 (Vec 64 Bool))) -> (Integer * Integer)) -> \\(y : Vec 2 ((Vec 6 (Vec 64 Bool)) * (Vec 6 (Vec 64 Bool)))) -> map ((Vec 6 (Vec 64 Bool)) * (Vec 6 (Vec 64 Bool))) (Integer * Integer) f 2 y";
 
+// NOTE: This is admitted so that it can be polymorphic.  Proving it would
+// require monomorphic input types and would reduce its usefulness.  However,
+// it is trivially true.
 unfold_map <- admit_cryptol (rewrite (cryptol_ss())
   {{ \f xs -> (map_size_2_term f xs) == ([f x1, f x2] where [x1, x2] = xs) }});
 
 // A proof for the first time n == N_MAX (AGGR_GT_SET is unset)
-// TODO: Prove n-th commit case (AGGR_GT_SET is set)
-blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- custom_verify
+blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- really_custom_verify
   "blst_pairing_aggregate_pk_in_g2"
-  // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ Hash_to_G1_ov
                 , POINTonE1_from_Jacobian_alias_ov
@@ -295,7 +290,6 @@ blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- custom_verify
 
 blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g2"
-  // TODO: This set does not include ovs needed for sig portion!
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ Hash_to_G1_ov
                 , POINTonE1_from_Jacobian_alias_ov
@@ -459,15 +453,11 @@ let demo_BasicAggregateVerify_A_spec n = do {
   llvm_precond {{ verify_A_pk_precond (pks@1) }};
   llvm_precond {{ verify_A_pk_precond (pks@2) }};
   */
-  // TODO: Preconditions.  Likely can lift signature preconditions from
-  // BasicVerify, and apply pk preconds to every element in pks.  Also need
-  // precond that all messages are unique (Or to integrate that into postcond)
   llvm_execute_func [ llvm_term {{ `n : [64] }}
                     , llvm_term {{ `message_len : [64] }}
                     , pks_ptr
                     , messages_ptr
                     , sig_ptr ];
-  // TODO: Postcond
   llvm_return (llvm_term
       {{ bool_to_limb (CoreAggregateVerify (split`{n} (join (join pks))) messages (join sig)) }});
 };
@@ -591,9 +581,6 @@ let vec_is_zero_5fp2_spec = do {
 
 vec_is_zero_5fp2_ov <- test "vec_is_zero" []  vec_is_zero_5fp2_spec;
 
-// TODO: Fix finalverify now that AggregatedSignature union is different.
-// Probably need to mark it as always a POINTonE2 (maybe using
-// points_to_untyped)
 blst_pairing_finalverify_ov <- custom_verify
   "blst_pairing_finalverify"
   (concat mul_fp12_ovs
@@ -641,8 +628,7 @@ finalverify_core_verify_thm <- admit_cryptol
        where
          p = affinify E (hash_to_curve_opt_impl (msg, dst))) }};
 
-// TODO: Prove
-// TODO: Need N=4 variant
+// TODO: Prove?  More likely should reference comment in pairing.saw
 finalverify_ate_pairing_3_thm <- admit_cryptol
  {{ \pk1 pk2 pk3 sig m1 m2 m3 ->
     (finalverify
@@ -660,6 +646,7 @@ finalverify_ate_pairing_3_thm <- admit_cryptol
         , bls_ate_pairing m3 pk3 ) ==
       bls_ate_pairing (affinify E sig) BP')) }};
 
+// TODO: Prove?  More likely should reference comment in pairing.saw
 finalverify_ate_pairing_4_thm <- admit_cryptol
  {{ \pk1 pk2 pk3 pk4 sig m1 m2 m3 m4 ->
     (finalverify
@@ -886,7 +873,6 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             , unfold_all_POINTonE2_affine_invariant_2_thm
             , unfold_all_POINTonE1_affine_invariant_5_thm
             , unfold_all_POINTonE2_affine_invariant_5_thm
-            // TODO: Need different size variants of unfolding the precond
             , unfold_all_verify_A_pk_precond_1_thm
             , affine_inv_affine_rep_e1_thm ];
     rw_with POINTonE1_base_thms;
@@ -977,10 +963,6 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             ];
     simplify basic_ss;
     simplify (cryptol_ss());
-    // TODO: Remember that uncompress_E1_imp was previously
-    // unfolded for the precondition proofs, so it'll either
-    // need to be unfolded here, or not unfolded in a special
-    // goal_ite to match the term in the precondition.
     rw_with remove_ho_rules;
     //print_readably;
     print_goal;
@@ -1070,7 +1052,6 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             , unfold_all_POINTonE2_affine_invariant_3_thm
             , unfold_all_POINTonE1_affine_invariant_5_thm
             , unfold_all_POINTonE2_affine_invariant_5_thm
-            // TODO: Need different size variants of unfolding the precond
             , unfold_all_verify_A_pk_precond_1_thm
             , unfold_all_verify_A_pk_precond_3_thm
             , affine_inv_affine_rep_e1_thm ];
@@ -1168,10 +1149,6 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             ];
     simplify basic_ss;
     simplify (cryptol_ss());
-    // TODO: Remember that uncompress_E1_imp was previously
-    // unfolded for the precondition proofs, so it'll either
-    // need to be unfolded here, or not unfolded in a special
-    // goal_ite to match the term in the precondition.
     rw_with remove_ho_rules;
     print_readably;
     //print_goal;
@@ -1263,7 +1240,6 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             , unfold_all_POINTonE2_affine_invariant_4_thm
             , unfold_all_POINTonE1_affine_invariant_5_thm
             , unfold_all_POINTonE2_affine_invariant_5_thm
-            // TODO: Need different size variants of unfolding the precond
             , unfold_all_verify_A_pk_precond_1_thm
             , unfold_all_verify_A_pk_precond_4_thm
             , affine_inv_affine_rep_e1_thm ];
@@ -1361,10 +1337,6 @@ demo_BasicAggregateVerify_A_ov <- really_custom_verify
             ];
     simplify basic_ss;
     simplify (cryptol_ss());
-    // TODO: Remember that uncompress_E1_imp was previously
-    // unfolded for the precondition proofs, so it'll either
-    // need to be unfolded here, or not unfolded in a special
-    // goal_ite to match the term in the precondition.
     rw_with remove_ho_rules;
     print_readably;
     //print_goal;
