@@ -556,12 +556,11 @@ hoist_is_point_projective_E_z_thm <- prove_cryptol
                        then is_point_projective E (x, y, z1)
                        else is_point_projective E (x, y, z2) }}) [];
 
-// TODO: Is this true?  Z==1 should indicate that the point is already affine.
-// So if it's on the curve in projective coordinates shouldn't it also be on
-// the curve in affine coordinates?  Prove?
-is_point_projective_E_affine_thm <- admit_cryptol (rewrite (cryptol_ss())
+is_point_projective_E_affine_thm <- really_prove_cryptol (rewrite (cryptol_ss())
   {{ \x y -> is_point_projective E (x, y, Fp.field_unit) ==
-             is_point_affine E (x, y) }});
+             if ~(is_point_O E (x, y))
+             then is_point_affine E (x, y)
+             else apply is_point_projective E (x, y, Fp.field_unit) }}) [];
 
 // For vec_is_zero(GT[0][1], sizeof(GT) - sizeof(GT[0][0])) in final verify
 let vec_is_zero_5fp2_spec = do {
