@@ -18,10 +18,12 @@ include "proof-helpers.saw";
 include "cryptol_imports.saw";
 include "vect.saw";
 include "fp_overrides.saw";
-include "fp2_overrides.saw";
 include "curve_operations.saw";
-include "curve_operations_e2.saw";
+include "ec_mult.saw";
 include "exp.saw";
+include "fp2_overrides.saw";
+include "curve_operations_e2.saw";
+include "ec_mult2.saw";
 include "exp2_for_bulk_add.saw";
 
 // first we do memory safety for points on E1

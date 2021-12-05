@@ -15,7 +15,7 @@ core_rewrites <- for
   
   , "(b: Bool) -> (x: (Vec 2 (Vec 6 (Vec 64 Bool)))) -> (y: (Vec 2 (Vec 6 (Vec 64 Bool)))) -> EqTrue (vecEq 6 (Vec 64 Bool) (vecEq 64 Bool boolEq) (at 2 (Vec 6 (Vec 64 Bool)) (ite (Vec 2 (Vec 6 (Vec 64 Bool))) b x y) 0) (ite (Vec 6 (Vec 64 Bool)) b (at 2 (Vec 6 (Vec 64 Bool)) x 0) (at 2 (Vec 6 (Vec 64 Bool)) y 0)))"
   , "(b: Bool) -> (x: (Vec 2 (Vec 6 (Vec 64 Bool)))) -> (y: (Vec 2 (Vec 6 (Vec 64 Bool)))) -> EqTrue (vecEq 6 (Vec 64 Bool) (vecEq 64 Bool boolEq) (at 2 (Vec 6 (Vec 64 Bool)) (ite (Vec 2 (Vec 6 (Vec 64 Bool))) b x y) 1) (ite (Vec 6 (Vec 64 Bool)) b (at 2 (Vec 6 (Vec 64 Bool)) x 1) (at 2 (Vec 6 (Vec 64 Bool)) y 1)))"
-   ] (prove_core abc);
+   ] (prove_core (w4_unint_z3 []));
 
 more_rewrites <- for
   [ {{ \ c (x:(Integer,Integer,Integer)) y -> (if c then x else y).0 == (if c then x.0 else y.0) }}
@@ -168,31 +168,23 @@ let POINTonE1_add_affine_spec = do {
     crucible_points_to out_ptr (crucible_term {{ POINTonE1_rep ( point_add_affine Fp (POINTonE1_abs p1) (POINTonE1_affine_abs p2)) }});
 };
 
-//let {{
-//  one_mont_p = [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
-//               , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
-//  }};
+fp_zero_abs_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp_abs zero == Fp.field_zero }}) [];
+fp_zero_rep_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp_rep Fp.field_zero == zero }}) [];
 
-one_mont_p_invariant_thm <-
-  prove_cryptol (rewrite (cryptol_ss ())
-    {{fp_invariant [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
-                   , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
-//      {{ fp_invariant 0x15f65ec3fa80e4935c071a97a256ec6d77ce5853705257455f48985753c758baebf4000bc40c0002760900000002fffd
-       == True}}) [];
+let one_mont_p = {{
+  [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+  , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
+  // 0x15f65ec3fa80e4935c071a97a256ec6d77ce5853705257455f48985753c758baebf4000bc40c0002760900000002fffd
+}};
+
+one_mont_p_invariant_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp_invariant one_mont_p == True}}) [];
 
 // for the abs method:
-one_mont_p_abs_thm <-
-  prove_cryptol (rewrite (cryptol_ss ())
-       {{fp_abs [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
-                , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
-//         {{ fp_abs 0x15f65ec3fa80e4935c071a97a256ec6d77ce5853705257455f48985753c758baebf4000bc40c0002760900000002fffd
-          == Fp.field_unit }}) [];
+one_mont_p_abs_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp_abs one_mont_p == Fp.field_unit }}) [];
 
 
 // for the concrete method:
-one_mont_p_rep_thm <- prove_cryptol (rewrite (cryptol_ss ())
-  {{ fp_rep Fp.field_unit == [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
-                             , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493] }}) [] ;
+one_mont_p_rep_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp_rep Fp.field_unit == one_mont_p }}) [];
 
 
 // need to show: fp_invariant of `one` (in this case, BLS12_381_Rx.p, == ONE_MONT_P
@@ -498,21 +490,14 @@ let POINTonE1_affine_on_curve_spec = do {
   crucible_return (crucible_term {{ if is_point_affine E (POINTonE1_affine_abs p1) then (1:Limb) else 0 }});
 };
 
-//let {{
-//  B_E1 = [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
-//         , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
-//  }};
-B_E1_invariant_thm <-
-  prove_cryptol (rewrite (cryptol_ss ())
-    {{fp_invariant [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
-                   , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
-       == True}}) [];
+let B_E1 = {{
+  [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+  , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
+  //0xaa270000000cfff353cc0032fc34000a478fe97a6b0a807fb1d37ebee6ba24d78ec9733bbf78ab2f09d645513d83de7e
+}};
+B_E1_invariant_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp_invariant B_E1 == True }}) [];
 
-B_E1_abs_thm <-
-  prove_cryptol (rewrite (cryptol_ss ())
-    {{fp_abs       [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
-                   , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
-       == b }}) [];
+B_E1_abs_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp_abs B_E1 == b }}) [];
 
 POINTonE1_affine_on_curve_ov <- custom_verify "POINTonE1_affine_on_curve"
                       (concat vec_overrides fp_overrides)
