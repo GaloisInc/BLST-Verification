@@ -115,8 +115,8 @@ fp2_is_equal_elim_thm <- prove_cryptol {{ \x y -> Fp_2.is_equal (x,y) == (x==y) 
 fp2_normalize_ite_thm <- hoist {{fp2_normalize}} ["fp2_normalize"];
 fp2_abs_normalize_ite_thm <- hoist {{Fp_2.normalize}} ["Fp_2"];
 
-fp2_zero_abs_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp2_abs zero == Fp_2.field_zero }}) [];
-fp2_zero_rep_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp2_rep Fp_2.field_zero == zero }}) [];
+fp2_zero_abs_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp2_abs [zero, zero] == Fp_2.field_zero }}) [];
+fp2_zero_rep_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp2_rep Fp_2.field_zero == [zero, zero] }}) [];
 
 one_mont_fp2_abs_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp2_abs [one_mont_p, zero] == Fp_2.field_unit }}) [];
 one_mont_fp2_rep_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp2_rep Fp_2.field_unit == [one_mont_p, zero] }}) [];
