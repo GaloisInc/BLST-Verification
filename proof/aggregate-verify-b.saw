@@ -1,0 +1,79 @@
+// TODO: Copyright notice (here and in all of the BLS wrapper proofs)
+
+let {{
+  finalverify_B: ProjectivePoint t_Fp_2 -> t_Fp_12 -> Bit
+  finalverify_B e2 ctx_GT = is_head_one /\ is_tail_zero where
+    e2_affine = affinify E' e2
+    GT0 = miller_loop_opt_checked (POINTonE1_affine_abs (G1.0, G1.1)) e2_affine
+    GT1 = fp12_conjugate GT0
+    GT2 = Fp_12.mul (GT1, ctx_GT)
+    GT3 = fp12_rep (final_exponentiation_impl GT2)
+    [[a0, a1, a2], [a3, a4, a5]] = GT3
+    is_head_one = Fp_2.is_equal (fp2_abs a0, fp2_abs one_mont_px)
+    is_tail_zero = Fp_2.is_equal (fp2_abs a1, Fp_2.field_zero)
+                /\ Fp_2.is_equal (fp2_abs a2, Fp_2.field_zero)
+                /\ Fp_2.is_equal (fp2_abs a3, Fp_2.field_zero)
+                /\ Fp_2.is_equal (fp2_abs a4, Fp_2.field_zero)
+                /\ Fp_2.is_equal (fp2_abs a5, Fp_2.field_zero)
+}};
+
+let blst_pairing_finalverify_B_spec = do {
+  ctx_ptr <- llvm_alloc_readonly (llvm_struct "struct.blst_pairing_st");
+  GT <- llvm_fresh_var "GT" vec384fp12_type;
+  llvm_precond {{ fp12_invariant GT }};
+  AggrSign <- llvm_fresh_var "AggrSign" POINTonE2_type;
+  llvm_precond {{ POINTonE2_invariant AggrSign }};
+  crucible_precond {{ is_point_projective E' (POINTonE2_abs AggrSign) }}; // on the curve
+  crucible_precond {{ ~(Fp_2.is_equal ((fp2_abs (AggrSign.2)), Fp_2.field_zero)) }};
+  llvm_points_to (llvm_elem ctx_ptr 0)
+                 (llvm_term {{ AGGR_HASH_OR_ENCODE
+                            || AGGR_MIN_PK
+                            || AGGR_SIGN_SET
+                            || AGGR_GT_SET }});
+  llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term GT);
+  llvm_points_to (llvm_elem ctx_ptr 5) (llvm_term AggrSign);
+  llvm_execute_func [ ctx_ptr, llvm_null ];
+  llvm_return (llvm_term {{ bool_to_limb (finalverify_B (POINTonE2_abs AggrSign)
+                                                        (fp12_abs GT)) }});
+};
+
+// TODO: Continue with blst_pairing_aggregate_pk_in_g2_null_sig_spec (line 81)
+
+
+blst_pairing_finalverify_B_ov <- custom_verify
+  "blst_pairing_finalverify"
+  (concat mul_fp12_ovs
+          [ POINTonE2_from_Jacobian_ov
+          , conjugate_fp12_ov
+          , final_exp_alias_ov
+          , vec_is_equal_fp2_ov
+          , vec_is_zero_5fp2_ov
+          , miller_loop_n_1_ov])
+  blst_pairing_finalverify_B_spec
+  do {
+    rw_with fp12_rep_thms;
+    rw_with [ affine_inv_affine_rep_e2_thm , one_mont_px_invariant_thm];
+    unfolding ["fp12_rep", "fp6_rep", "finalverify_B", "G1", "one_mont_px"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with fp2_rep_thms;
+    rw_with fp12_normalization_thms;
+    rw_with POINTonE2_base_thms;
+    rw_with [ normalize_miller_loop_opt_checked_thm
+            , normalize_affinify_fp2_thm ];
+    rw_with remove_ho_rules;
+    print_goal;
+    //print_readably;
+    w4_unint_z3 (concat [ "all_distinct"
+                        , "POINTonE2_abs"
+                        , "POINTonE2_invariant"
+                        , "is_point_projective_E'"
+                        , "fp2_abs"
+                        , "final_exponentiation_impl"
+                        , "fp12_conjugate"
+                        , "miller_loop_opt_checked"
+                        , "Fp"
+                        , "Fp_2"
+                        , "fp12_abs" ]
+                        BasicVerify_B_unints);
+  };

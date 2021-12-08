@@ -12,8 +12,8 @@ let {{
   AGGR_SIGN_SET       = 0x00000010
   AGGR_GT_SET         = 0x00000020
   AGGR_HASH_OR_ENCODE = 0x00000040
-  finalverify: ProjectivePoint t_Fp -> t_Fp_12 -> Bit
-  finalverify e1 ctx_GT = is_head_one /\ is_tail_zero where
+  finalverify_A: ProjectivePoint t_Fp -> t_Fp_12 -> Bit
+  finalverify_A e1 ctx_GT = is_head_one /\ is_tail_zero where
     e1_affine = affinify E e1
     GT0 = miller_loop_opt_checked e1_affine (POINTonE2_affine_abs (G2.0, G2.1))
     GT1 = fp12_conjugate GT0
@@ -52,7 +52,7 @@ all_distinct_3_ov <- admit "all_distinct" (all_distinct_spec 3);
 
 all_distinct_4_ov <- admit "all_distinct" (all_distinct_spec 4);
 
-let blst_pairing_finalverify_spec = do {
+let blst_pairing_finalverify_A_spec = do {
   /*
   (ctx, ctx_ptr) <- ptr_to_fresh_readonly "ctx"
                                           (llvm_struct "struct.blst_pairing");
@@ -74,8 +74,8 @@ let blst_pairing_finalverify_spec = do {
   // POINTonE2, but in this case it's a POINTonE1.
   llvm_points_to_untyped (llvm_elem ctx_ptr 5) (llvm_term AggrSign);
   llvm_execute_func [ ctx_ptr, llvm_null ];
-  llvm_return (llvm_term {{ bool_to_limb (finalverify (POINTonE1_abs AggrSign)
-                                                      (fp12_abs GT)) }});
+  llvm_return (llvm_term {{ bool_to_limb (finalverify_A (POINTonE1_abs AggrSign)
+                                                        (fp12_abs GT)) }});
 };
 
 let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
@@ -556,7 +556,7 @@ hoist_is_point_projective_E_z_thm <- prove_cryptol
                        then is_point_projective E (x, y, z1)
                        else is_point_projective E (x, y, z2) }}) [];
 
-is_point_projective_E_affine_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+is_point_projective_E_affine_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x y -> is_point_projective E (x, y, Fp.field_unit) ==
              if ~(is_point_O E (x, y))
              then is_point_affine E (x, y)
@@ -582,7 +582,7 @@ let vec_is_zero_5fp2_spec = do {
 
 vec_is_zero_5fp2_ov <- test "vec_is_zero" []  vec_is_zero_5fp2_spec;
 
-blst_pairing_finalverify_ov <- custom_verify
+blst_pairing_finalverify_A_ov <- custom_verify
   "blst_pairing_finalverify"
   (concat mul_fp12_ovs
           [ POINTonE1_from_Jacobian_ov
@@ -591,11 +591,11 @@ blst_pairing_finalverify_ov <- custom_verify
           , vec_is_equal_fp2_ov
           , vec_is_zero_5fp2_ov
           , miller_loop_n_1_ov])
-  blst_pairing_finalverify_spec
+  blst_pairing_finalverify_A_spec
   do {
     rw_with fp12_rep_thms;
     rw_with [affine_inv_affine_rep_e1_thm, one_mont_px_invariant_thm];
-    unfolding ["fp12_rep", "fp6_rep", "finalverify", "G2", "one_mont_px"];
+    unfolding ["fp12_rep", "fp6_rep", "finalverify_A", "G2", "one_mont_px"];
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with fp2_rep_thms;
@@ -604,8 +604,8 @@ blst_pairing_finalverify_ov <- custom_verify
     rw_with [ normalize_miller_loop_opt_checked_thm
             , normalize_affinify_thm ];
     rw_with remove_ho_rules;
-    print_goal;
-    //print_readably;
+    //print_goal;
+    print_readably;
     w4_unint_z3 (concat [ "all_distinct"
                         , "POINTonE1_abs"
                         , "POINTonE1_invariant"
@@ -635,15 +635,15 @@ fp12_unit_check_with_fp2_equal_thm <- prove_cryptol (rewrite (cryptol_ss ())
 G2_to_BP'_thm <- prove_cryptol
   {{ POINTonE2_affine_abs (G2.0, G2.1) == BP' }} [];
 
-finalverify_core_verify_thm <- custom_prove_cryptol
+finalverify_A_core_verify_thm <- custom_prove_cryptol
   {{ \pk sig (msg : [msg_len][8]) (dst : [dst_len][8]) ->
-      (finalverify sig
+      (finalverify_A sig
                    (miller_loop_opt_checked (p.0, p.1) pk) ==
        core_verify_pk_in_g2_impl pk (affinify E sig) msg dst []
        where
          p = affinify E (hash_to_curve_opt_impl (msg, dst))) }}
   do {
-    unfolding ["finalverify", "core_verify_pk_in_g2_impl"];
+    unfolding ["finalverify_A", "core_verify_pk_in_g2_impl"];
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with [fp12_unit_check_with_fp2_equal_thm];
@@ -664,9 +664,9 @@ finalverify_core_verify_thm <- custom_prove_cryptol
   };
 
 // TODO: Prove?  More likely should reference comment in pairing.saw
-finalverify_ate_pairing_3_thm <- admit_cryptol
+finalverify_A_ate_pairing_3_thm <- admit_cryptol
  {{ \pk1 pk2 pk3 sig m1 m2 m3 ->
-    (finalverify
+    (finalverify_A
       sig
       (Fp_12.mul
         ( F_prod
@@ -682,9 +682,9 @@ finalverify_ate_pairing_3_thm <- admit_cryptol
       bls_ate_pairing (affinify E sig) BP')) }};
 
 // TODO: Prove?  More likely should reference comment in pairing.saw
-finalverify_ate_pairing_4_thm <- admit_cryptol
+finalverify_A_ate_pairing_4_thm <- admit_cryptol
  {{ \pk1 pk2 pk3 pk4 sig m1 m2 m3 m4 ->
-    (finalverify
+    (finalverify_A
       sig
       (Fp_12.mul
         ( F_prod
@@ -733,7 +733,7 @@ unfold_aggregate_loop_4_thm <- prove_cryptol
           [pk1, pk2, pk3, pk4] = pks
           [msg1, msg2, msg3, msg4] = msgs) }} ["aggregate_loop_body"];
 
-affinify_abs_z_1_thm <- really_prove_cryptol
+affinify_abs_z_1_thm <- prove_cryptol
   {{ \p -> affinify E (p.0, p.1, Fp.field_unit) == normalize_affine_point Fp p }} [];
 
 hoist_field_access_1_fp_thm <- prove_cryptol
@@ -851,7 +851,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
                 //, miller_loop_n_2_ov
                 , miller_loop_n_1_ov
                 // ovs used in blst_pairing_finalverify:
-                , blst_pairing_finalverify_ov
+                , blst_pairing_finalverify_A_ov
                 // Pairing aggregate ovs
                 , blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov
                 , blst_pairing_aggregate_pk_in_g2_null_sig_0_ov
@@ -948,7 +948,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     simplify (cryptol_ss());
     rw_with [ unfold_map
             , normalize_miller_loop_opt_checked_thm
-            , finalverify_core_verify_thm
+            , finalverify_A_core_verify_thm
             , core_verify_pk_in_g2_impl_thm
             , unfold_aggregate_loop_1_thm
             , affinify_abs_z_1_thm
@@ -1029,7 +1029,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
                 //, miller_loop_n_2_ov
                 , miller_loop_n_1_ov
                 // ovs used in blst_pairing_finalverify:
-                , blst_pairing_finalverify_ov
+                , blst_pairing_finalverify_A_ov
                 // Pairing aggregate ovs
                 , blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov
                 , blst_pairing_aggregate_pk_in_g2_null_sig_0_ov
@@ -1129,7 +1129,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     simplify (cryptol_ss());
     rw_with [ unfold_map
             , normalize_miller_loop_opt_checked_thm
-            , finalverify_ate_pairing_3_thm
+            , finalverify_A_ate_pairing_3_thm
             , core_verify_pk_in_g2_impl_thm
             , unfold_aggregate_loop_3_thm
             , affinify_abs_z_1_thm
@@ -1218,7 +1218,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
                 //, miller_loop_n_2_ov
                 , miller_loop_n_1_ov
                 // ovs used in blst_pairing_finalverify:
-                , blst_pairing_finalverify_ov
+                , blst_pairing_finalverify_A_ov
                 // Pairing aggregate ovs
                 , blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov
                 , blst_pairing_aggregate_pk_in_g2_null_sig_0_ov
@@ -1318,7 +1318,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     simplify (cryptol_ss());
     rw_with [ unfold_map
             , normalize_miller_loop_opt_checked_thm
-            , finalverify_ate_pairing_4_thm
+            , finalverify_A_ate_pairing_4_thm
             , core_verify_pk_in_g2_impl_thm
             , unfold_aggregate_loop_4_thm
             , affinify_abs_z_1_thm
