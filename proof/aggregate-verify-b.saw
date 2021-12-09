@@ -279,8 +279,110 @@ blst_pairing_aggregate_pk_in_g1_null_sig_1_nth_commit_ov <- custom_verify
                         BasicVerify_B_unints);
   };
 
-// TODO: Continue with unfold_all_POINTonE2_affine_invariant_2_thm (line 229)
+let blst_pairing_aggregate_pk_in_g1_sig_spec = do {
+  ctx_ptr <- llvm_alloc (llvm_struct "struct.blst_pairing_st");
+  //
+  // ctx->ctrl must have AGGR_HASH_OR_ENCODE set and AGGR_MIN_SIG unset, but we
+  // leave the rest uninterpreted
+  // TODO: Update this comment here and in the A version ^
+  ctx_ctrl <- llvm_fresh_var "ctx.ctrl" (llvm_int 32);
+  llvm_precond {{ (ctx_ctrl && AGGR_HASH_OR_ENCODE) != 0 }};
+  llvm_precond {{ (ctx_ctrl && AGGR_MIN_SIG) == 0 }};
+  llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) == 0 }};
+  llvm_precond {{ (ctx_ctrl && AGGR_SIGN_SET) == 0 }};
+  llvm_points_to (llvm_elem ctx_ptr 0) (llvm_term ctx_ctrl);
+  //
+  // Set ctx.nelems
+  llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ 0 : [32] }});
+  //
+  dst_ptr <- llvm_alloc_readonly (llvm_array dst_len (llvm_int 8));
+  llvm_points_to dst_ptr (llvm_term {{ BMPKS::reexport_DST }});
+  llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
+  llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
+  //
+  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" POINTonE1_affine_type;
+  llvm_precond {{ ~(is_point_O E (POINTonE1_affine_abs pk)) }};
+  llvm_precond {{ POINTonE1_affine_invariant pk }};
+  //
+  (sig, sig_ptr) <- ptr_to_fresh_readonly "sig" POINTonE2_affine_type;
+  llvm_precond {{ ~ (is_point_O E' (POINTonE2_affine_abs sig)) }};
+  llvm_precond {{ POINTonE2_affine_invariant sig }};
+  llvm_precond {{ is_point_affine E' (POINTonE2_affine_abs sig) }};
+  llvm_precond {{ is_in_g2_impl (POINTonE2_affine_abs sig) }};
+  // TODO: This handles vec_is_zero, but I think there are rewrite rules to
+  // derive is_point_O from (or to) this, which might make for a better spec,
+  // and an uglier proof.
+  llvm_precond {{ ~(Fp_2.is_equal (fp2_abs x, Fp_2.field_zero) /\
+                    Fp_2.is_equal (fp2_abs y, Fp_2.field_zero))
+                  where (x, y) = sig }};
+  //
+  let msg_len = 32;
+  (msg, msg_ptr) <-
+      ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  llvm_execute_func [ ctx_ptr
+                    , pk_ptr
+                    , sig_ptr
+                    , msg_ptr
+                    , llvm_term {{ `msg_len : [64] }}
+                    , llvm_null
+                    , llvm_term {{ 0 : [64] }} ];
+  llvm_points_to (llvm_elem ctx_ptr 0)
+                 (llvm_term {{ ctx_ctrl || AGGR_SIGN_SET  || AGGR_MIN_PK }});
+  let Q = {{ POINTonE2_affine_rep
+               (affinify E' (hash_to_curve_E2_opt_impl (msg, BMPKS::reexport_DST))) }};
+  llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ 1 : [32]}});
+  // These postconditions on Q and P are true in the commit case too, but it
+  // doesn't matter because they've already been processed in that case, so
+  // we ignore them to simplify the proof.
+  // ctx.Q[ctx.nelems] == Q
+  llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) 0) (llvm_term Q);
+  // ctx.P[ctx.nelems] == pk
+  llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) 0) (llvm_term pk);
+  // DST, and dst_len are unchanged
+  llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
+  llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
+  llvm_points_to
+      (llvm_elem ctx_ptr 5)
+      (llvm_term {{ ( sig.0, sig.1, one_mont_px ) }});
+  llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }});
+};
 
+blst_pairing_aggregate_pk_in_g1_sig_ov <- really_custom_verify
+  "blst_pairing_aggregate_pk_in_g1"
+  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
+                [ Hash_to_G2_ov
+                , POINTonE2_from_Jacobian_alias_ov
+                , POINTonE2_in_g2_ov
+                , vec_copy_2fp_ov
+                , miller_loop_n_2_ov ])
+  blst_pairing_aggregate_pk_in_g1_sig_spec
+  do {
+    unfolding [ "POINTonE2_affine_invariant"
+              , "POINTonE1_affine_invariant"
+              , "is_point_O"
+              , "same_point_affine"
+              , "point_O"
+              , "POINTonE1_affine_abs"
+              , "BMPKS::reexport_DST"
+              , "BLSMinimalPublicKeySize::DST" ];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with POINTonE2_base_thms;
+    unfolding ["POINTonE2_rep"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with fp2_rep_thms;
+    rw_with normalize_hash_to_curve_E2_opt_impl_rws;
+    rw_with hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms;
+    rw_with remove_ho_rules;
+    print_goal;
+    //print_readably;
+    w4_unint_z3 (concat [ "affinify_E'"
+                        , "hash_to_curve_E2_opt_impl" ]
+                        BasicVerify_B_unints);
+  };
+
+// TODO: Continue with basic verify spec
 
 blst_pairing_finalverify_B_ov <- custom_verify
   "blst_pairing_finalverify"
@@ -319,3 +421,8 @@ blst_pairing_finalverify_B_ov <- custom_verify
                         , "fp12_abs" ]
                         BasicVerify_B_unints);
   };
+
+// TODO: If you get an error about types not being memory compatible, it very
+// well may be due to type checking on sig in the
+// blst_pairing_aggregate_pk_in_g1 specs, which perform type checking where the
+// equivalent g2 spec cannot (due to the union type in the struct).

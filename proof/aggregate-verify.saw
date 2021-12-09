@@ -1,7 +1,5 @@
-/*
 let do_prove = true;
 include "proof-helpers.saw";
-*/
 
 let {{
   // TODO: Define
@@ -217,10 +215,9 @@ blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- custom_verify
     simplify (cryptol_ss());
     rw_with fp_rep_thms;
     rw_with normalize_hash_to_curve_opt_impl_rws;
-    print_readably;
     rw_with hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms;
     rw_with remove_ho_rules;
-    //print_goal;
+    print_goal;
     //print_readably;
     w4_unint_z3 (concat [ "affinify_E"
                         , "hash_to_curve_opt_impl" ]
@@ -399,7 +396,7 @@ let blst_pairing_aggregate_pk_in_g2_sig_spec = do {
   // of POINTonE1 and POINTonE2
   llvm_points_to_untyped
       (llvm_elem ctx_ptr 5)
-      (llvm_term {{ [ sig.0, sig.1, one_mont_p ] }});
+      (llvm_term {{ ( sig.0, sig.1, one_mont_p ) }});
   llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }});
 };
 
