@@ -37,7 +37,157 @@ let blst_pairing_finalverify_B_spec = do {
                                                         (fp12_abs GT)) }});
 };
 
-// TODO: Continue with blst_pairing_aggregate_pk_in_g2_null_sig_spec (line 81)
+let blst_pairing_aggregate_pk_in_g1_null_sig_spec ctx_nelems aggr_gt_set = do {
+  ctx_ptr <- llvm_alloc (llvm_struct "struct.blst_pairing_st");
+  //
+  // ctx->ctrl must have AGGR_HASH_OR_ENCODE set and AGGR_MIN_SIG unset, but we
+  // leave the rest uninterpreted
+  ctx_ctrl <- llvm_fresh_var "ctx.ctrl" (llvm_int 32);
+  llvm_precond {{ (ctx_ctrl && AGGR_HASH_OR_ENCODE) != 0 }};
+  llvm_precond {{ (ctx_ctrl && AGGR_MIN_SIG) == 0 }};
+  llvm_points_to (llvm_elem ctx_ptr 0) (llvm_term ctx_ctrl);
+  //
+  // Set ctx.nelems
+  llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ `ctx_nelems : [32] }});
+  //
+  dst_ptr <- llvm_alloc_readonly (llvm_array dst_len (llvm_int 8));
+  llvm_points_to dst_ptr (llvm_term {{ BMPKS::reexport_DST }});
+  llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
+  llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
+  ctx_GT <- if aggr_gt_set
+            then llvm_fresh_var "ctx.GT" vec384fp12_type
+            else return {{ undefined }};
+  if aggr_gt_set
+    then do {
+      llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) != 0 }};
+      llvm_precond {{ fp12_invariant ctx_GT }};
+      llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT);
+    } else llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) == 0 }};
+  ctx_Q0 <- if eval_bool {{ `ctx_nelems == (`N_MAX - 1) }}
+            then llvm_fresh_var "ctx.Q0" POINTonE2_affine_type
+            else return {{ undefined }};
+  ctx_P0 <- if eval_bool {{ `ctx_nelems == (`N_MAX - 1) }}
+            then llvm_fresh_var "ctx.P0" POINTonE1_affine_type
+            else return {{ undefined }};
+  ctx_AggrSign <- llvm_fresh_var "ctx.AggrSign" POINTonE2_type;
+  llvm_points_to (llvm_elem ctx_ptr 5) (llvm_term ctx_AggrSign);
+  //
+  // Constrain ctx.P and ctx.Q if approaching N_MAX
+  if eval_bool {{ `ctx_nelems == (`N_MAX - 1) }}
+  then do {
+    llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) 0) (llvm_term ctx_Q0);
+    llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) 0) (llvm_term ctx_P0);
+    llvm_precond {{ POINTonE2_affine_invariant ctx_Q0 }};
+    llvm_precond {{ POINTonE1_affine_invariant ctx_P0 }};
+  } else do { return (); };
+  //
+  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" POINTonE1_affine_type;
+  llvm_precond {{ ~(is_point_O E (POINTonE1_affine_abs pk)) }};
+  llvm_precond {{ POINTonE1_affine_invariant pk }};
+  //
+  let msg_len = 32;
+  (msg, msg_ptr) <-
+      ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  llvm_execute_func [ ctx_ptr
+                    , pk_ptr
+                    , llvm_null
+                    , msg_ptr
+                    , llvm_term {{ `msg_len : [64] }}
+                    , llvm_null
+                    , llvm_term {{ 0 : [64] }} ];
+  let Q = {{ POINTonE2_affine_rep
+               (affinify E' (hash_to_curve_E2_opt_impl (msg, BMPKS::reexport_DST))) }};
+  if eval_bool {{ `ctx_nelems == (`N_MAX - 1) }}
+  then do {
+    llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ 0 : [32] }});
+    llvm_points_to (llvm_elem ctx_ptr 0)
+                   (llvm_term {{ ctx_ctrl || AGGR_GT_SET  || AGGR_MIN_PK }});
+    let GT =
+      {{ fp12_rep (F_prod Fp_12
+                          [ miller_loop_opt (POINTonE1_affine_abs ctx_P0)
+                                            (POINTonE2_affine_abs ctx_Q0)
+                          , miller_loop_opt (POINTonE1_affine_abs pk)
+                                            (POINTonE2_affine_abs Q) ]) }};
+    if aggr_gt_set
+    then do {
+      llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term
+        {{ fp12_rep (Fp_12.mul (fp12_abs ctx_GT, fp12_abs GT)) }});
+    } else do {
+      // ctx->GT is set for the first time
+      llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term GT);
+    };
+  } else do {
+    llvm_points_to (llvm_elem ctx_ptr 0)
+                   (llvm_term {{ ctx_ctrl || AGGR_MIN_PK }});
+    llvm_points_to (llvm_elem ctx_ptr 1)
+                   (llvm_term {{ `ctx_nelems + 1 : [32]}});
+    // ctx->GT is unchanged (if set)
+    if aggr_gt_set
+    then llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT)
+    else return ();
+    // These postconditions on Q and P are true in the commit case too, but it
+    // doesn't matter because they've already been processed in that case, so
+    // we ignore them to simplify the proof.
+    // ctx.Q[ctx.nelems] == Q
+    llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) ctx_nelems) (llvm_term Q);
+    // ctx.P[ctx.nelems] == pk
+    llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) ctx_nelems)
+                   (llvm_term pk);
+  };
+  // DST, dst_len, and AggrSign are unchanged
+  llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
+  llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
+  llvm_points_to (llvm_elem ctx_ptr 5) (llvm_term ctx_AggrSign);
+  llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }});
+};
+
+Hash_to_G2_ov <- prove_Hash_to_G2_impl msg_len dst_len aug_len;
+
+hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms <-
+  core_verify_pk_in_g1_POINTonE2_from_Jacobian_hash_preconds msg_len dst_len aug_len;
+
+// NOTE: normalize_hash_to_curve_impl is for E2, while
+// normalize_hash_to_curve_impl_thms is for E1...
+normalize_hash_to_curve_E2_opt_impl_rws <-
+  normalize_hash_to_curve_impl msg_len dst_len aug_len;
+
+blst_pairing_aggregate_pk_in_g1_null_sig_0_ov <- custom_verify
+  "blst_pairing_aggregate_pk_in_g1"
+  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
+                [ Hash_to_G2_ov
+                , POINTonE2_from_Jacobian_alias_ov
+                , vec_copy_2fp_ov
+                , miller_loop_n_2_ov ])
+  // AGGR_GT_SET will always be set in null_sig case for N_MAX == 2
+  (blst_pairing_aggregate_pk_in_g1_null_sig_spec 0 true)
+  do {
+    unfolding [ "POINTonE1_affine_invariant"
+              , "is_point_O"
+              , "same_point_affine"
+              , "point_O"
+              , "POINTonE1_affine_abs"
+              , "BMPKS::reexport_DST"
+              , "BLSMinimalPublicKeySize::DST" ];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with POINTonE2_base_thms;
+    unfolding ["POINTonE2_rep"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with fp2_rep_thms;
+    rw_with normalize_hash_to_curve_E2_opt_impl_rws;
+    rw_with hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms;
+    rw_with remove_ho_rules;
+    print_goal;
+    //print_readably;
+    w4_unint_z3 (concat [ "affinify_E'"
+                        , "hash_to_curve_E2_opt_impl" ]
+                        BasicVerify_B_unints);
+  };
+
+
+
+// TODO: Continue with unfold_all_POINTonE2_affine_invariant_2_thm (line 229)
 
 
 blst_pairing_finalverify_B_ov <- custom_verify
