@@ -1,5 +1,7 @@
+/*
 let do_prove = true;
 include "proof-helpers.saw";
+*/
 
 let {{
   // TODO: Define

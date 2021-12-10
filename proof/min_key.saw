@@ -170,19 +170,20 @@ demo_SkToPk_B_ov <- custom_verify "demo_SkToPk_B"
                         e1_unints);
   };
 
+let {{
+  verify_B_pk_precond: [48][8] -> Bool
+  verify_B_pk_precond pk = (uncompress_E1_imp pk != nothing) /\
+                           (~((pk@0)@1)) /\
+                           pubkey_to_point_is_affine_min_key pk /\
+                           (uncompress_E1_x_fp pk != Fp.field_zero) /\
+                           ~(((uncompressed_pk.0) == Fp.field_zero) /\
+                             ((uncompressed_pk.1) == Fp.field_zero))
+    where uncompressed_pk = uncompress_E1_OK pk
+}};
+
 let demo_KeyValidate_B_spec = do {
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE1_Uncompress_in" compressed_E1_rep_type;
-  crucible_precond {{ uncompress_E1_imp inp != nothing }};
-  // TODO: Maybe drop this precond vv
-  crucible_precond {{ ~((inp@0)@1) }};
-  llvm_precond {{ pubkey_to_point_is_affine_min_key inp }};
-  // TODO: Maybe drop this precond vv
-  crucible_precond {{ uncompress_E1_x_fp inp != Fp.field_zero }};
-  // TODO: Explain (the library disagrees with spec on treating point_O as on
-  // the curve?)
-  let uncompressed_inp = {{ uncompress_E1_OK inp }};
-  llvm_precond {{ ~(((uncompressed_inp.0) == Fp.field_zero) /\
-                    ((uncompressed_inp.1) == Fp.field_zero)) }};
+  crucible_precond {{ verify_B_pk_precond inp }};
   llvm_execute_func [ in_ptr ];
   // TODO: Postcond
   llvm_return (llvm_term {{ bool_to_limb (BMPKS::KeyValidate (join inp)) }});
@@ -253,6 +254,7 @@ demo_KeyValidate_B_ov <- custom_verify "demo_KeyValidate_B"
               , "POINTonE1_affine_rep"
               , "pubkey_to_point_is_affine_min_key"
               , "POINTonE1_affine_abs"
+              , "verify_B_pk_precond"
               , "BLSMinimalPublicKeySize::other_curve"
               , "BLSMinimalPublicKeySize::pubkey_to_point" ];
     simplify (addsimp is_point_affine_E_thm empty_ss);
@@ -523,6 +525,14 @@ demo_BasicSign_B_ov <- custom_verify "demo_BasicSign_B"
                         [] );
   };
 
+let verify_B_sig_preconds sig = do {
+  crucible_precond {{ uncompress_E2_imp sig != nothing }};
+  // TODO: Maybe drop this precond vv
+  crucible_precond {{ ~((sig@0)@1) }};
+  llvm_precond {{ ~(is_point_O E' (uncompress_E2_OK sig)) }};
+  llvm_precond {{ signature_to_point_is_affine_min_key sig }};
+}
+
 let demo_BasicVerify_B_spec = do {
   global_alloc_init "demo_DST_B" {{ BMPKS::reexport_DST }};
   (sig, sig_ptr) <- ptr_to_fresh_readonly "sig" compressed_E2_rep_type;
@@ -530,22 +540,8 @@ let demo_BasicVerify_B_spec = do {
   let message_len = 32;
   (message, message_ptr) <-
       ptr_to_fresh_readonly "message" (llvm_array message_len (llvm_int 8));
-  crucible_precond {{ uncompress_E2_imp sig != nothing }};
-  // TODO: Maybe drop this precond vv
-  crucible_precond {{ ~((sig@0)@1) }};
-  crucible_precond {{ uncompress_E1_imp pk != nothing }};
-  // TODO: Maybe drop this precond vv
-  crucible_precond {{ ~((pk@0)@1) }};
-  llvm_precond {{ pubkey_to_point_is_affine_min_key pk }};
-  // TODO: Maybe drop this precond vv
-  crucible_precond {{ uncompress_E1_x_fp pk != Fp.field_zero }};
-  // TODO: Explain (the library disagrees with spec on treating point_O as on
-  // the curve?)
-  let uncompressed_pk = {{ uncompress_E1_OK pk }};
-  llvm_precond {{ ~(((uncompressed_pk.0) == Fp.field_zero) /\
-                    ((uncompressed_pk.1) == Fp.field_zero)) }};
-  llvm_precond {{ ~(is_point_O E' (uncompress_E2_OK sig)) }};
-  llvm_precond {{ signature_to_point_is_affine_min_key sig }};
+  verify_B_sig_preconds sig;
+  llvm_precond {{ verify_B_pk_precond pk }};
   // preconditions
   llvm_execute_func [ sig_ptr
                     , pk_ptr
@@ -713,6 +709,7 @@ demo_BasicVerify_B_ov <- custom_verify "demo_BasicVerify_B"
                   , "uncompress_E1_imp"
                   , "POINTonE1_affine_abs"
                   , "blst_core_verify_pk_in_g1_error_precond"
+                  , "verify_B_pk_precond"
                   ];
         simplify basic_ss;
         simplify (cryptol_ss());

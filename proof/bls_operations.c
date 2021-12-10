@@ -180,13 +180,12 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
   return blst_pairing_finalverify(&ctx, NULL);
 }
 
-/*
-limb_t demo_BasicAggregateVerify_B(const byte **pks,
-                                   const byte **messages,
-                                   const byte sig[96],
-                                   size_t n,
-                                   size_t message_len) {
-  if (!all_distinct(messages, n, message_len)) return 0;
+limb_t demo_BasicAggregateVerify_B(size_t n,
+                                   size_t message_len,
+                                   const byte pks[n][48],
+                                   const byte messages[n][message_len],
+                                   const byte sig[96]) {
+  if (!all_distinct(n, message_len, messages)) return 0;
 
   // uncompress and check the sig
   blst_p2_affine R;
@@ -197,8 +196,6 @@ limb_t demo_BasicAggregateVerify_B(const byte **pks,
 
   // Create aggregate verify context
   blst_pairing ctx;
-  // TODO: Should `hash_or_encode` be 1?  It is elsewhere, so I assume it
-  // should be here too
   blst_pairing_init(&ctx, 1, demo_DST_B, 43);
 
   for (size_t i = 0; i < n; ++i) {
@@ -221,4 +218,3 @@ limb_t demo_BasicAggregateVerify_B(const byte **pks,
   blst_pairing_commit(&ctx);
   return blst_pairing_finalverify(&ctx, NULL);
 }
-*/

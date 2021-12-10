@@ -382,6 +382,34 @@ blst_pairing_aggregate_pk_in_g1_sig_ov <- really_custom_verify
                         BasicVerify_B_unints);
   };
 
+let demo_BasicAggregateVerify_B_spec n = do {
+  global_alloc_init "demo_DST_B" {{ BMPKS::reexport_DST }};
+  (sig, sig_ptr) <- ptr_to_fresh_readonly "sig" compressed_E2_rep_type;
+  (pks, pks_ptr) <-
+      ptr_to_fresh_readonly "pks" (llvm_array n compressed_E1_rep_type);
+  let message_len = 32;
+  (messages, messages_ptr) <-
+      ptr_to_fresh_readonly "messages"
+                            (llvm_array n
+                                        (llvm_array message_len (llvm_int 8)));
+  // TODO: verify_B_sig_preconds has a different set of preconds than
+  // verify_A_sig_preconds.  The same is true for verify_A_pk_preconds.
+  // Remember this if problems arise during proof.
+  verify_B_sig_preconds sig;
+  llvm_precond {{ all verify_B_pk_precond pks }};
+  llvm_precond {{ all_distinct messages }};
+  llvm_execute_func [ llvm_term {{ `n : [64] }}
+                    , llvm_term {{ `message_len : [64] }}
+                    , pks_ptr
+                    , messages_ptr
+                    , sig_ptr ];
+  // TODO: Postcond
+                    /*
+  llvm_return (llvm_term
+      {{ bool_to_limb (BMPKS::CoreAggregateVerify (split`{n} (join (join pks))) messages (join sig)) }});
+      */
+};
+
 // TODO: Continue with basic verify spec
 
 blst_pairing_finalverify_B_ov <- custom_verify
@@ -421,6 +449,10 @@ blst_pairing_finalverify_B_ov <- custom_verify
                         , "fp12_abs" ]
                         BasicVerify_B_unints);
   };
+
+// TODO: For aggregate verify proof, follow same pattern of starting with a
+// copy of the basic verify proof then add whatever I added in the aggregate
+// verify proof for the A variant
 
 // TODO: If you get an error about types not being memory compatible, it very
 // well may be due to type checking on sig in the
