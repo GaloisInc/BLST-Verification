@@ -925,9 +925,9 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     //hoist_ifs_in_goal;
     rw_with fp_rep_thms;
     rw_with [ normalize_affine_fp_pair0_thm
-            , hoist_fp_invariant
-            , hoist_fp_abs
-            , normalize_affine_fp_pair1_thm
+            //, hoist_fp_invariant
+            //, hoist_fp_abs
+            //, normalize_affine_fp_pair1_thm
             , one_mont_p_invariant_thm
             , one_mont_p_abs_thm
             , hoist_is_point_projective_E_z_thm

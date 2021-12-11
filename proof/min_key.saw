@@ -531,7 +531,7 @@ let verify_B_sig_preconds sig = do {
   crucible_precond {{ ~((sig@0)@1) }};
   llvm_precond {{ ~(is_point_O E' (uncompress_E2_OK sig)) }};
   llvm_precond {{ signature_to_point_is_affine_min_key sig }};
-}
+};
 
 let demo_BasicVerify_B_spec = do {
   global_alloc_init "demo_DST_B" {{ BMPKS::reexport_DST }};
@@ -591,6 +591,8 @@ blst_core_verify_pk_in_g1_ov <-  admit
   "blst_core_verify_pk_in_g1"
   (blst_core_verify_pk_in_g1_null_aug_spec 32 43);
 
+// TODO: If proofs using this unints break it's because I changed it for
+// aggregate verify B.
 let BasicVerify_B_unints = (concat [
   "HashToCurveE2::hash_to_curve"
 , "BLSMinimalPublicKeySize::KeyValidate"
@@ -610,13 +612,16 @@ let BasicVerify_B_unints = (concat [
 , "is_point_affine_E"
 , "is_point_affine_E'"
 , "is_square_fp"
+, "is_square_fp2"
 , "nothing"
 , "pubkey_subgroup_check"
 , "pubkey_to_point_is_affine_min_key"
 , "sign_F_p"
+, "sign_F_p_2"
 , "BLSMinimalPublicKeySize::reexport_signature_subgroup_check"
 , "signature_to_point_is_affine_min_key"
 , "sqrt_fp"
+, "sqrt_fp2"
 , "uncompress_E1"
 , "uncompress_E1_OK"
 , "uncompress_E1_imp"
@@ -625,6 +630,9 @@ let BasicVerify_B_unints = (concat [
 , "uncompress_E1_y2"
 , "uncompress_E2_OK"
 , "uncompress_E2_imp"
+, "uncompress_E2_x"
+, "uncompress_E2_x_fp"
+, "uncompress_E2_y2"
 ] []); //(concat ec_mult_unints e2_unints));
 
 demo_BasicVerify_B_ov <- custom_verify "demo_BasicVerify_B"

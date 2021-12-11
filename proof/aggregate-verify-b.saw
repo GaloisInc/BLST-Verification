@@ -347,7 +347,7 @@ let blst_pairing_aggregate_pk_in_g1_sig_spec = do {
   llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }});
 };
 
-blst_pairing_aggregate_pk_in_g1_sig_ov <- really_custom_verify
+blst_pairing_aggregate_pk_in_g1_sig_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g1"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ Hash_to_G2_ov
@@ -447,6 +447,142 @@ blst_pairing_finalverify_B_ov <- custom_verify
                         , "Fp"
                         , "Fp_2"
                         , "fp12_abs" ]
+                        BasicVerify_B_unints);
+  };
+
+unfold_all_verify_B_pk_precond_1_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \x1 -> all verify_B_pk_precond [x1] ==
+            (verify_B_pk_precond x1) }}) ["verify_B_pk_precond"];
+
+is_point_projective_E'_affine_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \x y -> is_point_projective E' (x, y, Fp_2.field_unit) ==
+             if ~(is_point_O E' (x, y))
+             then is_point_affine E' (x, y)
+             else apply is_point_projective E' (x, y, Fp_2.field_unit) }}) [];
+
+hoist_fp2_invariant <- really_prove_cryptol
+  (rewrite (cryptol_ss())
+    {{ \c x1 x2 -> fp2_invariant (if c then x1 else x2) ==
+                   if c then fp2_invariant x1 else fp2_invariant x2 }})
+  ["fp2_invariant"];
+
+hoist_field_access_0_pair_thm <- really_prove_cryptol
+  (rewrite (cryptol_ss())
+  {{ \b (t0 : Fp_2_rep_t) (t1 : Fp_2_rep_t) (f0 : Fp_2_rep_t) (f1 : Fp_2_rep_t) ->
+      (if b then (t0, t1) else (f0, f1)).0 == (if b then t0 else f0) }}) [];
+
+hoist_field_access_1_pair_thm <- really_prove_cryptol
+  (rewrite (cryptol_ss())
+  {{ \b (t0 : Fp_2_rep_t) (t1 : Fp_2_rep_t) (f0 : Fp_2_rep_t) (f1 : Fp_2_rep_t) ->
+      (if b then (t0, t1) else (f0, f1)).1 == (if b then t1 else f1) }}) [];
+
+// Proof for n = 1
+demo_BasicAggregateVerify_B_ov <- really_custom_verify
+  "demo_BasicAggregateVerify_B"
+  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
+                [ all_distinct_1_ov
+                , blst_p2_uncompress_OK_ov  // Was the lower level variant in A
+                , POINTonE2_affine_on_curve_ov
+                , blst_p2_affine_in_g2_ov
+                , demo_KeyValidate_B_ov
+                , POINTonE1_Uncompress_OK_ov  // Was the higher level variant in A
+                // ovs used in pairing aggregate:
+                // TODO: Do I need these?
+                , POINTonE2_in_g2_ov
+                , Hash_to_G2_ov
+                , POINTonE2_from_Jacobian_alias_ov
+                , vec_copy_2fp_ov
+                // ovs used in blst_pairing_commit:
+                , miller_loop_n_1_ov
+                // ovs used in blst_pairing_finalverify:
+                , blst_pairing_finalverify_B_ov
+                // Pairing aggregate ovs
+                , blst_pairing_aggregate_pk_in_g1_null_sig_1_nth_commit_ov
+                , blst_pairing_aggregate_pk_in_g1_null_sig_0_ov
+                , blst_pairing_aggregate_pk_in_g1_null_sig_1_first_commit_ov
+                , blst_pairing_aggregate_pk_in_g1_sig_ov
+                ])
+  (demo_BasicAggregateVerify_B_spec 1)
+  do {
+    // Precondition proof(s)
+    rw_with_1 unfold_all_verify_B_pk_precond_1_thm;
+    unfolding [ "POINTonE2_affine_abs"
+              , "uncompress_E1_imp" // TODO: Might need to skip this on 8th goal?
+              , "uncompress_E2_imp" // TODO: Might need to skip this on 9th goal?
+              , "POINTonE1_affine_abs"
+              , "blst_core_verify_pk_in_g1_error_precond"
+              , "verify_B_pk_precond"
+              ];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    simplify basic_ss;
+    rw_with [ hoist_POINTonE1_affine_rep
+            , hoist_POINTonE1_affine_invariant
+            , hoist_POINTonE2_affine_rep
+            , hoist_POINTonE2_affine_invariant
+            , affine_inv_affine_rep_e2_thm
+            , zero_lt_one_thm
+            , intLe_sym_thm
+            , affine_inv_affine_rep_e1_thm ];
+    rw_with structural_rewrites;
+    simplify basic_ss;
+    rw_with [ fold_POINTonE1_affine_invariant
+            , fold_POINTonE2_affine_invariant
+            , hoist_POINTonE1_affine_invariant
+            , hoist_POINTonE2_affine_invariant
+            , affine_inv_affine_rep_e2_thm
+            , fold_POINTonE1_affine_abs_thm
+            , hoist_POINTonE1_affine_abs_thm
+            , hoist_is_point_O_E_thm
+            , POINTonE1_affine_abs_rep_thm
+            , is_point_O_E_KeyValidate_thm
+            , normalize_uncompress_E1_OK_thm
+            , unfold_all_POINTonE1_affine_invariant_1_thm
+            , unfold_all_POINTonE2_affine_invariant_1_thm
+            , unfold_all_verify_B_pk_precond_1_thm
+            , affine_inv_affine_rep_e1_thm ];
+    //rw_with POINTonE1_base_thms; //
+    rw_with POINTonE2_base_thms;
+    unfolding ["POINTonE2_rep", "verify_B_pk_precond"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    // Goal 8
+    rw_with fp_rep_thms; //
+    rw_with fp2_rep_thms;
+    rw_with normalize_hash_to_curve_E2_opt_impl_rws; // rw
+    rw_with hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms; // rw
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    unfolding [ "POINTonE2_invariant" // rw
+              , "POINTonE2_affine_rep" // rw
+              , "select"
+              , "POINTonE2_abs" ]; // rw
+    //hoist_ifs_in_goal;
+    rw_with fp_rep_thms; //
+    rw_with fp2_rep_thms;
+    rw_with [ normalize_affine_fp_pair0_thm  // n9
+            //, hoist_fp_invariant // unchanged
+            , hoist_fp2_invariant
+            //, hoist_fp_abs // unchanged
+            , normalize_affine_fp_pair1_thm  // n9
+            , one_mont_px_invariant_thm  // rw
+            , one_mont_px_abs_thm  // rw
+            , hoist_is_point_projective_E_z_thm // n9
+            , is_point_projective_E'_affine_thm // rw
+            // BEGIN new for B proof
+            , hoist_field_access_0_pair_thm
+            , hoist_field_access_1_pair_thm
+            // END new for B proof
+            , normalize_uncompress_E2_OK_thm];
+    rw_with fp_rep_thms; //
+    rw_with fp2_rep_thms;
+    rw_with fp12_rep_thms;
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with remove_ho_rules;
+    // END Precondition proofs
+    print_readably;
+    w4_unint_z3 (concat ["all_distinct"]
                         BasicVerify_B_unints);
   };
 
