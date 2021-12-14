@@ -927,7 +927,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     rw_with [ normalize_affine_fp_pair0_thm
             //, hoist_fp_invariant
             //, hoist_fp_abs
-            //, normalize_affine_fp_pair1_thm
+            , normalize_affine_fp_pair1_thm
             , one_mont_p_invariant_thm
             , one_mont_p_abs_thm
             , hoist_is_point_projective_E_z_thm
@@ -979,7 +979,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
             , hoist_field_access_1_fp2_thm
             , hoist_bls_ate_pairing_lhs_thm
             , hoist_bls_ate_pairing_rhs_thm
-            , access_1_from_1_thm
+            //, access_1_from_1_thm
             , is_in_g1_impl_thm
             , hoist_is_point_affine_E_thm
             , uncompress_E1_on_curve
@@ -992,7 +992,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     rw_with fp12_laws;
     rw_with [ hoist_fp12_normalize_thm
             , normalize_bls_ate_pairing_thm
-            , at_split_join_join_is_join_thm
+            //, at_split_join_join_is_join_thm
             , fp12_is_equal_thm
             ];
     simplify basic_ss;
