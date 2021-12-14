@@ -1,0 +1,104 @@
+diff --git a/proof/curve_operations.saw b/proof/curve_operations.saw
+index a62dc30..9b4f2fb 100644
+--- a/proof/curve_operations.saw
++++ b/proof/curve_operations.saw
+@@ -172,9 +172,9 @@ fp_zero_abs_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp_abs zero == Fp.f
+ fp_zero_rep_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp_rep Fp.field_zero == zero }}) [];
+ 
+ let one_mont_p = {{
+-  [ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
+-  , 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
+-  // 0x15f65ec3fa80e4935c071a97a256ec6d77ce5853705257455f48985753c758baebf4000bc40c0002760900000002fffd
++  //[ 0x760900000002fffd, 0xebf4000bc40c0002, 0x5f48985753c758ba
++  //, 0x77ce585370525745, 0x5c071a97a256ec6d, 0x15f65ec3fa80e493]
++  0x15f65ec3fa80e4935c071a97a256ec6d77ce5853705257455f48985753c758baebf4000bc40c0002760900000002fffd
+ }};
+ 
+ one_mont_p_invariant_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp_invariant one_mont_p == True}}) [];
+@@ -491,9 +491,9 @@ let POINTonE1_affine_on_curve_spec = do {
+ };
+ 
+ let B_E1 = {{
+-  [ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
+-  , 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
+-  //0xaa270000000cfff353cc0032fc34000a478fe97a6b0a807fb1d37ebee6ba24d78ec9733bbf78ab2f09d645513d83de7e
++  //[ 0xaa270000000cfff3, 0x53cc0032fc34000a, 0x478fe97a6b0a807f
++  //, 0xb1d37ebee6ba24d7, 0x8ec9733bbf78ab2f, 0x09d645513d83de7e ]
++  0xaa270000000cfff353cc0032fc34000a478fe97a6b0a807fb1d37ebee6ba24d78ec9733bbf78ab2f09d645513d83de7e
+ }};
+ B_E1_invariant_thm <- prove_cryptol (rewrite (cryptol_ss ()) {{ fp_invariant B_E1 == True }}) [];
+ 
+diff --git a/proof/types.saw b/proof/types.saw
+index 11a8077..290d125 100644
+--- a/proof/types.saw
++++ b/proof/types.saw
+@@ -4,9 +4,10 @@
+ */
+ let vec256_type = (llvm_array 4 (llvm_int 64));
+ let vec512_type = (llvm_array 8 (llvm_int 64));
+-let vec384_type = (llvm_array 6 (llvm_int 64));
+-// let vec384_type = llvm_int 384;
+-let vec768_type = (llvm_array 12 (llvm_int 64));
++//let vec384_type = (llvm_array 6 (llvm_int 64));
++let vec384_type = llvm_int 384;
++//let vec768_type = (llvm_array 12 (llvm_int 64));
++let vec768_type = llvm_array 2 vec384_type;
+ let vec768x_type = llvm_array 2 vec768_type;
+ let vec384x_type = (llvm_array 2 vec384_type);
+ 
+@@ -19,10 +20,12 @@ let vec384fp6_type = (llvm_array 3 vec384x_type);
+ let vec768fp6_type = llvm_array 3 vec768x_type;
+ let vec384fp12_type = (llvm_array 2 vec384fp6_type);
+ 
+-//let POINTonE1_type = llvm_type "{i384, i384, i384}" ;
+-//let POINTonE1_affine_type = llvm_type "{i384, i384}";
+-let POINTonE1_type = llvm_struct "struct.POINTonE1";
+-let POINTonE1_affine_type = llvm_struct "struct.POINTonE1_affine";
++let POINTonE1_type = llvm_type "{i384, i384, i384}";
++let POINTonE1_affine_type = llvm_type "{i384, i384}";
++//let POINTonE1_type = llvm_struct "struct.POINTonE1";
++//let POINTonE1_affine_type = llvm_struct "struct.POINTonE1_affine";
+ 
+-let POINTonE2_type = llvm_struct "struct.POINTonE2";
+-let POINTonE2_affine_type = llvm_struct "struct.POINTonE2_affine";
++let POINTonE2_type = llvm_type "{[2 x i384], [2 x i384], [2 x i384]}";
++let POINTonE2_affine_type = llvm_type "{[2 x i384], [2 x i384]}";
++//let POINTonE2_type = llvm_struct "struct.POINTonE2";
++//let POINTonE2_affine_type = llvm_struct "struct.POINTonE2_affine";
+diff --git a/spec/implementation/Types.cry b/spec/implementation/Types.cry
+index 4a08dee..edd5e17 100644
+--- a/spec/implementation/Types.cry
++++ b/spec/implementation/Types.cry
+@@ -10,8 +10,8 @@
+ module implementation::Types where
+ 
+ type Vec256 = [4][64]
+-// type Vec384 = [384]
+-type Vec384 = [6][64]
++type Vec384 = [384]
++// type Vec384 = [6][64]
+ type Vec512 = [8][64]
+ type Vec768 = [12][64]
+ type Pow256 = [32][8]
+@@ -29,7 +29,9 @@ vec_abs: {n} (fin n) => [n]Limb -> [n*64]
+ vec_abs limbs = join (reverse limbs)
+ 
+ vec256_abs = vec_abs`{256/64}
+-vec384_abs = vec_abs`{384/64}
++vec384_abs : Vec384 -> Vec384
++vec384_abs x = x
++//vec384_abs = vec_abs`{384/64}
+ vec512_abs = vec_abs`{512/64}
+ vec768_abs = vec_abs`{768/64}
+ 
+@@ -42,7 +44,9 @@ vec_rep:  {n} (fin n) => [n*64] -> [n]Limb
+ vec_rep x = reverse (split x)
+ 
+ vec256_rep = vec_rep`{256/64}
+-vec384_rep = vec_rep`{384/64}
++vec384_rep : Vec384 -> Vec384
++vec384_rep x = x
++//vec384_rep = vec_rep`{384/64}
+ vec768_rep = vec_rep`{768/64}
+ 
+ /**

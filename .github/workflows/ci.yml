@@ -1,9 +1,14 @@
 name: Proofs
-on: [pull_request]
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
 
 jobs:
   proofs:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    timeout-minutes: 600
     strategy:
       fail-fast: false
       matrix:
@@ -17,6 +22,11 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: true
+      - run: |
+          curl -fsSL https://get.docker.com -o get-docker.sh
+          sudo sh get-docker.sh
+          sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
       - run: docker-compose pull
       - run: docker-compose build
       - run: docker-compose run blst ${{ matrix.proof-target }}

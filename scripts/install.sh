@@ -17,8 +17,7 @@ if [ $# -ne 0 ] && [ "$1" = "--latest" ]; then
   CRYPTOL_NIGHTLY=$(curl -s https://cryptol.net/builds/nightly/ | grep -oP "cryptol.*?${CRYPTOL_DATE}-Ubuntu.*?\.tar\.gz"  | head -n 1) # `curl -s` means silent; `grep -o` says print only the matched substring; `grep -P` says Perl syntax, which we use to get a lazy match (shortest) with .*?
   CRYPTOL_URL="https://cryptol.net/builds/nightly/${CRYPTOL_NIGHTLY}"
 else
-  #SAW_URL="https://saw.galois.com/builds/nightly/saw-0.8.0.99-2021-06-17-Linux-x86_64.tar.gz"
-  SAW_URL="https://saw.galois.com/builds/nightly/saw-Linux-8.10.3-7-16.zip"
+  SAW_URL="https://saw.galois.com/builds/nightly/saw-0.8.0.99-2021-12-06-Linux-x86_64.tar.gz"
   CRYPTOL_URL="https://github.com/GaloisInc/cryptol/releases/download/2.11.0/cryptol-2.11.0-Linux-x86_64.tar.gz"
 
 fi
@@ -60,12 +59,9 @@ fi
 if [ ! -f bin/saw ]
 then
     mkdir -p deps/saw
-    #wget $SAW_URL -O deps/saw.tar.gz
-    #tar -x -f deps/saw.tar.gz --one-top-level=deps/saw
-    #cp deps/saw/*/bin/saw bin/saw
-    wget $SAW_URL -O deps/saw.zip
-    unzip deps/saw.zip -d deps/saw
-    cp deps/saw/saw bin/saw
+    wget $SAW_URL -O deps/saw.tar.gz
+    tar -x -f deps/saw.tar.gz --one-top-level=deps/saw
+    cp deps/saw/*/bin/saw bin/saw
     chmod +x bin/saw
 fi
 

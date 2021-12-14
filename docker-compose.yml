@@ -8,8 +8,8 @@ services:
       - ./blst_recent:/workdir/blst_recent:ro
       - ./blst_bulk_addition:/workdir/blst_bulk_addition:ro
       - ./cryptol-specs:/workdir/cryptol-specs:ro
-      - ./proof:/workdir/proof:ro
-      - ./spec:/workdir/spec:ro
+      - ./proof:/workdir/proof:rw
+      - ./spec:/workdir/spec:rw
       - ./tests:/workdir/tests:ro
       - ./scripts:/workdir/scripts:ro
       - ./patches:/workdir/patches:ro
