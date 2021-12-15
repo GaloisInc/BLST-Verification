@@ -531,14 +531,35 @@ unfold_aggregate_loop_min_key_4_thm <- prove_cryptol
 affinify_abs_z_1_fp2_thm <- prove_cryptol
   {{ \p -> affinify E' (p.0, p.1, Fp_2.field_unit) == normalize_affine_point Fp_2 p }} [];
 
-// TODO: Prove
-finalverify_B_core_verify_thm <- admit_cryptol
+G1_to_BP_thm <- prove_cryptol {{ POINTonE1_affine_abs (G1.0, G1.1) == BP }} [];
+
+finalverify_B_core_verify_thm <- custom_prove_cryptol
   {{ \pk sig (msg : [msg_len][8]) (dst : [dst_len][8]) ->
       (finalverify_B sig
                    (miller_loop_opt_checked pk (p.0, p.1)) ==
        core_verify_pk_in_g1_impl pk (affinify E' sig) msg dst []
        where
-         p = affinify E' (hash_to_curve_E2_opt_impl (msg, dst))) }};
+         p = affinify E' (hash_to_curve_E2_opt_impl (msg, dst))) }}
+  do {
+    unfolding ["finalverify_B", "core_verify_pk_in_g1_impl"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with [fp12_unit_check_with_fp2_equal_thm];
+    rw_with fp12_rep_thms;
+    rw_with fp12_normalization_thms;
+    unfolding ["final_exponentiation_impl"];
+    rw_with [ normalize_C_expt_thm
+            , G1_to_BP_thm ];
+    rw_with remove_ho_rules;
+    print_goal;
+    w4_unint_z3 [ "affinify_E'"
+                , "C_expt"
+                , "final_exp_frobenius_map"
+                , "Fp_12"
+                , "fp12_conjugate"
+                , "hash_to_curve_E2_opt_impl"
+                , "miller_loop_opt_checked" ];
+  };
 
 // TODO: Prove?  More likely should reference comment in pairing.saw
 finalverify_B_ate_pairing_3_thm <- admit_cryptol
