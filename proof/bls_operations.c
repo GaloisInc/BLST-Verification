@@ -177,6 +177,7 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
                                         0) != BLST_SUCCESS) return 0;
   }
   blst_pairing_commit(&ctx);
+  // TODO: Should branch on this and return 0 or 1 for consistency?
   return blst_pairing_finalverify(&ctx, NULL);
 }
 

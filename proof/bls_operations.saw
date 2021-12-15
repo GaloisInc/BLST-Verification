@@ -260,6 +260,13 @@ let {{
   verify_A_pk_precond: [96][8] -> Bool
   verify_A_pk_precond pk = (uncompress_E2_imp pk != nothing) /\
                            (~((pk@0)@1)) /\
+                           // TODO: pubkey_to_point_is_affine is a bit
+                           // redundant because we already assume that
+                           // uncompress_E2_imp produces points on the curve
+                           // when it succeeds (see uncompress_E2_OK_on_curve
+                           // and uncompress_on_curve).  Either remove this, or
+                           // note that it's just here for convenience and
+                           // reference the other assumptions.
                            pubkey_to_point_is_affine pk
 }};
 
@@ -506,7 +513,7 @@ e1_scalar_mult_not_bad_O_thm <- admit_cryptol (rewrite (cryptol_ss())
                                         (affinify E (hash_to_curve_opt_impl x)))) &&
                   ~(is_bad_O_form_E P)) }});
 
-F_prod_Fp_12_thm <- really_prove_cryptol
+F_prod_Fp_12_thm <- prove_cryptol
   {{ \[x, y] -> F_prod Fp_12 [x, y] == F_prod_Fp_12 [x, y] }} [];
 
 let remove_ho_rules = concat
@@ -791,6 +798,8 @@ let verify_A_sig_preconds sig = do {
   let uncompressed_sig = {{ uncompress_E1_OK sig }};
   llvm_precond {{ ~(((uncompressed_sig.0) == Fp.field_zero) /\
                     ((uncompressed_sig.1) == Fp.field_zero)) }};
+  // TODO: Same note about pubkey_to_point_is_affine in verify_A_pk_precond
+  // applies here.  Also to the 'B' equivalents
   llvm_precond {{ signature_to_point_is_affine sig }};
   // TODO: Maybe drop this precond vv
   crucible_precond {{ uncompress_E1_x_fp sig != Fp.field_zero }};
@@ -1003,7 +1012,7 @@ core_verify_pk_in_g2_impl_thm <- admit_cryptol {{ \pk sig msg dst -> core_verify
 
 blst_core_verify_pk_in_g2_ov <- verify_blst_core_verify_pk_in_g2_null_aug 32 43 0;
 
-demo_BasicVerify_A_ov <- really_custom_verify "demo_BasicVerify_A"
+demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
   [ POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
   , POINTonE1_affine_on_curve_ov
   , vec_is_zero_2fp_ov

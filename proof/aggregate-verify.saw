@@ -1106,8 +1106,8 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     //hoist_ifs_in_goal;
     rw_with fp_rep_thms;
     rw_with [ normalize_affine_fp_pair0_thm
-            , hoist_fp_invariant
-            , hoist_fp_abs
+            //, hoist_fp_invariant
+            //, hoist_fp_abs
             , normalize_affine_fp_pair1_thm
             , one_mont_p_invariant_thm
             , one_mont_p_abs_thm
@@ -1160,7 +1160,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
             , hoist_field_access_1_fp2_thm
             , hoist_bls_ate_pairing_lhs_thm
             , hoist_bls_ate_pairing_rhs_thm
-            , access_1_from_1_thm
+            //, access_1_from_1_thm
             , is_in_g1_impl_thm
             , hoist_is_point_affine_E_thm
             , uncompress_E1_on_curve
@@ -1168,9 +1168,11 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
             , fp_pair_to_point_thm
             , hash_to_curve_E1_opt_impl_equiv_ov
             , hash_to_curve_e1_opt_thm
+            /*
             , simplify_ugly_at_0_thm
             , simplify_ugly_at_1_thm
             , simplify_ugly_at_2_thm
+            */
             ];
     simplify basic_ss;
     simplify (cryptol_ss());
@@ -1178,7 +1180,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     //rw_with fp12_laws;
     rw_with [ hoist_fp12_normalize_thm
             , normalize_bls_ate_pairing_thm
-            , at_split_join_join_is_join_thm
+            //, at_split_join_join_is_join_thm
             , fp12_is_equal_thm
             , fp12_mul_by_1_thm
             ];
