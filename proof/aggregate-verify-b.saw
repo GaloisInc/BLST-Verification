@@ -619,22 +619,23 @@ hoist_fp2_abs_thm <- prove_cryptol (rewrite (cryptol_ss())
                if b then fp2_abs t else fp2_abs f }})
   ["fp2_abs"];
 
-// TODO: Prove
-hoist_fragmented_affinify_E'_thm <- admit_cryptol (rewrite (cryptol_ss())
+hoist_fragmented_affinify_E'_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
   {{ \b t1 t2 f1 f2 z -> affinify E' ((if b then t1 else f1), (if b then t2 else f2), z) ==
-               if b then affinify E' (t1, t2, z) else affinify E' (f1, f2, z) }});
+               if b then affinify E' (t1, t2, z) else affinify E' (f1, f2, z) }})
+  do {
+    rw_with remove_ho_rules;
+    w4_unint_z3 ["affinify_E'"];
+  };
 
-// TODO: Prove
-hoist_fragmented_is_point_affine_E'_thm <- admit_cryptol (rewrite (cryptol_ss())
+hoist_fragmented_is_point_affine_E'_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \b t f -> is_point_affine E' ((if b then t.0 else f.0), (if b then t.1 else f.1)) ==
-               if b then is_point_affine E' t else is_point_affine E' f }});
-
-bad_denorm <- admit_cryptol {{ \x -> Fp_2.normalize x == x }};
+               if b then is_point_affine E' t else is_point_affine E' f }}) [];
 
 // TODO: Prove
 normalize_uncompress_E2_OK_0_thm <- admit_cryptol
   {{ \x -> Fp_2.normalize (uncompress_E2_OK x).0 == (uncompress_E2_OK x).0 }};
-  
+
+// TODO: Prove
 normalize_uncompress_E2_OK_1_thm <- admit_cryptol
   {{ \x -> Fp_2.normalize (uncompress_E2_OK x).1 == (uncompress_E2_OK x).1 }};
 
@@ -643,9 +644,6 @@ normalize_point_O_E'_0_thm <- prove_cryptol
 
 normalize_point_O_E'_1_thm <- prove_cryptol
   {{ Fp_2.normalize (point_O E').1 == (point_O E').1 }} [];
-
-bad_is_point_affine_thm <- admit_cryptol
-  {{ \x -> is_point_affine E' x == True }};
 
 // Proof for n = 1
 demo_BasicAggregateVerify_B_ov <- custom_verify
