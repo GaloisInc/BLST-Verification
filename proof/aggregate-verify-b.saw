@@ -522,6 +522,24 @@ finalverify_B_core_verify_thm <- admit_cryptol
        where
          p = affinify E' (hash_to_curve_E2_opt_impl (msg, dst))) }};
 
+// TODO: Prove?  More likely should reference comment in pairing.saw
+finalverify_B_ate_pairing_3_thm <- admit_cryptol
+ {{ \pk1 pk2 pk3 sig m1 m2 m3 ->
+    (finalverify_B
+      sig
+      (Fp_12.mul
+        ( F_prod
+            Fp_12
+            [ miller_loop_opt pk1 m1
+            , miller_loop_opt pk2 m2 ]
+        , miller_loop_opt_checked pk3 m3)) ==
+     (Fp_12.mul
+        ( Fp_12.mul
+          ( bls_ate_pairing pk1 m1
+          , bls_ate_pairing pk2 m2 )
+        , bls_ate_pairing pk3 m3 ) ==
+      bls_ate_pairing BP (affinify E' sig))) }};
+
 fp2_pair_to_point_thm <- prove_cryptol
   {{ \(x : AffinePoint t_Fp_2) -> (x.0, x.1) == x }} [];
 
@@ -911,8 +929,7 @@ demo_BasicAggregateVerify_B_ov <- custom_verify
     rw_with [ unfold_map //
             , unfold_map_fp2
             , normalize_miller_loop_opt_checked_thm
-            // TODO: implement vv
-            //, finalverify_B_ate_pairing_3_thm // rw
+            , finalverify_B_ate_pairing_3_thm // rw
             , core_verify_pk_in_g1_impl_thm
             , unfold_aggregate_loop_min_key_3_thm // rw
             , affinify_abs_z_1_thm //
