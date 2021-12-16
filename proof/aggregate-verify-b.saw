@@ -631,13 +631,21 @@ hoist_fragmented_is_point_affine_E'_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \b t f -> is_point_affine E' ((if b then t.0 else f.0), (if b then t.1 else f.1)) ==
                if b then is_point_affine E' t else is_point_affine E' f }}) [];
 
-// TODO: Prove
-normalize_uncompress_E2_OK_0_thm <- admit_cryptol
-  {{ \x -> Fp_2.normalize (uncompress_E2_OK x).0 == (uncompress_E2_OK x).0 }};
+normalize_uncompress_E2_OK_0_thm <- custom_prove_cryptol
+  {{ \x -> Fp_2.normalize (uncompress_E2_OK x).0 == (uncompress_E2_OK x).0 }}
+  do {
+    rw_with [ normalize_affine_fp2_pair0_thm
+            , normalize_uncompress_E2_OK_thm ];
+    w4_unint_z3 ["uncompress_E2_OK"];
+  };
 
-// TODO: Prove
-normalize_uncompress_E2_OK_1_thm <- admit_cryptol
-  {{ \x -> Fp_2.normalize (uncompress_E2_OK x).1 == (uncompress_E2_OK x).1 }};
+normalize_uncompress_E2_OK_1_thm <- custom_prove_cryptol
+  {{ \x -> Fp_2.normalize (uncompress_E2_OK x).1 == (uncompress_E2_OK x).1 }}
+  do {
+    rw_with [ normalize_affine_fp2_pair1_thm
+            , normalize_uncompress_E2_OK_thm ];
+    w4_unint_z3 ["uncompress_E2_OK"];
+  };
 
 normalize_point_O_E'_0_thm <- prove_cryptol
   {{ Fp_2.normalize (point_O E').0 == (point_O E').0 }} [];
