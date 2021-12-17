@@ -34,12 +34,6 @@ limb_t demo_KeyValidate_A(const unsigned char in[96]) {
   blst_p2_affine pk;
   BLST_ERROR r;
   r = blst_p2_uncompress(&pk, in);
-  /*
-  return r == BLST_SUCCESS &&
-         blst_p2_affine_on_curve(&pk) &&
-         !blst_p2_affine_is_inf(&pk) &&
-         blst_p2_affine_in_g2(&pk);
-         */
   if (r != BLST_SUCCESS) return 0;
   if (! blst_p2_affine_on_curve(&pk)) return 0;
   if (blst_p2_affine_is_inf(&pk)) return 0;
@@ -63,15 +57,8 @@ limb_t demo_KeyValidate_B(const unsigned char in[48]) {
 
 void demo_BasicSign_A(byte out[48], const blst_scalar *SK,
                      const byte *message, size_t message_len) {
-  // TODO: Figure out how to use globals in SAW?
-  //const byte local_DST_A[] = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_AUG_";
   blst_p1 Q1, Q2;
-  // TODO: Double check, but I think aug is supposed to be a public key?  That
-  // will determine the size it should be.
-  // TODO: Is DST_len supposted to include the null terminator?  It's 44 with
-  // the null terminator, and 43 without.
   blst_hash_to_g1(&Q1, message, message_len, demo_DST_A, 43, NULL, 0); // no "aug" string
-  // blst_p1_mult(&Q, &Q, SK, 256); // or 255?
   blst_sign_pk_in_g2(&Q2, &Q1, SK);
   blst_p1_compress(out, &Q2);
 };
@@ -147,8 +134,8 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
   blst_p1_affine R;
   if (blst_p1_uncompress(&R, sig) != BLST_SUCCESS) return 0;
   if (! blst_p1_affine_on_curve(&R)) return 0;
-  if (blst_p1_affine_is_inf(&R)) return 0;  // TODO: Checked in aggregate.c:108
-  if (! blst_p1_affine_in_g1(&R)) return 0; // TODO: Checked in aggregate.c:111
+  if (blst_p1_affine_is_inf(&R)) return 0;
+  if (! blst_p1_affine_in_g1(&R)) return 0;
 
   // Create aggregate verify context
   blst_pairing ctx;
@@ -161,7 +148,6 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
   for (size_t i = 0; i < n; ++i) {
     const byte* pk = pks[i];
     // Check and Uncompress PK
-    // TODO: Do I have to do these checks?  Or does BLST do them internally?
     if (!demo_KeyValidate_A(pk)) return 0;
 
     blst_p2_affine PK;
@@ -177,8 +163,8 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
                                         0) != BLST_SUCCESS) return 0;
   }
   blst_pairing_commit(&ctx);
-  // TODO: Should branch on this and return 0 or 1 for consistency?
-  return blst_pairing_finalverify(&ctx, NULL);
+  if (!blst_pairing_finalverify(&ctx, NULL)) return 0;
+  return 1;
 }
 
 limb_t demo_BasicAggregateVerify_B(size_t n,
@@ -202,7 +188,6 @@ limb_t demo_BasicAggregateVerify_B(size_t n,
   for (size_t i = 0; i < n; ++i) {
     const byte* pk = pks[i];
     // Check and Uncompress PK
-    // TODO: Do I have to do these checks?  Or does BLST do them internally?
     if (!demo_KeyValidate_B(pk)) return 0;
     blst_p1_affine PK;
     if (blst_p1_uncompress(&PK, pk) != BLST_SUCCESS) return 0;
@@ -217,5 +202,6 @@ limb_t demo_BasicAggregateVerify_B(size_t n,
                                         0) != BLST_SUCCESS) return 0;
   }
   blst_pairing_commit(&ctx);
-  return blst_pairing_finalverify(&ctx, NULL);
+  if (!blst_pairing_finalverify(&ctx, NULL)) return 0;
+  return 1;
 }
