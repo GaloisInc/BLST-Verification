@@ -1167,7 +1167,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
             , hoist_is_in_g1_impl_thm
             , fp_pair_to_point_thm
             , hash_to_curve_E1_opt_impl_equiv_ov
-            , hash_to_curve_e1_opt_thm
             /*
             , simplify_ugly_at_0_thm
             , simplify_ugly_at_1_thm
@@ -1358,7 +1357,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
             , hoist_is_in_g1_impl_thm
             , fp_pair_to_point_thm
             , hash_to_curve_E1_opt_impl_equiv_ov
-            , hash_to_curve_e1_opt_thm
             /*
             , simplify_ugly_at_0_thm
             , simplify_ugly_at_1_thm

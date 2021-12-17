@@ -468,6 +468,10 @@ let demo_BasicSign_A_spec = do {
 // hash_to_g2.saw:118 to see why this is with is_point_affine rather than
 // is_point_projective (it might not be easy to transform goal to
 // is_point_projective)
+
+// TODO: Probably want an assumption that is_point_affine (hash_to_curve_opt)
+// is True, then prove this using that assumption and
+// prove_hash_to_curve_E1_opt_impl_equiv_thm.
 hash_to_g1_on_curve_thm <- admit_cryptol
   {{ \x -> is_point_affine E (affinify E (hash_to_curve_opt_impl x)) == True }};
 
@@ -567,9 +571,6 @@ test_thm_correct' <- custom_prove_cryptol (rewrite (cryptol_ss())
                         ec_mult_unints);
   };
 
-hash_to_curve_e1_opt_thm <- admit_cryptol
-  {{ \x -> HE1::hash_to_curve x == HE1::hash_to_curve_opt x }};
-
 hash_to_curve_arg_expand_thm <- prove_cryptol
   {{ \(x:([32][8],[43][8])) ->
        hash_to_curve_opt_impl x ==
@@ -577,12 +578,11 @@ hash_to_curve_arg_expand_thm <- prove_cryptol
 
 // TODO: why is this needed here (see prove_hash_to_g1_ov in hash_to_g1.saw)?
 hash_to_curve_e1_impl_thm <- custom_prove_cryptol
-  {{ \(x:([32][8],[43][8])) -> HE1::hash_to_curve x == affinify E (hash_to_curve_opt_impl x) }}
+  {{ \(x:([32][8],[43][8])) -> HE1::hash_to_curve_opt x == affinify E (hash_to_curve_opt_impl x) }}
   do {
     simplify (addsimp hash_to_curve_arg_expand_thm empty_ss);
     unfolding ["apply"];
     simplify (addsimp hash_to_curve_E1_opt_impl_equiv_ov empty_ss);
-    simplify (addsimp hash_to_curve_e1_opt_thm empty_ss);
     simplify basic_ss;
     (print_goal);
     w4_unint_z3 ["HashToCurveE1::hash_to_curve_opt"];
@@ -840,7 +840,7 @@ hoist_POINTonE1_affine_invariant <- prove_cryptol
   ["POINTonE1_affine_invariant"];
 
 let BasicVerify_A_unints = (concat [
-  "HE1::hash_to_curve"
+  "HE1::hash_to_curve_opt"
 , "KeyValidate"
 , "POINTonE1_affine_abs"
 , "POINTonE1_affine_invariant"
@@ -957,11 +957,6 @@ uncompress_E1_OK_on_curve <- admit_cryptol
            then True
            else apply is_point_affine E (uncompress_E1_OK x) }};
 
-// TODO: Do not use
-denorm <- admit_cryptol {{ \x -> Fp_2.normalize x == x }};
-
-denorm_ap <- admit_cryptol {{ \x -> normalize_affine_point Fp_2 x == x }};
-
 is_point_O_E_affine_no_abs_rev_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x y -> ((peq x Fp.field_zero) /\ (peq y Fp.field_zero)) ==
              is_point_O E (x, y) }}) [];
@@ -1001,11 +996,12 @@ is_point_O_KeyValidate_thm <- admit_cryptol (rewrite (cryptol_ss())
 
 let {{
   core_verify_pk_in_g2 pk sig msg dst = Fp_12.is_equal(c1, c2) where
-    c1 = bls_ate_pairing (HE1::hash_to_curve (msg, dst)) pk
+    c1 = bls_ate_pairing (HE1::hash_to_curve_opt (msg, dst)) pk
     c2 = bls_ate_pairing sig BP'
 }};
 
 // TODO: Where did this come from?  Note 1 in pairing.saw?
+// TODO: Might need guards that pk and sig are valid (IE, on the curve?)
 core_verify_pk_in_g2_impl_thm <- admit_cryptol {{ \pk sig msg dst -> core_verify_pk_in_g2_impl pk sig msg dst [] == core_verify_pk_in_g2 pk sig msg dst }};
 
 blst_core_verify_pk_in_g2_ov <- verify_blst_core_verify_pk_in_g2_null_aug 32 43 0;

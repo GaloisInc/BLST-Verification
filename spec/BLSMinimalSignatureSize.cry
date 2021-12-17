@@ -34,7 +34,7 @@ other_curve = E'
 DST: [43][8]
 DST = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_"
 
-hash_to_point hx = hash_to_curve (hx, DST)
+hash_to_point hx = hash_to_curve_opt (hx, DST)
 
 // other primitives "determined by the above parameters"
 

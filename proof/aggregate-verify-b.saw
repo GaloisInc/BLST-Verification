@@ -1066,7 +1066,6 @@ demo_BasicAggregateVerify_B_ov <- custom_verify
             , fp_pair_to_point_thm //
             , fp2_pair_to_point_thm
             , hash_to_curve_E2_opt_impl_equiv_ov // rw
-            , hash_to_curve_e2_opt_thm
             ];
     simplify basic_ss;
     simplify (cryptol_ss());
@@ -1289,7 +1288,6 @@ demo_BasicAggregateVerify_B_ov <- custom_verify
             , fp_pair_to_point_thm //
             , fp2_pair_to_point_thm
             , hash_to_curve_E2_opt_impl_equiv_ov // rw
-            , hash_to_curve_e2_opt_thm
             ];
     simplify basic_ss;
     simplify (cryptol_ss());

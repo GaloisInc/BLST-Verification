@@ -6,5 +6,5 @@ import HashToCurveE1
 import Pairing
 
 core_verify_pk_in_g2 pk sig msg dst = Fp_12.is_equal(c1, c2) where
-    c1 = bls_ate_pairing (hash_to_curve (msg, dst)) pk
+    c1 = bls_ate_pairing (hash_to_curve_opt (msg, dst)) pk
     c2 = bls_ate_pairing sig BP'

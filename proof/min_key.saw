@@ -448,17 +448,12 @@ hash_to_curve_e2_arg_expand_thm <- prove_cryptol
        hash_to_curve_E2_opt_impl x ==
        apply hash_to_curve_E2_opt_impl (([]:[0][8])#x.0, x.1) }} ["hash_to_curve_E2_opt_impl"];
 
-hash_to_curve_e2_opt_thm <- admit_cryptol
-  {{ \x -> HE2::hash_to_curve x == HE2::hash_to_curve_opt x }};
-
-
 hash_to_curve_e2_impl_thm <- custom_prove_cryptol
-  {{ \(x:([32][8],[43][8])) -> HE2::hash_to_curve x == affinify E' (hash_to_curve_E2_opt_impl x) }}
+  {{ \(x:([32][8],[43][8])) -> HE2::hash_to_curve_opt x == affinify E' (hash_to_curve_E2_opt_impl x) }}
   do {
     simplify (addsimp hash_to_curve_e2_arg_expand_thm empty_ss);
     unfolding ["apply"];
     simplify (addsimp hash_to_curve_E2_opt_impl_equiv_ov empty_ss);
-    simplify (addsimp hash_to_curve_e2_opt_thm empty_ss);
     simplify basic_ss;
     (print_goal);
     w4_unint_z3 ["HashToCurveE2::hash_to_curve_opt"];
@@ -580,7 +575,7 @@ is_point_O_E'_affine_rev_point_thm <- prove_cryptol
 
 let {{
   core_verify_pk_in_g1 pk sig msg dst = Fp_12.is_equal(c1, c2) where
-      c1 = bls_ate_pairing pk (HE2::hash_to_curve (msg, dst))
+      c1 = bls_ate_pairing pk (HE2::hash_to_curve_opt (msg, dst))
       c2 = bls_ate_pairing BP sig
 }};
 
@@ -594,7 +589,7 @@ blst_core_verify_pk_in_g1_ov <-  admit
 // TODO: If proofs using this unints break it's because I changed it for
 // aggregate verify B.
 let BasicVerify_B_unints = (concat [
-  "HashToCurveE2::hash_to_curve"
+  "HashToCurveE2::hash_to_curve_opt"
 , "BLSMinimalPublicKeySize::KeyValidate"
 , "POINTonE1_affine_abs"
 , "POINTonE1_affine_invariant"
