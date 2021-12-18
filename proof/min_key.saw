@@ -579,7 +579,7 @@ let {{
       c2 = bls_ate_pairing BP sig
 }};
 
-// TODO: Might need guards that this isn't an error case
+// This assumption is justified by Note 1 in proof/pairing.saw
 core_verify_pk_in_g1_impl_thm <- admit_cryptol {{ \pk sig msg dst -> core_verify_pk_in_g1_impl pk sig msg dst [] == core_verify_pk_in_g1 pk sig msg dst }};
 
 blst_core_verify_pk_in_g1_ov <-  admit

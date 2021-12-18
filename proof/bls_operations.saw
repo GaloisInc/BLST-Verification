@@ -8,11 +8,10 @@ import "../spec/BLSMinimalSignatureSize.cry";
 let do_prove = true;
 include "proof-helpers.saw";
 
-let {{
-  drop_join_reverse: {n_bits, n_bytes} (fin n_bytes, n_bits <= 8*n_bytes) => [n_bytes][8] -> [n_bits]
-  drop_join_reverse bytes = drop`{back=n_bits} (join (reverse bytes))
+include "bls_operations/large_core_terms.saw";
+include "bls_operations/sk_to_pk_a.saw";
 
-  same_point_affine_E' = same_point_affine E'
+let {{
   same_point_affine_E  = same_point_affine E
 
   is_bad_O_form_E: POINTonE1_t -> Bool
@@ -20,12 +19,6 @@ let {{
                        (fp_abs (P.2) != Fp.field_zero)) \/
                       ((~(is_point_O E (fp_abs P.0, fp_abs P.1))) /\
                        fp_abs (P.2) == Fp.field_zero)
-
-  is_bad_O_form_E': POINTonE2_t -> Bool
-  is_bad_O_form_E' P = ((is_point_O E' (fp2_abs P.0, fp2_abs P.1)) /\
-                        (fp2_abs (P.2) != Fp_2.field_zero)) \/
-                       ((~(is_point_O E' (fp2_abs P.0, fp2_abs P.1))) /\
-                        fp2_abs (P.2) == Fp_2.field_zero)
 
   pubkey_to_point_is_affine: [96][8] -> Bool
   pubkey_to_point_is_affine pk =
@@ -45,213 +38,16 @@ let {{
 same_point_affine_E_thm <- prove_cryptol
   {{ \P1 P2 -> same_point_affine E P1 P2 == same_point_affine_E P1 P2 }} [];
 
-let demo_SkToPk_A_spec = do {
-  let n_bytes = 32;
-  let bits = 255;
-  out_ptr <- llvm_alloc (llvm_array 96 (llvm_int 8));
-  scalar_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array n_bytes (llvm_int 8));
-  scalar <- crucible_fresh_var "scalar" (llvm_array n_bytes (llvm_int 8));
-  crucible_points_to scalar_ptr (crucible_term scalar);
-  // extra precondition from POINTonE2_mult_w5
-  crucible_precond {{ e2_order BP' > scalar_value`{bits,n_bytes} scalar + shift }};
-  llvm_precond {{ scalar != zero }};
-  llvm_execute_func [out_ptr, scalar_ptr];
-  // TODO: is this `join . reverse` (and `reverse . split`) necessary?  Seems
-  // like an endianness conversion?
-  // TODO: I *think* you only need the endianness reversal going in, but it
-  // isn't necessary on the way out because the key is supposed to be big
-  // endian.  Double check though.
-  //llvm_points_to out_ptr (llvm_term {{ reverse (split`{each=8} (sk_to_pk (drop_join_reverse scalar))) }});
-  llvm_points_to out_ptr (llvm_term {{ (split`{each=8} (sk_to_pk (drop_join_reverse scalar))) }});
-};
-
-let or_core = parse_core "or";
-let not_core = parse_core "not";
-let and_core = parse_core "and";
-
-affine_inv_affine_rep_e2_thm <- custom_prove_cryptol
-  {{ \P -> POINTonE2_affine_invariant (POINTonE2_affine_rep P) == True }}
-  do {
-    unfolding [ "POINTonE2_affine_rep" , "POINTonE2_affine_invariant" ];
-    rw_with fp2_rep_thms;
-    print_goal;
-    w4_unint_z3 [];
-  };
-
-affine_E'_inv_thm <- test_cryptol (rewrite (cryptol_ss())
-  {{ \P1 P2 ->
-     (and_core (same_point_affine E' (affinify E' (POINTonE2_abs P1)) P2)
-               (and_core (POINTonE2_invariant P1)
-                         (and_core (not_core (is_bad_O_form_E' P1))
-                                   (is_point_projective E' (POINTonE2_abs P1))))) ==
-     (same_point_affine E' (affinify E' (POINTonE2_abs P1)) P2 /\
-      ~(is_bad_O_form_E' P1) /\
-      is_point_affine E' P2) }});
-
-// NOTE: Too slow to quickcheck
-e2_scalar_mult_on_curve_thm <- admit_cryptol
-  {{ \sk P -> is_point_affine E' (e2_scalar_mult sk P) ==
-              if is_point_affine E' P
-              then True
-              else apply is_point_affine E' (e2_scalar_mult sk P) }};
-
-BP'_is_point_affine_thm <- prove_cryptol
-  {{ is_point_affine E' BP' == True }} [];
 
 let boolEq_core = parse_core "boolEq";
 
 and_true_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \b1 b2 -> boolEq_core (and_core b1 b2) (b1 /\ (b2 /\ True)) == True }}) [];
 
-e2_scalar_mult_not_bad_O_thm <- admit_cryptol (rewrite (cryptol_ss())
-  {{ \P sk -> (same_point_affine
-                E'
-                (affinify E' (POINTonE2_abs P))
-                (e2_scalar_mult (scalar_value`{255,32} sk) BP')) ==
-              ((apply same_point_affine
-                      E'
-                      (affinify E' (POINTonE2_abs P))
-                      (e2_scalar_mult (scalar_value`{255,32} sk) BP')) &&
-                ~(is_bad_O_form_E' P)) }});
 
-same_point_affine_E'_thm <- prove_cryptol
-  {{ \P1 P2 -> same_point_affine E' P1 P2 == same_point_affine_E' P1 P2 }} [];
-
-
-// Can't use normal conditional formulation because "sk" is a fresh var that
-// exists only on the right hand side of the substitution, so the override
-// never applies
-test_thm_correct <- custom_prove_cryptol (rewrite (cryptol_ss())
-  {{ \P sk -> (same_point_affine
-                E'
-                (affinify E' (POINTonE2_abs P))
-                (e2_scalar_mult (scalar_value`{255,32} sk) BP')) ==
-              ((apply same_point_affine
-                      E'
-                      (affinify E' (POINTonE2_abs P))
-                      (e2_scalar_mult (scalar_value`{255,32} sk) BP')) &&
-               POINTonE2_invariant P &&
-               ~(is_bad_O_form_E' P) &&
-               is_point_projective E' (POINTonE2_abs P)) }})
-  do {
-    rw_with_1 e2_scalar_mult_not_bad_O_thm;
-    unfolding ["apply"];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    simplify (addsimps [ affine_E'_inv_thm
-                       , affine_inv_affine_rep_e2_thm
-                       , e2_scalar_mult_on_curve_thm
-                       , BP'_is_point_affine_thm ] empty_ss);
-    simplify basic_ss;
-    simplify (addsimp same_point_affine_E'_thm empty_ss);
-    print_goal;
-    w4_unint_z3 (concat [ "e2_scalar_mult"
-                        , "is_bad_O_form_E'"
-                        , "scalar_value"
-                        , "same_point_affine_E'" ]
-                        e2_unints);
-  };
-
-mult_scalar_mult_thm <- admit_cryptol
-  {{ \b P -> mult E' b P == e2_scalar_mult (toInt b) P }};
 
 fold_scalar_value_thm <- prove_cryptol
   {{ \x -> toInt`{255} (drop_join_reverse`{255, 32} x) == scalar_value`{255, 32} x }} [];
-
-split_join_thms <- for [48, 96]
-  (\x -> prove_cryptol (rewrite (cryptol_ss())
-    {{ \v -> split`{x, 8, Bool} (join`{x, 8, Bool} v) == v }}) []);
-
-let vecEq = parse_core "vecEq 96 (Vec 8 Bool) (bvEq 8)";
-
-is_equal_thms <- for
-  [ {{ \ x y -> E.base_field.is_equal (x,y) == (x==y) }}
-  , {{ \ x y -> E'.base_field.is_equal (x,y) == (x==y) }}
-  ] (\ t -> prove_cryptol t []);
-
-serialize_e2_eq_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \P1 P2 -> (vecEq (serialize_E2 P1) (serialize_E2 P2)) ==
-               if same_point_affine E' P1 P2
-               then True
-               else apply vecEq (serialize_E2 P1) (serialize_E2 P2) }})
-  ["serialize_E2"];
-
-point_e2_eq <- parse_core "pairEq (Vec 2 Integer) (Vec 2 Integer) (vecEq 2 Integer intEq) (vecEq 2 Integer intEq)";
-
-eq_to_same_point_affine_E'_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \P1 P2 -> (point_e2_eq P1 P2) == same_point_affine E' P1 P2 }}) [];
-
-  // TODO: This feels provable
-affinify_affine_thm <- test_cryptol
-  {{ \P -> serialize_E2 (fp2_abs P.0, fp2_abs P.1) ==
-           if (fp2_abs P.2) ==  Fp_2.field_unit
-           then serialize_E2 (affinify E' (POINTonE2_abs P))
-           else apply serialize_E2 (fp2_abs P.0, fp2_abs P.1) }};
-
-include "horrible_core_terms.saw";
-
-if_elim_thms <- for at_96_cores
- (\x -> prove_cryptol (rewrite (cryptol_ss())
-    {{ \b1 b2 b3 (x1 : [96][8]) (x2 : [96][8]) ->
-          (if (and_core (and_core b1 b2) b3)
-           then x (if b2 then x1 else x2)
-           else (x x1)) == (x x1) }}) []);
-
-O_O_unit_implies_bad_O_form_E' <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \P -> (is_bad_O_form_E' P) ==
-           if (is_point_O E' (fp2_abs P.0, fp2_abs P.1)) /\
-              (fp2_abs (P.2) == Fp_2.field_unit)
-           then True
-           else apply is_bad_O_form_E' P }}) [];
-
-demo_SkToPk_A_ov <- custom_verify "demo_SkToPk_A"
-  [blst_sk_to_pk_in_g2_ov, blst_p2_compress_projective_ov, blst_p2_compress_affine_ov]
-  demo_SkToPk_A_spec
-  do {
-    unfolding [ "sk_to_pk"
-              , "module parameter point_to_pubkey"
-              , "module parameter other_curve"
-              , "module parameter P"
-              , "other_curve"
-              , "P"
-              , "point_to_pubkey" ];
-    simplify (cryptol_ss());
-    simplify (addsimp eq_to_same_point_affine_E'_thm empty_ss);
-    simplify (addsimps [test_thm_correct] empty_ss);
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    unfolding ["apply"];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with_1 O_O_unit_implies_bad_O_form_E';
-    // BEGIN final goal proof
-    simplify (addsimps (concat split_join_thms
-                               [mult_scalar_mult_thm,
-                                affinify_affine_thm,
-                                fold_scalar_value_thm,
-                                serialize_e2_eq_thm])
-                       empty_ss);
-    simplify (addsimps split_join_thms empty_ss);
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    simplify (addsimps if_elim_thms empty_ss);
-    simplify (addsimps [unrip_thm_96, serialize_e2_eq_thm] empty_ss);
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    unfolding ["apply"];
-    simplify remove_higher_order_function_simpset;
-    simplify (addsimp same_point_affine_E'_thm empty_ss);
-    print_goal;
-    w4_unint_z3 (concat [ "e2_order"
-                        , "scalar_value"
-                        , "POINTonE2_abs"
-                        , "serialize_E2"
-                        , "fp2_abs"
-                        , "e2_scalar_mult"
-                        , "same_point_affine_E'"
-                        , "POINTonE2_invariant" ]
-                        e2_unints);
-  };
 
 let {{
   // TODO: Rename to indicate this is actually the KeyValidate precond
@@ -1000,8 +796,7 @@ let {{
     c2 = bls_ate_pairing sig BP'
 }};
 
-// TODO: Where did this come from?  Note 1 in pairing.saw?
-// TODO: Might need guards that pk and sig are valid (IE, on the curve?)
+// This assumption is justified by Note 1 in proof/pairing.saw
 core_verify_pk_in_g2_impl_thm <- admit_cryptol {{ \pk sig msg dst -> core_verify_pk_in_g2_impl pk sig msg dst [] == core_verify_pk_in_g2 pk sig msg dst }};
 
 blst_core_verify_pk_in_g2_ov <- verify_blst_core_verify_pk_in_g2_null_aug 32 43 0;
