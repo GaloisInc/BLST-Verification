@@ -10,9 +10,8 @@ let {{
   same_point_affine_E' = same_point_affine E'
 
   /*
-   * Point O is in a "bad" form iff:
-   * 1.  (0, 0, z) where z is non-zero, or
-   * 2.  (x, y 0) where (x, y) is point O in affine coordinates
+   * Point O is in a "bad" form iff it is in the form (0, 0, _) or (_, _, 0),
+   * rather than (0, 0, 0):
    */
   is_bad_O_form_E': POINTonE2_t -> Bool
   is_bad_O_form_E' P = ((is_point_O E' (fp2_abs P.0, fp2_abs P.1)) /\
@@ -42,7 +41,7 @@ let and_core = parse_core "and";
 // (is_point_projective E' P1), then P2 is on the curve
 // (is_point_affine E' P2), so long as:
 // 1. P1 is not point O in the "bad" form, and
-// 2. P1 satisifies the POINTonE1 invariant
+// 2. P1 satisifies the POINTonE2 invariant
 // For more info on why this "bad point O" check is necessary, see the
 // POINTonE1_in_G1 note in proof/subgroup_check_g1.saw
 affine_E'_inv_thm <- test_cryptol (rewrite (cryptol_ss())
