@@ -10,13 +10,6 @@ include "proof-helpers.saw";
 */
 
 let {{
-  pubkey_to_point_is_affine_min_key: [48][8] -> Bool
-  pubkey_to_point_is_affine_min_key pk =
-  // TODO: I had to manually unfold pubkey_to_point here.  Could that cause
-  // problems in the proof??
-    maybe_cases (uncompress_E1 pk)
-      False
-      (\y -> is_point_affine E y)
   signature_to_point_is_affine_min_key: [96][8] -> Bool
   signature_to_point_is_affine_min_key sig =
     // TODO: I manually unfolded signature_to_point here.  Could that cause
@@ -32,24 +25,7 @@ let {{
 
 
 
-let {{
-  verify_B_pk_precond: [48][8] -> Bool
-  verify_B_pk_precond pk = (uncompress_E1_imp pk != nothing) /\
-                           (~((pk@0)@1)) /\
-                           pubkey_to_point_is_affine_min_key pk /\
-                           (uncompress_E1_x_fp pk != Fp.field_zero) /\
-                           ~(((uncompressed_pk.0) == Fp.field_zero) /\
-                             ((uncompressed_pk.1) == Fp.field_zero))
-    where uncompressed_pk = uncompress_E1_OK pk
-}};
 
-let demo_KeyValidate_B_spec = do {
-  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE1_Uncompress_in" compressed_E1_rep_type;
-  crucible_precond {{ verify_B_pk_precond inp }};
-  llvm_execute_func [ in_ptr ];
-  // TODO: Postcond
-  llvm_return (llvm_term {{ bool_to_limb (BMPKS::KeyValidate (join inp)) }});
-};
 
 // TODO: Is this proved somewhere?
 uncompress_E1_uncompress_E1_OK_thm <- admit_cryptol (rewrite (cryptol_ss())
@@ -58,25 +34,11 @@ uncompress_E1_uncompress_E1_OK_thm <- admit_cryptol (rewrite (cryptol_ss())
            then (True, uncompress_E1_OK x)
            else apply uncompress_E1 x }});
 
-just_e1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \(x : AffinePoint t_Fp) -> just x == (True, x) }}) [];
-
 fold_normalize_affine_fp_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> (Fp.normalize P.0, Fp.normalize P.1) ==
            normalize_affine_point Fp P }}) [];
 
-hoist_pair_fp_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \b (x : t_Fp) (y : t_Fp) -> (x, if b then y else x) ==
-                                  if b then (x, y) else (x, x) }}) [];
 
-normalize_point_O_E_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ normalize_affine_point Fp (point_O E) == point_O E }}) [];
-
-is_in_g1_impl_min_key_thm <- admit_cryptol
-  (rewrite (cryptol_ss())
-  {{ \P -> BMPKS::reexport_pubkey_subgroup_check P ==
-           if is_point_affine_E P
-           then is_in_g1_impl P
-           else apply BMPKS::reexport_pubkey_subgroup_check P }});
 
 // We assume that pubkey_subgroup_check is equivalent to is_in_g2_impl for
 // points on the curve.  This assumption is proved in Bowe "Faster Subgroup
@@ -97,290 +59,17 @@ hoist_POINTonE1_affine_invariant <- prove_cryptol
 
 inteq_core <- parse_core "intEq";
 
-fold_is_point_O_E_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \x y -> ((inteq_core x Fp.field_zero) /\ (inteq_core y Fp.field_zero)) ==
-           is_point_O E (x, y) }}) [];
-
-demo_KeyValidate_B_ov <- custom_verify "demo_KeyValidate_B"
-  [ POINTonE1_Uncompress_OK_ov //blst_p1_uncompress_OK_ov
-  , POINTonE1_affine_on_curve_ov
-  , vec_is_zero_2fp_ov
-  , blst_p1_affine_in_g1_ov ]
-  demo_KeyValidate_B_spec
-  do {
-    unfolding [ "BMPKS::KeyValidate"
-              , "maybe_cases"
-              , "BLSMinimalPublicKeySize::module parameter pubkey_to_point"
-              , "BLSMinimalPublicKeySize::module parameter other_curve"
-              , "bool_to_limb"
-              , "POINTonE1_affine_rep"
-              , "pubkey_to_point_is_affine_min_key"
-              , "POINTonE1_affine_abs"
-              , "verify_B_pk_precond"
-              , "BLSMinimalPublicKeySize::other_curve"
-              , "BLSMinimalPublicKeySize::pubkey_to_point" ];
-    simplify (addsimp is_point_affine_E_thm empty_ss);
-    simplify (addsimps [ uncompress_E1_OK_on_curve] empty_ss);
-    simplify basic_ss;
-    simplify (addsimp is_point_O_E_affine_rev_thm empty_ss);
-    simplify (cryptol_ss());
-    simplify (addsimps core_rewrites empty_ss);
-    simplify (addsimp fp_abs_ite_thm empty_ss);
-    simplify fp_simpset;
-    simplify (addsimp is_in_g1_impl_min_key_thm empty_ss);
-    simplify basic_ss;
-    simplify (addsimp is_point_O_E_thm empty_ss);
-    simplify (basic_ss);
-    simplify (addsimps [ hoist_POINTonE1_affine_rep
-                       , affine_inv_affine_rep_e1_thm
-                       , hoist_POINTonE1_affine_invariant ] empty_ss);
-    simplify (basic_ss);
-    simplify (cryptol_ss());
-    simplify (addsimps core_rewrites empty_ss);
-    simplify (addsimps split_join_thms empty_ss);
-    simplify (addsimps [ uncompress_E1_uncompress_E1_OK_thm ] empty_ss);
-    goal_num_ite 4
-      (do {
-        simplify (addsimp just_e1_thm empty_ss);
-        simplify (basic_ss);
-        simplify (cryptol_ss());
-        simplify (addsimps [ fold_normalize_affine_fp_thm
-                           , hoist_pair_fp_thm
-                           , fold_is_point_O_E_thm
-                           , normalize_point_O_E_thm
-                           , normalize_uncompress_E1_OK_thm
-                           , zero_lt_one_thm
-                           , hoist_normalize_affine_fp_thm ] empty_ss);
-        unfolding [ "POINTonE1_affine_invariant"
-                  , "apply"
-                  , "uncompress_E1_imp" ];
-        rw_with fp_rep_thms;
-        simplify (basic_ss);
-        simplify (cryptol_ss());
-        rw_with remove_ho_rules;
-        (print_goal);
-        w4_unint_z3 (concat [ "is_in_g1_impl"
-                            , "uncompress_E1_OK"
-                            , "is_point_affine_E"
-                            , "BMPKS::reexport_pubkey_subgroup_check"
-                            , "is_point_O_E"
-                            , "is_point_affine_E"
-                            , "uncompress_E1"
-                            , "POINTonE1_affine_invariant"
-                            , "fp_rep"
-                            , "uncompress_E1_imp"]
-                            BasicVerify_A_unints);
-      })
-      (do { 
-        simplify remove_higher_order_function_simpset;
-        unfolding [ "POINTonE1_affine_invariant"
-                  , "uncompress_E1_imp" ];
-        rw_with fp_rep_thms;
-        (print_goal);
-        w4_unint_z3 [ "is_in_g1_impl"
-                    , "Fp"
-                    , "uncompress_E1_OK"
-                    , "is_point_affine_E"
-                    , "BMPKS::reexport_pubkey_subgroup_check"
-                    , "is_point_O_E"
-                    , "is_point_affine_E"
-                    , "uncompress_E1"
-                    , "uncompress_E1_imp"];
-        });
-  };
-
-let demo_BasicSign_B_spec = do {
-  //let DST = {{ "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_" }};
-  global_alloc_init "demo_DST_B" {{ BMPKS::reexport_DST }};
-  let msg_len = 32;
-  out_ptr <- llvm_alloc (llvm_array 96 (llvm_int 8));
-  // SK must be aligned
-  SK_ptr <- llvm_alloc_readonly_aligned 8 pow256_type;
-  SK <- llvm_fresh_var "SK" pow256_type;
-  llvm_points_to SK_ptr (llvm_term SK);
-  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
-  // TODO: This precond was the only way I could think of to be able to talk
-  // about the relationship between SK and the result of blst_hash_to_g2.  Is
-  // there maybe a theorem that would work better?
-  llvm_precond {{ e2_order (affinify E' (hash_to_curve_E2_opt_impl (msg,BMPKS::reexport_DST))) >
-                  scalar_value`{255,32} SK + shift }};
-  // TODO: Do I need this precond VV ?
-  llvm_precond {{ SK != zero }};
-  llvm_execute_func [ out_ptr
-                    , SK_ptr
-                    , msg_ptr
-                    , llvm_term {{ `msg_len : [64] }} ];
-  // TODO: Endianness?  (Both for return, and for args to CoreSign)
-  // TODO: Postcond
-  llvm_points_to
-    out_ptr
-    (llvm_term
-      {{ split`{each=8} (BMPKS::CoreSign (drop_join_reverse`{255, 32} SK,
-                                          msg)) }});
-};
-
-affine_inv_min_key_thm <- test_cryptol
-  {{ \P1 P2 ->
-     (and_core (same_point_affine E' (affinify E' (POINTonE2_abs P1)) P2)
-               (and_core (POINTonE2_invariant P1)
-                         (and_core (not_core (is_bad_O_form_E' P1))
-                                   (is_point_projective E' (POINTonE2_abs P1))))) ==
-               (same_point_affine E' (affinify E' (POINTonE2_abs P1)) P2 /\
-                ~(is_bad_O_form_E' P1) /\
-                is_point_affine E' P2) }};
-
-// TODO: Under what conditions is this true?  Should probably be done over IETF
-// spec version rather than _impl version.  Also, see note on
-// hash_to_g2.saw:118 to see why this is with is_point_affine rather than
-// is_point_projective (it might not be easy to transform goal to
-// is_point_projective)
-hash_to_g2_on_curve_thm <- admit_cryptol
-  {{ \x -> is_point_affine E' (affinify E' (hash_to_curve_E2_opt_impl x)) == True }};
-
-e2_scalar_mult_not_bad_O_min_key_thm <- admit_cryptol (rewrite (cryptol_ss())
-  {{ \P sk (x:([32][8],[43][8])) ->
-                (same_point_affine
-                  E'
-                  (affinify E' (POINTonE2_abs P))
-                  (e2_scalar_mult (scalar_value`{255,32} sk)
-                                  (affinify E' (hash_to_curve_E2_opt_impl x)))) ==
-                ((apply same_point_affine
-                        E'
-                        (affinify E' (POINTonE2_abs P))
-                        (e2_scalar_mult (scalar_value`{255,32} sk)
-                                        (affinify E' (hash_to_curve_E2_opt_impl x)))) &&
-                  ~(is_bad_O_form_E' P)) }});
-
-test_thm_correct'_min_pk <- custom_prove_cryptol (rewrite (cryptol_ss())
-  {{ \P sk (x:([32][8],[43][8])) ->
-                (same_point_affine
-                  E'
-                  (affinify E' (POINTonE2_abs P))
-                  (e2_scalar_mult (scalar_value`{255,32} sk)
-                                  (affinify E' (hash_to_curve_E2_opt_impl x)))) ==
-                ((apply same_point_affine
-                        E'
-                        (affinify E' (POINTonE2_abs P))
-                        (e2_scalar_mult (scalar_value`{255,32} sk)
-                                        (affinify E' (hash_to_curve_E2_opt_impl x)))) &&
-                  POINTonE2_invariant P &&
-                  ~(is_bad_O_form_E' P) &&
-                  is_point_projective E' (POINTonE2_abs P)) }})
-  do {
-    rw_with_1 e2_scalar_mult_not_bad_O_min_key_thm;
-    unfolding ["apply"];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with POINTonE2_base_thms;
-    simplify (addsimps [ affine_inv_min_key_thm
-                       , e2_scalar_mult_on_curve_thm
-                       , hash_to_g2_on_curve_thm
-                       , affine_inv_affine_rep_e2_thm ]
-                       empty_ss);
-    simplify basic_ss;
-    rw_with remove_ho_rules;
-    rw_with_1 same_point_affine_E'_thm;
-    rw_with_1 and_true_thm;
-    print_goal;
-    w4_unint_z3 (concat [ "same_point_affine_E'"
-                        , "hash_to_curve_E2_opt_impl"
-                        , "scalar_value"
-                        , "is_bad_O_form_E'" ]
-                        []);
-  };
-
-let vecEq96 = parse_core "vecEq 96 (Vec 8 Bool) (bvEq 8)";
-
-hoist_if_vecEq96_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \b v1 v2 v3 -> (vecEq96 (if b then v1 else v2) v3) ==
-                    (if b then (vecEq96 v1 v3) else (vecEq96 v2 v3)) }}) [];
-
-// TODO: Prove (e1 version already proved)
-serialize_e2_affine_thm <-  admit_cryptol (rewrite (cryptol_ss())
-  {{ \P -> serialize_E2 (fp2_abs P.0, fp2_abs P.1) ==
-           if (POINTonE2_invariant P) /\ (fp2_abs (P.2) == Fp_2.field_unit)
-           then serialize_E2 (affinify E' (POINTonE2_abs P))
-           else apply serialize_E2 (fp2_abs P.0, fp2_abs P.1) }});
-
-mult_e2_scalar_mult_thm <- admit_cryptol
-  {{ \b P -> mult E' b P == e2_scalar_mult (toInt b) P }};
-
-hash_to_curve_e2_arg_expand_thm <- prove_cryptol
-  {{ \(x:([32][8],[43][8])) ->
-       hash_to_curve_E2_opt_impl x ==
-       apply hash_to_curve_E2_opt_impl (([]:[0][8])#x.0, x.1) }} ["hash_to_curve_E2_opt_impl"];
-
-hash_to_curve_e2_impl_thm <- custom_prove_cryptol
-  {{ \(x:([32][8],[43][8])) -> HE2::hash_to_curve_opt x == affinify E' (hash_to_curve_E2_opt_impl x) }}
-  do {
-    simplify (addsimp hash_to_curve_e2_arg_expand_thm empty_ss);
-    unfolding ["apply"];
-    simplify (addsimp hash_to_curve_E2_opt_impl_equiv_ov empty_ss);
-    simplify basic_ss;
-    (print_goal);
-    w4_unint_z3 ["HashToCurveE2::hash_to_curve_opt"];
-  };
 
 
-demo_BasicSign_B_ov <- custom_verify "demo_BasicSign_B"
-  [ hash_to_g2_impl_ov
-  , POINTonE2_mult_w5_sk_ov
-  , blst_p2_compress_affine_ov
-  , blst_p2_compress_projective_ov ]
-  demo_BasicSign_B_spec
-  do {
-    simplify (addsimp eq_to_same_point_affine_E'_thm (cryptol_ss()));
-    rw_with POINTonE2_base_thms;
-    simplify (addsimps POINTonE2_thms (cryptol_ss()));
-    simplify (addsimp eliminate_normalized_args_affinify_thm empty_ss);
-    simplify basic_ss;
-    simplify (addsimps [test_thm_correct'_min_pk] empty_ss);
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with_1 O_O_unit_implies_bad_O_form_E';
-    unfolding ["apply", "BLSMinimalPublicKeySize::reexport_DST", "BLSMinimalPublicKeySize::DST", "is_bad_O_form_E'"];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    // BEGIN final goal proof
-    unfolding [ "BMPKS::CoreSign"
-              , "BLSMinimalPublicKeySize::module parameter point_to_signature"
-              , "BLSMinimalPublicKeySize::module parameter main_curve"
-              , "BLSMinimalPublicKeySize::main_curve"
-              , "BLSMinimalPublicKeySize::module parameter hash_to_point"
-              , "BLSMinimalPublicKeySize::hash_to_point"
-              , "BLSMinimalPublicKeySize::point_to_signature"
-              , "BLSMinimalPublicKeySize::reexport_DST"
-              , "BLSMinimalPublicKeySize::DST" ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    simplify (addsimps (concat split_join_thms
-                               [ hash_to_curve_e2_impl_thm
-                               , fold_scalar_value_thm
-                               , serialize_e2_eq_thm
-                               , mult_e2_scalar_mult_thm ])
-                       empty_ss);
-    simplify basic_ss;
-    simplify (addsimps [hoist_unrip_96_thm] empty_ss);
-    simplify (addsimps [hoist_if_vecEq96_thm] empty_ss);
-    simplify (addsimps [serialize_e2_affine_thm] empty_ss);
-    simplify (addsimps [serialize_e2_eq_thm] empty_ss);
-    simplify (addsimps [hoist_if_vecEq96_thm] empty_ss);
-    simplify (addsimps [serialize_e2_eq_thm] empty_ss);
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    simplify (addsimps remove_ho_rules empty_ss);
-    simplify (addsimps [same_point_affine_E'_thm] empty_ss);
-    (print_goal);
-    w4_unint_z3 (concat [ "e2_order"
-                        , "e2_scalar_mult"
-                        , "fp2_abs"
-                        , "Fp_2"
-                        , "is_point_projective_E'"
-                        , "hash_to_curve_E2_opt_impl"
-                        , "scalar_value"
-                        , "same_point_affine_E'" ]
-                        [] );
-  };
+
+
+
+
+
+
+
+
+
 
 let verify_B_sig_preconds sig = do {
   crucible_precond {{ uncompress_E2_imp sig != nothing }};

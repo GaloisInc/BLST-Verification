@@ -214,7 +214,7 @@ affine_inv_thm <- test_cryptol
                 ~(is_bad_O_form_E P1) /\
                 is_point_affine E P2) }};
 
-// e2_scalar_mult does not produce point O in the bad forms of (0, 0, _) or
+// e1_scalar_mult does not produce point O in the bad forms of (0, 0, _) or
 // (_, _, 0)
 e1_scalar_mult_not_bad_O_thm <- admit_cryptol (rewrite (cryptol_ss())
   // TODO: Revisit this comment, it seems kinda wrong, but it would be nice to

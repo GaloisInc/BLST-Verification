@@ -20,6 +20,7 @@ include "bls_operations/basic_sign_a.saw";
 include "bls_operations/basic_verify_a.saw";
 include "bls_operations/sk_to_pk_b.saw";
 include "bls_operations/key_validate_b.saw";
+include "bls_operations/basic_sign_b.saw";
 
 
 
@@ -55,9 +56,6 @@ include "print_readably.saw";
 
 
 
-is_point_O_E_affine_rev_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \x y -> (((fp_abs x) == Fp.field_zero) /\ ((fp_abs y) == Fp.field_zero)) ==
-             is_point_O E (POINTonE1_affine_abs (x, y)) }}) [];
 
 
 let fp_rep_at0 = parse_core "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6 (Vec 64 Bool)) x 0";

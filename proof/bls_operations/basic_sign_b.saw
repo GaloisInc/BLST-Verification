@@ -1,0 +1,257 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+let vecEq96 = parse_core "vecEq 96 (Vec 8 Bool) (bvEq 8)";
+hoist_if_vecEq96_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \b v1 v2 v3 -> (vecEq96 (if b then v1 else v2) v3) ==
+                    (if b then (vecEq96 v1 v3) else (vecEq96 v2 v3)) }}) [];
+
+affinify_E'_concrete_z_unit_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \P -> affinify E' (POINTonE2_abs P) ==
+           if (POINTonE2_invariant P) /\ ((fp2_abs P.2) == Fp_2.field_unit)
+           then affinify E' (fp2_abs P.0, fp2_abs P.1, Fp_2.field_unit)
+           else apply affinify E' (POINTonE2_abs P) }}) ["fp2_abs", "Fp_2"];
+
+Fp2_div_unit_unit_thm <- prove_cryptol
+  {{ Fp_2.div (Fp_2.field_unit, Fp_2.field_unit) == Fp_2.field_unit }} [];
+
+Fp2_normalize_abs_thm <- custom_prove_cryptol
+  {{ \x -> Fp_2.normalize (fp2_abs x) == fp2_abs x }}
+  do {
+    simplify (addsimps [fp2_abs_normalize_thm, fp2_abstract_invariant_thm] empty_ss);
+    (print_goal);
+    w4_unint_z3 [];
+  };
+
+affinify_E'_z_1_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
+  {{ \P -> affinify E' (POINTonE2_abs P) ==
+           if (POINTonE2_invariant P) /\ ((fp2_abs P.2) == Fp_2.field_unit)
+           then (fp2_abs P.0, fp2_abs P.1)
+           else apply affinify E' (POINTonE2_abs P) }})
+  do {
+    simplify (addsimp affinify_E'_concrete_z_unit_thm empty_ss);
+    simplify (addsimps [affinify_needs_no_special_case_thm] empty_ss);
+    unfolding ["apply"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    simplify (addsimp Fp2_div_unit_unit_thm empty_ss);
+    simplify (addsimps fp2_laws empty_ss);
+    unfolding ["POINTonE2_invariant"];
+    simplify (addsimp Fp2_normalize_abs_thm empty_ss);
+    simplify (addsimps remove_ho_rules empty_ss);
+    (print_goal);
+    w4_unint_z3 ["Fp_2", "fp2_invariant", "fp2_abs"];
+  };
+
+serialize_e2_affine_thm <-  custom_prove_cryptol (rewrite (cryptol_ss())
+  {{ \P -> serialize_E2 (fp2_abs P.0, fp2_abs P.1) ==
+           if (POINTonE2_invariant P) /\ (fp2_abs (P.2) == Fp_2.field_unit)
+           then serialize_E2 (affinify E' (POINTonE2_abs P))
+           else apply serialize_E2 (fp2_abs P.0, fp2_abs P.1) }})
+  do {
+    simplify (addsimps [affinify_E'_z_1_thm] empty_ss);
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    unfolding ["apply"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    simplify (addsimps remove_ho_rules empty_ss);
+    print_goal;
+    w4_unint_z3 ["fp2_abs", "serialize_E2", "affinify_E'", "POINTonE2_abs"];
+  };
+
+hash_to_curve_e2_arg_expand_thm <- prove_cryptol
+  {{ \(x:([32][8],[43][8])) ->
+       hash_to_curve_E2_opt_impl x ==
+       apply hash_to_curve_E2_opt_impl (([]:[0][8])#x.0, x.1) }} ["hash_to_curve_E2_opt_impl"];
+
+hash_to_curve_e2_impl_thm <- custom_prove_cryptol
+  {{ \(x:([32][8],[43][8])) -> HE2::hash_to_curve_opt x == affinify E' (hash_to_curve_E2_opt_impl x) }}
+  do {
+    simplify (addsimp hash_to_curve_e2_arg_expand_thm empty_ss);
+    unfolding ["apply"];
+    simplify (addsimp hash_to_curve_E2_opt_impl_equiv_ov empty_ss);
+    simplify basic_ss;
+    (print_goal);
+    w4_unint_z3 ["HashToCurveE2::hash_to_curve_opt"];
+  };
+
+// e2_scalar_mult does not produce point O in the bad forms of (0, 0, _) or
+// (_, _, 0)
+e2_scalar_mult_not_bad_O_min_key_thm <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \P sk (x:([32][8],[43][8])) ->
+                (same_point_affine
+                  E'
+                  (affinify E' (POINTonE2_abs P))
+                  (e2_scalar_mult (scalar_value`{255,32} sk)
+                                  (affinify E' (hash_to_curve_E2_opt_impl x)))) ==
+                ((apply same_point_affine
+                        E'
+                        (affinify E' (POINTonE2_abs P))
+                        (e2_scalar_mult (scalar_value`{255,32} sk)
+                                        (affinify E' (hash_to_curve_E2_opt_impl x)))) &&
+                  ~(is_bad_O_form_E' P)) }});
+
+// hash_to_curve_opt produces points on the curve
+hash_to_g2_opt_on_curve_thm <- admit_cryptol
+  {{ \x -> is_point_affine E' (HE2::hash_to_curve_opt x) == True }};
+
+hash_to_g2_on_curve_thm <- custom_prove_cryptol
+  {{ \(msg:[32][8]) (dst:[43][8]) -> is_point_affine E' (affinify E' (hash_to_curve_E2_opt_impl (msg,dst))) == True }}
+  do {
+    rw_with [ hash_to_curve_E2_opt_impl_equiv_ov
+            , hash_to_g2_opt_on_curve_thm ];
+    print_goal;
+    w4_unint_z3 [];
+  };
+
+// This theorem states that if (affinify P1) == P2 and P1 is on the curve
+// (is_point_projective E' P1), then P2 is on the curve
+// (is_point_affine E' P2), so long as:
+// 1. P1 is not point O in the "bad" form, and
+// 2. P1 satisifies the POINTonE1 invariant
+// For more info on why this "bad point O" check is necessary, see the
+// POINTonE1_in_G1 note in proof/subgroup_check_g1.saw
+affine_inv_min_key_thm <- test_cryptol
+  {{ \P1 P2 ->
+     (and_core (same_point_affine E' (affinify E' (POINTonE2_abs P1)) P2)
+               (and_core (POINTonE2_invariant P1)
+                         (and_core (not_core (is_bad_O_form_E' P1))
+                                   (is_point_projective E' (POINTonE2_abs P1))))) ==
+               (same_point_affine E' (affinify E' (POINTonE2_abs P1)) P2 /\
+                ~(is_bad_O_form_E' P1) /\
+                is_point_affine E' P2) }};
+
+// P = sk * (hash_to_curve x) has the following properties:
+// 1.  P satisfies the POINTonE2_invariant
+// 2.  P is not in the bad O forms of (0, 0, _) or (_, _, 0)
+// 3.  P is on the curve
+e2_scalar_mult_htc_props <- custom_prove_cryptol (rewrite (cryptol_ss())
+  {{ \P sk (msg:[32][8]) (dst:[43][8]) ->
+                (same_point_affine
+                  E'
+                  (affinify E' (POINTonE2_abs P))
+                  (e2_scalar_mult (scalar_value`{255,32} sk)
+                                  (affinify E' (hash_to_curve_E2_opt_impl (msg,dst))))) ==
+                ((apply same_point_affine
+                        E'
+                        (affinify E' (POINTonE2_abs P))
+                        (e2_scalar_mult (scalar_value`{255,32} sk)
+                                        (affinify E' (hash_to_curve_E2_opt_impl (msg,dst))))) &&
+                  POINTonE2_invariant P &&
+                  ~(is_bad_O_form_E' P) &&
+                  is_point_projective E' (POINTonE2_abs P)) }})
+  do {
+    rw_with_1 e2_scalar_mult_not_bad_O_min_key_thm;
+    unfolding ["apply"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with POINTonE2_base_thms;
+    simplify (addsimps [ affine_inv_min_key_thm
+                       , e2_scalar_mult_on_curve_thm
+                       , hash_to_g2_on_curve_thm
+                       , affine_inv_affine_rep_e2_thm ]
+                       empty_ss);
+    simplify basic_ss;
+    rw_with remove_ho_rules;
+    rw_with_1 same_point_affine_E'_thm;
+    rw_with_1 and_true_thm;
+    print_goal;
+    w4_unint_z3 (concat [ "same_point_affine_E'"
+                        , "hash_to_curve_E2_opt_impl"
+                        , "scalar_value"
+                        , "is_bad_O_form_E'" ]
+                        []);
+  };
+
+
+let demo_BasicSign_B_spec = do {
+  global_alloc_init "demo_DST_B" {{ BMPKS::reexport_DST }};
+
+  out_ptr <- llvm_alloc (llvm_array 96 (llvm_int 8));
+
+  // SK must be aligned
+  SK_ptr <- llvm_alloc_readonly_aligned 8 pow256_type;
+  SK <- llvm_fresh_var "SK" pow256_type;
+  llvm_points_to SK_ptr (llvm_term SK);
+  llvm_precond {{ SK != zero }};
+
+  let msg_len = 32;
+  (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  llvm_precond {{ e2_order (affinify E' (hash_to_curve_E2_opt_impl (msg,BMPKS::reexport_DST))) >
+                  scalar_value`{255,32} SK + shift }};
+
+  llvm_execute_func [ out_ptr
+                    , SK_ptr
+                    , msg_ptr
+                    , llvm_term {{ `msg_len : [64] }} ];
+
+  llvm_points_to
+    out_ptr
+    (llvm_term
+      {{ split`{each=8} (BMPKS::CoreSign (drop_join_reverse`{255, 32} SK,
+                                          msg)) }});
+};
+
+demo_BasicSign_B_ov <- custom_verify "demo_BasicSign_B"
+  [ hash_to_g2_impl_ov
+  , POINTonE2_mult_w5_sk_ov
+  , blst_p2_compress_affine_ov
+  , blst_p2_compress_projective_ov ]
+  demo_BasicSign_B_spec
+  do {
+    simplify (addsimp eq_to_same_point_affine_E'_thm (cryptol_ss()));
+    rw_with POINTonE2_base_thms;
+    simplify (addsimps POINTonE2_thms (cryptol_ss()));
+    simplify (addsimp eliminate_normalized_args_affinify_thm empty_ss);
+    simplify basic_ss;
+    simplify (addsimps [e2_scalar_mult_htc_props] empty_ss);
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with_1 O_O_unit_implies_bad_O_form_E';
+    unfolding ["apply", "BLSMinimalPublicKeySize::reexport_DST", "BLSMinimalPublicKeySize::DST", "is_bad_O_form_E'"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    // final goal proof
+    unfolding [ "BMPKS::CoreSign"
+              , "BLSMinimalPublicKeySize::module parameter point_to_signature"
+              , "BLSMinimalPublicKeySize::module parameter main_curve"
+              , "BLSMinimalPublicKeySize::main_curve"
+              , "BLSMinimalPublicKeySize::module parameter hash_to_point"
+              , "BLSMinimalPublicKeySize::hash_to_point"
+              , "BLSMinimalPublicKeySize::point_to_signature"
+              , "BLSMinimalPublicKeySize::reexport_DST"
+              , "BLSMinimalPublicKeySize::DST" ];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    simplify (addsimps (concat split_join_thms
+                               [ hash_to_curve_e2_impl_thm
+                               , fold_scalar_value_thm
+                               , serialize_e2_eq_thm
+                               , mult_scalar_mult_thm ])
+                       empty_ss);
+    simplify basic_ss;
+    simplify (addsimps [hoist_unrip_96_thm] empty_ss);
+    simplify (addsimps [hoist_if_vecEq96_thm] empty_ss);
+    simplify (addsimps [serialize_e2_affine_thm] empty_ss);
+    simplify (addsimps [serialize_e2_eq_thm] empty_ss);
+    simplify (addsimps [hoist_if_vecEq96_thm] empty_ss);
+    simplify (addsimps [serialize_e2_eq_thm] empty_ss);
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    simplify (addsimps remove_ho_rules empty_ss);
+    simplify (addsimps [same_point_affine_E'_thm] empty_ss);
+    (print_goal);
+    w4_unint_z3 (concat [ "e2_order"
+                        , "e2_scalar_mult"
+                        , "fp2_abs"
+                        , "Fp_2"
+                        , "is_point_projective_E'"
+                        , "hash_to_curve_E2_opt_impl"
+                        , "scalar_value"
+                        , "same_point_affine_E'" ]
+                        [] );
+  };
+

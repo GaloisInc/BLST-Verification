@@ -41,10 +41,6 @@ if_elim_48_thms <- for at_48_cores
            then x (if b2 then x1 else x2)
            else (x x1)) == (x x1) }}) []);
 
-// mult and e1_scalar_mult are interchangeable
-mult_scalar_mult_E_thm <- admit_cryptol
-  {{ \b P -> mult E b P == e1_scalar_mult (toInt b) P }};
-
 // e1_scalar_mult does not produce point O in the bad forms of (0, 0, _) or
 // (_, _, 0)
 e1_scalar_mult_not_bad_O_min_pk_thm <- admit_cryptol (rewrite (cryptol_ss())
@@ -152,7 +148,7 @@ demo_SkToPk_B_ov <- custom_verify "demo_SkToPk_B"
     rw_with_1 O_O_unit_implies_bad_O_form_E;
     unfolding ["apply"];
     simplify (addsimps (concat split_join_thms
-                               [mult_scalar_mult_E_thm,
+                               [mult_e1_scalar_mult_thm,
                                 affinify_affine_E1_thm,
                                 fold_scalar_value_thm,
                                 serialize_e1_eq_thm])
