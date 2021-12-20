@@ -19,6 +19,7 @@ include "bls_operations/key_validate_a.saw";
 include "bls_operations/basic_sign_a.saw";
 include "bls_operations/basic_verify_a.saw";
 include "bls_operations/sk_to_pk_b.saw";
+include "bls_operations/key_validate_b.saw";
 
 
 

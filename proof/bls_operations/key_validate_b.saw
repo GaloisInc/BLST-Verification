@@ -1,0 +1,149 @@
+let {{
+  pubkey_to_point_is_affine_min_key: [48][8] -> Bool
+  pubkey_to_point_is_affine_min_key pk =
+    maybe_cases (uncompress_E1 pk)
+      False
+      (\y -> is_point_affine E y)
+
+  // A precondition on public keys used in many of the minimal signature BLS
+  // wrapper proofs.  It has four parts:
+  // 1.  Uncompression of pk is successful
+  // 2.  The infinity bit is unset
+  // 3.  Uncompression produces a point on the curve.  This past part is
+  //     unnessary to state explicitly here because we already assume it to be
+  //     true (see uncompress_on_curve in 'proof/aggregate_in_g2.saw'), but it
+  //     simplifies the proofs to have it in the form that
+  //     pubkey_to_point_is_affine_min_key takes.
+  // 4.  The uncompressed point is not point_O (follows from part #2).
+  verify_B_pk_precond: [48][8] -> Bool
+  verify_B_pk_precond pk = (uncompress_E1_imp pk != nothing) /\
+                           (~((pk@0)@1)) /\
+                           pubkey_to_point_is_affine_min_key pk /\
+                           (uncompress_E1_x_fp pk != Fp.field_zero) /\
+                           ~(((uncompressed_pk.0) == Fp.field_zero) /\
+                             ((uncompressed_pk.1) == Fp.field_zero))
+    where uncompressed_pk = uncompress_E1_OK pk
+}};
+
+normalize_point_O_E_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ normalize_affine_point Fp (point_O E) == point_O E }}) [];
+
+inteq_core <- parse_core "intEq";
+fold_is_point_O_E_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \x y -> ((inteq_core x Fp.field_zero) /\ (inteq_core y Fp.field_zero)) ==
+           is_point_O E (x, y) }}) [];
+
+hoist_pair_fp_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \b (x : t_Fp) (y : t_Fp) -> (x, if b then y else x) ==
+                                  if b then (x, y) else (x, x) }}) [];
+
+just_e1_thm <- prove_cryptol (rewrite (cryptol_ss()) {{ \(x : AffinePoint t_Fp) -> just x == (True, x) }}) [];
+
+// We assume that pubkey_subgroup_check is equivalent to is_in_g1_impl for
+// points on the curve.  This assumption is proved in Bowe "Faster Subgroup
+// Checks for BLS12-381".
+is_in_g1_impl_min_key_thm <- admit_cryptol
+  (rewrite (cryptol_ss())
+  {{ \P -> BMPKS::reexport_pubkey_subgroup_check P ==
+           if is_point_affine_E P
+           then is_in_g1_impl P
+           else apply BMPKS::reexport_pubkey_subgroup_check P }});
+
+is_point_O_E_affine_rev_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \x y -> (((fp_abs x) == Fp.field_zero) /\ ((fp_abs y) == Fp.field_zero)) ==
+             is_point_O E (POINTonE1_affine_abs (x, y)) }}) [];
+
+let demo_KeyValidate_B_spec = do {
+  (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE1_Uncompress_in" compressed_E1_rep_type;
+  crucible_precond {{ verify_B_pk_precond inp }};
+  llvm_execute_func [ in_ptr ];
+  llvm_return (llvm_term {{ bool_to_limb (BMPKS::KeyValidate (join inp)) }});
+};
+
+demo_KeyValidate_B_ov <- custom_verify "demo_KeyValidate_B"
+  [ POINTonE1_Uncompress_OK_ov
+  , POINTonE1_affine_on_curve_ov
+  , vec_is_zero_2fp_ov
+  , blst_p1_affine_in_g1_ov ]
+  demo_KeyValidate_B_spec
+  do {
+    unfolding [ "BMPKS::KeyValidate"
+              , "maybe_cases"
+              , "BLSMinimalPublicKeySize::module parameter pubkey_to_point"
+              , "BLSMinimalPublicKeySize::module parameter other_curve"
+              , "bool_to_limb"
+              , "POINTonE1_affine_rep"
+              , "pubkey_to_point_is_affine_min_key"
+              , "POINTonE1_affine_abs"
+              , "verify_B_pk_precond"
+              , "BLSMinimalPublicKeySize::other_curve"
+              , "BLSMinimalPublicKeySize::pubkey_to_point" ];
+    simplify (addsimp is_point_affine_E_thm empty_ss);
+    simplify (addsimps [ uncompress_E1_on_curve] empty_ss);
+    simplify basic_ss;
+    simplify (addsimp is_point_O_E_affine_rev_thm empty_ss);
+    simplify (cryptol_ss());
+    simplify (addsimps core_rewrites empty_ss);
+    simplify (addsimp fp_abs_ite_thm empty_ss);
+    simplify fp_simpset;
+    simplify (addsimp is_in_g1_impl_min_key_thm empty_ss);
+    simplify basic_ss;
+    simplify (addsimp is_point_O_E_thm empty_ss);
+    simplify (basic_ss);
+    simplify (addsimps [ hoist_POINTonE1_affine_rep
+                       , affine_inv_affine_rep_e1_thm
+                       , hoist_POINTonE1_affine_invariant ] empty_ss);
+    simplify (basic_ss);
+    simplify (cryptol_ss());
+    simplify (addsimps core_rewrites empty_ss);
+    simplify (addsimps split_join_thms empty_ss);
+    simplify (addsimps [ uncompress_E1_uncompress_E1_OK_thm ] empty_ss);
+    goal_num_ite 4
+      (do {
+        simplify (addsimp just_e1_thm empty_ss);
+        simplify (basic_ss);
+        simplify (cryptol_ss());
+        simplify (addsimps [ fold_normalize_affine_fp_thm
+                           , hoist_pair_fp_thm
+                           , fold_is_point_O_E_thm
+                           , normalize_point_O_E_thm
+                           , normalize_uncompress_E1_OK_thm
+                           , zero_lt_one_thm
+                           , hoist_normalize_affine_fp_thm ] empty_ss);
+        unfolding [ "POINTonE1_affine_invariant"
+                  , "apply"
+                  , "uncompress_E1_imp" ];
+        rw_with fp_rep_thms;
+        simplify (basic_ss);
+        simplify (cryptol_ss());
+        rw_with remove_ho_rules;
+        (print_goal);
+        w4_unint_z3 (concat [ "is_in_g1_impl"
+                            , "uncompress_E1_OK"
+                            , "is_point_affine_E"
+                            , "BMPKS::reexport_pubkey_subgroup_check"
+                            , "is_point_O_E"
+                            , "is_point_affine_E"
+                            , "uncompress_E1"
+                            , "POINTonE1_affine_invariant"
+                            , "fp_rep"
+                            , "uncompress_E1_imp"]
+                            BasicVerify_A_unints);
+      })
+      (do { 
+        simplify remove_higher_order_function_simpset;
+        unfolding [ "POINTonE1_affine_invariant"
+                  , "uncompress_E1_imp" ];
+        rw_with fp_rep_thms;
+        (print_goal);
+        w4_unint_z3 [ "is_in_g1_impl"
+                    , "Fp"
+                    , "uncompress_E1_OK"
+                    , "is_point_affine_E"
+                    , "BMPKS::reexport_pubkey_subgroup_check"
+                    , "is_point_O_E"
+                    , "is_point_affine_E"
+                    , "uncompress_E1"
+                    , "uncompress_E1_imp"];
+        });
+  };
