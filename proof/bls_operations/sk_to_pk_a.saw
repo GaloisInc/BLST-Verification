@@ -169,10 +169,8 @@ affinify_affine_thm <- custom_prove_cryptol
     unfolding ["apply"];
     simplify basic_ss;
     simplify (cryptol_ss());
-    print_goal;
     rw_with [affinify_POINTonE2_abs_z_1_thm];
     rw_with_1 affinify_E'_thm;
-    //print_readably;
     w4_unint_z3 ["serialize_E2", "affinify_E'"];
   };
 
