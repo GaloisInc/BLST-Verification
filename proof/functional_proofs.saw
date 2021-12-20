@@ -61,7 +61,4 @@ include "core_verify_pk_in_g2.saw";
 
 /*
 include "bls_operations.saw";
-include "min_key.saw";
-include "aggregate-verify.saw";
-include "aggregate-verify-b.saw";
 */
