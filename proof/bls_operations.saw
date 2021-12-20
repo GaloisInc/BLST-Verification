@@ -6,10 +6,8 @@
 import "../spec/BLSMinimalSignatureSize.cry";
 BMPKS <- cryptol_load "../spec/BLSMinimalPublicKeySize.cry";
 
-/*
 let do_prove = true;
 include "proof-helpers.saw";
-*/
 
 // TODO: Remove all print_goals
 
@@ -21,10 +19,10 @@ include "bls_operations/basic_verify_a.saw";
 include "bls_operations/sk_to_pk_b.saw";
 include "bls_operations/key_validate_b.saw";
 include "bls_operations/basic_sign_b.saw";
+include "bls_operations/basic_verify_b.saw";
 
 
 
-/*
 
 
 
@@ -74,4 +72,3 @@ uncompress_E1_OK_on_curve <- admit_cryptol
 include "min_key.saw";
 include "aggregate-verify.saw";
 include "aggregate-verify-b.saw";
-*/
