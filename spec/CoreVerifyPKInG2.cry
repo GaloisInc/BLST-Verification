@@ -1,4 +1,3 @@
-// TODO: Belongs in implementation directory
 module CoreVerifyPKInG2 where
 
 import Parameters

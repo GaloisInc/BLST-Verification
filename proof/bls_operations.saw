@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Galois, Inc.
+ * Copyright (c) 2021 Galois, Inc.
  * SPDX-License-Identifier: Apache-2.0 OR MIT
 */
 
@@ -16,17 +16,8 @@ include "bls_operations/large_core_terms.saw";
 include "bls_operations/sk_to_pk_a.saw";
 include "bls_operations/key_validate_a.saw";
 include "bls_operations/basic_sign_a.saw";
+include "bls_operations/basic_verify_a.saw";
 
-let {{
-
-  signature_to_point_is_affine: [48][8] -> Bool
-  signature_to_point_is_affine sig =
-    maybe_cases (signature_to_point (join sig))
-      False
-      (\y -> is_point_affine E y)
-
-  F_prod_Fp_12 = F_prod Fp_12
-}};
 
 
 
@@ -52,22 +43,6 @@ include "print_readably.saw";
 
 
 
-F_prod_Fp_12_thm <- prove_cryptol
-  {{ \[x, y] -> F_prod Fp_12 [x, y] == F_prod_Fp_12 [x, y] }} [];
-
-let remove_ho_rules = concat
-  [ point_add_fp2_thm, point_dadd_fp2_thm, point_double_fp2_thm, point_neg_fp2_thm
-   , point_add_affine_fp2_thm, point_dadd_affine_fp2_thm
-   , add_E'_thm, add'_E'_thm, neg_E'_thm
-   , affinify_E'_thm, projectify_E'_thm
-   , is_point_affine_E'_thm, is_point_projective_E'_thm
-   , is_point_O_E'_thm ]
-  [ point_add_fp_thm, point_dadd_fp_thm, point_double_fp_thm, point_neg_fp_thm
-   , point_add_affine_fp_thm, point_dadd_affine_fp_thm
-   , add_E_thm, add'_E_thm, affinify_E_thm,  projectify_E_thm
-   , is_point_affine_E_thm, is_point_projective_E_thm, is_point_O_E_thm, point_O_E_thm
-   , F_prod_Fp_12_thm
-   ];
 
 
 
@@ -75,348 +50,24 @@ let remove_ho_rules = concat
 
 
 
-let compressed_E1_rep_type = llvm_array 48 (llvm_int 8);
-
-let verify_A_sig_preconds sig = do {
-  crucible_precond {{ uncompress_E1_imp sig != nothing }};
-  // TODO: Maybe drop this precond vv
-  crucible_precond {{ ~((sig@0)@1) }};
-  // TODO: Explain (the library disagrees with spec on treating point_O as on
-  // the curve?)
-  let uncompressed_sig = {{ uncompress_E1_OK sig }};
-  llvm_precond {{ ~(((uncompressed_sig.0) == Fp.field_zero) /\
-                    ((uncompressed_sig.1) == Fp.field_zero)) }};
-  // TODO: Same note about pubkey_to_point_is_affine in verify_A_pk_precond
-  // applies here.  Also to the 'B' equivalents
-  llvm_precond {{ signature_to_point_is_affine sig }};
-  // TODO: Maybe drop this precond vv
-  crucible_precond {{ uncompress_E1_x_fp sig != Fp.field_zero }};
-};
-
-let verify_A_pk_preconds pk = do {
-  crucible_precond {{ uncompress_E2_imp pk != nothing }};
-  // TODO: Maybe drop this precond vv
-  crucible_precond {{ ~((pk@0)@1) }};
-  llvm_precond {{ pubkey_to_point_is_affine pk }};
-};
-
-let demo_BasicVerify_A_spec = do {
-  global_alloc_init "demo_DST_A" {{ DST }};
-  (sig, sig_ptr) <- ptr_to_fresh_readonly "sig" compressed_E1_rep_type;
-  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" compressed_E2_rep_type;
-  let message_len = 32;
-  (message, message_ptr) <-
-      ptr_to_fresh_readonly "message" (llvm_array message_len (llvm_int 8));
-  verify_A_sig_preconds sig;
-  llvm_precond {{ verify_A_pk_precond pk }};
-  //verify_A_pk_preconds pk;
-  llvm_execute_func [ sig_ptr
-                    , pk_ptr
-                    , message_ptr
-                    , llvm_term {{ `message_len : [64] }} ];
-  // TODO: Postcond
-  llvm_return (llvm_term
-      {{ bool_to_limb (CoreVerify (join pk) message (join sig)) }});
-};
 
 is_point_O_E_affine_rev_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x y -> (((fp_abs x) == Fp.field_zero) /\ ((fp_abs y) == Fp.field_zero)) ==
              is_point_O E (POINTonE1_affine_abs (x, y)) }}) [];
 
-hoist_POINTonE1_affine_invariant <- prove_cryptol
-  (rewrite (cryptol_ss())
-    {{ \c p1 p2 -> POINTonE1_affine_invariant (if c then p1 else p2) ==
-                   if c then POINTonE1_affine_invariant p1 else POINTonE1_affine_invariant p2 }})
-  ["POINTonE1_affine_invariant"];
-
-let BasicVerify_A_unints = (concat [
-  "HE1::hash_to_curve_opt"
-, "KeyValidate"
-, "POINTonE1_affine_abs"
-, "POINTonE1_affine_invariant"
-, "POINTonE1_affine_rep"
-, "POINTonE2_affine_abs"
-, "POINTonE2_affine_invariant"
-, "POINTonE2_affine_rep"
-//, "point_O_E"
-//, "Fp"
-//, "fp_abs"
-, "bls_ate_pairing"
-, "deserialize_E2"
-, "fp_invariant"
-, "fp_rep"
-, "is_in_g1_impl"
-, "is_in_g2_impl"
-, "is_point_affine_E"
-, "is_point_affine_E'"
-, "is_square_fp"
-, "nothing"
-, "pubkey_subgroup_check"
-, "pubkey_to_point_is_affine"
-, "sign_F_p"
-, "reexport_signature_subgroup_check"
-, "signature_to_point_is_affine"
-, "sqrt_fp"
-, "uncompress_E1"
-, "uncompress_E1_OK"
-, "uncompress_E1_imp"
-, "uncompress_E1_x"
-, "uncompress_E1_x_fp"
-, "uncompress_E1_y2"
-, "uncompress_E2_OK"
-, "uncompress_E2_imp"
-] []); //(concat ec_mult_unints e2_unints));
-
-zero_lt_one_thm <- prove_core abc
-  "EqTrue (boolEq (intLe (natToInt 0) (natToInt 1)) True)";
-
-fold_POINTonE1_affine_invariant <- prove_cryptol
-  {{ \P -> (fp_invariant (P.0) /\ fp_invariant (P.1)) ==
-           POINTonE1_affine_invariant P }} [];
-
-fold_POINTonE2_affine_invariant <- prove_cryptol
-  {{ \P -> (fp2_invariant (P.0) /\ fp2_invariant (P.1)) ==
-           POINTonE2_affine_invariant P }} [];
-
-// TODO: Is this proved somewhere?
-uncompress_E1_uncompress_E1_OK_thm <- admit_cryptol (rewrite (cryptol_ss())
-  {{ \x -> uncompress_E1 x ==
-           if uncompress_E1_imp x != nothing
-           then (True, uncompress_E1_OK x)
-           else apply uncompress_E1 x }});
-
-// We assume that signature_subgroup_check is equivalent to is_in_g1_impl for
-// points on the curve.  This assumption is proved in Bowe "Faster Subgroup
-// Checks for BLS12-381".
-is_in_g1_impl_thm <- admit_cryptol
-  (rewrite (cryptol_ss())
-  {{ \P -> reexport_signature_subgroup_check P ==
-           if is_point_affine E P
-           then is_in_g1_impl P
-           else apply reexport_signature_subgroup_check P }});
-
-fold_normalize_affine_fp_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \P -> (Fp.normalize P.0, Fp.normalize P.1) ==
-           normalize_affine_point Fp P }}) [];
-
-POINTonE1_affine_abs_rep_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
-  {{ \P -> POINTonE1_affine_abs (POINTonE1_affine_rep P) ==
-           normalize_affine_point Fp P }})
-  do {
-    unfolding [ "POINTonE1_affine_abs"
-              , "POINTonE1_affine_rep"
-              , "normalize_affine_point"];
-    rw_with fp_rep_thms;
-    print_goal;
-    w4_unint_z3 [];
-  };
-
-hoist_normalize_affine_fp_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \b P1 P2 -> normalize_affine_point Fp (if b then P1 else P2) ==
-                 if b
-                 then normalize_affine_point Fp P1
-                 else normalize_affine_point Fp P2 }}) [];
-
-normalize_uncompress_E1_OK_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
-  {{ \x -> normalize_affine_point Fp (uncompress_E1_OK x) ==
-           uncompress_E1_OK x }})
-  do {
-    unfolding ["uncompress_E1_OK", "uncompress_E1_x_fp", "uncompress_E1_y"];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with_1 hoist_normalize_affine_fp_thm;
-    unfolding ["normalize_affine_point"];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with fp_laws;
-    rw_with [normalize_sqrt_fp_thm];
-    print_goal;
-    w4_unint_z3 fp_unints;
-  };
 
 let fp_rep_at0 = parse_core "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6 (Vec 64 Bool)) x 0";
 
 squash_at_0_thm <- prove_cryptol
   {{ \(x : Fp_rep_t) (y : Fp_rep_t) -> (fp_rep_at0 [x, y]) == x }} [];
 
-// TODO: Replace with uncompress_on_curve from aggregate_in_g1 proofs (more
+// TODO: Replace with uncompress_E1_on_curve from aggregate_in_g1 proofs (more
 // powerful theorem)
 uncompress_E1_OK_on_curve <- admit_cryptol
   {{ \x -> is_point_affine E (uncompress_E1_OK x) ==
            if uncompress_E1_imp x != nothing
            then True
            else apply is_point_affine E (uncompress_E1_OK x) }};
-
-is_point_O_E_affine_no_abs_rev_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \x y -> ((peq x Fp.field_zero) /\ (peq y Fp.field_zero)) ==
-             is_point_O E (x, y) }}) [];
-
-fold_POINTonE2_affine_abs_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \P -> ((fp2_abs P.0), (fp2_abs P.1)) == POINTonE2_affine_abs P }}) [];
-
-hoist_POINTonE2_affine_abs_thm <- prove_cryptol
-  (rewrite (cryptol_ss())
-    {{ \c p1 p2 -> POINTonE2_affine_abs (if c then p1 else p2) ==
-                   if c then POINTonE2_affine_abs p1 else POINTonE2_affine_abs p2 }})
-  ["POINTonE2_affine_abs"];
-
-hoist_is_point_O_E'_thm <- prove_cryptol
-  (rewrite (cryptol_ss())
-    {{ \c p1 p2 -> is_point_O E' (if c then p1 else p2) ==
-                   if c then is_point_O E' p1 else is_point_O E' p2 }}) [];
-
-POINTonE2_affine_abs_rep_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
-  {{ \P -> POINTonE2_affine_abs (POINTonE2_affine_rep P) ==
-           normalize_affine_point Fp_2 P }})
-  do {
-    unfolding [ "POINTonE2_affine_abs"
-              , "POINTonE2_affine_rep"
-              , "normalize_affine_point" ];
-    rw_with fp2_rep_thms;
-    w4_unint_z3 fp2_unints;
-  };
-
-// TODO: Prove
-// TODO: Try new is_point_O assumption based on CoreVerify precondition instead
-is_point_O_KeyValidate_thm <- admit_cryptol (rewrite (cryptol_ss())
-  {{ \pk -> is_point_O E' (uncompress_E2_OK pk) ==
-            if KeyValidate (join pk) 
-            then False
-            else apply is_point_O E' (uncompress_E2_OK pk) }});
-
-let {{
-  core_verify_pk_in_g2 pk sig msg dst = Fp_12.is_equal(c1, c2) where
-    c1 = bls_ate_pairing (HE1::hash_to_curve_opt (msg, dst)) pk
-    c2 = bls_ate_pairing sig BP'
-}};
-
-// This assumption is justified by Note 1 in proof/pairing.saw
-core_verify_pk_in_g2_impl_thm <- admit_cryptol {{ \pk sig msg dst -> core_verify_pk_in_g2_impl pk sig msg dst [] == core_verify_pk_in_g2 pk sig msg dst }};
-
-blst_core_verify_pk_in_g2_ov <- verify_blst_core_verify_pk_in_g2_null_aug 32 43 0;
-
-demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
-  [ POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
-  , POINTonE1_affine_on_curve_ov
-  , vec_is_zero_2fp_ov
-  , blst_p1_affine_in_g1_ov
-  , blst_p2_uncompress_OK_ov
-  , POINTonE2_affine_on_curve_ov
-  , vec_is_zero_2fp2_ov
-  , blst_p2_affine_in_g2_ov
-  , demo_KeyValidate_A_ov
-  , blst_core_verify_pk_in_g2_ov ]
-  demo_BasicVerify_A_spec
-  do {
-    (goal_num_ite 7
-      (do {
-        // Postcondition proof
-        unfolding [ "CoreVerify"
-                  , "module parameter signature_to_point"
-                  //, "module parameter signature_subgroup_check"
-                  , "signature_to_point_is_affine"
-                  , "maybe_cases"
-                  //, "POINTonE1_affine_rep"
-                  , "signature_to_point"
-                  //, "POINTonE1_affine_abs"
-                  //, "POINTonE2_affine_abs"
-                  , "module parameter pubkey_to_point"
-                  , "pubkey_to_point"
-                  , "blst_core_verify_pk_in_g2_error_precond"];
-        rw_with_1 core_verify_pk_in_g2_impl_thm;
-        unfolding [ "core_verify_pk_in_g2"
-                  , "module parameter pairing"
-                  , "pairing"
-                  , "module parameter hash_to_point"
-                  , "hash_to_point"
-                  , "module parameter P"
-                  , "P" ];
-        rw_with split_join_thms;
-        rw_with [ uncompress_E1_uncompress_E1_OK_thm
-                , POINTonE1_affine_abs_rep_thm
-                , is_in_g1_impl_thm];
-        unfolding ["apply"];
-        simplify basic_ss;
-        simplify (cryptol_ss());
-        simplify fp_simpset;
-        simplify (addsimps core_rewrites empty_ss);
-        //rw_with_1 squash_at_0_thm;
-        rw_with [ fold_normalize_affine_fp_thm
-                , intLe_sym_thm
-                , normalize_uncompress_E1_OK_thm ];
-        simplify basic_ss;
-        simplify (cryptol_ss());
-        unfolding ["POINTonE1_affine_rep"];
-        rw_with fp_rep_thms;
-        rw_with [ normalize_uncompress_E1_OK_thm
-                , intLe_sym_thm
-                , zero_lt_one_thm
-                , is_point_O_E_affine_no_abs_rev_thm
-                , uncompress_E1_OK_on_curve ];
-        simplify basic_ss;
-        simplify (cryptol_ss());
-        rw_with_1 is_point_O_E_affine_no_abs_rev_thm;
-        rw_with [ fold_normalize_affine_fp_thm
-                , deserialize_E2_uncompress_E2_OK_thm
-                , normalize_uncompress_E1_OK_thm ];
-        // TODO: core_verify rewrite rule goes here
-        rw_with [ POINTonE2_affine_abs_rep_thm
-                , hoist_normalize_affine_fp2_thm
-                , normalize_uncompress_E2_OK_thm ];
-        rw_with remove_ho_rules;
-        print_goal;
-        w4_unint_z3 BasicVerify_A_unints;
-      })
-      (do {
-        // Precondition proof(s)
-        unfolding [ "POINTonE1_affine_abs"
-                  , "uncompress_E1_imp"
-                  , "POINTonE2_affine_abs"
-                  /*
-                  , "KeyValidate"
-                  , "module parameter pubkey_to_point"
-                  , "pubkey_to_point"
-                  , "module parameter pubkey_subgroup_check"
-                  , "module parameter other_curve"
-                  , "other_curve"
-                  , "maybe_cases"
-                  */
-                  , "blst_core_verify_pk_in_g2_error_precond"
-                  ];
-        simplify basic_ss;
-        simplify (cryptol_ss());
-        simplify basic_ss;
-        rw_with [ hoist_POINTonE1_affine_rep
-                , hoist_POINTonE1_affine_invariant
-                , hoist_POINTonE2_affine_rep
-                , hoist_POINTonE2_affine_invariant
-                , affine_inv_affine_rep_e2_thm
-                , zero_lt_one_thm
-                , intLe_sym_thm
-                , affine_inv_affine_rep_e1_thm ];
-        rw_with structural_rewrites;
-        simplify basic_ss;
-        rw_with [ fold_POINTonE1_affine_invariant
-                , fold_POINTonE2_affine_invariant
-                , hoist_POINTonE1_affine_invariant
-                , hoist_POINTonE2_affine_invariant
-                , affine_inv_affine_rep_e2_thm
-                , fold_POINTonE2_affine_abs_thm
-                , hoist_POINTonE2_affine_abs_thm
-                , hoist_is_point_O_E'_thm
-                , POINTonE2_affine_abs_rep_thm
-                , is_point_O_KeyValidate_thm
-                , normalize_uncompress_E2_OK_thm
-                , affine_inv_affine_rep_e1_thm ];
-        //rw_with_1 is_point_O_affine_rev_thm;
-        simplify basic_ss;
-        simplify (cryptol_ss());
-        rw_with remove_ho_rules;
-        // END Precondition proofs
-        print_goal;
-        w4_unint_z3 BasicVerify_A_unints;
-      }));
-  };
 
 include "min_key.saw";
 include "aggregate-verify.saw";
