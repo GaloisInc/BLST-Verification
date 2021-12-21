@@ -288,6 +288,8 @@ let verify_blst_core_verify_pk_in_g1_null_aug msg_len dst_len = do {
       (side_conditions_script msg_len dst_len 0));
 };
 
+blst_core_verify_pk_in_g1_ov <- verify_blst_core_verify_pk_in_g1_null_aug 32 43;
+
 let verify_blst_core_verify_pk_in_g1_error msg_len dst_len aug_len = do {
   let Hash_to_G2_ov = run (prove_Hash_to_G2_impl msg_len dst_len aug_len);
   custom_verify_path_sat

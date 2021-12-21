@@ -615,7 +615,7 @@ let BasicAggregateVerify_B_ovs =
                 , blst_pairing_aggregate_pk_in_g1_null_sig_0_ov
                 , blst_pairing_aggregate_pk_in_g1_null_sig_1_first_commit_ov
                 , blst_pairing_aggregate_pk_in_g1_sig_ov
-                ])
+                ]);
 
 let prove_BasicAggregateVerify_B final_goal_num = do {
   // Precondition proof(s)

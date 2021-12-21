@@ -10,7 +10,6 @@ BMPKS <- cryptol_load "../spec/BLSMinimalPublicKeySize.cry";
 let do_prove = true;
 include "proof-helpers.saw";
 */
-
 // TODO: Remove all print_goals
 
 include "bls_operations/large_core_terms.saw";
@@ -23,58 +22,5 @@ include "bls_operations/key_validate_b.saw";
 include "bls_operations/basic_sign_b.saw";
 include "bls_operations/basic_verify_b.saw";
 include "bls_operations/aggregate_verify_a.saw";
-include "bls_operations/aggregate_verify_b.saw";
+//include "bls_operations/aggregate_verify_b.saw";
 
-
-
-/*
-
-
-
-
-fold_scalar_value_thm <- prove_cryptol
-  {{ \x -> toInt`{255} (drop_join_reverse`{255, 32} x) == scalar_value`{255, 32} x }} [];
-
-
-
-// TODO: Replace with uncompress_on_curve from aggregate_in_g2 proofs (more
-// powerful theorem)
-uncompress_E2_OK_on_curve <- admit_cryptol
-  {{ \x -> is_point_affine E' (uncompress_E2_OK x) ==
-           if uncompress_E2_imp x != nothing
-           then True
-           else is_point_affine E' (uncompress_E2_OK x) }};
-
-
-
-include "print_readably.saw";
-
-
-
-
-
-
-
-
-
-
-
-
-
-let fp_rep_at0 = parse_core "\\ (x:(Vec 2 (Vec 6 (Vec 64 Bool)))) -> at 2 (Vec 6 (Vec 64 Bool)) x 0";
-
-squash_at_0_thm <- prove_cryptol
-  {{ \(x : Fp_rep_t) (y : Fp_rep_t) -> (fp_rep_at0 [x, y]) == x }} [];
-
-// TODO: Replace with uncompress_E1_on_curve from aggregate_in_g1 proofs (more
-// powerful theorem)
-uncompress_E1_OK_on_curve <- admit_cryptol
-  {{ \x -> is_point_affine E (uncompress_E1_OK x) ==
-           if uncompress_E1_imp x != nothing
-           then True
-           else apply is_point_affine E (uncompress_E1_OK x) }};
-
-include "min_key.saw";
-include "aggregate-verify.saw";
-include "aggregate-verify-b.saw";
-*/
