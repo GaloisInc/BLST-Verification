@@ -591,11 +591,11 @@ normalize_point_O_E'_0_thm <- prove_cryptol
 normalize_point_O_E'_1_thm <- prove_cryptol
   {{ Fp_2.normalize (point_O E').1 == (point_O E').1 }} [];
 
-// Proof for n = 1
-demo_BasicAggregateVerify_B_ov <- custom_verify
-  "demo_BasicAggregateVerify_B"
+let BasicAggregateVerify_B_ovs =
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ all_distinct_1_ov
+                , all_distinct_3_ov
+                , all_distinct_4_ov
                 , blst_p2_uncompress_OK_ov
                 , POINTonE2_affine_on_curve_ov
                 , blst_p2_affine_in_g2_ov
@@ -616,583 +616,211 @@ demo_BasicAggregateVerify_B_ov <- custom_verify
                 , blst_pairing_aggregate_pk_in_g1_null_sig_1_first_commit_ov
                 , blst_pairing_aggregate_pk_in_g1_sig_ov
                 ])
+
+let prove_BasicAggregateVerify_B final_goal_num = do {
+  // Precondition proof(s)
+  rw_with_1 unfold_all_verify_B_pk_precond_1_thm;
+  unfolding [ "POINTonE2_affine_abs"
+            , "POINTonE1_affine_abs"
+            , "blst_core_verify_pk_in_g1_error_precond"
+            , "verify_B_pk_precond"
+            ];
+  (goal_num_ite final_goal_num
+    do {
+      return ();
+    }
+    do {
+      (unfolding ["uncompress_E1_imp", "uncompress_E2_imp"]);
+    });
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  simplify basic_ss;
+  rw_with [ hoist_POINTonE1_affine_rep
+          , hoist_POINTonE1_affine_invariant
+          , hoist_POINTonE2_affine_rep
+          , hoist_POINTonE2_affine_invariant
+          , affine_inv_affine_rep_e2_thm
+          , zero_lt_one_thm
+          , intLe_sym_thm
+          , affine_inv_affine_rep_e1_thm ];
+  rw_with structural_rewrites;
+  simplify basic_ss;
+  rw_with [ fold_POINTonE1_affine_invariant
+          , fold_POINTonE2_affine_invariant
+          , hoist_POINTonE1_affine_invariant
+          , hoist_POINTonE2_affine_invariant
+          , affine_inv_affine_rep_e2_thm
+          , fold_POINTonE1_affine_abs_thm
+          , hoist_POINTonE1_affine_abs_thm
+          , hoist_is_point_O_E_thm
+          , POINTonE1_affine_abs_rep_thm
+          , is_point_O_E_KeyValidate_thm
+          , normalize_uncompress_E1_OK_thm
+          , unfold_all_POINTonE1_affine_invariant_1_thm
+          , unfold_all_POINTonE2_affine_invariant_1_thm
+          , unfold_all_POINTonE1_affine_invariant_3_thm
+          , unfold_all_POINTonE2_affine_invariant_3_thm
+          , unfold_all_POINTonE1_affine_invariant_4_thm
+          , unfold_all_POINTonE2_affine_invariant_4_thm
+          , unfold_all_verify_B_pk_precond_1_thm
+          , unfold_all_verify_B_pk_precond_3_thm
+          , unfold_all_verify_B_pk_precond_4_thm
+          , affine_inv_affine_rep_e1_thm ];
+  rw_with POINTonE2_base_thms;
+  unfolding ["POINTonE2_rep", "verify_B_pk_precond"];
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  rw_with fp_rep_thms;
+  rw_with fp2_rep_thms;
+  rw_with normalize_hash_to_curve_E2_opt_impl_rws;
+  rw_with hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms;
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  unfolding [ "POINTonE2_invariant"
+            , "POINTonE2_affine_rep"
+            , "select"
+            , "POINTonE2_abs" ];
+  rw_with fp_rep_thms;
+  rw_with fp2_rep_thms;
+  rw_with [ normalize_affine_fp_pair0_thm
+          , normalize_affine_fp2_pair0_thm
+          , hoist_fp2_invariant
+          , normalize_affine_fp_pair1_thm
+          , normalize_affine_fp2_pair1_thm
+          , one_mont_px_invariant_thm
+          , one_mont_px_abs_thm
+          , hoist_is_point_projective_E_z_thm
+          , hoist_is_point_projective_E'_z_thm
+          , is_point_projective_E'_affine_thm
+          , hoist_field_access_0_pair_thm
+          , hoist_field_access_1_pair_thm
+          , normalize_uncompress_E2_OK_thm];
+  rw_with fp_rep_thms;
+  rw_with fp2_rep_thms;
+  rw_with fp12_rep_thms;
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  // Final goal
+  rw_with fp12_normalization_thms;
+  unfolding [ "Cryptol::map"
+            , "BLSMinimalPublicKeySize::CoreAggregateVerify"
+            , "affinify_E'"
+            ];
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  rw_with [ unfold_map
+          , unfold_map_fp2
+          , normalize_miller_loop_opt_checked_thm
+          , finalverify_B_core_verify_thm
+          , finalverify_B_ate_pairing_3_thm
+          , finalverify_B_ate_pairing_4_thm
+          , core_verify_pk_in_g1_impl_thm
+          , unfold_aggregate_loop_min_key_1_thm
+          , unfold_aggregate_loop_min_key_3_thm
+          , unfold_aggregate_loop_min_key_4_thm
+          , affinify_abs_z_1_thm
+          , affinify_abs_z_1_fp2_thm
+          , normalize_uncompress_E1_OK_thm
+          , normalize_uncompress_E2_OK_thm
+          , normalize_point_O_E'_thm
+          , normalize_point_O_E_thm
+          , normalize_affinify_thm
+          , normalize_affinify_fp2_thm
+          , hoist_fp2_abs_thm
+          , hoist_fragmented_affinify_E'_thm
+          ];
+  rw_with fp2_rep_thms;
+  rw_with [ fold_normalize_affine_fp2_thm
+          , normalize_uncompress_E2_OK_thm
+          , normalize_point_O_E'_thm
+          , normalize_uncompress_E2_OK_0_thm
+          , normalize_uncompress_E2_OK_1_thm
+          , normalize_point_O_E'_0_thm
+          , normalize_point_O_E'_1_thm
+          , affinify_abs_z_1_fp2_thm ];
+  unfolding [ "core_verify_pk_in_g1"
+            , "BLSMinimalPublicKeySize::aggregate_loop_body"
+            , "BLSMinimalPublicKeySize::module parameter pairing"
+            , "maybe_cases"
+            , "BLSMinimalPublicKeySize::module parameter P"
+            , "BLSMinimalPublicKeySize::P"
+            , "BLSMinimalPublicKeySize::module parameter G"
+            , "BLSMinimalPublicKeySize::G"
+            , "BLSMinimalPublicKeySize::module parameter hash_to_point"
+            , "BLSMinimalPublicKeySize::hash_to_point"
+            , "BLSMinimalPublicKeySize::module parameter signature_to_point"
+            , "BLSMinimalPublicKeySize::signature_to_point"
+            , "BLSMinimalPublicKeySize::module parameter pubkey_to_point"
+            , "BLSMinimalPublicKeySize::pubkey_to_point"
+            , "BLSMinimalPublicKeySize::pairing"
+            , "BLSMinimalPublicKeySize::reexport_DST"
+            , "BLSMinimalPublicKeySize::module parameter DST"
+            ];
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  rw_with split_join_thms;
+  rw_with [ uncompress_E1_uncompress_E1_OK_thm
+          , deserialize_E2_uncompress_E2_OK_thm
+          , hoist_field_access_1_fp_thm
+          , hoist_field_access_1_fp2_thm
+          , hoist_bls_ate_pairing_lhs_thm
+          , hoist_bls_ate_pairing_rhs_thm
+          , is_in_g1_impl_thm
+          , is_in_g2_impl_min_key_thm
+          , hoist_is_point_affine_E_thm
+          , hoist_is_point_affine_E'_thm
+          , hoist_fragmented_is_point_affine_E'_thm
+          , uncompress_E1_on_curve
+          , uncompress_on_curve
+          , hoist_is_in_g1_impl_thm
+          , hoist_is_in_g2_impl_thm
+          , fp_pair_to_point_thm
+          , fp2_pair_to_point_thm
+          , hash_to_curve_E2_opt_impl_equiv_ov
+          ];
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  unfolding [ "just", "nothing" ];
+  //rw_with fp12_laws;
+  rw_with [ hoist_fp12_normalize_thm
+          , normalize_bls_ate_pairing_thm
+          , fp12_is_equal_thm
+          , fp12_mul_by_1_thm
+          ];
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  rw_with remove_ho_rules;
+  simplify (addsimps readability_rewrites cleanup_simpset);
+  print_goal;
+  w4_unint_z3 (concat [ "HE2::hash_to_curve_opt"
+                      , "affinify_E"
+                      , "affinify_E'"
+                      , "all_distinct"
+                      , "hash_to_curve_E2_opt_impl"
+                      , "fp12_rep"
+                      , "fp12_mul"
+                      , "F_prod_Fp_12"
+                      , "miller_loop_opt" ]
+                      BasicVerify_B_unints);
+};
+
+// Proof for n = 1
+demo_BasicAggregateVerify_B_1_ov <- custom_verify
+  "demo_BasicAggregateVerify_B"
+  BasicAggregateVerify_B_ovs
   (demo_BasicAggregateVerify_B_spec 1)
-  do {
-    // Precondition proof(s)
-    rw_with_1 unfold_all_verify_B_pk_precond_1_thm;
-    unfolding [ "POINTonE2_affine_abs"
-              , "POINTonE1_affine_abs"
-              , "blst_core_verify_pk_in_g1_error_precond"
-              , "verify_B_pk_precond"
-              ];
-    (goal_num_ite 9
-      do {
-        return ();
-      }
-      do {
-        (unfolding ["uncompress_E1_imp", "uncompress_E2_imp"]);
-      });
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    simplify basic_ss;
-    rw_with [ hoist_POINTonE1_affine_rep
-            , hoist_POINTonE1_affine_invariant
-            , hoist_POINTonE2_affine_rep
-            , hoist_POINTonE2_affine_invariant
-            , affine_inv_affine_rep_e2_thm
-            , zero_lt_one_thm
-            , intLe_sym_thm
-            , affine_inv_affine_rep_e1_thm ];
-    rw_with structural_rewrites;
-    simplify basic_ss;
-    rw_with [ fold_POINTonE1_affine_invariant
-            , fold_POINTonE2_affine_invariant
-            , hoist_POINTonE1_affine_invariant
-            , hoist_POINTonE2_affine_invariant
-            , affine_inv_affine_rep_e2_thm
-            , fold_POINTonE1_affine_abs_thm
-            , hoist_POINTonE1_affine_abs_thm
-            , hoist_is_point_O_E_thm
-            , POINTonE1_affine_abs_rep_thm
-            , is_point_O_E_KeyValidate_thm
-            , normalize_uncompress_E1_OK_thm
-            , unfold_all_POINTonE1_affine_invariant_1_thm
-            , unfold_all_POINTonE2_affine_invariant_1_thm
-            , unfold_all_verify_B_pk_precond_1_thm
-            , affine_inv_affine_rep_e1_thm ];
-    rw_with POINTonE2_base_thms;
-    unfolding ["POINTonE2_rep", "verify_B_pk_precond"];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with fp_rep_thms;
-    rw_with fp2_rep_thms;
-    rw_with normalize_hash_to_curve_E2_opt_impl_rws;
-    rw_with hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms;
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    unfolding [ "POINTonE2_invariant"
-              , "POINTonE2_affine_rep"
-              , "select"
-              , "POINTonE2_abs" ];
-    rw_with fp_rep_thms;
-    rw_with fp2_rep_thms;
-    rw_with [ normalize_affine_fp_pair0_thm
-            , normalize_affine_fp2_pair0_thm
-            , hoist_fp2_invariant
-            , normalize_affine_fp_pair1_thm
-            , normalize_affine_fp2_pair1_thm
-            , one_mont_px_invariant_thm
-            , one_mont_px_abs_thm
-            , hoist_is_point_projective_E_z_thm
-            , hoist_is_point_projective_E'_z_thm
-            , is_point_projective_E'_affine_thm
-            , hoist_field_access_0_pair_thm
-            , hoist_field_access_1_pair_thm
-            , normalize_uncompress_E2_OK_thm];
-    rw_with fp_rep_thms;
-    rw_with fp2_rep_thms;
-    rw_with fp12_rep_thms;
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    // Final goal
-    rw_with fp12_normalization_thms;
-    unfolding [ "Cryptol::map"
-              , "BLSMinimalPublicKeySize::CoreAggregateVerify"
-              , "affinify_E'"
-              ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with [ unfold_map
-            , unfold_map_fp2
-            , normalize_miller_loop_opt_checked_thm
-            , finalverify_B_core_verify_thm
-            , core_verify_pk_in_g1_impl_thm
-            , unfold_aggregate_loop_min_key_1_thm
-            , affinify_abs_z_1_thm
-            , affinify_abs_z_1_fp2_thm
-            , normalize_uncompress_E1_OK_thm
-            , normalize_uncompress_E2_OK_thm
-            , normalize_point_O_E'_thm
-            , normalize_point_O_E_thm
-            , normalize_affinify_thm
-            , normalize_affinify_fp2_thm
-            , hoist_fp2_abs_thm
-            , hoist_fragmented_affinify_E'_thm
-            ];
-    rw_with fp2_rep_thms;
-    rw_with [ fold_normalize_affine_fp2_thm
-            , normalize_uncompress_E2_OK_thm
-            , normalize_point_O_E'_thm
-            , normalize_uncompress_E2_OK_0_thm
-            , normalize_uncompress_E2_OK_1_thm
-            , normalize_point_O_E'_0_thm
-            , normalize_point_O_E'_1_thm
-            , affinify_abs_z_1_fp2_thm ];
-    unfolding [ "core_verify_pk_in_g1"
-              , "BLSMinimalPublicKeySize::aggregate_loop_body"
-              , "BLSMinimalPublicKeySize::module parameter pairing"
-              , "maybe_cases"
-              , "BLSMinimalPublicKeySize::module parameter P"
-              , "BLSMinimalPublicKeySize::P"
-              , "BLSMinimalPublicKeySize::module parameter G"
-              , "BLSMinimalPublicKeySize::G"
-              , "BLSMinimalPublicKeySize::module parameter hash_to_point"
-              , "BLSMinimalPublicKeySize::hash_to_point"
-              , "BLSMinimalPublicKeySize::module parameter signature_to_point"
-              , "BLSMinimalPublicKeySize::signature_to_point"
-              , "BLSMinimalPublicKeySize::module parameter pubkey_to_point"
-              , "BLSMinimalPublicKeySize::pubkey_to_point"
-              , "BLSMinimalPublicKeySize::pairing"
-              , "BLSMinimalPublicKeySize::reexport_DST"
-              , "BLSMinimalPublicKeySize::module parameter DST"
-              ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with split_join_thms;
-    rw_with [ uncompress_E1_uncompress_E1_OK_thm
-            , deserialize_E2_uncompress_E2_OK_thm
-            , hoist_field_access_1_fp_thm
-            , hoist_field_access_1_fp2_thm
-            , hoist_bls_ate_pairing_lhs_thm
-            , hoist_bls_ate_pairing_rhs_thm
-            , is_in_g1_impl_thm
-            , is_in_g2_impl_min_key_thm
-            , hoist_is_point_affine_E_thm
-            , hoist_is_point_affine_E'_thm
-            , hoist_fragmented_is_point_affine_E'_thm
-            , uncompress_E1_on_curve
-            , uncompress_on_curve
-            , hoist_is_in_g1_impl_thm
-            , hoist_is_in_g2_impl_thm
-            , fp_pair_to_point_thm
-            , fp2_pair_to_point_thm
-            ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    unfolding [ "just", "nothing" ];
-    rw_with fp12_laws;
-    rw_with [ hoist_fp12_normalize_thm
-            , normalize_bls_ate_pairing_thm
-            , fp12_is_equal_thm
-            ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with remove_ho_rules;
-    simplify (addsimps readability_rewrites cleanup_simpset);
-    print_goal;
-    w4_unint_z3 (concat [ "affinify_E"
-                        , "affinify_E'"
-                        , "all_distinct"
-                        , "hash_to_curve_E2_opt_impl"
-                        , "fp12_rep"
-                        , "F_prod_Fp_12"
-                        , "miller_loop_opt" ]
-                        BasicVerify_B_unints);
-  };
+  (prove_BasicAggregateVerify_B 9);
 
 // Proof for n = 3
-demo_BasicAggregateVerify_B_ov <- custom_verify
+demo_BasicAggregateVerify_B_3_ov <- custom_verify
   "demo_BasicAggregateVerify_B"
-  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
-                [ all_distinct_3_ov
-                , blst_p2_uncompress_OK_ov
-                , POINTonE2_affine_on_curve_ov
-                , blst_p2_affine_in_g2_ov
-                , demo_KeyValidate_B_ov
-                , POINTonE1_Uncompress_OK_ov
-                // ovs used in pairing aggregate:
-                , POINTonE2_in_g2_ov
-                , Hash_to_G2_ov
-                , POINTonE2_from_Jacobian_alias_ov
-                , vec_copy_2fp_ov
-                // ovs used in blst_pairing_commit:
-                , miller_loop_n_1_ov
-                // ovs used in blst_pairing_finalverify:
-                , blst_pairing_finalverify_B_ov
-                // Pairing aggregate ovs
-                , blst_pairing_aggregate_pk_in_g1_null_sig_1_nth_commit_ov
-                , blst_pairing_aggregate_pk_in_g1_null_sig_0_ov
-                , blst_pairing_aggregate_pk_in_g1_null_sig_1_first_commit_ov
-                , blst_pairing_aggregate_pk_in_g1_sig_ov
-                ])
+  BasicAggregateVerify_B_ovs
   (demo_BasicAggregateVerify_B_spec 3)
-  do {
-    // Precondition proof(s)
-    rw_with_1 unfold_all_verify_B_pk_precond_1_thm;
-    unfolding [ "POINTonE2_affine_abs"
-              , "POINTonE1_affine_abs"
-              , "blst_core_verify_pk_in_g1_error_precond"
-              , "verify_B_pk_precond"
-              ];
-    (goal_num_ite 16
-      do {
-        return ();
-      }
-      do {
-        (unfolding ["uncompress_E1_imp", "uncompress_E2_imp"]);
-      });
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    simplify basic_ss;
-    rw_with [ hoist_POINTonE1_affine_rep
-            , hoist_POINTonE1_affine_invariant
-            , hoist_POINTonE2_affine_rep
-            , hoist_POINTonE2_affine_invariant
-            , affine_inv_affine_rep_e2_thm
-            , zero_lt_one_thm
-            , intLe_sym_thm
-            , affine_inv_affine_rep_e1_thm ];
-    rw_with structural_rewrites;
-    simplify basic_ss;
-    rw_with [ fold_POINTonE1_affine_invariant
-            , fold_POINTonE2_affine_invariant
-            , hoist_POINTonE1_affine_invariant
-            , hoist_POINTonE2_affine_invariant
-            , affine_inv_affine_rep_e2_thm
-            , fold_POINTonE1_affine_abs_thm
-            , hoist_POINTonE1_affine_abs_thm
-            , hoist_is_point_O_E_thm
-            , POINTonE1_affine_abs_rep_thm
-            , is_point_O_E_KeyValidate_thm
-            , normalize_uncompress_E1_OK_thm
-            , unfold_all_POINTonE1_affine_invariant_1_thm
-            , unfold_all_POINTonE2_affine_invariant_1_thm
-            , unfold_all_POINTonE1_affine_invariant_3_thm
-            , unfold_all_POINTonE2_affine_invariant_3_thm
-            , unfold_all_verify_B_pk_precond_3_thm
-            , affine_inv_affine_rep_e1_thm ];
-    rw_with POINTonE2_base_thms;
-    unfolding ["POINTonE2_rep", "verify_B_pk_precond"];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with fp_rep_thms;
-    rw_with fp2_rep_thms;
-    rw_with normalize_hash_to_curve_E2_opt_impl_rws;
-    rw_with hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms;
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    unfolding [ "POINTonE2_invariant"
-              , "POINTonE2_affine_rep"
-              , "select"
-              , "POINTonE2_abs" ];
-    rw_with fp_rep_thms;
-    rw_with fp2_rep_thms;
-    rw_with [ normalize_affine_fp_pair0_thm
-            , normalize_affine_fp2_pair0_thm
-            , hoist_fp2_invariant
-            , normalize_affine_fp_pair1_thm
-            , normalize_affine_fp2_pair1_thm
-            , one_mont_px_invariant_thm
-            , one_mont_px_abs_thm
-            , hoist_is_point_projective_E_z_thm
-            , hoist_is_point_projective_E'_z_thm
-            , is_point_projective_E'_affine_thm
-            , hoist_field_access_0_pair_thm
-            , hoist_field_access_1_pair_thm
-            , normalize_uncompress_E2_OK_thm];
-    rw_with fp_rep_thms;
-    rw_with fp2_rep_thms;
-    rw_with fp12_rep_thms;
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    // Final goal
-    rw_with fp12_normalization_thms;
-    unfolding [ "Cryptol::map"
-              , "BLSMinimalPublicKeySize::CoreAggregateVerify"
-              , "affinify_E'"
-              ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with [ unfold_map
-            , unfold_map_fp2
-            , normalize_miller_loop_opt_checked_thm
-            , finalverify_B_ate_pairing_3_thm
-            , core_verify_pk_in_g1_impl_thm
-            , unfold_aggregate_loop_min_key_3_thm
-            , affinify_abs_z_1_thm
-            , affinify_abs_z_1_fp2_thm
-            , normalize_uncompress_E1_OK_thm
-            , normalize_uncompress_E2_OK_thm
-            , normalize_point_O_E'_thm
-            , normalize_point_O_E_thm
-            , normalize_affinify_thm
-            , normalize_affinify_fp2_thm
-            , hoist_fp2_abs_thm
-            , hoist_fragmented_affinify_E'_thm
-            ];
-    rw_with fp2_rep_thms;
-    rw_with [ fold_normalize_affine_fp2_thm
-            , normalize_uncompress_E2_OK_thm
-            , normalize_point_O_E'_thm //
-            , normalize_uncompress_E2_OK_0_thm
-            , normalize_uncompress_E2_OK_1_thm
-            , normalize_point_O_E'_0_thm
-            , normalize_point_O_E'_1_thm
-            , affinify_abs_z_1_fp2_thm ];
-    unfolding [ "core_verify_pk_in_g1"
-              , "BLSMinimalPublicKeySize::aggregate_loop_body"
-              , "BLSMinimalPublicKeySize::module parameter pairing"
-              , "maybe_cases"
-              , "BLSMinimalPublicKeySize::module parameter P"
-              , "BLSMinimalPublicKeySize::P"
-              , "BLSMinimalPublicKeySize::module parameter G"
-              , "BLSMinimalPublicKeySize::G"
-              , "BLSMinimalPublicKeySize::module parameter hash_to_point"
-              , "BLSMinimalPublicKeySize::hash_to_point"
-              , "BLSMinimalPublicKeySize::module parameter signature_to_point"
-              , "BLSMinimalPublicKeySize::signature_to_point"
-              , "BLSMinimalPublicKeySize::module parameter pubkey_to_point"
-              , "BLSMinimalPublicKeySize::pubkey_to_point"
-              , "BLSMinimalPublicKeySize::pairing"
-              , "BLSMinimalPublicKeySize::reexport_DST"
-              , "BLSMinimalPublicKeySize::module parameter DST"
-              ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with split_join_thms;
-    rw_with [ uncompress_E1_uncompress_E1_OK_thm
-            , deserialize_E2_uncompress_E2_OK_thm
-            , hoist_field_access_1_fp_thm
-            , hoist_field_access_1_fp2_thm
-            , hoist_bls_ate_pairing_lhs_thm
-            , hoist_bls_ate_pairing_rhs_thm
-            , is_in_g1_impl_thm
-            , is_in_g2_impl_min_key_thm
-            , hoist_is_point_affine_E_thm
-            , hoist_is_point_affine_E'_thm
-            , hoist_fragmented_is_point_affine_E'_thm
-            , uncompress_E1_on_curve
-            , uncompress_on_curve
-            , hoist_is_in_g1_impl_thm
-            , hoist_is_in_g2_impl_thm
-            , fp_pair_to_point_thm
-            , fp2_pair_to_point_thm
-            , hash_to_curve_E2_opt_impl_equiv_ov
-            ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    unfolding [ "just", "nothing" ];
-    rw_with [ hoist_fp12_normalize_thm
-            , normalize_bls_ate_pairing_thm
-            , fp12_is_equal_thm
-            , fp12_mul_by_1_thm
-            ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with remove_ho_rules;
-    simplify (addsimps readability_rewrites cleanup_simpset);
-    print_goal;
-    w4_unint_z3 (concat [ "HE2::hash_to_curve_opt"
-                        , "affinify_E"
-                        , "affinify_E'"
-                        , "all_distinct"
-                        , "hash_to_curve_E2_opt_impl"
-                        , "fp12_rep"
-                        , "fp12_mul"
-                        , "F_prod_Fp_12"
-                        , "miller_loop_opt" ]
-                        BasicVerify_B_unints);
-  };
+  (prove_BasicAggregateVerify_B 16);
 
-demo_BasicAggregateVerify_B_ov <- custom_verify
+// Proof for n = 4
+demo_BasicAggregateVerify_B_4_ov <- custom_verify
   "demo_BasicAggregateVerify_B"
-  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
-                [ all_distinct_4_ov
-                , blst_p2_uncompress_OK_ov
-                , POINTonE2_affine_on_curve_ov
-                , blst_p2_affine_in_g2_ov
-                , demo_KeyValidate_B_ov
-                , POINTonE1_Uncompress_OK_ov
-                // ovs used in pairing aggregate:
-                , POINTonE2_in_g2_ov
-                , Hash_to_G2_ov
-                , POINTonE2_from_Jacobian_alias_ov
-                , vec_copy_2fp_ov
-                // ovs used in blst_pairing_commit:
-                , miller_loop_n_1_ov
-                // ovs used in blst_pairing_finalverify:
-                , blst_pairing_finalverify_B_ov
-                // Pairing aggregate ovs
-                , blst_pairing_aggregate_pk_in_g1_null_sig_1_nth_commit_ov
-                , blst_pairing_aggregate_pk_in_g1_null_sig_0_ov
-                , blst_pairing_aggregate_pk_in_g1_null_sig_1_first_commit_ov
-                , blst_pairing_aggregate_pk_in_g1_sig_ov
-                ])
+  BasicAggregateVerify_B_ovs
   (demo_BasicAggregateVerify_B_spec 4)
-  do {
-    // Precondition proof(s)
-    rw_with_1 unfold_all_verify_B_pk_precond_1_thm;
-    unfolding [ "POINTonE2_affine_abs"
-              , "POINTonE1_affine_abs"
-              , "blst_core_verify_pk_in_g1_error_precond"
-              , "verify_B_pk_precond"
-              ];
-    (goal_num_ite 17
-      do {
-        return ();
-      }
-      do {
-        (unfolding ["uncompress_E1_imp", "uncompress_E2_imp"]);
-      });
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    simplify basic_ss;
-    rw_with [ hoist_POINTonE1_affine_rep
-            , hoist_POINTonE1_affine_invariant
-            , hoist_POINTonE2_affine_rep
-            , hoist_POINTonE2_affine_invariant
-            , affine_inv_affine_rep_e2_thm
-            , zero_lt_one_thm
-            , intLe_sym_thm
-            , affine_inv_affine_rep_e1_thm ];
-    rw_with structural_rewrites;
-    simplify basic_ss;
-    rw_with [ fold_POINTonE1_affine_invariant
-            , fold_POINTonE2_affine_invariant
-            , hoist_POINTonE1_affine_invariant
-            , hoist_POINTonE2_affine_invariant
-            , affine_inv_affine_rep_e2_thm
-            , fold_POINTonE1_affine_abs_thm
-            , hoist_POINTonE1_affine_abs_thm
-            , hoist_is_point_O_E_thm
-            , POINTonE1_affine_abs_rep_thm
-            , is_point_O_E_KeyValidate_thm
-            , normalize_uncompress_E1_OK_thm
-            , unfold_all_POINTonE1_affine_invariant_1_thm
-            , unfold_all_POINTonE2_affine_invariant_1_thm
-            , unfold_all_POINTonE1_affine_invariant_4_thm
-            , unfold_all_POINTonE2_affine_invariant_4_thm
-            , unfold_all_verify_B_pk_precond_4_thm
-            , affine_inv_affine_rep_e1_thm ];
-    rw_with POINTonE2_base_thms;
-    unfolding ["POINTonE2_rep", "verify_B_pk_precond"];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with fp_rep_thms;
-    rw_with fp2_rep_thms;
-    rw_with normalize_hash_to_curve_E2_opt_impl_rws;
-    rw_with hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms;
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    unfolding [ "POINTonE2_invariant"
-              , "POINTonE2_affine_rep"
-              , "select"
-              , "POINTonE2_abs" ];
-    rw_with fp_rep_thms;
-    rw_with fp2_rep_thms;
-    rw_with [ normalize_affine_fp_pair0_thm
-            , normalize_affine_fp2_pair0_thm
-            , hoist_fp2_invariant
-            , normalize_affine_fp_pair1_thm
-            , normalize_affine_fp2_pair1_thm
-            , one_mont_px_invariant_thm
-            , one_mont_px_abs_thm
-            , hoist_is_point_projective_E_z_thm
-            , hoist_is_point_projective_E'_z_thm
-            , is_point_projective_E'_affine_thm
-            , hoist_field_access_0_pair_thm
-            , hoist_field_access_1_pair_thm
-            , normalize_uncompress_E2_OK_thm];
-    rw_with fp_rep_thms;
-    rw_with fp2_rep_thms;
-    rw_with fp12_rep_thms;
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    // Final goal
-    rw_with fp12_normalization_thms;
-    unfolding [ "Cryptol::map"
-              , "BLSMinimalPublicKeySize::CoreAggregateVerify"
-              , "affinify_E'"
-              ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with [ unfold_map
-            , unfold_map_fp2
-            , normalize_miller_loop_opt_checked_thm
-            , finalverify_B_ate_pairing_4_thm
-            , core_verify_pk_in_g1_impl_thm
-            , unfold_aggregate_loop_min_key_4_thm
-            , affinify_abs_z_1_thm
-            , affinify_abs_z_1_fp2_thm
-            , normalize_uncompress_E1_OK_thm
-            , normalize_uncompress_E2_OK_thm
-            , normalize_point_O_E'_thm
-            , normalize_point_O_E_thm
-            , normalize_affinify_thm
-            , normalize_affinify_fp2_thm
-            , hoist_fp2_abs_thm
-            , hoist_fragmented_affinify_E'_thm
-            ];
-    rw_with fp2_rep_thms;
-    rw_with [ fold_normalize_affine_fp2_thm
-            , normalize_uncompress_E2_OK_thm
-            , normalize_point_O_E'_thm //
-            , normalize_uncompress_E2_OK_0_thm
-            , normalize_uncompress_E2_OK_1_thm
-            , normalize_point_O_E'_0_thm
-            , normalize_point_O_E'_1_thm
-            , affinify_abs_z_1_fp2_thm ];
-    unfolding [ "core_verify_pk_in_g1"
-              , "BLSMinimalPublicKeySize::aggregate_loop_body"
-              , "BLSMinimalPublicKeySize::module parameter pairing"
-              , "maybe_cases"
-              , "BLSMinimalPublicKeySize::module parameter P"
-              , "BLSMinimalPublicKeySize::P"
-              , "BLSMinimalPublicKeySize::module parameter G"
-              , "BLSMinimalPublicKeySize::G"
-              , "BLSMinimalPublicKeySize::module parameter hash_to_point"
-              , "BLSMinimalPublicKeySize::hash_to_point"
-              , "BLSMinimalPublicKeySize::module parameter signature_to_point"
-              , "BLSMinimalPublicKeySize::signature_to_point"
-              , "BLSMinimalPublicKeySize::module parameter pubkey_to_point"
-              , "BLSMinimalPublicKeySize::pubkey_to_point"
-              , "BLSMinimalPublicKeySize::pairing"
-              , "BLSMinimalPublicKeySize::reexport_DST"
-              , "BLSMinimalPublicKeySize::module parameter DST"
-              ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with split_join_thms;
-    rw_with [ uncompress_E1_uncompress_E1_OK_thm
-            , deserialize_E2_uncompress_E2_OK_thm
-            , hoist_field_access_1_fp_thm
-            , hoist_field_access_1_fp2_thm
-            , hoist_bls_ate_pairing_lhs_thm
-            , hoist_bls_ate_pairing_rhs_thm
-            , is_in_g1_impl_thm
-            , is_in_g2_impl_min_key_thm
-            , hoist_is_point_affine_E_thm
-            , hoist_is_point_affine_E'_thm
-            , hoist_fragmented_is_point_affine_E'_thm
-            , uncompress_E1_on_curve
-            , uncompress_on_curve
-            , hoist_is_in_g1_impl_thm
-            , hoist_is_in_g2_impl_thm
-            , fp_pair_to_point_thm
-            , fp2_pair_to_point_thm
-            , hash_to_curve_E2_opt_impl_equiv_ov
-            ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    unfolding [ "just", "nothing" ];
-    rw_with [ hoist_fp12_normalize_thm
-            , normalize_bls_ate_pairing_thm
-            , fp12_is_equal_thm
-            , fp12_mul_by_1_thm
-            ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with remove_ho_rules;
-    simplify (addsimps readability_rewrites cleanup_simpset);
-    print_goal;
-    w4_unint_z3 (concat [ "HE2::hash_to_curve_opt"
-                        , "affinify_E"
-                        , "affinify_E'"
-                        , "all_distinct"
-                        , "hash_to_curve_E2_opt_impl"
-                        , "fp12_rep"
-                        , "fp12_mul"
-                        , "F_prod_Fp_12"
-                        , "miller_loop_opt" ]
-                        BasicVerify_B_unints);
-  };
+  (prove_BasicAggregateVerify_B 17);
