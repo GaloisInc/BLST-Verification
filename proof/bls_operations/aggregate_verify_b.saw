@@ -157,39 +157,6 @@ hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms <-
 normalize_hash_to_curve_E2_opt_impl_rws <-
   normalize_hash_to_curve_impl msg_len dst_len aug_len;
 
-blst_pairing_aggregate_pk_in_g1_null_sig_0_ov <- custom_verify
-  "blst_pairing_aggregate_pk_in_g1"
-  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
-                [ Hash_to_G2_ov
-                , POINTonE2_from_Jacobian_alias_ov
-                , vec_copy_2fp_ov
-                , miller_loop_n_2_ov ])
-  // AGGR_GT_SET will always be set in null_sig case for N_MAX == 2
-  (blst_pairing_aggregate_pk_in_g1_null_sig_spec 0 true)
-  do {
-    unfolding [ "POINTonE1_affine_invariant"
-              , "is_point_O"
-              , "same_point_affine"
-              , "point_O"
-              , "POINTonE1_affine_abs"
-              , "BMPKS::reexport_DST"
-              , "BLSMinimalPublicKeySize::DST" ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with POINTonE2_base_thms;
-    unfolding ["POINTonE2_rep"];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with fp2_rep_thms;
-    rw_with normalize_hash_to_curve_E2_opt_impl_rws;
-    rw_with hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms;
-    rw_with remove_ho_rules;
-    print_goal;
-    w4_unint_z3 (concat [ "affinify_E'"
-                        , "hash_to_curve_E2_opt_impl" ]
-                        BasicVerify_B_unints);
-  };
-
 let map_size_2_fp2_term = parse_core "\\(f : ((Vec 2 (Vec 6 (Vec 64 Bool))) * (Vec 2 (Vec 6 (Vec 64 Bool)))) -> ((Vec 2 Integer) * (Vec 2 Integer))) -> \\(y : Vec 2 ((Vec 2 (Vec 6 (Vec 64 Bool))) * (Vec 2 (Vec 6 (Vec 64 Bool))))) -> map ((Vec 2 (Vec 6 (Vec 64 Bool))) * (Vec 2 (Vec 6 (Vec 64 Bool)))) ((Vec 2 Integer) * (Vec 2 Integer)) f 2 y";
 
 // This is admitted so that it can be polymorphic.  Proving it would require
@@ -198,92 +165,64 @@ let map_size_2_fp2_term = parse_core "\\(f : ((Vec 2 (Vec 6 (Vec 64 Bool))) * (V
 unfold_map_fp2 <- admit_cryptol (rewrite (cryptol_ss())
   {{ \f xs -> (map_size_2_fp2_term f xs) == ([f x1, f x2] where [x1, x2] = xs) }});
 
-blst_pairing_aggregate_pk_in_g1_null_sig_1_first_commit_ov <- custom_verify
-  "blst_pairing_aggregate_pk_in_g1"
+let blst_pairing_aggregate_pk_in_g1_null_sig_ovs =
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ Hash_to_G2_ov
                 , POINTonE2_from_Jacobian_alias_ov
                 , vec_copy_2fp_ov
-                , miller_loop_n_2_ov ])
+                , miller_loop_n_2_ov ]);
+
+let prove_blst_pairing_aggregate_pk_in_g1_null_sig = do {
+  rw_with [ unfold_all_POINTonE1_affine_invariant_2_thm
+          , unfold_all_POINTonE2_affine_invariant_2_thm ];
+  unfolding [ "Cryptol::map" ];
+  rw_with [unfold_map_fp2];
+  unfolding [ "POINTonE1_affine_invariant"
+            , "is_point_O"
+            , "same_point_affine"
+            , "point_O"
+            , "POINTonE1_affine_abs"
+            , "BMPKS::reexport_DST"
+            , "BLSMinimalPublicKeySize::DST" ];
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  rw_with POINTonE2_base_thms;
+  unfolding ["POINTonE2_rep"];
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  rw_with fp2_rep_thms;
+  rw_with normalize_hash_to_curve_E2_opt_impl_rws;
+  rw_with hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms;
+  rw_with [normalize_affinify_fp2_thm, F_prod_Fp_12_thm];
+  rw_with fp12_rep_thms;
+  rw_with remove_ho_rules;
+  print_goal;
+  w4_unint_z3 (concat [ "affinify_E'"
+                      , "fp12_rep"
+                      , "F_prod_Fp_12"
+                      , "miller_loop_opt"
+                      , "hash_to_curve_E2_opt_impl" ]
+                      BasicVerify_B_unints);
+};
+
+blst_pairing_aggregate_pk_in_g1_null_sig_0_ov <- custom_verify
+  "blst_pairing_aggregate_pk_in_g1"
+  blst_pairing_aggregate_pk_in_g1_null_sig_ovs
+  // AGGR_GT_SET will always be set in null_sig case for N_MAX == 2
+  (blst_pairing_aggregate_pk_in_g1_null_sig_spec 0 true)
+  prove_blst_pairing_aggregate_pk_in_g1_null_sig;
+
+blst_pairing_aggregate_pk_in_g1_null_sig_1_first_commit_ov <- custom_verify
+  "blst_pairing_aggregate_pk_in_g1"
+  blst_pairing_aggregate_pk_in_g1_null_sig_ovs
   (blst_pairing_aggregate_pk_in_g1_null_sig_spec 1 false)
-  do {
-    // BEGIN N == 2 specific
-    rw_with [ unfold_all_POINTonE1_affine_invariant_2_thm
-            , unfold_all_POINTonE2_affine_invariant_2_thm ];
-    unfolding [ "Cryptol::map" ];
-    rw_with [unfold_map_fp2];
-    // END N == 2 specific
-    unfolding [ "POINTonE1_affine_invariant"
-              , "is_point_O"
-              , "same_point_affine"
-              , "point_O"
-              , "POINTonE1_affine_abs"
-              , "BMPKS::reexport_DST"
-              , "BLSMinimalPublicKeySize::DST" ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with POINTonE2_base_thms;
-    unfolding ["POINTonE2_rep"];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with fp2_rep_thms;
-    rw_with normalize_hash_to_curve_E2_opt_impl_rws;
-    rw_with hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms;
-    // BEGIN N == 2 specific
-    rw_with [normalize_affinify_fp2_thm, F_prod_Fp_12_thm];
-    // END N == 2 specific
-    rw_with remove_ho_rules;
-    print_goal;
-    w4_unint_z3 (concat [ "affinify_E'"
-                        , "fp12_rep"
-                        , "F_prod_Fp_12"
-                        , "miller_loop_opt"
-                        , "hash_to_curve_E2_opt_impl" ]
-                        BasicVerify_B_unints);
-  };
+  prove_blst_pairing_aggregate_pk_in_g1_null_sig;
 
 blst_pairing_aggregate_pk_in_g1_null_sig_1_nth_commit_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g1"
-  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
-                [ Hash_to_G2_ov
-                , POINTonE2_from_Jacobian_alias_ov
-                , vec_copy_2fp_ov
-                , miller_loop_n_2_ov ])
+  blst_pairing_aggregate_pk_in_g1_null_sig_ovs
   (blst_pairing_aggregate_pk_in_g1_null_sig_spec 1 true)
-  do {
-    rw_with [ unfold_all_POINTonE1_affine_invariant_2_thm
-            , unfold_all_POINTonE2_affine_invariant_2_thm ];
-    unfolding [ "Cryptol::map" ];
-    rw_with [unfold_map_fp2];
-    unfolding [ "POINTonE1_affine_invariant"
-              , "is_point_O"
-              , "same_point_affine"
-              , "point_O"
-              , "POINTonE1_affine_abs"
-              , "BMPKS::reexport_DST"
-              , "BLSMinimalPublicKeySize::DST" ];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with POINTonE2_base_thms;
-    unfolding ["POINTonE2_rep"];
-    simplify basic_ss;
-    simplify (cryptol_ss());
-    rw_with fp2_rep_thms;
-    rw_with normalize_hash_to_curve_E2_opt_impl_rws;
-    rw_with hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms;
-    rw_with [normalize_affinify_fp2_thm, F_prod_Fp_12_thm];
-    // BEGIN nth_commit specific
-    rw_with fp12_rep_thms;
-    // END nth_commit specific
-    rw_with remove_ho_rules;
-    print_goal;
-    w4_unint_z3 (concat [ "affinify_E'"
-                        , "fp12_rep"
-                        , "F_prod_Fp_12"
-                        , "miller_loop_opt"
-                        , "hash_to_curve_E2_opt_impl" ]
-                        BasicVerify_B_unints);
-  };
+  prove_blst_pairing_aggregate_pk_in_g1_null_sig;
 
 let blst_pairing_aggregate_pk_in_g1_sig_spec = do {
   ctx_ptr <- llvm_alloc (llvm_struct "struct.blst_pairing_st");
@@ -839,7 +778,8 @@ demo_BasicAggregateVerify_B_ov <- custom_verify
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with remove_ho_rules;
-    print_readably;
+    simplify (addsimps readability_rewrites cleanup_simpset);
+    print_goal;
     w4_unint_z3 (concat [ "affinify_E"
                         , "affinify_E'"
                         , "all_distinct"
@@ -1040,7 +980,8 @@ demo_BasicAggregateVerify_B_ov <- custom_verify
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with remove_ho_rules;
-    print_readably;
+    simplify (addsimps readability_rewrites cleanup_simpset);
+    print_goal;
     w4_unint_z3 (concat [ "HE2::hash_to_curve_opt"
                         , "affinify_E"
                         , "affinify_E'"
@@ -1242,7 +1183,8 @@ demo_BasicAggregateVerify_B_ov <- custom_verify
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with remove_ho_rules;
-    print_readably;
+    simplify (addsimps readability_rewrites cleanup_simpset);
+    print_goal;
     w4_unint_z3 (concat [ "HE2::hash_to_curve_opt"
                         , "affinify_E"
                         , "affinify_E'"

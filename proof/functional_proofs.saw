@@ -16,7 +16,6 @@ m_noadx_recent <- llvm_load_module "../build/llvm_noadx_recent/libblst.a.bc";
 let do_prove = false;
 
 include "proof-helpers.saw";
-include "print_readably.saw";
 
 include "x86/correctness.saw";
 
@@ -60,4 +59,5 @@ include "final_exp.saw";
 include "core_verify_pk_in_g1.saw";
 include "core_verify_pk_in_g2.saw";
 
+include "print_readably.saw";
 include "bls_operations.saw";

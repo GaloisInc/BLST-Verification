@@ -844,7 +844,6 @@ let prove_BasicAggregateVerify_A final_goal_num = do {
   simplify basic_ss;
   simplify (cryptol_ss());
   unfolding [ "just", "nothing" ];
-  //rw_with fp12_laws;
   rw_with [ hoist_fp12_normalize_thm
           , normalize_bls_ate_pairing_thm
           , fp12_is_equal_thm
