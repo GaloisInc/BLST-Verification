@@ -745,7 +745,7 @@ fp12_is_equal_thm <- prove_cryptol (rewrite (cryptol_ss())
 fp12_mul_by_1_thm <- prove_cryptol
   {{ \x      -> Fp_12.mul (Fp_12.field_unit, x) == Fp_12.normalize x }} [];
 
-let BasicAggregateVerify_ovs =
+let BasicAggregateVerify_A_ovs =
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ all_distinct_1_ov
                 , all_distinct_3_ov
@@ -774,28 +774,7 @@ let BasicAggregateVerify_ovs =
 // Proof for n = 1
 demo_BasicAggregateVerify_A_ov <- custom_verify
   "demo_BasicAggregateVerify_A"
-  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
-                [ all_distinct_1_ov
-                , POINTonE1_Uncompress_OK_ov
-                , POINTonE1_affine_on_curve_ov
-                , blst_p1_affine_in_g1_ov
-                , demo_KeyValidate_A_ov
-                , blst_p2_uncompress_OK_ov
-                // ovs used in pairing aggregate:
-                , POINTonE1_in_G1_ov
-                , Hash_to_G1_ov
-                , POINTonE1_from_Jacobian_alias_ov
-                , vec_copy_2fp_ov
-                // ovs used in blst_pairing_commit:
-                , miller_loop_n_1_ov
-                // ovs used in blst_pairing_finalverify:
-                , blst_pairing_finalverify_A_ov
-                // Pairing aggregate ovs
-                , blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov
-                , blst_pairing_aggregate_pk_in_g2_null_sig_0_ov
-                , blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov
-                , blst_pairing_aggregate_pk_in_g2_sig_ov
-                ])
+  BasicAggregateVerify_A_ovs
   (demo_BasicAggregateVerify_A_spec 1)
   do {
     // Precondition proof(s)
@@ -935,28 +914,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
 // Proof for n = 3
 demo_BasicAggregateVerify_A_ov <- custom_verify
   "demo_BasicAggregateVerify_A"
-  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
-                [ all_distinct_3_ov
-                , POINTonE1_Uncompress_OK_ov
-                , POINTonE1_affine_on_curve_ov
-                , blst_p1_affine_in_g1_ov
-                , demo_KeyValidate_A_ov
-                , blst_p2_uncompress_OK_ov
-                // ovs used in pairing aggregate:
-                , POINTonE1_in_G1_ov
-                , Hash_to_G1_ov
-                , POINTonE1_from_Jacobian_alias_ov
-                , vec_copy_2fp_ov
-                // ovs used in blst_pairing_commit:
-                , miller_loop_n_1_ov
-                // ovs used in blst_pairing_finalverify:
-                , blst_pairing_finalverify_A_ov
-                // Pairing aggregate ovs
-                , blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov
-                , blst_pairing_aggregate_pk_in_g2_null_sig_0_ov
-                , blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov
-                , blst_pairing_aggregate_pk_in_g2_sig_ov
-                ])
+  BasicAggregateVerify_A_ovs
   (demo_BasicAggregateVerify_A_spec 3)
   do {
     // Precondition proof(s)
@@ -1103,28 +1061,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
 // Proof for n = 4
 demo_BasicAggregateVerify_A_ov <- custom_verify
   "demo_BasicAggregateVerify_A"
-  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
-                [ all_distinct_4_ov
-                , POINTonE1_Uncompress_OK_ov
-                , POINTonE1_affine_on_curve_ov
-                , blst_p1_affine_in_g1_ov
-                , demo_KeyValidate_A_ov
-                , blst_p2_uncompress_OK_ov
-                // ovs used in pairing aggregate:
-                , POINTonE1_in_G1_ov
-                , Hash_to_G1_ov
-                , POINTonE1_from_Jacobian_alias_ov
-                , vec_copy_2fp_ov
-                // ovs used in blst_pairing_commit:
-                , miller_loop_n_1_ov
-                // ovs used in blst_pairing_finalverify:
-                , blst_pairing_finalverify_A_ov
-                // Pairing aggregate ovs
-                , blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov
-                , blst_pairing_aggregate_pk_in_g2_null_sig_0_ov
-                , blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov
-                , blst_pairing_aggregate_pk_in_g2_sig_ov
-                ])
+  BasicAggregateVerify_A_ovs
   (demo_BasicAggregateVerify_A_spec 4)
   do {
     // Precondition proof(s)
