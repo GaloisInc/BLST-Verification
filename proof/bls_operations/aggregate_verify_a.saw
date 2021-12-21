@@ -1,17 +1,13 @@
-/*
-let do_prove = true;
-include "proof-helpers.saw";
-*/
-
 let {{
-  // TODO: Define
   all_distinct: {n, m} [n][m][8] -> Bit
   all_distinct messages = undefined
+
   AGGR_MIN_SIG        = 0x00000001
   AGGR_MIN_PK         = 0x00000002
   AGGR_SIGN_SET       = 0x00000010
   AGGR_GT_SET         = 0x00000020
   AGGR_HASH_OR_ENCODE = 0x00000040
+
   finalverify_A: ProjectivePoint t_Fp -> t_Fp_12 -> Bit
   finalverify_A e1 ctx_GT = is_head_one /\ is_tail_zero where
     e1_affine = affinify E e1
@@ -33,6 +29,10 @@ let dst_len = 43;
 let aug_len = 0;
 let N_MAX = 2;
 
+// We admit the all_distinct spec to be undefined and leave it uninterpreted in
+// all of the proofs because it is irrelevant to the proofs itself.  It must be
+// in the BLS wrapper to satisfy the IETF spec, but both the BLST library and
+// our AggregateVerify specs assume this check has already been performed.
 let all_distinct_spec n = do {
   let message_len = 32;
   (messages, messages_ptr) <-
@@ -44,19 +44,11 @@ let all_distinct_spec n = do {
                     , messages_ptr ];
   llvm_return (llvm_term {{ bool_to_limb (all_distinct messages) }});
 };
-
-// TODO: Prove?
 all_distinct_1_ov <- admit "all_distinct" (all_distinct_spec 1);
-
 all_distinct_3_ov <- admit "all_distinct" (all_distinct_spec 3);
-
 all_distinct_4_ov <- admit "all_distinct" (all_distinct_spec 4);
 
 let blst_pairing_finalverify_A_spec = do {
-  /*
-  (ctx, ctx_ptr) <- ptr_to_fresh_readonly "ctx"
-                                          (llvm_struct "struct.blst_pairing");
-                                          */
   ctx_ptr <- llvm_alloc_readonly (llvm_struct "struct.blst_pairing_st");
   GT <- llvm_fresh_var "GT" vec384fp12_type;
   llvm_precond {{ fp12_invariant GT }};
@@ -80,17 +72,17 @@ let blst_pairing_finalverify_A_spec = do {
 
 let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
   ctx_ptr <- llvm_alloc (llvm_struct "struct.blst_pairing_st");
-  //
+
   // ctx->ctrl must have AGGR_HASH_OR_ENCODE set and AGGR_MIN_PK unset, but we
   // leave the rest uninterpreted
   ctx_ctrl <- llvm_fresh_var "ctx.ctrl" (llvm_int 32);
   llvm_precond {{ (ctx_ctrl && AGGR_HASH_OR_ENCODE) != 0 }};
   llvm_precond {{ (ctx_ctrl && AGGR_MIN_PK) == 0 }};
   llvm_points_to (llvm_elem ctx_ptr 0) (llvm_term ctx_ctrl);
-  //
+
   // Set ctx.nelems
   llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ `ctx_nelems : [32] }});
-  //
+
   dst_ptr <- llvm_alloc_readonly (llvm_array dst_len (llvm_int 8));
   llvm_points_to dst_ptr (llvm_term {{ DST }});
   llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
@@ -115,7 +107,7 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
   // must use llvm_points_to_untyped
   ctx_AggrSign <- llvm_fresh_var "ctx.AggrSign" POINTonE1_type;
   llvm_points_to_untyped (llvm_elem ctx_ptr 5) (llvm_term ctx_AggrSign);
-  //
+
   // Constrain ctx.P and ctx.Q if approaching N_MAX
   if eval_bool {{ `ctx_nelems == (`N_MAX - 1) }}
   then do {
@@ -124,11 +116,11 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
     llvm_precond {{ POINTonE2_affine_invariant ctx_Q0 }};
     llvm_precond {{ POINTonE1_affine_invariant ctx_P0 }};
   } else do { return (); };
-  //
+
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" POINTonE2_affine_type;
   llvm_precond {{ ~(is_point_O E' (POINTonE2_affine_abs pk)) }};
   llvm_precond {{ POINTonE2_affine_invariant pk }};
-  //
+
   let msg_len = 32;
   (msg, msg_ptr) <-
       ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
@@ -170,8 +162,8 @@ let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
     then llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT)
     else return ();
     // These postconditions on Q and P are true in the commit case too, but it
-    // doesn't matter because they've already been processed in that case, so
-    // we ignore them to simplify the proof.
+    // doesn't matter because they've already been processed into ctx.AggrSign
+    // in that case, so we ignore them to simplify the proof.
     // ctx.Q[ctx.nelems] == pk
     llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) ctx_nelems) (llvm_term pk);
     // ctx.P[ctx.nelems] == POINTonE1_affine_rep (affinify E (hash_to_curve_opt_impl (msg, DST)))
@@ -193,6 +185,7 @@ hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms <-
 normalize_hash_to_curve_opt_impl_rws <-
   normalize_hash_to_curve_impl_thms msg_len dst_len aug_len;
 
+// TODO: Merge aggregate_pk_in_g2_null_sig proofs
 blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- custom_verify
   "blst_pairing_aggregate_pk_in_g2"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
@@ -220,7 +213,6 @@ blst_pairing_aggregate_pk_in_g2_null_sig_0_ov <- custom_verify
     rw_with hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms;
     rw_with remove_ho_rules;
     print_goal;
-    //print_readably;
     w4_unint_z3 (concat [ "affinify_E"
                         , "hash_to_curve_opt_impl" ]
                         BasicVerify_A_unints);
@@ -238,9 +230,9 @@ unfold_all_POINTonE1_affine_invariant_2_thm <- prove_cryptol (rewrite (cryptol_s
 
 let map_size_2_term = parse_core "\\(f : ((Vec 6 (Vec 64 Bool)) * (Vec 6 (Vec 64 Bool))) -> (Integer * Integer)) -> \\(y : Vec 2 ((Vec 6 (Vec 64 Bool)) * (Vec 6 (Vec 64 Bool)))) -> map ((Vec 6 (Vec 64 Bool)) * (Vec 6 (Vec 64 Bool))) (Integer * Integer) f 2 y";
 
-// NOTE: This is admitted so that it can be polymorphic.  Proving it would
-// require monomorphic input types and would reduce its usefulness.  However,
-// it is trivially true.
+// This is admitted so that it can be polymorphic.  Proving it would require
+// monomorphic input types and would reduce its usefulness.  However, it is
+// trivially true.
 unfold_map <- admit_cryptol (rewrite (cryptol_ss())
   {{ \f xs -> (map_size_2_term f xs) == ([f x1, f x2] where [x1, x2] = xs) }});
 
@@ -280,7 +272,6 @@ blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov <- custom_verify
     // END N == 2 specific
     rw_with remove_ho_rules;
     print_goal;
-    //print_readably;
     w4_unint_z3 (concat [ "affinify_E"
                         , "fp12_rep"
                         , "F_prod_Fp_12"
@@ -323,7 +314,6 @@ blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov <- custom_verify
     // END nth_commit specific
     rw_with remove_ho_rules;
     print_goal;
-    //print_readably;
     w4_unint_z3 (concat [ "affinify_E"
                         , "fp12_rep"
                         , "F_prod_Fp_12"
@@ -334,7 +324,7 @@ blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov <- custom_verify
 
 let blst_pairing_aggregate_pk_in_g2_sig_spec = do {
   ctx_ptr <- llvm_alloc (llvm_struct "struct.blst_pairing_st");
-  //
+
   // ctx->ctrl must have AGGR_HASH_OR_ENCODE set and AGGR_MIN_PK unset, but we
   // leave the rest uninterpreted
   ctx_ctrl <- llvm_fresh_var "ctx.ctrl" (llvm_int 32);
@@ -343,32 +333,28 @@ let blst_pairing_aggregate_pk_in_g2_sig_spec = do {
   llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) == 0 }};
   llvm_precond {{ (ctx_ctrl && AGGR_SIGN_SET) == 0 }};
   llvm_points_to (llvm_elem ctx_ptr 0) (llvm_term ctx_ctrl);
-  //
+
   // Set ctx.nelems
   llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ 0 : [32] }});
-  //
+
   dst_ptr <- llvm_alloc_readonly (llvm_array dst_len (llvm_int 8));
   llvm_points_to dst_ptr (llvm_term {{ DST }});
   llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
   llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
-  //
+
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" POINTonE2_affine_type;
   llvm_precond {{ ~(is_point_O E' (POINTonE2_affine_abs pk)) }};
-  // TODO: Do I need this if keyvalidate is a precond?
   llvm_precond {{ POINTonE2_affine_invariant pk }};
-  //
+
   (sig, sig_ptr) <- ptr_to_fresh_readonly "sig" POINTonE1_affine_type;
   llvm_precond {{ ~ (is_point_O E (POINTonE1_affine_abs sig)) }};
   llvm_precond {{ POINTonE1_affine_invariant sig }};
   llvm_precond {{ is_point_affine E (POINTonE1_affine_abs sig) }};
   llvm_precond {{ is_in_g1_impl (POINTonE1_affine_abs sig) }};
-  // TODO: This handles vec_is_zero, but I think there are rewrite rules to
-  // derive is_point_O from (or to) this, which might make for a better spec,
-  // and an uglier proof.
   llvm_precond {{ ~(Fp.is_equal (fp_abs x, Fp.field_zero) /\
                     Fp.is_equal (fp_abs y, Fp.field_zero))
                   where (x, y) = sig }};
-  //
+
   let msg_len = 32;
   (msg, msg_ptr) <-
       ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
@@ -430,7 +416,6 @@ blst_pairing_aggregate_pk_in_g2_sig_ov <- custom_verify
     rw_with hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms;
     rw_with remove_ho_rules;
     print_goal;
-    //print_readably;
     w4_unint_z3 (concat [ "affinify_E"
                         , "hash_to_curve_opt_impl" ]
                         BasicVerify_A_unints);
@@ -438,27 +423,27 @@ blst_pairing_aggregate_pk_in_g2_sig_ov <- custom_verify
 
 let demo_BasicAggregateVerify_A_spec n = do {
   global_alloc_init "demo_DST_A" {{ DST }};
+
   (sig, sig_ptr) <- ptr_to_fresh_readonly "sig" compressed_E1_rep_type;
+  verify_A_sig_preconds sig;
+
   (pks, pks_ptr) <-
       ptr_to_fresh_readonly "pks" (llvm_array n compressed_E2_rep_type);
+  llvm_precond {{ all verify_A_pk_precond pks }};
+
   let message_len = 32;
   (messages, messages_ptr) <-
       ptr_to_fresh_readonly "messages"
                             (llvm_array n
                                         (llvm_array message_len (llvm_int 8)));
-  verify_A_sig_preconds sig;
-  llvm_precond {{ all verify_A_pk_precond pks }};
   llvm_precond {{ all_distinct messages }};
-  /*
-  llvm_precond {{ verify_A_pk_precond (pks@0) }};
-  llvm_precond {{ verify_A_pk_precond (pks@1) }};
-  llvm_precond {{ verify_A_pk_precond (pks@2) }};
-  */
+
   llvm_execute_func [ llvm_term {{ `n : [64] }}
                     , llvm_term {{ `message_len : [64] }}
                     , pks_ptr
                     , messages_ptr
                     , sig_ptr ];
+
   llvm_return (llvm_term
       {{ bool_to_limb (CoreAggregateVerify (split`{n} (join (join pks))) messages (join sig)) }});
 };
@@ -502,22 +487,6 @@ unfold_all_verify_A_pk_precond_4_thm <- prove_cryptol (rewrite (cryptol_ss())
              verify_A_pk_precond x3 /\
              verify_A_pk_precond x4) }}) ["verify_A_pk_precond"];
 
-unfold_all_POINTonE2_affine_invariant_5_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \x1 x2 x3 x4 x5 -> all POINTonE2_affine_invariant [x1, x2, x3, x4, x5] ==
-                        (POINTonE2_affine_invariant x1 /\
-                         POINTonE2_affine_invariant x2 /\
-                         POINTonE2_affine_invariant x3 /\
-                         POINTonE2_affine_invariant x4 /\
-                         POINTonE2_affine_invariant x5) }}) [];
-
-unfold_all_POINTonE1_affine_invariant_5_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \x1 x2 x3 x4 x5 -> all POINTonE1_affine_invariant [x1, x2, x3, x4, x5] ==
-                        (POINTonE1_affine_invariant x1 /\
-                         POINTonE1_affine_invariant x2 /\
-                         POINTonE1_affine_invariant x3 /\
-                         POINTonE1_affine_invariant x4 /\
-                         POINTonE1_affine_invariant x5) }}) [];
-
 unfold_all_POINTonE2_affine_invariant_1_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x1 -> all POINTonE2_affine_invariant [x1] ==
             (POINTonE2_affine_invariant x1) }}) [];
@@ -535,18 +504,6 @@ normalize_affine_fp_pair0_thm <- prove_cryptol (rewrite (cryptol_ss())
 
 normalize_affine_fp_pair1_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \P -> (Fp.normalize P.1) == (normalize_affine_point Fp P).1 }}) [];
-
-hoist_fp_invariant <- prove_cryptol
-  (rewrite (cryptol_ss())
-    {{ \c x1 x2 -> fp_invariant (if c then x1 else x2) ==
-                   if c then fp_invariant x1 else fp_invariant x2 }})
-  ["fp_invariant"];
-
-hoist_fp_abs <- prove_cryptol
-  (rewrite (cryptol_ss())
-    {{ \c x1 x2 -> fp_abs (if c then x1 else x2) ==
-                   if c then fp_abs x1 else fp_abs x2 }})
-  ["fp_abs"];
 
 hoist_is_point_projective_E_z_thm <- prove_cryptol
   (rewrite (cryptol_ss())
@@ -578,7 +535,6 @@ let vec_is_zero_5fp2_spec = do {
         /\ (Fp_2.is_equal (fp2_abs a4, Fp_2.field_zero))
         ) then 1 else (0:Limb)) where [a0,a1,a2,a3,a4] = a }});
   };
-
 vec_is_zero_5fp2_ov <- test "vec_is_zero" []  vec_is_zero_5fp2_spec;
 
 blst_pairing_finalverify_A_ov <- custom_verify
@@ -603,8 +559,8 @@ blst_pairing_finalverify_A_ov <- custom_verify
     rw_with [ normalize_miller_loop_opt_checked_thm
             , normalize_affinify_thm ];
     rw_with remove_ho_rules;
-    //print_goal;
-    print_readably;
+    print_goal;
+    //print_readably;
     w4_unint_z3 (concat [ "all_distinct"
                         , "POINTonE1_abs"
                         , "POINTonE1_invariant"
@@ -662,7 +618,7 @@ finalverify_A_core_verify_thm <- custom_prove_cryptol
                 , "miller_loop_opt_checked" ];
   };
 
-// TODO: Prove?  More likely should reference comment in pairing.saw
+// This assumption is justified by Note 1 in proof/pairing.saw
 finalverify_A_ate_pairing_3_thm <- admit_cryptol
  {{ \pk1 pk2 pk3 sig m1 m2 m3 ->
     (finalverify_A
@@ -680,7 +636,7 @@ finalverify_A_ate_pairing_3_thm <- admit_cryptol
         , bls_ate_pairing m3 pk3 ) ==
       bls_ate_pairing (affinify E sig) BP')) }};
 
-// TODO: Prove?  More likely should reference comment in pairing.saw
+// This assumption is justified by Note 1 in proof/pairing.saw
 finalverify_A_ate_pairing_4_thm <- admit_cryptol
  {{ \pk1 pk2 pk3 pk4 sig m1 m2 m3 m4 ->
     (finalverify_A
@@ -755,20 +711,6 @@ hoist_bls_ate_pairing_rhs_thm <- prove_cryptol
                   then bls_ate_pairing x1 t
                   else bls_ate_pairing x1 f }} ["bls_ate_pairing"];
 
-/*
-let at_1_768 = parse_core "\\(v : (Vec 1 (Vec 768 Bool))) -> at 1 (Vec 768 Bool) v 0";
-
-at_1_split_1_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \(v : [768]) -> at_1_768 (split`{1} v) == v }}) [];
-  */
-
-let at_1_96_8_0_core = parse_core "\\(v : (Vec 1 (Vec 96 (Vec 8 Bool)))) -> at 1 (Vec 96 (Vec 8 Bool)) v 0";
-
-let access_1_from_1_core = parse_core "\\(v : (Vec 1 (Vec 96 (Vec 8 Bool)))) -> split 96 8 Bool (at 1 (Vec 768 Bool) (split 1 768 Bool (join 96 8 Bool (join 1 96 (Vec 8 Bool) v))) 0)";
-
-access_1_from_1_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \v -> access_1_from_1_core v == at_1_96_8_0_core v }}) [];
-
 hoist_is_point_affine_E_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \b t f -> is_point_affine E (if b then t else f) ==
                if b then is_point_affine E t else is_point_affine E f }}) [];
@@ -777,13 +719,6 @@ hoist_is_in_g1_impl_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \b t f -> is_in_g1_impl (if b then t else f) ==
                if b then is_in_g1_impl t else is_in_g1_impl f }})
   ["is_in_g1_impl"];
-
-let at_split_join_join_core = parse_core "\\(v : (Vec 1 (Vec 96 (Vec 8 Bool)))) -> at 1 (Vec 768 Bool) (split 1 768 Bool (join 96 8 Bool (join 1 96 (Vec 8 Bool) v))) 0";
-
-//let join_96_8_bool = parse_core "join 96 8 Bool";
-
-at_split_join_join_is_join_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \v -> at_split_join_join_core v == join`{96, 8} (at_1_96_8_0_core v) }}) [];
 
 fp_pair_to_point_thm <- prove_cryptol
   {{ \(x : AffinePoint t_Fp) -> (x.0, x.1) == x }} [];
@@ -807,36 +742,15 @@ hoist_fp12_normalize_thm <- prove_cryptol (rewrite (cryptol_ss())
 fp12_is_equal_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \x y -> Fp_12.is_equal (x, y) == (x == y) }}) [];
 
-let ugly_at_0_core = parse_core "\\ (v : (Vec 3 (Vec 96 (Vec 8 Bool)))) -> split 96 8 Bool (at 3 (Vec 768 Bool) (split 3 768 Bool (join 288 8 Bool (join 3 96 (Vec 8 Bool) v))) 0)";
-
-let at_3_96_8_0_core = parse_core "\\(v : (Vec 3 (Vec 96 (Vec 8 Bool)))) -> at 3 (Vec 96 (Vec 8 Bool)) v 0";
-
-simplify_ugly_at_0_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \v -> ugly_at_0_core v == at_3_96_8_0_core v }}) [];
-
-let ugly_at_1_core = parse_core "\\ (v : (Vec 3 (Vec 96 (Vec 8 Bool)))) -> split 96 8 Bool (at 3 (Vec 768 Bool) (split 3 768 Bool (join 288 8 Bool (join 3 96 (Vec 8 Bool) v))) 1)";
-
-let at_3_96_8_1_core = parse_core "\\(v : (Vec 3 (Vec 96 (Vec 8 Bool)))) -> at 3 (Vec 96 (Vec 8 Bool)) v 1";
-
-simplify_ugly_at_1_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \v -> ugly_at_1_core v == at_3_96_8_1_core v }}) [];
-
-let ugly_at_2_core = parse_core "\\ (v : (Vec 3 (Vec 96 (Vec 8 Bool)))) -> split 96 8 Bool (at 3 (Vec 768 Bool) (split 3 768 Bool (join 288 8 Bool (join 3 96 (Vec 8 Bool) v))) 2)";
-
-let at_3_96_8_2_core = parse_core "\\(v : (Vec 3 (Vec 96 (Vec 8 Bool)))) -> at 3 (Vec 96 (Vec 8 Bool)) v 2";
-
-simplify_ugly_at_2_thm <- prove_cryptol (rewrite (cryptol_ss())
-  {{ \v -> ugly_at_2_core v == at_3_96_8_2_core v }}) [];
-
 fp12_mul_by_1_thm <- prove_cryptol
   {{ \x      -> Fp_12.mul (Fp_12.field_unit, x) == Fp_12.normalize x }} [];
 
-// Proof for n = 1
-demo_BasicAggregateVerify_A_ov <- custom_verify
-  "demo_BasicAggregateVerify_A"
+let BasicAggregateVerify_ovs =
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ all_distinct_1_ov
-                , POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
+                , all_distinct_3_ov
+                , all_distinct_4_ov
+                , POINTonE1_Uncompress_OK_ov
                 , POINTonE1_affine_on_curve_ov
                 , blst_p1_affine_in_g1_ov
                 , demo_KeyValidate_A_ov
@@ -847,7 +761,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
                 , POINTonE1_from_Jacobian_alias_ov
                 , vec_copy_2fp_ov
                 // ovs used in blst_pairing_commit:
-                //, miller_loop_n_2_ov
                 , miller_loop_n_1_ov
                 // ovs used in blst_pairing_finalverify:
                 , blst_pairing_finalverify_A_ov
@@ -856,11 +769,32 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
                 , blst_pairing_aggregate_pk_in_g2_null_sig_0_ov
                 , blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov
                 , blst_pairing_aggregate_pk_in_g2_sig_ov
-                /*
-                , POINTonE1_from_Jacobian_ov
-                , conjugate_fp12_ov
-                , final_exp_ov
-                */
+                ]);
+
+// Proof for n = 1
+demo_BasicAggregateVerify_A_ov <- custom_verify
+  "demo_BasicAggregateVerify_A"
+  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
+                [ all_distinct_1_ov
+                , POINTonE1_Uncompress_OK_ov
+                , POINTonE1_affine_on_curve_ov
+                , blst_p1_affine_in_g1_ov
+                , demo_KeyValidate_A_ov
+                , blst_p2_uncompress_OK_ov
+                // ovs used in pairing aggregate:
+                , POINTonE1_in_G1_ov
+                , Hash_to_G1_ov
+                , POINTonE1_from_Jacobian_alias_ov
+                , vec_copy_2fp_ov
+                // ovs used in blst_pairing_commit:
+                , miller_loop_n_1_ov
+                // ovs used in blst_pairing_finalverify:
+                , blst_pairing_finalverify_A_ov
+                // Pairing aggregate ovs
+                , blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov
+                , blst_pairing_aggregate_pk_in_g2_null_sig_0_ov
+                , blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov
+                , blst_pairing_aggregate_pk_in_g2_sig_ov
                 ])
   (demo_BasicAggregateVerify_A_spec 1)
   do {
@@ -904,8 +838,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
             , unfold_all_POINTonE2_affine_invariant_1_thm
             , unfold_all_POINTonE1_affine_invariant_2_thm
             , unfold_all_POINTonE2_affine_invariant_2_thm
-            , unfold_all_POINTonE1_affine_invariant_5_thm
-            , unfold_all_POINTonE2_affine_invariant_5_thm
             , unfold_all_verify_A_pk_precond_1_thm
             , affine_inv_affine_rep_e1_thm ];
     rw_with POINTonE1_base_thms;
@@ -915,18 +847,14 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     rw_with fp_rep_thms;
     rw_with normalize_hash_to_curve_opt_impl_rws;
     rw_with hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms;
-    //rw_with_1 is_point_O_affine_rev_thm;
     simplify basic_ss;
     simplify (cryptol_ss());
     unfolding [ "POINTonE1_invariant"
               , "POINTonE1_affine_rep"
               , "select"
               , "POINTonE1_abs" ];
-    //hoist_ifs_in_goal;
     rw_with fp_rep_thms;
     rw_with [ normalize_affine_fp_pair0_thm
-            //, hoist_fp_invariant
-            //, hoist_fp_abs
             , normalize_affine_fp_pair1_thm
             , one_mont_p_invariant_thm
             , one_mont_p_abs_thm
@@ -937,7 +865,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     rw_with fp12_rep_thms;
     simplify basic_ss;
     simplify (cryptol_ss());
-    //print_readably;
     // Final goal
     rw_with fp12_normalization_thms;
     unfolding [ "Cryptol::map"
@@ -971,7 +898,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
               , "pairing" ];
     simplify basic_ss;
     simplify (cryptol_ss());
-    //rw_with_1 at_1_split_1_thm;
     rw_with split_join_thms;
     rw_with [ uncompress_E1_uncompress_E1_OK_thm
             , deserialize_E2_uncompress_E2_OK_thm
@@ -979,7 +905,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
             , hoist_field_access_1_fp2_thm
             , hoist_bls_ate_pairing_lhs_thm
             , hoist_bls_ate_pairing_rhs_thm
-            //, access_1_from_1_thm
             , is_in_g1_impl_thm
             , hoist_is_point_affine_E_thm
             , uncompress_E1_on_curve
@@ -992,13 +917,11 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     rw_with fp12_laws;
     rw_with [ hoist_fp12_normalize_thm
             , normalize_bls_ate_pairing_thm
-            //, at_split_join_join_is_join_thm
             , fp12_is_equal_thm
             ];
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with remove_ho_rules;
-    //print_readably;
     print_goal;
     w4_unint_z3 (concat [ "affinify_E"
                         , "all_distinct"
@@ -1014,7 +937,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ all_distinct_3_ov
-                , POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
+                , POINTonE1_Uncompress_OK_ov
                 , POINTonE1_affine_on_curve_ov
                 , blst_p1_affine_in_g1_ov
                 , demo_KeyValidate_A_ov
@@ -1025,7 +948,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
                 , POINTonE1_from_Jacobian_alias_ov
                 , vec_copy_2fp_ov
                 // ovs used in blst_pairing_commit:
-                //, miller_loop_n_2_ov
                 , miller_loop_n_1_ov
                 // ovs used in blst_pairing_finalverify:
                 , blst_pairing_finalverify_A_ov
@@ -1034,11 +956,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
                 , blst_pairing_aggregate_pk_in_g2_null_sig_0_ov
                 , blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov
                 , blst_pairing_aggregate_pk_in_g2_sig_ov
-                /*
-                , POINTonE1_from_Jacobian_ov
-                , conjugate_fp12_ov
-                , final_exp_ov
-                */
                 ])
   (demo_BasicAggregateVerify_A_spec 3)
   do {
@@ -1084,8 +1001,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
             , unfold_all_POINTonE2_affine_invariant_2_thm
             , unfold_all_POINTonE1_affine_invariant_3_thm
             , unfold_all_POINTonE2_affine_invariant_3_thm
-            , unfold_all_POINTonE1_affine_invariant_5_thm
-            , unfold_all_POINTonE2_affine_invariant_5_thm
             , unfold_all_verify_A_pk_precond_1_thm
             , unfold_all_verify_A_pk_precond_3_thm
             , affine_inv_affine_rep_e1_thm ];
@@ -1096,18 +1011,14 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     rw_with fp_rep_thms;
     rw_with normalize_hash_to_curve_opt_impl_rws;
     rw_with hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms;
-    //rw_with_1 is_point_O_affine_rev_thm;
     simplify basic_ss;
     simplify (cryptol_ss());
     unfolding [ "POINTonE1_invariant"
               , "POINTonE1_affine_rep"
               , "select"
               , "POINTonE1_abs" ];
-    //hoist_ifs_in_goal;
     rw_with fp_rep_thms;
     rw_with [ normalize_affine_fp_pair0_thm
-            //, hoist_fp_invariant
-            //, hoist_fp_abs
             , normalize_affine_fp_pair1_thm
             , one_mont_p_invariant_thm
             , one_mont_p_abs_thm
@@ -1118,7 +1029,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     rw_with fp12_rep_thms;
     simplify basic_ss;
     simplify (cryptol_ss());
-    //print_readably;
     // Final goal
     rw_with fp12_normalization_thms;
     unfolding [ "Cryptol::map"
@@ -1152,7 +1062,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
               , "pairing" ];
     simplify basic_ss;
     simplify (cryptol_ss());
-    //rw_with_1 at_1_split_1_thm;
     rw_with split_join_thms;
     rw_with [ uncompress_E1_uncompress_E1_OK_thm
             , deserialize_E2_uncompress_E2_OK_thm
@@ -1160,34 +1069,26 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
             , hoist_field_access_1_fp2_thm
             , hoist_bls_ate_pairing_lhs_thm
             , hoist_bls_ate_pairing_rhs_thm
-            //, access_1_from_1_thm
             , is_in_g1_impl_thm
             , hoist_is_point_affine_E_thm
             , uncompress_E1_on_curve
             , hoist_is_in_g1_impl_thm
             , fp_pair_to_point_thm
             , hash_to_curve_E1_opt_impl_equiv_ov
-            /*
-            , simplify_ugly_at_0_thm
-            , simplify_ugly_at_1_thm
-            , simplify_ugly_at_2_thm
-            */
             ];
     simplify basic_ss;
     simplify (cryptol_ss());
     unfolding [ "just", "nothing" ];
-    //rw_with fp12_laws;
     rw_with [ hoist_fp12_normalize_thm
             , normalize_bls_ate_pairing_thm
-            //, at_split_join_join_is_join_thm
             , fp12_is_equal_thm
             , fp12_mul_by_1_thm
             ];
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with remove_ho_rules;
-    print_readably;
-    //print_goal;
+    simplify (addsimps readability_rewrites cleanup_simpset);
+    print_goal;
     w4_unint_z3 (concat [ "HE1::hash_to_curve_opt"
                         , "affinify_E"
                         , "all_distinct"
@@ -1204,7 +1105,7 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
   "demo_BasicAggregateVerify_A"
   (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
                 [ all_distinct_4_ov
-                , POINTonE1_Uncompress_OK_ov // blst_p1_uncompress_OK_ov
+                , POINTonE1_Uncompress_OK_ov
                 , POINTonE1_affine_on_curve_ov
                 , blst_p1_affine_in_g1_ov
                 , demo_KeyValidate_A_ov
@@ -1215,7 +1116,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
                 , POINTonE1_from_Jacobian_alias_ov
                 , vec_copy_2fp_ov
                 // ovs used in blst_pairing_commit:
-                //, miller_loop_n_2_ov
                 , miller_loop_n_1_ov
                 // ovs used in blst_pairing_finalverify:
                 , blst_pairing_finalverify_A_ov
@@ -1224,11 +1124,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
                 , blst_pairing_aggregate_pk_in_g2_null_sig_0_ov
                 , blst_pairing_aggregate_pk_in_g2_null_sig_1_first_commit_ov
                 , blst_pairing_aggregate_pk_in_g2_sig_ov
-                /*
-                , POINTonE1_from_Jacobian_ov
-                , conjugate_fp12_ov
-                , final_exp_ov
-                */
                 ])
   (demo_BasicAggregateVerify_A_spec 4)
   do {
@@ -1274,8 +1169,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
             , unfold_all_POINTonE2_affine_invariant_2_thm
             , unfold_all_POINTonE1_affine_invariant_4_thm
             , unfold_all_POINTonE2_affine_invariant_4_thm
-            , unfold_all_POINTonE1_affine_invariant_5_thm
-            , unfold_all_POINTonE2_affine_invariant_5_thm
             , unfold_all_verify_A_pk_precond_1_thm
             , unfold_all_verify_A_pk_precond_4_thm
             , affine_inv_affine_rep_e1_thm ];
@@ -1286,18 +1179,14 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     rw_with fp_rep_thms;
     rw_with normalize_hash_to_curve_opt_impl_rws;
     rw_with hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms;
-    //rw_with_1 is_point_O_affine_rev_thm;
     simplify basic_ss;
     simplify (cryptol_ss());
     unfolding [ "POINTonE1_invariant"
               , "POINTonE1_affine_rep"
               , "select"
               , "POINTonE1_abs" ];
-    //hoist_ifs_in_goal;
     rw_with fp_rep_thms;
     rw_with [ normalize_affine_fp_pair0_thm
-            //, hoist_fp_invariant
-            //, hoist_fp_abs
             , normalize_affine_fp_pair1_thm
             , one_mont_p_invariant_thm
             , one_mont_p_abs_thm
@@ -1308,7 +1197,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
     rw_with fp12_rep_thms;
     simplify basic_ss;
     simplify (cryptol_ss());
-    //print_readably;
     // Final goal
     rw_with fp12_normalization_thms;
     unfolding [ "Cryptol::map"
@@ -1342,7 +1230,6 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
               , "pairing" ];
     simplify basic_ss;
     simplify (cryptol_ss());
-    //rw_with_1 at_1_split_1_thm;
     rw_with split_join_thms;
     rw_with [ uncompress_E1_uncompress_E1_OK_thm
             , deserialize_E2_uncompress_E2_OK_thm
@@ -1350,34 +1237,26 @@ demo_BasicAggregateVerify_A_ov <- custom_verify
             , hoist_field_access_1_fp2_thm
             , hoist_bls_ate_pairing_lhs_thm
             , hoist_bls_ate_pairing_rhs_thm
-            //, access_1_from_1_thm
             , is_in_g1_impl_thm
             , hoist_is_point_affine_E_thm
             , uncompress_E1_on_curve
             , hoist_is_in_g1_impl_thm
             , fp_pair_to_point_thm
             , hash_to_curve_E1_opt_impl_equiv_ov
-            /*
-            , simplify_ugly_at_0_thm
-            , simplify_ugly_at_1_thm
-            , simplify_ugly_at_2_thm
-            */
             ];
     simplify basic_ss;
     simplify (cryptol_ss());
     unfolding [ "just", "nothing" ];
-    //rw_with fp12_laws;
     rw_with [ hoist_fp12_normalize_thm
             , normalize_bls_ate_pairing_thm
-            //, at_split_join_join_is_join_thm
             , fp12_is_equal_thm
             , fp12_mul_by_1_thm
             ];
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with remove_ho_rules;
-    print_readably;
-    //print_goal;
+    simplify (addsimps readability_rewrites cleanup_simpset);
+    print_goal;
     w4_unint_z3 (concat [ "HE1::hash_to_curve_opt"
                         , "affinify_E"
                         , "all_distinct"
