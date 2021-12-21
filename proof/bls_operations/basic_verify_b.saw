@@ -50,9 +50,11 @@ hoist_POINTonE1_affine_abs_thm <- prove_cryptol
                    if c then POINTonE1_affine_abs p1 else POINTonE1_affine_abs p2 }})
   ["POINTonE1_affine_abs"];
 
-blst_core_verify_pk_in_g1_ov <-  admit
+blst_core_verify_pk_in_g1_ov <- verify_blst_core_verify_pk_in_g1_null_aug 32 43;
+/*
   "blst_core_verify_pk_in_g1"
   (blst_core_verify_pk_in_g1_null_aug_spec 32 43);
+  */
 
 let verify_B_sig_preconds sig = do {
   // Uncompression succeeds

@@ -277,6 +277,17 @@ let verify_blst_core_verify_pk_in_g1_non_null msg_len dst_len aug_len = do {
       (side_conditions_script msg_len dst_len aug_len));
 };
 
+let verify_blst_core_verify_pk_in_g1_null_aug msg_len dst_len = do {
+  let Hash_to_G2_ov = run (prove_Hash_to_G2_impl msg_len dst_len 0);
+  custom_verify_path_sat
+    "blst_core_verify_pk_in_g1"
+    (concat overrides [Hash_to_G2_ov])
+    (blst_core_verify_pk_in_g1_null_aug_spec msg_len dst_len)
+    (goal_num_ite 17
+      (post_condition_script msg_len dst_len 0)
+      (side_conditions_script msg_len dst_len 0));
+};
+
 let verify_blst_core_verify_pk_in_g1_error msg_len dst_len aug_len = do {
   let Hash_to_G2_ov = run (prove_Hash_to_G2_impl msg_len dst_len aug_len);
   custom_verify_path_sat

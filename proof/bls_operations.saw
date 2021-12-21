@@ -21,9 +21,9 @@ include "bls_operations/basic_verify_a.saw";
 include "bls_operations/sk_to_pk_b.saw";
 include "bls_operations/key_validate_b.saw";
 include "bls_operations/basic_sign_b.saw";
-include "print_readably.saw";
 include "bls_operations/basic_verify_b.saw";
 include "bls_operations/aggregate_verify_a.saw";
+include "bls_operations/aggregate_verify_b.saw";
 
 
 
