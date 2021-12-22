@@ -185,7 +185,7 @@ let blst_core_verify_pk_in_g2_spec aug_len msg_len DST_len = do {
 
 let overrides = (foldr concat [ec_ops_overrides, assembly_overrides, fp12_tower_ovs] []);
 
-let miller_loop_ns = [1,2,8]; // sizes to verify (this is slow!); we need 8 because to verify the aggregate functions witn nelems = 8, which must be verified as it enters a special code path.
+let miller_loop_ns = [1,2]; // sizes to verify (this is slow!); We have patched the code to set `MAX_N = 2` for performance in the functional proofs, so `n=2` takes a special code path that must be verified.
 
 line_dbl_ov <- verify "line_dbl" overrides line_dbl_spec;
 line_dbl_alias_ov <- verify "line_dbl" overrides line_dbl_alias_spec;
