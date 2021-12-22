@@ -51,7 +51,6 @@ normalize_uncompress_E2_OK_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
     simplify (addsimps [normalize_sqrt_fp2_thm] empty_ss);
     simplify (addsimps [unfold_Fp_2_normalize_thm] empty_ss);
     simplify (addsimps fp_laws empty_ss);
-    print_goal;
     w4_unint_z3 fp2_unints;
   };
 
@@ -160,7 +159,6 @@ demo_KeyValidate_A_ov <- custom_verify "demo_KeyValidate_A"
                            , hoist_normalize_affine_fp2_thm ] empty_ss);
         simplify (basic_ss);
         simplify (cryptol_ss());
-        (print_goal);
         w4_unint_z3 [ "is_in_g2_impl"
                     , "uncompress_E2_OK"
                     , "is_point_affine_E'"
@@ -173,7 +171,6 @@ demo_KeyValidate_A_ov <- custom_verify "demo_KeyValidate_A"
                     , "uncompress_E2_imp"];
       })
       (do { 
-        (print_goal);
         w4_unint_z3 [ "is_in_g2_impl"
                     , "uncompress_E2_OK"
                     , "is_point_affine_E'"

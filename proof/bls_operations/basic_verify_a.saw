@@ -87,7 +87,6 @@ normalize_uncompress_E1_OK_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
     simplify (cryptol_ss());
     rw_with fp_laws;
     rw_with [normalize_sqrt_fp_thm];
-    print_goal;
     w4_unint_z3 fp_unints;
   };
 
@@ -149,7 +148,6 @@ POINTonE1_affine_abs_rep_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
               , "POINTonE1_affine_rep"
               , "normalize_affine_point"];
     rw_with fp_rep_thms;
-    print_goal;
     w4_unint_z3 [];
   };
 
@@ -287,7 +285,6 @@ demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
                 , hoist_normalize_affine_fp2_thm
                 , normalize_uncompress_E2_OK_thm ];
         rw_with remove_ho_rules;
-        print_goal;
         w4_unint_z3 BasicVerify_A_unints;
       })
       (do {
@@ -325,7 +322,6 @@ demo_BasicVerify_A_ov <- custom_verify "demo_BasicVerify_A"
         simplify basic_ss;
         simplify (cryptol_ss());
         rw_with remove_ho_rules;
-        print_goal;
         w4_unint_z3 BasicVerify_A_unints;
       }));
   };

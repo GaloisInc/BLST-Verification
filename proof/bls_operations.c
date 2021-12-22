@@ -2,14 +2,12 @@
 #include <stdio.h> // for NULL 
 #include <string.h> // for memcmp
 
-// TODO: Move
-
 // Two variants:
 // _A: min signature size
 // _B: min pk size
 
-// Explicitly note that demo_DST_A is 43 bytes to avoid the null terminator
-// (needed for SAW to treat the allocation as 32 bytes)
+// demo_DST_A and demo_DST_B are 43 bytes to avoid the null terminator.  This
+// is needed for SAW to treat the allocations as 43 bytes.
 byte demo_DST_A[43] = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_";
 byte demo_DST_B[43] = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_";
 
@@ -141,10 +139,6 @@ limb_t demo_BasicAggregateVerify_A(size_t n,
   blst_pairing ctx;
   blst_pairing_init(&ctx, 1, demo_DST_A, 43);
 
-  // Idea:  Break this out into a function that processes MAX_N elements, and
-  // specify that function.  That may be a good middle ground between verifying
-  // aggregate_pk_in_g2 individually (which could be painful to properly
-  // capture the effects on the context) and this which produces large goals.
   for (size_t i = 0; i < n; ++i) {
     const byte* pk = pks[i];
     // Check and Uncompress PK

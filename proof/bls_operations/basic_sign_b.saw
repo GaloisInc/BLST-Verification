@@ -21,7 +21,6 @@ Fp2_normalize_abs_thm <- custom_prove_cryptol
   {{ \x -> Fp_2.normalize (fp2_abs x) == fp2_abs x }}
   do {
     simplify (addsimps [fp2_abs_normalize_thm, fp2_abstract_invariant_thm] empty_ss);
-    (print_goal);
     w4_unint_z3 [];
   };
 
@@ -41,7 +40,6 @@ affinify_E'_z_1_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
     unfolding ["POINTonE2_invariant"];
     simplify (addsimp Fp2_normalize_abs_thm empty_ss);
     simplify (addsimps remove_ho_rules empty_ss);
-    (print_goal);
     w4_unint_z3 ["Fp_2", "fp2_invariant", "fp2_abs"];
   };
 
@@ -58,7 +56,6 @@ serialize_e2_affine_thm <-  custom_prove_cryptol (rewrite (cryptol_ss())
     simplify basic_ss;
     simplify (cryptol_ss());
     simplify (addsimps remove_ho_rules empty_ss);
-    print_goal;
     w4_unint_z3 ["fp2_abs", "serialize_E2", "affinify_E'", "POINTonE2_abs"];
   };
 
@@ -74,7 +71,6 @@ hash_to_curve_e2_impl_thm <- custom_prove_cryptol
     unfolding ["apply"];
     simplify (addsimp hash_to_curve_E2_opt_impl_equiv_ov empty_ss);
     simplify basic_ss;
-    (print_goal);
     w4_unint_z3 ["HashToCurveE2::hash_to_curve_opt"];
   };
 
@@ -103,7 +99,6 @@ hash_to_g2_on_curve_thm <- custom_prove_cryptol
   do {
     rw_with [ hash_to_curve_E2_opt_impl_equiv_ov
             , hash_to_g2_opt_on_curve_thm ];
-    print_goal;
     w4_unint_z3 [];
   };
 
@@ -158,7 +153,6 @@ e2_scalar_mult_htc_props <- custom_prove_cryptol (rewrite (cryptol_ss())
     rw_with remove_ho_rules;
     rw_with_1 same_point_affine_E'_thm;
     rw_with_1 and_true_thm;
-    print_goal;
     w4_unint_z3 (concat [ "same_point_affine_E'"
                         , "hash_to_curve_E2_opt_impl"
                         , "scalar_value"
@@ -243,7 +237,6 @@ demo_BasicSign_B_ov <- custom_verify "demo_BasicSign_B"
     simplify (cryptol_ss());
     simplify (addsimps remove_ho_rules empty_ss);
     simplify (addsimps [same_point_affine_E'_thm] empty_ss);
-    (print_goal);
     w4_unint_z3 (concat [ "e2_order"
                         , "e2_scalar_mult"
                         , "fp2_abs"

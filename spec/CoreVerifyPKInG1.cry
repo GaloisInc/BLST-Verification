@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
 module CoreVerifyPKInG1 where
 
 import Parameters

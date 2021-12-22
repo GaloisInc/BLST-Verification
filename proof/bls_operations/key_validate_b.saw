@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
 let {{
   pubkey_to_point_is_affine_min_key: [48][8] -> Bool
   pubkey_to_point_is_affine_min_key pk =
@@ -117,7 +122,6 @@ demo_KeyValidate_B_ov <- custom_verify "demo_KeyValidate_B"
         simplify (basic_ss);
         simplify (cryptol_ss());
         rw_with remove_ho_rules;
-        (print_goal);
         w4_unint_z3 (concat [ "is_in_g1_impl"
                             , "uncompress_E1_OK"
                             , "is_point_affine_E"
@@ -135,7 +139,6 @@ demo_KeyValidate_B_ov <- custom_verify "demo_KeyValidate_B"
         unfolding [ "POINTonE1_affine_invariant"
                   , "uncompress_E1_imp" ];
         rw_with fp_rep_thms;
-        (print_goal);
         w4_unint_z3 [ "is_in_g1_impl"
                     , "Fp"
                     , "uncompress_E1_OK"

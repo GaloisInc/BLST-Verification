@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
 let {{
   same_point_affine_E  = same_point_affine E
 
@@ -34,7 +39,6 @@ Fp_normalize_abs_thm <- custom_prove_cryptol
   {{ \x -> Fp.normalize (fp_abs x) == fp_abs x }}
   do {
     simplify (addsimps [fp_abs_normalize_thm, fp_abstract_invariant_thm] empty_ss);
-    (print_goal);
     w4_unint_z3 [];
   };
 
@@ -79,7 +83,6 @@ eliminate_normalized_args_affinify_E_thm <- custom_prove_cryptol
     rw_with_1 affinify_E_needs_no_special_case_thm;
     unfolding ["E", "normalize_point"];
     simplify fp_simpset;
-    print_goal;
     w4_unint_z3 fp_unints;
   };
 
@@ -93,7 +96,6 @@ affinify_concrete_z_unit_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
     simplify basic_ss;
     simplify (cryptol_ss());
     simplify (addsimps remove_ho_rules empty_ss);
-    print_goal;
     w4_unint_z3 (concat ["fp_abs", "Fp"] ec_mult_unints);
   };
 
@@ -114,7 +116,6 @@ affinify_z_1_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
     unfolding ["POINTonE1_invariant"];
     simplify (addsimp Fp_normalize_abs_thm empty_ss);
     simplify (addsimps remove_ho_rules empty_ss);
-    (print_goal);
     w4_unint_z3 (concat ["Fp", "fp_invariant", "fp_abs"] ec_mult_unints);
   };
 
@@ -132,7 +133,6 @@ serialize_e1_affine_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
     simplify basic_ss;
     simplify (cryptol_ss());
     simplify (addsimps remove_ho_rules empty_ss);
-    print_goal;
     w4_unint_z3 ["fp_abs", "serialize_E1", "affinify_E", "POINTonE1_abs"];
   };
 
@@ -153,7 +153,6 @@ hash_to_curve_e1_impl_thm <- custom_prove_cryptol
     unfolding ["apply"];
     simplify (addsimp hash_to_curve_E1_opt_impl_equiv_ov empty_ss);
     simplify basic_ss;
-    (print_goal);
     w4_unint_z3 ["HashToCurveE1::hash_to_curve_opt"];
   };
 
@@ -173,7 +172,6 @@ affine_inv_affine_rep_e1_thm <- custom_prove_cryptol
   do {
     unfolding [ "POINTonE1_affine_rep" , "POINTonE1_affine_invariant" ];
     rw_with fp_rep_thms;
-    print_goal;
     w4_unint_z3 [];
   };
 
@@ -186,7 +184,6 @@ hash_to_g1_on_curve_thm <- custom_prove_cryptol
   do {
     rw_with [ hash_to_curve_E1_opt_impl_equiv_ov
             , hash_to_g1_opt_on_curve_thm ];
-    print_goal;
     w4_unint_z3 [];
   };
 
@@ -271,7 +268,6 @@ e1_scalar_mult_htc_props <- custom_prove_cryptol (rewrite (cryptol_ss())
     rw_with remove_ho_rules;
     rw_with_1 same_point_affine_E_thm;
     rw_with_1 and_true_thm;
-    print_goal;
     w4_unint_z3 (concat [ "same_point_affine_E"
                         , "hash_to_curve_opt_impl"
                         , "scalar_value"
@@ -356,7 +352,6 @@ demo_BasicSign_A_ov <- custom_verify "demo_BasicSign_A"
     simplify (cryptol_ss());
     simplify (addsimps remove_ho_rules empty_ss);
     simplify (addsimps [same_point_affine_E_thm] empty_ss);
-    (print_goal);
     w4_unint_z3 (concat [ "e1_order"
                         , "e1_scalar_mult"
                         , "fp_abs"

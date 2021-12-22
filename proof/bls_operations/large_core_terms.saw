@@ -496,7 +496,7 @@ hoist_unrip_48_thm <- prove_cryptol (rewrite (cryptol_ss())
     , if b then at_48_47 x1 else at_48_47 x2
     ] == (if b then x1 else x2) }}) [];
 
-hoist_unrip_96_thm <- really_prove_cryptol (rewrite (cryptol_ss())
+hoist_unrip_96_thm <- prove_cryptol (rewrite (cryptol_ss())
   {{ \b (x1 : [96][8]) (x2 : [96][8]) ->
     [ if b then at_96_0 x1 else at_96_0 x2
     , if b then at_96_1 x1 else at_96_1 x2

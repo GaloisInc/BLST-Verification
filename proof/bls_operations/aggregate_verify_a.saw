@@ -236,11 +236,8 @@ let prove_blst_pairing_aggregate_pk_in_g2_null_sig = do {
   rw_with normalize_hash_to_curve_opt_impl_rws;
   rw_with hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms;
   rw_with [normalize_affinify_thm, F_prod_Fp_12_thm];
-  // BEGIN nth_commit specific
   rw_with fp12_rep_thms;
-  // END nth_commit specific
   rw_with remove_ho_rules;
-  print_goal;
   w4_unint_z3 (concat [ "affinify_E"
                       , "fp12_rep"
                       , "F_prod_Fp_12"
@@ -363,7 +360,6 @@ blst_pairing_aggregate_pk_in_g2_sig_ov <- custom_verify
     rw_with normalize_hash_to_curve_opt_impl_rws;
     rw_with hash_to_curve_opt_impl_POINTonE1_from_Jacobian_precond_thms;
     rw_with remove_ho_rules;
-    print_goal;
     w4_unint_z3 (concat [ "affinify_E"
                         , "hash_to_curve_opt_impl" ]
                         BasicVerify_A_unints);
@@ -507,8 +503,6 @@ blst_pairing_finalverify_A_ov <- custom_verify
     rw_with [ normalize_miller_loop_opt_checked_thm
             , normalize_affinify_thm ];
     rw_with remove_ho_rules;
-    print_goal;
-    //print_readably;
     w4_unint_z3 (concat [ "all_distinct"
                         , "POINTonE1_abs"
                         , "POINTonE1_invariant"
@@ -556,7 +550,6 @@ finalverify_A_core_verify_thm <- custom_prove_cryptol
     rw_with [ normalize_C_expt_thm
             , G2_to_BP'_thm ];
     rw_with remove_ho_rules;
-    print_goal;
     w4_unint_z3 [ "affinify_E"
                 , "C_expt"
                 , "final_exp_frobenius_map"
@@ -679,7 +672,6 @@ normalize_bls_ate_pairing_thm <- custom_prove_cryptol
     simplify basic_ss;
     simplify (cryptol_ss());
     rw_with [ k_expt_C_expt_thm, normalize_C_expt_thm ];
-    print_goal;
     w4_unint_z3 ["C_expt", "final_exp_frobenius_map", "ate_pairing'"];
   };
 
@@ -853,7 +845,6 @@ let prove_BasicAggregateVerify_A final_goal_num = do {
   simplify (cryptol_ss());
   rw_with remove_ho_rules;
   simplify (addsimps readability_rewrites cleanup_simpset);
-  print_goal;
   w4_unint_z3 (concat [ "HE1::hash_to_curve_opt"
                       , "affinify_E"
                       , "all_distinct"

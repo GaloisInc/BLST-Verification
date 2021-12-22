@@ -101,7 +101,6 @@ e1_scalar_mult_BP_props <- custom_prove_cryptol (rewrite (cryptol_ss())
                        , BP_is_point_affine_thm ] empty_ss);
     simplify basic_ss;
     simplify (addsimp same_point_affine_E_thm empty_ss);
-    print_goal;
     w4_unint_z3 (concat [ "e1_scalar_mult"
                         , "is_bad_O_form_E"
                         , "scalar_value"
@@ -163,7 +162,6 @@ demo_SkToPk_B_ov <- custom_verify "demo_SkToPk_B"
     unfolding ["apply"];
     rw_with remove_ho_rules;
     simplify (addsimp same_point_affine_E_thm empty_ss);
-    print_goal;
     w4_unint_z3 (concat [ "e1_order"
                         , "is_point_projective_E"
                         , "is_bad_O_form_E"

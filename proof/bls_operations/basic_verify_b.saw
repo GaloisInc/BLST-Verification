@@ -197,7 +197,6 @@ demo_BasicVerify_B_ov <- custom_verify "demo_BasicVerify_B"
                 , normalize_uncompress_E2_OK_thm
                 , normalize_uncompress_E1_OK_thm ];
         rw_with remove_ho_rules;
-        print_goal;
         w4_unint_z3 BasicVerify_B_unints;
       })
       (do {
@@ -236,7 +235,6 @@ demo_BasicVerify_B_ov <- custom_verify "demo_BasicVerify_B"
         simplify basic_ss;
         simplify (cryptol_ss());
         rw_with remove_ho_rules;
-        print_goal;
         w4_unint_z3 BasicVerify_B_unints;
       }));
   };

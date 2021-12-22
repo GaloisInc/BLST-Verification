@@ -72,12 +72,8 @@ parameter
 //type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + DST_len))
 type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + 43))
 
-// TODO: Better name.  And maybe use instead of DST throughout?
-// TODO: Do I even need reexport_DST?
 reexport_DST = DST
 
-// TODO: Better name.  Maybe param should be _pubkey_subgroup_check and this
-// should be pubkey_subgroup_check
 reexport_pubkey_subgroup_check = pubkey_subgroup_check
 reexport_signature_subgroup_check = signature_subgroup_check
 
@@ -89,8 +85,6 @@ reexport_signature_subgroup_check = signature_subgroup_check
 
 // 2.4 SkToPk
 
-// TODO: This was 256, but the BLST sk_to_pk spec drops the first bit, so I
-// made it 255 to match.  Why do the parameter lengths differ?
 sk_to_pk: [255] -> [pubkey_len]
 sk_to_pk sk = point_to_pubkey (EC::mult other_curve sk P)
 
@@ -108,9 +102,8 @@ KeyValidate pk = ret where
 
 // 2.6 CoreSign
 
-/* CoreSign: {msg_len} (Hashable msg_len) => [256] -> [msg_len][8] -> [signature_len] */
+/* CoreSign: {msg_len} (Hashable msg_len) => [255] -> [msg_len][8] -> [signature_len] */
 /* CoreSign sk message = signature where */
-// TODO: Same note about dropped first bit...
 CoreSign: {msg_len} (Hashable msg_len) => ([255], [msg_len][8]) -> [signature_len]
 CoreSign (sk, message) = signature where
     Q = hash_to_point message

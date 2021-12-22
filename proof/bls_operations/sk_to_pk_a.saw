@@ -29,7 +29,6 @@ affine_inv_affine_rep_e2_thm <- custom_prove_cryptol
   do {
     unfolding [ "POINTonE2_affine_rep" , "POINTonE2_affine_invariant" ];
     rw_with fp2_rep_thms;
-    print_goal;
     w4_unint_z3 [];
   };
 
@@ -110,7 +109,6 @@ e2_scalar_mult_BP'_props <- custom_prove_cryptol (rewrite (cryptol_ss())
                        , BP'_is_point_affine_thm ] empty_ss);
     simplify basic_ss;
     simplify (addsimp same_point_affine_E'_thm empty_ss);
-    print_goal;
     w4_unint_z3 (concat [ "e2_scalar_mult"
                         , "is_bad_O_form_E'"
                         , "scalar_value"
@@ -234,7 +232,6 @@ demo_SkToPk_A_ov <- custom_verify "demo_SkToPk_A"
     rw_with if_elim_thms;
     rw_with [unrip_thm_96, serialize_e2_eq_thm];
     unfolding ["apply"];
-    print_goal;
     w4_unint_z3 (concat [ "e2_order"
                         , "scalar_value"
                         , "POINTonE2_abs"
