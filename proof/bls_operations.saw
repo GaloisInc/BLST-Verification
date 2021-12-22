@@ -6,18 +6,18 @@
 import "../spec/BLSMinimalSignatureSize.cry";
 BMPKS <- cryptol_load "../spec/BLSMinimalPublicKeySize.cry";
 
-let do_prove = true;
-include "proof-helpers.saw";
-
 include "bls_operations/large_core_terms.saw";
+
 include "bls_operations/sk_to_pk_a.saw";
 include "bls_operations/key_validate_a.saw";
 include "bls_operations/basic_sign_a.saw";
 include "bls_operations/basic_verify_a.saw";
+
 include "bls_operations/sk_to_pk_b.saw";
 include "bls_operations/key_validate_b.saw";
 include "bls_operations/basic_sign_b.saw";
 include "bls_operations/basic_verify_b.saw";
+
 include "bls_operations/aggregate_verify_a.saw";
 include "bls_operations/aggregate_verify_b.saw";
 
