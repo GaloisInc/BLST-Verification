@@ -67,11 +67,15 @@ BP'_is_point_affine_thm <- prove_cryptol
 // e2_scalar_mult does not produce point O in the bad forms of (0, 0, _) or
 // (_, _, 0)
 e2_scalar_mult_not_bad_O_thm <- admit_cryptol (rewrite (cryptol_ss())
-  // TODO: Revisit this comment, it seems kinda wrong, but it would be nice to
-  // explain why I'm not using the usual conditional rewrite form here. vv
   // Can't use normal conditional rewrite rule formulation because "sk" is a
   // fresh var that exists only on the right hand side of the substitution, so
-  // the override would never applies
+  // the override would never applies.  That is, a rewrite of the form:
+  //   is_bad_O_form_E P ==
+  //   if (same_point_affine E (affinify ...) (e2_scalar_mult ...))
+  //   then False
+  //   else apply ...
+  // will never apply due to unused variables in the right hand side of the
+  // equality.
   {{ \P sk -> (same_point_affine
                 E'
                 (affinify E' (POINTonE2_abs P))
