@@ -30,7 +30,7 @@ let AGGR_GT_SET = {{ 32:[32] }};
 let AGGR_HASH_OR_ENCODE = {{ 64:[32] }};
 let MIN_SIG_OR_PK = {{ AGGR_MIN_SIG || AGGR_MIN_PK }};
 
-let N_MAX = 8; // NOTE: must match N_MAX defined in C code
+let N_MAX = 2; // NOTE: must match N_MAX defined in C code
 
 let {{ is_in_G1 (p : ([6][64], [6][64])) = (undefined:[64]) }}; // NOTE: the goal is to leave it uninterpreted
 let POINTonE1_in_G1_spec = do {
@@ -296,7 +296,7 @@ let overrides = foldr concat [hash_to_field_ovs, ec_ops_overrides, assembly_over
 
 pairing_init_ov <- verify "blst_pairing_init" [] (blst_pairing_init_spec 8);
 
-let aggregate_ns = [0,1,7]; // aggregate_... calls miller_loop_n for nelems+1
+let aggregate_ns = [0,1]; // aggregate_... calls miller_loop_n for nelems+1
 
 let make_aggregate_pk_in_g1_ov null_sig nelems = verify_unint "blst_pairing_aggregate_pk_in_g1" overrides ["is_in_G2"] (blst_pairing_aggregate_pk_in_spec DST_len msg_len aug_len nelems null_sig false); // null_sig should be 0 or 1
 aggregate_pk_in_g1_null_sig_ovs <- for aggregate_ns (make_aggregate_pk_in_g1_ov 1);

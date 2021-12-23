@@ -1,0 +1,177 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+affinify_z_1_fp_replace_thm <- custom_prove_cryptol
+  {{ \p -> affinify E p ==
+           if p.2 == Fp.field_unit
+           then apply affinify E (p.0, p.1, Fp.field_unit)
+           else apply affinify E p }}
+  do {
+    unfolding ["apply"];
+    rw_with_1 affinify_E_thm;
+    w4_unint_z3 ["affinify_E"];
+  };
+
+affinify_POINTonE1_abs_z_1_thm <- prove_cryptol
+  {{ \p -> (affinify E (p'.0, p'.1, Fp.field_unit) == (p'.0, p'.1)
+      where p' = POINTonE1_abs p) }} [];
+
+affinify_affine_E1_thm <- custom_prove_cryptol
+  {{ \P -> serialize_E1 (fp_abs P.0, fp_abs P.1) ==
+           if (fp_abs P.2) ==  Fp.field_unit
+           then serialize_E1 (affinify E (POINTonE1_abs P))
+           else apply serialize_E1 (fp_abs P.0, fp_abs P.1) }}
+  do {
+    rw_with_1 affinify_z_1_fp_replace_thm;
+    unfolding ["apply"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with [affinify_POINTonE1_abs_z_1_thm];
+    rw_with_1 affinify_E_thm;
+    w4_unint_z3 ["serialize_E1", "affinify_E"];
+  };
+
+
+if_elim_48_thms <- for at_48_cores
+ (\x -> prove_cryptol (rewrite (cryptol_ss())
+    {{ \b1 b2 b3 (x1 : [48][8]) (x2 : [48][8]) ->
+          (if (and_core (and_core b1 b2) b3)
+           then x (if b2 then x1 else x2)
+           else (x x1)) == (x x1) }}) []);
+
+// e1_scalar_mult does not produce point O in the bad forms of (0, 0, _) or
+// (_, _, 0)
+e1_scalar_mult_not_bad_O_min_pk_thm <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \P sk -> (same_point_affine
+                E
+                (affinify E (POINTonE1_abs P))
+                (e1_scalar_mult (scalar_value`{255,32} sk) BP)) ==
+              ((apply same_point_affine
+                      E
+                      (affinify E (POINTonE1_abs P))
+                      (e1_scalar_mult (scalar_value`{255,32} sk) BP)) &&
+                ~(is_bad_O_form_E P)) }});
+
+BP_is_point_affine_thm <- prove_cryptol
+  {{ is_point_affine E BP == True }} [];
+
+// This theorem states that if (affinify P1) == P2 and P1 is on the curve
+// (is_point_projective E' P1), then P2 is on the curve
+// (is_point_affine E' P2), so long as:
+// 1. P1 is not point O in the "bad" form, and
+// 2. P1 satisifies the POINTonE1 invariant
+// For more info on why this "bad point O" check is necessary, see the
+// POINTonE1_in_G1 note in proof/subgroup_check_g1.saw
+affine_E_inv_thm <- test_cryptol (rewrite (cryptol_ss())
+  {{ \P1 P2 ->
+     (and_core (same_point_affine E (affinify E (POINTonE1_abs P1)) P2)
+               (and_core (POINTonE1_invariant P1)
+                         (and_core (not_core (is_bad_O_form_E P1))
+                                   (is_point_projective E (POINTonE1_abs P1))))) ==
+     (same_point_affine E (affinify E (POINTonE1_abs P1)) P2 /\
+      ~(is_bad_O_form_E P1) /\
+      is_point_affine E P2) }});
+
+// P = sk * BP has the following properties:
+// 1.  P satisfies the POINTonE1_invariant
+// 2.  P is not in the bad O forms of (0, 0, _) or (_, _, 0)
+// 3.  P is on the curve
+e1_scalar_mult_BP_props <- custom_prove_cryptol (rewrite (cryptol_ss())
+  {{ \P sk -> (same_point_affine
+                E
+                (affinify E (POINTonE1_abs P))
+                (e1_scalar_mult (scalar_value`{255,32} sk) BP)) ==
+              ((apply same_point_affine
+                      E
+                      (affinify E (POINTonE1_abs P))
+                      (e1_scalar_mult (scalar_value`{255,32} sk) BP)) &&
+               POINTonE1_invariant P &&
+               ~(is_bad_O_form_E P) &&
+               is_point_projective E (POINTonE1_abs P)) }})
+  do {
+    rw_with_1 e1_scalar_mult_not_bad_O_min_pk_thm;
+    unfolding ["apply"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    simplify (addsimps [ affine_E_inv_thm
+                       , affine_inv_affine_rep_e1_thm
+                       , e1_scalar_mult_on_curve_thm
+                       , BP_is_point_affine_thm ] empty_ss);
+    simplify basic_ss;
+    simplify (addsimp same_point_affine_E_thm empty_ss);
+    w4_unint_z3 (concat [ "e1_scalar_mult"
+                        , "is_bad_O_form_E"
+                        , "scalar_value"
+                        , "same_point_affine_E" ]
+                        e1_unints);
+  };
+
+let demo_SkToPk_B_spec = do {
+  let n_bytes = 32;
+  let bits = 255;
+  out_ptr <- llvm_alloc (llvm_array 48 (llvm_int 8));
+
+  scalar_ptr <- llvm_alloc_readonly_aligned 8 (llvm_array n_bytes (llvm_int 8));
+  scalar <- llvm_fresh_var "scalar" (llvm_array n_bytes (llvm_int 8));
+  llvm_points_to scalar_ptr (llvm_term scalar);
+  llvm_precond {{ scalar != zero }};
+  // precondition from POINTonE2_mult_w5
+  llvm_precond {{ e1_order BP > scalar_value`{bits,n_bytes} scalar + shift }};
+
+  llvm_execute_func [out_ptr, scalar_ptr];
+
+  llvm_points_to out_ptr (llvm_term {{ (split`{each=8} (BMPKS::sk_to_pk (drop_join_reverse scalar))) }});
+};
+
+demo_SkToPk_B_ov <- custom_verify "demo_SkToPk_B"
+  [blst_sk_to_pk_in_g1_ov, blst_p1_compress_projective_ov, blst_p1_compress_affine_ov]
+  demo_SkToPk_B_spec
+  do {
+    unfolding [ "BMPKS::sk_to_pk"
+              , "BLSMinimalPublicKeySize::module parameter point_to_pubkey"
+              , "BLSMinimalPublicKeySize::module parameter other_curve"
+              , "BLSMinimalPublicKeySize::module parameter P"
+              , "BLSMinimalPublicKeySize::other_curve"
+              , "BLSMinimalPublicKeySize::P"
+              , "BLSMinimalPublicKeySize::point_to_pubkey" ];
+    simplify (cryptol_ss());
+    simplify (addsimp eq_to_same_point_affine_E_thm empty_ss);
+    simplify (addsimps [e1_scalar_mult_BP_props] empty_ss);
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    unfolding ["apply"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with_1 O_O_unit_implies_bad_O_form_E;
+    unfolding ["apply"];
+    simplify (addsimps (concat split_join_thms
+                               [mult_e1_scalar_mult_thm,
+                                affinify_affine_E1_thm,
+                                fold_scalar_value_thm,
+                                serialize_e1_eq_thm])
+                       empty_ss);
+    simplify (addsimps split_join_thms empty_ss);
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    simplify (addsimps if_elim_48_thms empty_ss);
+    simplify (addsimps [unrip_thm_48, serialize_e1_eq_thm] empty_ss);
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    unfolding ["apply"];
+    rw_with remove_ho_rules;
+    simplify (addsimp same_point_affine_E_thm empty_ss);
+    w4_unint_z3 (concat [ "e1_order"
+                        , "is_point_projective_E"
+                        , "is_bad_O_form_E"
+                        , "scalar_value"
+                        , "POINTonE2_abs"
+                        , "serialize_E1"
+                        , "fp_abs"
+                        , "e1_scalar_mult"
+                        , "same_point_affine_E"
+                        , "POINTonE1_invariant" ]
+                        e1_unints);
+  };
+

@@ -298,6 +298,8 @@ let prove_hash_to_curve_opt_equiv msg_len DST_len =
       w4_unint_z3 (concat fp_unints ["HE2::iso_map","HE2::map_to_curve_simple_swu","HE2::clear_cofactor","HE2::hash_to_field"]);
     };
 
+hash_to_curve_E2_opt_impl_equiv_ov <- (prove_hash_to_curve_opt_equiv 32 43);
+
 // normalization theorems:
 
 /* Not true

@@ -48,5 +48,7 @@ import "../spec/Pairing.cry";
 import "../spec/implementation/PairingImpl.cry";
 import "../spec/implementation/FinalExp.cry";
 
+import "../spec/CoreVerifyPKInG1.cry";
 import "../spec/implementation/CoreVerifyPKInG1.cry";
+import "../spec/CoreVerifyPKInG2.cry";
 import "../spec/implementation/CoreVerifyPKInG2.cry";

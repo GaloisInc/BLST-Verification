@@ -1,0 +1,821 @@
+/*
+ * Copyright (c) 2021 Galois, Inc.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+*/
+
+let {{
+  finalverify_B: ProjectivePoint t_Fp_2 -> t_Fp_12 -> Bit
+  finalverify_B e2 ctx_GT = is_head_one /\ is_tail_zero where
+    e2_affine = affinify E' e2
+    GT0 = miller_loop_opt_checked (POINTonE1_affine_abs (G1.0, G1.1)) e2_affine
+    GT1 = fp12_conjugate GT0
+    GT2 = Fp_12.mul (GT1, ctx_GT)
+    GT3 = fp12_rep (final_exponentiation_impl GT2)
+    [[a0, a1, a2], [a3, a4, a5]] = GT3
+    is_head_one = Fp_2.is_equal (fp2_abs a0, fp2_abs one_mont_px)
+    is_tail_zero = Fp_2.is_equal (fp2_abs a1, Fp_2.field_zero)
+                /\ Fp_2.is_equal (fp2_abs a2, Fp_2.field_zero)
+                /\ Fp_2.is_equal (fp2_abs a3, Fp_2.field_zero)
+                /\ Fp_2.is_equal (fp2_abs a4, Fp_2.field_zero)
+                /\ Fp_2.is_equal (fp2_abs a5, Fp_2.field_zero)
+}};
+
+let blst_pairing_finalverify_B_spec = do {
+  ctx_ptr <- llvm_alloc_readonly (llvm_struct "struct.blst_pairing_st");
+
+  GT <- llvm_fresh_var "GT" vec384fp12_type;
+  llvm_precond {{ fp12_invariant GT }};
+
+  AggrSign <- llvm_fresh_var "AggrSign" POINTonE2_type;
+  llvm_precond {{ POINTonE2_invariant AggrSign }};
+  crucible_precond {{ is_point_projective E' (POINTonE2_abs AggrSign) }}; // on the curve
+  crucible_precond {{ ~(Fp_2.is_equal ((fp2_abs (AggrSign.2)), Fp_2.field_zero)) }};
+
+  llvm_points_to (llvm_elem ctx_ptr 0)
+                 (llvm_term {{ AGGR_HASH_OR_ENCODE
+                            || AGGR_MIN_PK
+                            || AGGR_SIGN_SET
+                            || AGGR_GT_SET }});
+  llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term GT);
+  llvm_points_to (llvm_elem ctx_ptr 5) (llvm_term AggrSign);
+
+  llvm_execute_func [ ctx_ptr, llvm_null ];
+
+  llvm_return (llvm_term {{ bool_to_limb (finalverify_B (POINTonE2_abs AggrSign)
+                                                        (fp12_abs GT)) }});
+};
+
+let blst_pairing_aggregate_pk_in_g1_null_sig_spec ctx_nelems aggr_gt_set = do {
+  ctx_ptr <- llvm_alloc (llvm_struct "struct.blst_pairing_st");
+
+  // ctx->ctrl must have AGGR_HASH_OR_ENCODE set and AGGR_MIN_SIG unset, but we
+  // leave the rest uninterpreted
+  ctx_ctrl <- llvm_fresh_var "ctx.ctrl" (llvm_int 32);
+  llvm_precond {{ (ctx_ctrl && AGGR_HASH_OR_ENCODE) != 0 }};
+  llvm_precond {{ (ctx_ctrl && AGGR_MIN_SIG) == 0 }};
+  llvm_points_to (llvm_elem ctx_ptr 0) (llvm_term ctx_ctrl);
+
+  // Set ctx.nelems
+  llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ `ctx_nelems : [32] }});
+
+  dst_ptr <- llvm_alloc_readonly (llvm_array dst_len (llvm_int 8));
+  llvm_points_to dst_ptr (llvm_term {{ BMPKS::reexport_DST }});
+  llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
+  llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
+  ctx_GT <- if aggr_gt_set
+            then llvm_fresh_var "ctx.GT" vec384fp12_type
+            else return {{ undefined }};
+  if aggr_gt_set
+    then do {
+      llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) != 0 }};
+      llvm_precond {{ fp12_invariant ctx_GT }};
+      llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT);
+    } else llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) == 0 }};
+  ctx_Q0 <- if eval_bool {{ `ctx_nelems == (`N_MAX - 1) }}
+            then llvm_fresh_var "ctx.Q0" POINTonE2_affine_type
+            else return {{ undefined }};
+  ctx_P0 <- if eval_bool {{ `ctx_nelems == (`N_MAX - 1) }}
+            then llvm_fresh_var "ctx.P0" POINTonE1_affine_type
+            else return {{ undefined }};
+  ctx_AggrSign <- llvm_fresh_var "ctx.AggrSign" POINTonE2_type;
+  llvm_points_to (llvm_elem ctx_ptr 5) (llvm_term ctx_AggrSign);
+
+  // Constrain ctx.P and ctx.Q if approaching N_MAX
+  if eval_bool {{ `ctx_nelems == (`N_MAX - 1) }}
+  then do {
+    llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) 0) (llvm_term ctx_Q0);
+    llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) 0) (llvm_term ctx_P0);
+    llvm_precond {{ POINTonE2_affine_invariant ctx_Q0 }};
+    llvm_precond {{ POINTonE1_affine_invariant ctx_P0 }};
+  } else do { return (); };
+
+  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" POINTonE1_affine_type;
+  llvm_precond {{ ~(is_point_O E (POINTonE1_affine_abs pk)) }};
+  llvm_precond {{ POINTonE1_affine_invariant pk }};
+
+  let msg_len = 32;
+  (msg, msg_ptr) <-
+      ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  llvm_execute_func [ ctx_ptr
+                    , pk_ptr
+                    , llvm_null
+                    , msg_ptr
+                    , llvm_term {{ `msg_len : [64] }}
+                    , llvm_null
+                    , llvm_term {{ 0 : [64] }} ];
+  let Q = {{ POINTonE2_affine_rep
+               (affinify E' (hash_to_curve_E2_opt_impl (msg, BMPKS::reexport_DST))) }};
+  if eval_bool {{ `ctx_nelems == (`N_MAX - 1) }}
+  then do {
+    llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ 0 : [32] }});
+    llvm_points_to (llvm_elem ctx_ptr 0)
+                   (llvm_term {{ ctx_ctrl || AGGR_GT_SET  || AGGR_MIN_PK }});
+    let GT =
+      {{ fp12_rep (F_prod Fp_12
+                          [ miller_loop_opt (POINTonE1_affine_abs ctx_P0)
+                                            (POINTonE2_affine_abs ctx_Q0)
+                          , miller_loop_opt (POINTonE1_affine_abs pk)
+                                            (POINTonE2_affine_abs Q) ]) }};
+    if aggr_gt_set
+    then do {
+      llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term
+        {{ fp12_rep (Fp_12.mul (fp12_abs ctx_GT, fp12_abs GT)) }});
+    } else do {
+      // ctx->GT is set for the first time
+      llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term GT);
+    };
+  } else do {
+    llvm_points_to (llvm_elem ctx_ptr 0)
+                   (llvm_term {{ ctx_ctrl || AGGR_MIN_PK }});
+    llvm_points_to (llvm_elem ctx_ptr 1)
+                   (llvm_term {{ `ctx_nelems + 1 : [32]}});
+    // ctx->GT is unchanged (if set)
+    if aggr_gt_set
+    then llvm_points_to (llvm_elem ctx_ptr 4) (llvm_term ctx_GT)
+    else return ();
+    // These postconditions on Q and P are true in the commit case too, but it
+    // doesn't matter because they've already been processed in that case, so
+    // we ignore them to simplify the proof.
+    // ctx.Q[ctx.nelems] == Q
+    llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) ctx_nelems) (llvm_term Q);
+    // ctx.P[ctx.nelems] == pk
+    llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) ctx_nelems)
+                   (llvm_term pk);
+  };
+  // DST, dst_len, and AggrSign are unchanged
+  llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
+  llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
+  llvm_points_to (llvm_elem ctx_ptr 5) (llvm_term ctx_AggrSign);
+  llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }});
+};
+
+Hash_to_G2_ov <- prove_Hash_to_G2_impl msg_len dst_len aug_len;
+
+hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms <-
+  core_verify_pk_in_g1_POINTonE2_from_Jacobian_hash_preconds msg_len dst_len aug_len;
+
+normalize_hash_to_curve_E2_opt_impl_rws <-
+  normalize_hash_to_curve_impl msg_len dst_len aug_len;
+
+let map_size_2_fp2_term = parse_core "\\(f : ((Vec 2 (Vec 6 (Vec 64 Bool))) * (Vec 2 (Vec 6 (Vec 64 Bool)))) -> ((Vec 2 Integer) * (Vec 2 Integer))) -> \\(y : Vec 2 ((Vec 2 (Vec 6 (Vec 64 Bool))) * (Vec 2 (Vec 6 (Vec 64 Bool))))) -> map ((Vec 2 (Vec 6 (Vec 64 Bool))) * (Vec 2 (Vec 6 (Vec 64 Bool)))) ((Vec 2 Integer) * (Vec 2 Integer)) f 2 y";
+
+// This is admitted so that it can be polymorphic.  Proving it would require
+// monomorphic input types and would reduce its usefulness.  However, it is
+// trivially true.
+unfold_map_fp2 <- admit_cryptol (rewrite (cryptol_ss())
+  {{ \f xs -> (map_size_2_fp2_term f xs) == ([f x1, f x2] where [x1, x2] = xs) }});
+
+let blst_pairing_aggregate_pk_in_g1_null_sig_ovs =
+  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
+                [ Hash_to_G2_ov
+                , POINTonE2_from_Jacobian_alias_ov
+                , vec_copy_2fp_ov
+                , miller_loop_n_2_ov ]);
+
+let prove_blst_pairing_aggregate_pk_in_g1_null_sig = do {
+  rw_with [ unfold_all_POINTonE1_affine_invariant_2_thm
+          , unfold_all_POINTonE2_affine_invariant_2_thm ];
+  unfolding [ "Cryptol::map" ];
+  rw_with [unfold_map_fp2];
+  unfolding [ "POINTonE1_affine_invariant"
+            , "is_point_O"
+            , "same_point_affine"
+            , "point_O"
+            , "POINTonE1_affine_abs"
+            , "BMPKS::reexport_DST"
+            , "BLSMinimalPublicKeySize::DST" ];
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  rw_with POINTonE2_base_thms;
+  unfolding ["POINTonE2_rep"];
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  rw_with fp2_rep_thms;
+  rw_with normalize_hash_to_curve_E2_opt_impl_rws;
+  rw_with hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms;
+  rw_with [normalize_affinify_fp2_thm, F_prod_Fp_12_thm];
+  rw_with fp12_rep_thms;
+  rw_with remove_ho_rules;
+  w4_unint_z3 (concat [ "affinify_E'"
+                      , "fp12_rep"
+                      , "F_prod_Fp_12"
+                      , "miller_loop_opt"
+                      , "hash_to_curve_E2_opt_impl" ]
+                      BasicVerify_B_unints);
+};
+
+blst_pairing_aggregate_pk_in_g1_null_sig_0_ov <- custom_verify
+  "blst_pairing_aggregate_pk_in_g1"
+  blst_pairing_aggregate_pk_in_g1_null_sig_ovs
+  // AGGR_GT_SET will always be set in null_sig case for N_MAX == 2
+  (blst_pairing_aggregate_pk_in_g1_null_sig_spec 0 true)
+  prove_blst_pairing_aggregate_pk_in_g1_null_sig;
+
+blst_pairing_aggregate_pk_in_g1_null_sig_1_first_commit_ov <- custom_verify
+  "blst_pairing_aggregate_pk_in_g1"
+  blst_pairing_aggregate_pk_in_g1_null_sig_ovs
+  (blst_pairing_aggregate_pk_in_g1_null_sig_spec 1 false)
+  prove_blst_pairing_aggregate_pk_in_g1_null_sig;
+
+blst_pairing_aggregate_pk_in_g1_null_sig_1_nth_commit_ov <- custom_verify
+  "blst_pairing_aggregate_pk_in_g1"
+  blst_pairing_aggregate_pk_in_g1_null_sig_ovs
+  (blst_pairing_aggregate_pk_in_g1_null_sig_spec 1 true)
+  prove_blst_pairing_aggregate_pk_in_g1_null_sig;
+
+let blst_pairing_aggregate_pk_in_g1_sig_spec = do {
+  ctx_ptr <- llvm_alloc (llvm_struct "struct.blst_pairing_st");
+
+  // Set up ctx->ctrl flags
+  ctx_ctrl <- llvm_fresh_var "ctx.ctrl" (llvm_int 32);
+  llvm_precond {{ (ctx_ctrl && AGGR_HASH_OR_ENCODE) != 0 }};
+  llvm_precond {{ (ctx_ctrl && AGGR_MIN_SIG) == 0 }};
+  llvm_precond {{ (ctx_ctrl && AGGR_GT_SET) == 0 }};
+  llvm_precond {{ (ctx_ctrl && AGGR_SIGN_SET) == 0 }};
+  llvm_points_to (llvm_elem ctx_ptr 0) (llvm_term ctx_ctrl);
+
+  // Set ctx.nelems
+  llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ 0 : [32] }});
+
+  dst_ptr <- llvm_alloc_readonly (llvm_array dst_len (llvm_int 8));
+  llvm_points_to dst_ptr (llvm_term {{ BMPKS::reexport_DST }});
+  llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
+  llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
+
+  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" POINTonE1_affine_type;
+  llvm_precond {{ ~(is_point_O E (POINTonE1_affine_abs pk)) }};
+  llvm_precond {{ POINTonE1_affine_invariant pk }};
+
+  (sig, sig_ptr) <- ptr_to_fresh_readonly "sig" POINTonE2_affine_type;
+  llvm_precond {{ ~ (is_point_O E' (POINTonE2_affine_abs sig)) }};
+  llvm_precond {{ POINTonE2_affine_invariant sig }};
+  llvm_precond {{ is_point_affine E' (POINTonE2_affine_abs sig) }};
+  llvm_precond {{ is_in_g2_impl (POINTonE2_affine_abs sig) }};
+  llvm_precond {{ ~(Fp_2.is_equal (fp2_abs x, Fp_2.field_zero) /\
+                    Fp_2.is_equal (fp2_abs y, Fp_2.field_zero))
+                  where (x, y) = sig }};
+
+  let msg_len = 32;
+  (msg, msg_ptr) <-
+      ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
+  llvm_execute_func [ ctx_ptr
+                    , pk_ptr
+                    , sig_ptr
+                    , msg_ptr
+                    , llvm_term {{ `msg_len : [64] }}
+                    , llvm_null
+                    , llvm_term {{ 0 : [64] }} ];
+  llvm_points_to (llvm_elem ctx_ptr 0)
+                 (llvm_term {{ ctx_ctrl || AGGR_SIGN_SET  || AGGR_MIN_PK }});
+  let Q = {{ POINTonE2_affine_rep
+               (affinify E' (hash_to_curve_E2_opt_impl (msg, BMPKS::reexport_DST))) }};
+  llvm_points_to (llvm_elem ctx_ptr 1) (llvm_term {{ 1 : [32]}});
+  // These postconditions on Q and P are true in the commit case too, but it
+  // doesn't matter because they've already been processed in that case, so
+  // we ignore them to simplify the proof.
+  // ctx.Q[ctx.nelems] == Q
+  llvm_points_to (llvm_elem (llvm_elem ctx_ptr 6) 0) (llvm_term Q);
+  // ctx.P[ctx.nelems] == pk
+  llvm_points_to (llvm_elem (llvm_elem ctx_ptr 7) 0) (llvm_term pk);
+  // DST, and dst_len are unchanged
+  llvm_points_to (llvm_elem ctx_ptr 2) dst_ptr;
+  llvm_points_to (llvm_elem ctx_ptr 3) (llvm_term {{ `dst_len : [64] }});
+  llvm_points_to
+      (llvm_elem ctx_ptr 5)
+      (llvm_term {{ ( sig.0, sig.1, one_mont_px ) }});
+  llvm_return (llvm_term {{ `BLST_SUCCESS : [32] }});
+};
+
+blst_pairing_aggregate_pk_in_g1_sig_ov <- custom_verify
+  "blst_pairing_aggregate_pk_in_g1"
+  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
+                [ Hash_to_G2_ov
+                , POINTonE2_from_Jacobian_alias_ov
+                , POINTonE2_in_g2_ov
+                , vec_copy_2fp_ov
+                , miller_loop_n_2_ov ])
+  blst_pairing_aggregate_pk_in_g1_sig_spec
+  do {
+    unfolding [ "POINTonE2_affine_invariant"
+              , "POINTonE1_affine_invariant"
+              , "is_point_O"
+              , "same_point_affine"
+              , "point_O"
+              , "POINTonE1_affine_abs"
+              , "BMPKS::reexport_DST"
+              , "BLSMinimalPublicKeySize::DST" ];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with POINTonE2_base_thms;
+    unfolding ["POINTonE2_rep"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with fp2_rep_thms;
+    rw_with normalize_hash_to_curve_E2_opt_impl_rws;
+    rw_with hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms;
+    rw_with remove_ho_rules;
+    w4_unint_z3 (concat [ "affinify_E'"
+                        , "hash_to_curve_E2_opt_impl" ]
+                        BasicVerify_B_unints);
+  };
+
+let demo_BasicAggregateVerify_B_spec n = do {
+  global_alloc_init "demo_DST_B" {{ BMPKS::reexport_DST }};
+
+  (sig, sig_ptr) <- ptr_to_fresh_readonly "sig" compressed_E2_rep_type;
+  verify_B_sig_preconds sig;
+
+  (pks, pks_ptr) <-
+      ptr_to_fresh_readonly "pks" (llvm_array n compressed_E1_rep_type);
+  llvm_precond {{ all verify_B_pk_precond pks }};
+
+  let message_len = 32;
+  (messages, messages_ptr) <-
+      ptr_to_fresh_readonly "messages"
+                            (llvm_array n
+                                        (llvm_array message_len (llvm_int 8)));
+  llvm_precond {{ all_distinct messages }};
+
+  llvm_execute_func [ llvm_term {{ `n : [64] }}
+                    , llvm_term {{ `message_len : [64] }}
+                    , pks_ptr
+                    , messages_ptr
+                    , sig_ptr ];
+
+  llvm_return (llvm_term
+      {{ bool_to_limb (BMPKS::CoreAggregateVerify (split`{n} (join (join pks))) messages (join sig)) }});
+};
+
+blst_pairing_finalverify_B_ov <- custom_verify
+  "blst_pairing_finalverify"
+  (concat mul_fp12_ovs
+          [ POINTonE2_from_Jacobian_ov
+          , conjugate_fp12_ov
+          , final_exp_alias_ov
+          , vec_is_equal_fp2_ov
+          , vec_is_zero_5fp2_ov
+          , miller_loop_n_1_ov])
+  blst_pairing_finalverify_B_spec
+  do {
+    rw_with fp12_rep_thms;
+    rw_with [ affine_inv_affine_rep_e2_thm , one_mont_px_invariant_thm];
+    unfolding ["fp12_rep", "fp6_rep", "finalverify_B", "G1", "one_mont_px"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with fp2_rep_thms;
+    rw_with fp12_normalization_thms;
+    rw_with POINTonE2_base_thms;
+    rw_with [ normalize_miller_loop_opt_checked_thm
+            , normalize_affinify_fp2_thm ];
+    rw_with remove_ho_rules;
+    w4_unint_z3 (concat [ "all_distinct"
+                        , "POINTonE2_abs"
+                        , "POINTonE2_invariant"
+                        , "is_point_projective_E'"
+                        , "fp2_abs"
+                        , "final_exponentiation_impl"
+                        , "fp12_conjugate"
+                        , "miller_loop_opt_checked"
+                        , "Fp"
+                        , "Fp_2"
+                        , "fp12_abs" ]
+                        BasicVerify_B_unints);
+  };
+
+unfold_all_verify_B_pk_precond_1_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \x1 -> all verify_B_pk_precond [x1] ==
+            (verify_B_pk_precond x1) }}) ["verify_B_pk_precond"];
+
+unfold_all_verify_B_pk_precond_3_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \x1 x2 x3 -> all verify_B_pk_precond [x1, x2, x3] ==
+            (verify_B_pk_precond x1 /\
+             verify_B_pk_precond x2 /\
+             verify_B_pk_precond x3) }}) ["verify_B_pk_precond"];
+
+unfold_all_verify_B_pk_precond_4_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \x1 x2 x3 x4 -> all verify_B_pk_precond [x1, x2, x3, x4] ==
+            (verify_B_pk_precond x1 /\
+             verify_B_pk_precond x2 /\
+             verify_B_pk_precond x3 /\
+             verify_B_pk_precond x4) }}) ["verify_B_pk_precond"];
+
+is_point_projective_E'_affine_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \x y -> is_point_projective E' (x, y, Fp_2.field_unit) ==
+             if ~(is_point_O E' (x, y))
+             then is_point_affine E' (x, y)
+             else apply is_point_projective E' (x, y, Fp_2.field_unit) }}) [];
+
+hoist_fp2_invariant <- prove_cryptol
+  (rewrite (cryptol_ss())
+    {{ \c x1 x2 -> fp2_invariant (if c then x1 else x2) ==
+                   if c then fp2_invariant x1 else fp2_invariant x2 }})
+  ["fp2_invariant"];
+
+hoist_field_access_0_pair_thm <- prove_cryptol
+  (rewrite (cryptol_ss())
+  {{ \b (t0 : Fp_2_rep_t) (t1 : Fp_2_rep_t) (f0 : Fp_2_rep_t) (f1 : Fp_2_rep_t) ->
+      (if b then (t0, t1) else (f0, f1)).0 == (if b then t0 else f0) }}) [];
+
+hoist_field_access_1_pair_thm <- prove_cryptol
+  (rewrite (cryptol_ss())
+  {{ \b (t0 : Fp_2_rep_t) (t1 : Fp_2_rep_t) (f0 : Fp_2_rep_t) (f1 : Fp_2_rep_t) ->
+      (if b then (t0, t1) else (f0, f1)).1 == (if b then t1 else f1) }}) [];
+
+normalize_affine_fp2_pair0_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \P -> (Fp_2.normalize P.0) == (normalize_affine_point Fp_2 P).0 }}) [];
+
+normalize_affine_fp2_pair1_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \P -> (Fp_2.normalize P.1) == (normalize_affine_point Fp_2 P).1 }}) [];
+
+hoist_is_point_projective_E'_z_thm <- prove_cryptol
+  (rewrite (cryptol_ss())
+    {{ \c x y z1 z2 -> is_point_projective E' (x, y, if c then z1 else z2) ==
+                       if c
+                       then is_point_projective E' (x, y, z1)
+                       else is_point_projective E' (x, y, z2) }}) [];
+
+unfold_aggregate_loop_min_key_1_thm <- prove_cryptol
+  {{ \(pks : [1][48*8]) (msgs : [1][msg_len][8]) ->
+      BMPKS::aggregate_loop pks msgs ==
+        (BMPKS::aggregate_loop_body pk1 msg1 (just Fp_12.field_unit)
+        where
+          [pk1] = pks
+          [msg1] = msgs) }} ["BMPKS::aggregate_loop_body"];
+
+unfold_aggregate_loop_min_key_3_thm <- prove_cryptol
+  {{ \(pks : [3][48*8]) (msgs : [3][msg_len][8]) ->
+      BMPKS::aggregate_loop pks msgs ==
+      (BMPKS::aggregate_loop_body pk3 msg3
+        (BMPKS::aggregate_loop_body pk2 msg2
+          (BMPKS::aggregate_loop_body pk1 msg1 (just Fp_12.field_unit)))
+        where
+          [pk1, pk2, pk3] = pks
+          [msg1, msg2, msg3] = msgs) }} ["BMPKS::aggregate_loop_body"];
+
+unfold_aggregate_loop_min_key_4_thm <- prove_cryptol
+  {{ \(pks : [4][48*8]) (msgs : [4][msg_len][8]) ->
+      BMPKS::aggregate_loop pks msgs ==
+      (BMPKS::aggregate_loop_body pk4 msg4
+        (BMPKS::aggregate_loop_body pk3 msg3
+          (BMPKS::aggregate_loop_body pk2 msg2
+            (BMPKS::aggregate_loop_body pk1 msg1 (just Fp_12.field_unit))))
+        where
+          [pk1, pk2, pk3, pk4] = pks
+          [msg1, msg2, msg3, msg4] = msgs) }} ["BMPKS::aggregate_loop_body"];
+
+affinify_abs_z_1_fp2_thm <- prove_cryptol
+  {{ \p -> affinify E' (p.0, p.1, Fp_2.field_unit) == normalize_affine_point Fp_2 p }} [];
+
+G1_to_BP_thm <- prove_cryptol {{ POINTonE1_affine_abs (G1.0, G1.1) == BP }} [];
+
+finalverify_B_core_verify_thm <- custom_prove_cryptol
+  {{ \pk sig (msg : [msg_len][8]) (dst : [dst_len][8]) ->
+      (finalverify_B sig
+                   (miller_loop_opt_checked pk (p.0, p.1)) ==
+       core_verify_pk_in_g1_impl pk (affinify E' sig) msg dst []
+       where
+         p = affinify E' (hash_to_curve_E2_opt_impl (msg, dst))) }}
+  do {
+    unfolding ["finalverify_B", "core_verify_pk_in_g1_impl"];
+    simplify basic_ss;
+    simplify (cryptol_ss());
+    rw_with [fp12_unit_check_with_fp2_equal_thm];
+    rw_with fp12_rep_thms;
+    rw_with fp12_normalization_thms;
+    unfolding ["final_exponentiation_impl"];
+    rw_with [ normalize_C_expt_thm
+            , G1_to_BP_thm ];
+    rw_with remove_ho_rules;
+    w4_unint_z3 [ "affinify_E'"
+                , "C_expt"
+                , "final_exp_frobenius_map"
+                , "Fp_12"
+                , "fp12_conjugate"
+                , "hash_to_curve_E2_opt_impl"
+                , "miller_loop_opt_checked" ];
+  };
+
+// This assumption is justified by Note 1 in proof/pairing.saw
+finalverify_B_ate_pairing_3_thm <- admit_cryptol
+ {{ \pk1 pk2 pk3 sig m1 m2 m3 ->
+    (finalverify_B
+      sig
+      (Fp_12.mul
+        ( F_prod
+            Fp_12
+            [ miller_loop_opt pk1 m1
+            , miller_loop_opt pk2 m2 ]
+        , miller_loop_opt_checked pk3 m3)) ==
+     (Fp_12.mul
+        ( Fp_12.mul
+          ( bls_ate_pairing pk1 m1
+          , bls_ate_pairing pk2 m2 )
+        , bls_ate_pairing pk3 m3 ) ==
+      bls_ate_pairing BP (affinify E' sig))) }};
+
+// This assumption is justified by Note 1 in proof/pairing.saw
+finalverify_B_ate_pairing_4_thm <- admit_cryptol
+ {{ \pk1 pk2 pk3 pk4 sig m1 m2 m3 m4 ->
+    (finalverify_B
+      sig
+      (Fp_12.mul
+        ( F_prod
+            Fp_12
+            [ miller_loop_opt pk1 m1
+            , miller_loop_opt pk2 m2 ]
+        , ( F_prod
+              Fp_12
+              [ miller_loop_opt pk3 m3
+              , miller_loop_opt pk4 m4 ]))) ==
+     (Fp_12.mul
+       ( Fp_12.mul
+          ( Fp_12.mul
+            ( bls_ate_pairing pk1 m1
+            , bls_ate_pairing pk2 m2 )
+          , bls_ate_pairing pk3 m3 )
+       , bls_ate_pairing pk4 m4 ) ==
+      bls_ate_pairing BP (affinify E' sig) )) }};
+
+fp2_pair_to_point_thm <- prove_cryptol
+  {{ \(x : AffinePoint t_Fp_2) -> (x.0, x.1) == x }} [];
+
+hoist_is_point_affine_E'_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \b t f -> is_point_affine E' (if b then t else f) ==
+               if b then is_point_affine E' t else is_point_affine E' f }}) [];
+
+hoist_is_in_g2_impl_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \b t f -> is_in_g2_impl (if b then t else f) ==
+               if b then is_in_g2_impl t else is_in_g2_impl f }})
+  ["is_in_g2_impl"];
+
+hoist_fp2_abs_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \b t f -> fp2_abs (if b then t else f) ==
+               if b then fp2_abs t else fp2_abs f }})
+  ["fp2_abs"];
+
+hoist_fragmented_affinify_E'_thm <- custom_prove_cryptol (rewrite (cryptol_ss())
+  {{ \b t1 t2 f1 f2 z -> affinify E' ((if b then t1 else f1), (if b then t2 else f2), z) ==
+               if b then affinify E' (t1, t2, z) else affinify E' (f1, f2, z) }})
+  do {
+    rw_with remove_ho_rules;
+    w4_unint_z3 ["affinify_E'"];
+  };
+
+hoist_fragmented_is_point_affine_E'_thm <- prove_cryptol (rewrite (cryptol_ss())
+  {{ \b t f -> is_point_affine E' ((if b then t.0 else f.0), (if b then t.1 else f.1)) ==
+               if b then is_point_affine E' t else is_point_affine E' f }}) [];
+
+normalize_uncompress_E2_OK_0_thm <- custom_prove_cryptol
+  {{ \x -> Fp_2.normalize (uncompress_E2_OK x).0 == (uncompress_E2_OK x).0 }}
+  do {
+    rw_with [ normalize_affine_fp2_pair0_thm
+            , normalize_uncompress_E2_OK_thm ];
+    w4_unint_z3 ["uncompress_E2_OK"];
+  };
+
+normalize_uncompress_E2_OK_1_thm <- custom_prove_cryptol
+  {{ \x -> Fp_2.normalize (uncompress_E2_OK x).1 == (uncompress_E2_OK x).1 }}
+  do {
+    rw_with [ normalize_affine_fp2_pair1_thm
+            , normalize_uncompress_E2_OK_thm ];
+    w4_unint_z3 ["uncompress_E2_OK"];
+  };
+
+normalize_point_O_E'_0_thm <- prove_cryptol
+  {{ Fp_2.normalize (point_O E').0 == (point_O E').0 }} [];
+
+normalize_point_O_E'_1_thm <- prove_cryptol
+  {{ Fp_2.normalize (point_O E').1 == (point_O E').1 }} [];
+
+let BasicAggregateVerify_B_ovs =
+  (foldr concat [vec_fp2_overrides, vec_overrides, mul_fp12_ovs]
+                [ all_distinct_1_ov
+                , all_distinct_3_ov
+                , all_distinct_4_ov
+                , blst_p2_uncompress_OK_ov
+                , POINTonE2_affine_on_curve_ov
+                , blst_p2_affine_in_g2_ov
+                , demo_KeyValidate_B_ov
+                , POINTonE1_Uncompress_OK_ov
+                // ovs used in pairing aggregate:
+                , POINTonE2_in_g2_ov
+                , Hash_to_G2_ov
+                , POINTonE2_from_Jacobian_alias_ov
+                , vec_copy_2fp_ov
+                // ovs used in blst_pairing_commit:
+                , miller_loop_n_1_ov
+                // ovs used in blst_pairing_finalverify:
+                , blst_pairing_finalverify_B_ov
+                // Pairing aggregate ovs
+                , blst_pairing_aggregate_pk_in_g1_null_sig_1_nth_commit_ov
+                , blst_pairing_aggregate_pk_in_g1_null_sig_0_ov
+                , blst_pairing_aggregate_pk_in_g1_null_sig_1_first_commit_ov
+                , blst_pairing_aggregate_pk_in_g1_sig_ov
+                ]);
+
+let prove_BasicAggregateVerify_B final_goal_num = do {
+  // Precondition proof(s)
+  rw_with_1 unfold_all_verify_B_pk_precond_1_thm;
+  unfolding [ "POINTonE2_affine_abs"
+            , "POINTonE1_affine_abs"
+            , "blst_core_verify_pk_in_g1_error_precond"
+            , "verify_B_pk_precond"
+            ];
+  (goal_num_ite final_goal_num
+    do {
+      return ();
+    }
+    do {
+      (unfolding ["uncompress_E1_imp", "uncompress_E2_imp"]);
+    });
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  simplify basic_ss;
+  rw_with [ hoist_POINTonE1_affine_rep
+          , hoist_POINTonE1_affine_invariant
+          , hoist_POINTonE2_affine_rep
+          , hoist_POINTonE2_affine_invariant
+          , affine_inv_affine_rep_e2_thm
+          , zero_lt_one_thm
+          , intLe_sym_thm
+          , affine_inv_affine_rep_e1_thm ];
+  rw_with structural_rewrites;
+  simplify basic_ss;
+  rw_with [ fold_POINTonE1_affine_invariant
+          , fold_POINTonE2_affine_invariant
+          , hoist_POINTonE1_affine_invariant
+          , hoist_POINTonE2_affine_invariant
+          , affine_inv_affine_rep_e2_thm
+          , fold_POINTonE1_affine_abs_thm
+          , hoist_POINTonE1_affine_abs_thm
+          , hoist_is_point_O_E_thm
+          , POINTonE1_affine_abs_rep_thm
+          , is_point_O_E_KeyValidate_thm
+          , normalize_uncompress_E1_OK_thm
+          , unfold_all_POINTonE1_affine_invariant_1_thm
+          , unfold_all_POINTonE2_affine_invariant_1_thm
+          , unfold_all_POINTonE1_affine_invariant_3_thm
+          , unfold_all_POINTonE2_affine_invariant_3_thm
+          , unfold_all_POINTonE1_affine_invariant_4_thm
+          , unfold_all_POINTonE2_affine_invariant_4_thm
+          , unfold_all_verify_B_pk_precond_1_thm
+          , unfold_all_verify_B_pk_precond_3_thm
+          , unfold_all_verify_B_pk_precond_4_thm
+          , affine_inv_affine_rep_e1_thm ];
+  rw_with POINTonE2_base_thms;
+  unfolding ["POINTonE2_rep", "verify_B_pk_precond"];
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  rw_with fp_rep_thms;
+  rw_with fp2_rep_thms;
+  rw_with normalize_hash_to_curve_E2_opt_impl_rws;
+  rw_with hash_to_curve_opt_impl_POINTonE2_from_Jacobian_precond_thms;
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  unfolding [ "POINTonE2_invariant"
+            , "POINTonE2_affine_rep"
+            , "select"
+            , "POINTonE2_abs" ];
+  rw_with fp_rep_thms;
+  rw_with fp2_rep_thms;
+  rw_with [ normalize_affine_fp_pair0_thm
+          , normalize_affine_fp2_pair0_thm
+          , hoist_fp2_invariant
+          , normalize_affine_fp_pair1_thm
+          , normalize_affine_fp2_pair1_thm
+          , one_mont_px_invariant_thm
+          , one_mont_px_abs_thm
+          , hoist_is_point_projective_E_z_thm
+          , hoist_is_point_projective_E'_z_thm
+          , is_point_projective_E'_affine_thm
+          , hoist_field_access_0_pair_thm
+          , hoist_field_access_1_pair_thm
+          , normalize_uncompress_E2_OK_thm];
+  rw_with fp_rep_thms;
+  rw_with fp2_rep_thms;
+  rw_with fp12_rep_thms;
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  // Final goal
+  rw_with fp12_normalization_thms;
+  unfolding [ "Cryptol::map"
+            , "BLSMinimalPublicKeySize::CoreAggregateVerify"
+            , "affinify_E'"
+            ];
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  rw_with [ unfold_map
+          , unfold_map_fp2
+          , normalize_miller_loop_opt_checked_thm
+          , finalverify_B_core_verify_thm
+          , finalverify_B_ate_pairing_3_thm
+          , finalverify_B_ate_pairing_4_thm
+          , core_verify_pk_in_g1_impl_thm
+          , unfold_aggregate_loop_min_key_1_thm
+          , unfold_aggregate_loop_min_key_3_thm
+          , unfold_aggregate_loop_min_key_4_thm
+          , affinify_abs_z_1_thm
+          , affinify_abs_z_1_fp2_thm
+          , normalize_uncompress_E1_OK_thm
+          , normalize_uncompress_E2_OK_thm
+          , normalize_point_O_E'_thm
+          , normalize_point_O_E_thm
+          , normalize_affinify_thm
+          , normalize_affinify_fp2_thm
+          , hoist_fp2_abs_thm
+          , hoist_fragmented_affinify_E'_thm
+          ];
+  rw_with fp2_rep_thms;
+  rw_with [ fold_normalize_affine_fp2_thm
+          , normalize_uncompress_E2_OK_thm
+          , normalize_point_O_E'_thm
+          , normalize_uncompress_E2_OK_0_thm
+          , normalize_uncompress_E2_OK_1_thm
+          , normalize_point_O_E'_0_thm
+          , normalize_point_O_E'_1_thm
+          , affinify_abs_z_1_fp2_thm ];
+  unfolding [ "core_verify_pk_in_g1"
+            , "BLSMinimalPublicKeySize::aggregate_loop_body"
+            , "BLSMinimalPublicKeySize::module parameter pairing"
+            , "maybe_cases"
+            , "BLSMinimalPublicKeySize::module parameter P"
+            , "BLSMinimalPublicKeySize::P"
+            , "BLSMinimalPublicKeySize::module parameter G"
+            , "BLSMinimalPublicKeySize::G"
+            , "BLSMinimalPublicKeySize::module parameter hash_to_point"
+            , "BLSMinimalPublicKeySize::hash_to_point"
+            , "BLSMinimalPublicKeySize::module parameter signature_to_point"
+            , "BLSMinimalPublicKeySize::signature_to_point"
+            , "BLSMinimalPublicKeySize::module parameter pubkey_to_point"
+            , "BLSMinimalPublicKeySize::pubkey_to_point"
+            , "BLSMinimalPublicKeySize::pairing"
+            , "BLSMinimalPublicKeySize::reexport_DST"
+            , "BLSMinimalPublicKeySize::module parameter DST"
+            ];
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  rw_with split_join_thms;
+  rw_with [ uncompress_E1_uncompress_E1_OK_thm
+          , deserialize_E2_uncompress_E2_OK_thm
+          , hoist_field_access_1_fp_thm
+          , hoist_field_access_1_fp2_thm
+          , hoist_bls_ate_pairing_lhs_thm
+          , hoist_bls_ate_pairing_rhs_thm
+          , is_in_g1_impl_thm
+          , is_in_g2_impl_min_key_thm
+          , hoist_is_point_affine_E_thm
+          , hoist_is_point_affine_E'_thm
+          , hoist_fragmented_is_point_affine_E'_thm
+          , uncompress_E1_on_curve
+          , uncompress_on_curve
+          , hoist_is_in_g1_impl_thm
+          , hoist_is_in_g2_impl_thm
+          , fp_pair_to_point_thm
+          , fp2_pair_to_point_thm
+          , hash_to_curve_E2_opt_impl_equiv_ov
+          ];
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  unfolding [ "just", "nothing" ];
+  //rw_with fp12_laws;
+  rw_with [ hoist_fp12_normalize_thm
+          , normalize_bls_ate_pairing_thm
+          , fp12_is_equal_thm
+          , fp12_mul_by_1_thm
+          ];
+  simplify basic_ss;
+  simplify (cryptol_ss());
+  rw_with remove_ho_rules;
+  simplify (addsimps readability_rewrites cleanup_simpset);
+  w4_unint_z3 (concat [ "HE2::hash_to_curve_opt"
+                      , "affinify_E"
+                      , "affinify_E'"
+                      , "all_distinct"
+                      , "hash_to_curve_E2_opt_impl"
+                      , "fp12_rep"
+                      , "fp12_mul"
+                      , "F_prod_Fp_12"
+                      , "miller_loop_opt" ]
+                      BasicVerify_B_unints);
+};
+
+// Proof for n = 1
+demo_BasicAggregateVerify_B_1_ov <- custom_verify
+  "demo_BasicAggregateVerify_B"
+  BasicAggregateVerify_B_ovs
+  (demo_BasicAggregateVerify_B_spec 1)
+  (prove_BasicAggregateVerify_B 9);
+
+// Proof for n = 3
+demo_BasicAggregateVerify_B_3_ov <- custom_verify
+  "demo_BasicAggregateVerify_B"
+  BasicAggregateVerify_B_ovs
+  (demo_BasicAggregateVerify_B_spec 3)
+  (prove_BasicAggregateVerify_B 16);
+
+// Proof for n = 4
+demo_BasicAggregateVerify_B_4_ov <- custom_verify
+  "demo_BasicAggregateVerify_B"
+  BasicAggregateVerify_B_ovs
+  (demo_BasicAggregateVerify_B_spec 4)
+  (prove_BasicAggregateVerify_B 17);

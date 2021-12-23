@@ -1,0 +1,13 @@
+diff --git a/src/aggregate.c b/src/aggregate.c
+index 50f6557..b8b7bd4 100644
+--- a/src/aggregate.c
++++ b/src/aggregate.c
+@@ -37,7 +37,7 @@
+  */
+ 
+ #ifndef N_MAX
+-# define N_MAX 8
++# define N_MAX 2
+ #endif
+ 
+ typedef union { POINTonE1 e1; POINTonE2 e2; } AggregatedSignature;
