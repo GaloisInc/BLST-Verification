@@ -18,7 +18,8 @@ for f in $files; do
     patch -f -p1 -t < patches/blst_bulk_addition_saw_cryptol/changes.patch
   fi
   saw "$f" -s "$summary_file" -f json
-  python3 scripts/html_summary.py "$summary_file" -o "build/$(basename $f)_dependencies.html"
+  dependencies_html=$(printf '%s' "build/${f}_dependencies.html" | sed -e 's/\.saw//' -e 's!/proof/!/!')
+  python3 scripts/html_summary.py "$summary_file" -o "$dependencies_html"
 done
 
 echo "All functions under verification were verified successfully"
