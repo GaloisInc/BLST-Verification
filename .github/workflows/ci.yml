@@ -33,6 +33,7 @@ jobs:
       - run: |
           sudo chown -R $USER:$(id -gn $USER) build
           jq -r '.[]' < <(cat build/*_output.json) | jq -s '.' | jq '. |= unique' > docs/output.json
+          cp build/*_dependencies.html docs
       - uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
