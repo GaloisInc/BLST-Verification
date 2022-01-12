@@ -40,9 +40,7 @@ fi
 if [ ! -f bin/yices ]
 then
     mkdir -p deps/yices
-    # As of 1/12/22 the Yices TLS certificate is expired and SRI has yet to
-    # replace it.  Temporarilly skip certificate validation.
-    wget $YICES_URL -O deps/yices.tar.gz --no-check-certificate
+    wget $YICES_URL -O deps/yices.tar.gz
     tar -x -f deps/yices.tar.gz --one-top-level=deps/yices
     cp deps/yices/*/bin/yices bin/yices
     cp deps/yices/*/bin/yices-smt2 bin/yices-smt2
