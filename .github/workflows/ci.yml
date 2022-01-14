@@ -33,10 +33,12 @@ jobs:
       - run: |
           sudo chown -R $USER:$(id -gn $USER) build
           jq -r '.[]' < <(cat build/*_output.json) | jq -s '.' | jq '. |= unique' > docs/output.json
+          cp build/*_dependencies.html docs || true
       - uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs
+          keep_files: true
       # - name: "Post Summary on PR"
       #   uses: actions/github-script@v3
       #   if: github.event_name == 'pull_request'

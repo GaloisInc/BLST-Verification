@@ -9,6 +9,7 @@
 
 import json
 import sys
+import re
 
 class DiGraph():
     '''Barely-functional version.'''
@@ -179,17 +180,19 @@ def show_assumptions_file(s, fname=None):
 # goes to https://github.com/GaloisInc/BLST-Verification/blob/main/proof/foo.saw#Lnnn
 
 def pathname_to_uri(p):
-    a = p.split('/')[-1]
-    b = a.split(':')
-    if len(b) < 2:
+    a = p.split(':')
+    b = re.findall(r'proof/(.*)', a[0])
+    if len(a) < 2:
         # raise Exception('Too few colons in %s => %s'%(p,a))
         return None
-    return 'https://github.com/GaloisInc/BLST-Verification/blob/main/proof/%s#L%s'%(b[0], b[1])
+    if len(b) == 0:
+        return None
+    return 'https://github.com/GaloisInc/BLST-Verification/blob/main/proof/%s#L%s'%(b[0], a[1])
 
 def show_method_summaries_html_1(s, f = sys.stdout):
     '''Shows which assumptions are used (even if via some intermediary)'''
     print ('<html><body><table>', file=f)
-    print ('<tr> <th> loc </th> <th> assumptions used</th></tr>', file=f)
+    print ('<tr> <th> description </th> <th> assumptions used</th></tr>', file=f)
     uris = [pathname_to_uri(e['loc']) for e in s]
     G = summary_event_digraph(s).transitive_closure()
     for i, e in enumerate(s):
@@ -209,6 +212,7 @@ def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10, only_items = 
     print ('<html><head><style> table, th, td {border: 1px solid black;}</style><body><table>', file=f)
     print ('<tr> <th> loc </th> <th> assumptions used</th></tr>', file=f)
     uris = [pathname_to_uri(e['loc']) for e in s]
+    descriptions = [(e['method'] if e['type']=='method' else e['type']+"-"+str(i)) for i, e in enumerate(s)]
     G = summary_event_digraph(s).transitive_closure()
     for i, e in enumerate(s):
         # if only_items is None and (e['type'] != 'method' or G.indegree(i) > 0): continue
@@ -220,7 +224,7 @@ def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10, only_items = 
                 dep_p.append(d)
         dep_p.sort()
         nrows = (len(dep_p) + deps_per_row - 1)//deps_per_row
-        print('<tr><td rowspan=%d> <a href="%s"> %d </a> </td>'% (nrows, uris[i], i), file=f)
+        print('<tr><td rowspan=%d> <a href="%s"> %s </a> </td>'% (nrows, uris[i], descriptions[i]), file=f)
         n = 0
         first_row = True
         for d in dep_p:
@@ -230,7 +234,7 @@ def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10, only_items = 
                   first_row=False
               else:
                   print('<tr><td>', file=f)
-          print (', ' if n > 0 else '', '<a href="', uris[d], '">', d, '</a>', file=f)
+          print (', ' if n > 0 else '', '<a href="', uris[d], '">', descriptions[d], '</a>', file=f)
           n = (n+1)%deps_per_row
           if n==0: print('</td></tr>', file=f)
         if n>0:
