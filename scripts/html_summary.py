@@ -7,12 +7,31 @@
 
 # There are also some functions here to emit csv, in case we want a spreadsheet view
 
+# The json proof summary gives:
+#
+#  type: "property" or "method"
+#  id: (a number, unique withing the summary file)
+#  status: "verified", "tested", or "assumed"
+#  loc: of the form filename:l1:c1-l2:c2 where l1,l2 are line numbers; c1,c2 column numbers
+#    ... or just  filename:l1:c1
+#  provers: list of strings naming the provers used (for verified properties only)
+#  dependencies: a list of ids
+#  elapsedtime:
+#  reason: (for properties only)
+#  numtests: (for tested status only)
+#  admitmsg: (for admitted only, a string)
+#  ploc: "theorem program location", optional for properties.
+
+# the "loc" gives the line(s) of a SAWscript source file where the proof
+#  was triggered.  This might be a `llvm_verify` command or a `prove_print` command
+#  or an `unsafe_assume`...
+
 import json
 import sys
 import re
 
 class DiGraph():
-    '''Barely-functional version.'''
+    '''Barely-functional version.  Functionality, such as it is, should match SageMath'''
     def __init__(self):
         # invariant: self.nverts  = len(self.outgoing)
         # invariant: for all o in outgoing, o is a sequence
@@ -207,9 +226,9 @@ def show_method_summaries_html_1(s, f = sys.stdout):
 def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10, only_items = None):
     '''Shows which assumptions are used (even if via some intermediary).  If `only_items` is `None`,
     then has a row for every method; otherwise only events whose index (in s) in in that list.
-    Uses multiple rows if needed, with no more than `deps_per_row` dependents listed on any row.'''
+    `deps_per_row` no longer has any effect.'''
 
-    print ('<html><head><style> table, th, td {border: 1px solid black;}</style><body><table>', file=f)
+    print ('<html><head><style> table, th, td {border: 1px solid black; border-collapse: collapse; word-wrap: normal;}</style><body><table>', file=f)
     print ('<tr> <th> loc </th> <th> assumptions used</th></tr>', file=f)
     uris = [pathname_to_uri(e['loc']) for e in s]
     descriptions = [(e['method'] if e['type']=='method' else e['type']+"-"+str(i)) for i, e in enumerate(s)]
@@ -223,22 +242,25 @@ def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10, only_items = 
             if s[d]['status'] != 'verified':
                 dep_p.append(d)
         dep_p.sort()
-        nrows = (len(dep_p) + deps_per_row - 1)//deps_per_row
-        print('<tr><td rowspan=%d> <a href="%s"> %s </a> </td>'% (nrows, uris[i], descriptions[i]), file=f)
+        #nrows = (len(dep_p) + deps_per_row - 1)//deps_per_row
+        #print('<tr><td rowspan=%d> <a href="%s"> %s </a> </td>'% (nrows, uris[i], descriptions[i]), file=f)
+        print('<tr><td> <a href="%s"> %s </a> </td>'% (uris[i], descriptions[i]), file=f)
         n = 0
-        first_row = True
+        # first_row = True
+        # if len(dep_p) == 0:
+        print('<td>', file=f)
         for d in dep_p:
-          if n==0:
-              if first_row:
-                  print('<td>', file=f)
-                  first_row=False
-              else:
-                  print('<tr><td>', file=f)
+          # if n==0:
+              # if first_row:
+                  # print('<td>', file=f)
+                  # first_row=False
+              # else:
+              #    print('<tr><td>', file=f)
           print (', ' if n > 0 else '', '<a href="', uris[d], '">', descriptions[d], '</a>', file=f)
-          n = (n+1)%deps_per_row
-          if n==0: print('</td></tr>', file=f)
-        if n>0:
-            print('</td></tr>', file=f)
+          n = (n+1) # %deps_per_row
+          # if n==0: print('</td></tr>', file=f)
+        # if n>0:
+        print('</td></tr>', file=f)
     print('</table></body></html>', file=f)
 
 def show_method_summaries_html_file(s, filename, deps_per_row=10, only_items = None):
