@@ -242,24 +242,14 @@ def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10, only_items = 
             if s[d]['status'] != 'verified':
                 dep_p.append(d)
         dep_p.sort()
-        #nrows = (len(dep_p) + deps_per_row - 1)//deps_per_row
-        #print('<tr><td rowspan=%d> <a href="%s"> %s </a> </td>'% (nrows, uris[i], descriptions[i]), file=f)
         print('<tr><td> <a href="%s"> %s </a> </td>'% (uris[i], descriptions[i]), file=f)
         n = 0
         # first_row = True
         # if len(dep_p) == 0:
         print('<td>', file=f)
         for d in dep_p:
-          # if n==0:
-              # if first_row:
-                  # print('<td>', file=f)
-                  # first_row=False
-              # else:
-              #    print('<tr><td>', file=f)
-          print (', ' if n > 0 else '', '<a href="', uris[d], '">', descriptions[d], '</a>', file=f)
-          n = (n+1) # %deps_per_row
-          # if n==0: print('</td></tr>', file=f)
-        # if n>0:
+            print (', ' if n > 0 else '', '<a href="', uris[d], '">', descriptions[d], '</a>', file=f)
+            n = (n+1)
         print('</td></tr>', file=f)
     print('</table></body></html>', file=f)
 
