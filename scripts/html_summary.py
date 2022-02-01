@@ -231,7 +231,7 @@ def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10,
     `deps_per_row` no longer has any effect.'''
 
     print ('<html><head><style> table, th, td {border: 1px solid black; border-collapse: collapse; word-wrap: normal;}</style><body><table>', file=f)
-    print ('<tr> <th> loc </th> <th> assumptions used</th></tr>', file=f)
+    print ('<tr> <th> verification </th> <th> assumptions used</th></tr>', file=f)
     uris = [pathname_to_uri(e['loc']) for e in s]
     descriptions = [(e['method'] if e['type']=='method' else e['type']+"-"+str(i)) for i, e in enumerate(s)]
     G = summary_event_digraph(s).transitive_closure()
@@ -247,13 +247,19 @@ def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10,
                 dep_p.append(d)
                 dep_locs.append(s[d]['loc'])
         dep_p.sort()
-        print('<tr><td> <a href="%s"> %s </a> </td>'% (uris[i], descriptions[i]), file=f)
+        if uris[i] is None:
+            print('<tr><td> %s </a> </td>'% (descriptions[i]), file=f) # no source location
+        else:
+            print('<tr><td> <a href="%s"> %s </a> </td>'% (uris[i], descriptions[i]), file=f)
         n = 0
         # first_row = True
         # if len(dep_p) == 0:
         print('<td>', file=f)
         for d in dep_p:
-            print (', ' if n > 0 else '', '<a href="', uris[d], '">', descriptions[d], '</a>', file=f)
+            if uris[d] is None: # Not sure that this could happen, but just in case...
+                print (', ' if n > 0 else '', descriptions[d], file=f)
+            else:
+                print (', ' if n > 0 else '', '<a href="', uris[d], '">', descriptions[d], '</a>', file=f)
             n = (n+1)
         print('</td></tr>', file=f)
     print('</table></body></html>', file=f)
