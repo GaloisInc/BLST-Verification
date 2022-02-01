@@ -223,9 +223,11 @@ def show_method_summaries_html_1(s, f = sys.stdout):
                 print ('<a href="', uris[d], '">', d, '</a>', file=f)
     print('</table></body></html>', file=f)
 
-def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10, only_items = None):
+def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10,
+                               only_items = None, eliminate_duplicate_links=False):
     '''Shows which assumptions are used (even if via some intermediary).  If `only_items` is `None`,
     then has a row for every method; otherwise only events whose index (in s) in in that list.
+    If `eliminate_duplicate_links`, then include just one instance of any link to a dependeent.  (These links arise when a single line of code in SAW generates many theorems).
     `deps_per_row` no longer has any effect.'''
 
     print ('<html><head><style> table, th, td {border: 1px solid black; border-collapse: collapse; word-wrap: normal;}</style><body><table>', file=f)
@@ -238,9 +240,12 @@ def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10, only_items = 
         if only_items is None and G.indegree(i) > 0: continue
         if only_items is not None and i not in only_items: continue # clumsy way to do this!
         dep_p = []
+        dep_locs = []
         for d in G.outgoing_edges(i):
-            if s[d]['status'] != 'verified':
+            if s[d]['status'] != 'verified' and \
+               not (eliminate_duplicate_links and s[d]['loc'] in dep_locs):
                 dep_p.append(d)
+                dep_locs.append(s[d]['loc'])
         dep_p.sort()
         print('<tr><td> <a href="%s"> %s </a> </td>'% (uris[i], descriptions[i]), file=f)
         n = 0
@@ -264,11 +269,11 @@ if __name__ == '__main__':
     #                    help = 'input json filename; read from stdin if absent')
     parser.add_argument('infilename', help = 'input json filename')
     parser.add_argument('--deps_per_row', '-d', dest='deps_per_row', type=int, default=10,
-                        help = 'number of dependents to show per row of table')
+                        help = 'number of dependents to show per row of table (deprecated, and no longer effective)')
     parser.add_argument('--outfile', '-o', nargs='?', type=argparse.FileType('w'),
                         default=sys.stdout)
     parser.add_argument('roots', metavar='N', type=int, nargs='*',
                     help='if given, a list of items to show; if absent, all unused items are shown')
     args = parser.parse_args()
     items = None if len(args.roots)==0 else args.roots
-    show_method_summaries_html(read_summary(args.infilename), args.outfile, args.deps_per_row, items)
+    show_method_summaries_html(read_summary(args.infilename), args.outfile, args.deps_per_row, items, eliminate_duplicate_links = True)
