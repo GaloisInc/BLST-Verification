@@ -7,12 +7,31 @@
 
 # There are also some functions here to emit csv, in case we want a spreadsheet view
 
+# The json proof summary gives:
+#
+#  type: "property" or "method"
+#  id: (a number, unique withing the summary file)
+#  status: "verified", "tested", or "assumed"
+#  loc: of the form filename:l1:c1-l2:c2 where l1,l2 are line numbers; c1,c2 column numbers
+#    ... or just  filename:l1:c1
+#  provers: list of strings naming the provers used (for verified properties only)
+#  dependencies: a list of ids
+#  elapsedtime:
+#  reason: (for properties only)
+#  numtests: (for tested status only)
+#  admitmsg: (for admitted only, a string)
+#  ploc: "theorem program location", optional for properties.
+
+# the "loc" gives the line(s) of a SAWscript source file where the proof
+#  was triggered.  This might be a `llvm_verify` command or a `prove_print` command
+#  or an `unsafe_assume`...
+
 import json
 import sys
 import re
 
 class DiGraph():
-    '''Barely-functional version.'''
+    '''Barely-functional version.  Functionality, such as it is, should match SageMath'''
     def __init__(self):
         # invariant: self.nverts  = len(self.outgoing)
         # invariant: for all o in outgoing, o is a sequence
@@ -204,13 +223,15 @@ def show_method_summaries_html_1(s, f = sys.stdout):
                 print ('<a href="', uris[d], '">', d, '</a>', file=f)
     print('</table></body></html>', file=f)
 
-def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10, only_items = None):
+def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10,
+                               only_items = None, eliminate_duplicate_links=False):
     '''Shows which assumptions are used (even if via some intermediary).  If `only_items` is `None`,
     then has a row for every method; otherwise only events whose index (in s) in in that list.
-    Uses multiple rows if needed, with no more than `deps_per_row` dependents listed on any row.'''
+    If `eliminate_duplicate_links`, then include just one instance of any link to a dependeent.  (These links arise when a single line of code in SAW generates many theorems).
+    `deps_per_row` no longer has any effect.'''
 
-    print ('<html><head><style> table, th, td {border: 1px solid black;}</style><body><table>', file=f)
-    print ('<tr> <th> loc </th> <th> assumptions used</th></tr>', file=f)
+    print ('<html><head><style> table, th, td {border: 1px solid black; border-collapse: collapse; word-wrap: normal;}</style><body><table>', file=f)
+    print ('<tr> <th> verification </th> <th> assumptions used</th></tr>', file=f)
     uris = [pathname_to_uri(e['loc']) for e in s]
     descriptions = [(e['method'] if e['type']=='method' else e['type']+"-"+str(i)) for i, e in enumerate(s)]
     G = summary_event_digraph(s).transitive_closure()
@@ -219,26 +240,28 @@ def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10, only_items = 
         if only_items is None and G.indegree(i) > 0: continue
         if only_items is not None and i not in only_items: continue # clumsy way to do this!
         dep_p = []
+        dep_locs = []
         for d in G.outgoing_edges(i):
-            if s[d]['status'] != 'verified':
+            if s[d]['status'] != 'verified' and \
+               not (eliminate_duplicate_links and s[d]['loc'] in dep_locs):
                 dep_p.append(d)
+                dep_locs.append(s[d]['loc'])
         dep_p.sort()
-        nrows = (len(dep_p) + deps_per_row - 1)//deps_per_row
-        print('<tr><td rowspan=%d> <a href="%s"> %s </a> </td>'% (nrows, uris[i], descriptions[i]), file=f)
+        if uris[i] is None:
+            print('<tr><td> %s </a> </td>'% (descriptions[i]), file=f) # no source location
+        else:
+            print('<tr><td> <a href="%s"> %s </a> </td>'% (uris[i], descriptions[i]), file=f)
         n = 0
-        first_row = True
+        # first_row = True
+        # if len(dep_p) == 0:
+        print('<td>', file=f)
         for d in dep_p:
-          if n==0:
-              if first_row:
-                  print('<td>', file=f)
-                  first_row=False
-              else:
-                  print('<tr><td>', file=f)
-          print (', ' if n > 0 else '', '<a href="', uris[d], '">', descriptions[d], '</a>', file=f)
-          n = (n+1)%deps_per_row
-          if n==0: print('</td></tr>', file=f)
-        if n>0:
-            print('</td></tr>', file=f)
+            if uris[d] is None: # Not sure that this could happen, but just in case...
+                print (', ' if n > 0 else '', descriptions[d], file=f)
+            else:
+                print (', ' if n > 0 else '', '<a href="', uris[d], '">', descriptions[d], '</a>', file=f)
+            n = (n+1)
+        print('</td></tr>', file=f)
     print('</table></body></html>', file=f)
 
 def show_method_summaries_html_file(s, filename, deps_per_row=10, only_items = None):
@@ -252,11 +275,11 @@ if __name__ == '__main__':
     #                    help = 'input json filename; read from stdin if absent')
     parser.add_argument('infilename', help = 'input json filename')
     parser.add_argument('--deps_per_row', '-d', dest='deps_per_row', type=int, default=10,
-                        help = 'number of dependents to show per row of table')
+                        help = 'number of dependents to show per row of table (deprecated, and no longer effective)')
     parser.add_argument('--outfile', '-o', nargs='?', type=argparse.FileType('w'),
                         default=sys.stdout)
     parser.add_argument('roots', metavar='N', type=int, nargs='*',
                     help='if given, a list of items to show; if absent, all unused items are shown')
     args = parser.parse_args()
     items = None if len(args.roots)==0 else args.roots
-    show_method_summaries_html(read_summary(args.infilename), args.outfile, args.deps_per_row, items)
+    show_method_summaries_html(read_summary(args.infilename), args.outfile, args.deps_per_row, items, eliminate_duplicate_links = True)
