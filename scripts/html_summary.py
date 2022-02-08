@@ -246,6 +246,9 @@ def show_method_summaries_html(s, f = sys.stdout, deps_per_row=10,
                not (eliminate_duplicate_links and s[d]['loc'] in dep_locs):
                 dep_p.append(d)
                 dep_locs.append(s[d]['loc'])
+        if not dep_p:
+            # Omit entries with no assumptions
+            continue
         dep_p.sort()
         if uris[i] is None:
             print('<tr><td> %s </a> </td>'% (descriptions[i]), file=f) # no source location
