@@ -1546,7 +1546,7 @@ frobenius_map_fp12_3_alias_ov <- custom_verify "frobenius_map_fp12"
 // we need to start with the subroutine sqr_fp4
 
 let {{ redc_mont_fp4 [x, y] = [redc_mont_fp2 x, redc_mont_fp2 y] }};
-let {{ fp4_rep_nom [x, y] = [fp2_rep_nom y, fp2_rep_nom x] }};
+// let {{ fp4_rep_nom [x, y] = [fp2_rep_nom y, fp2_rep_nom x] }};
 
 let redc_fp2x2_spec = do {
   ret_ptr <- crucible_alloc vec384x_type;
