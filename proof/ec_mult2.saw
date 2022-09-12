@@ -368,7 +368,7 @@ let {{
     start = affinify_E' (small_mult2 (head es) p)
 
   mult_w5_result_term2: {n} (fin n, n >= 1) => [n] -> ProjectivePoint t_Fp_2 -> AffinePoint t_Fp_2
-  mult_w5_result_term2 e p = mult_w5_intermediate2 (booth_parts2 e) p
+  mult_w5_result_term2 e p = mult_w5_intermediate2 (booth_parts e) p
   }};
   
 
@@ -388,31 +388,31 @@ let {{ shift_and_add acc e = shift*acc + e
 for [4,5,6,7,12,14, 64, 100] (\ bits ->
  custom_prove_cryptol
      {{ \ (e:[bits]) p -> mult_w5_result_term2 e p
-            == e2_scalar_mult (booth_with_add' (booth_parts2 e) (e2_order (affinify_E' p))) (affinify_E' p) }}
-  do { goal_eval_unint [ "e2_order", "e2_scalar_mult", "affinify_E'", "booth_parts2"
+            == e2_scalar_mult (booth_with_add' (booth_parts e) (e2_order (affinify_E' p))) (affinify_E' p) }}
+  do { goal_eval_unint [ "e2_order", "e2_scalar_mult", "affinify_E'", "booth_parts"
                        , "add'_E'", "small_mult2", "small_nonnegative_mult2", "add_exponents'"];
        simplify cleanup_simpset;
        simplify (addsimps (concat [small_mult_is_scalar_mult_thm, unrip_thm, unrip_thm_2, fp2_unrip_thm] POINTonE2_thms) empty_ss);
        unfolding ["add'_E'"]; // so that the rules can apply
        simplify (addsimps e2_scalar_mult_alg_thms (cryptol_ss()));
        simplify remove_higher_order_function_simpset; // and fold up again so it can be uninterpreted
-       w4_unint_z3 [ "e2_order", "e2_scalar_mult", "affinify_E'", "booth_parts2"
+       w4_unint_z3 [ "e2_order", "e2_scalar_mult", "affinify_E'", "booth_parts"
                    , "add'_E'", "small_mult2", "small_nonnegative_mult2", "add_exponents'"];
      } );
 
 // version needed for the code proof:
 let booth_lemma_3 n_bits = custom_prove_cryptol
-  {{ \ (e:[n_bits]) p -> e2_scalar_mult (booth_with_add' (booth_parts2 e) (e2_order (affinify E' p))) (affinify E' p)
+  {{ \ (e:[n_bits]) p -> e2_scalar_mult (booth_with_add' (booth_parts e) (e2_order (affinify E' p))) (affinify E' p)
                        == mult_w5_result_term2 e p }}
   do { simplify remove_higher_order_function_simpset; // for goal_eval to work
-       goal_eval_unint [ "e2_order", "e2_scalar_mult", "affinify_E'", "booth_parts2"
+       goal_eval_unint [ "e2_order", "e2_scalar_mult", "affinify_E'", "booth_parts"
                        , "add'_E'", "small_mult2", "small_nonnegative_mult2", "add_exponents'"];
        simplify cleanup_simpset;
        simplify (addsimps (concat [small_mult_is_scalar_mult_thm] POINTonE2_thms) fp2_simpset_x);
        unfolding ["add'_E'"]; // so that the rules can apply
        simplify (addsimps e2_scalar_mult_alg_thms (cryptol_ss()));
        simplify remove_higher_order_function_simpset; // and fold up again so it can be uninterpreted
-       w4_unint_z3 [ "e2_order", "e2_scalar_mult", "affinify_E'", "booth_parts2"
+       w4_unint_z3 [ "e2_order", "e2_scalar_mult", "affinify_E'", "booth_parts"
                    , "add'_E'", "small_mult2", "small_nonnegative_mult2", "add_exponents'"];
      } ;
 
@@ -421,7 +421,7 @@ let booth_lemma_3 n_bits = custom_prove_cryptol
 for [4,5,6,7,8,9,10,11,12,13]
   (\ bits -> 
       prove_cryptol {{ \ (e:[bits]) order -> order > (toInt e) + shift
-                                 ==> booth_with_add' (booth_parts2 e) order == booth2 e }} [] );
+                                 ==> booth_with_add' (booth_parts e) order == booth2 e }} [] );
 */
 
 // The version needed for the code proof:
@@ -430,7 +430,7 @@ let booth_lemma_2 n_bits = prove_cryptol
     {{ \ (e:[n_bits]) p1 ->
        e2_scalar_mult (booth2 e) p1 == 
           if (e2_order p1) > (toInt e) + shift
-          then e2_scalar_mult (booth_with_add' (booth_parts2 e) (e2_order p1)) p1
+          then e2_scalar_mult (booth_with_add' (booth_parts e) (e2_order p1)) p1
           else apply e2_scalar_mult (booth2 e) p1 }}
       ["e2_scalar_mult", "e2_order"] ;
 
