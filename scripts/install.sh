@@ -4,7 +4,8 @@ set -e
 
 Z3_URL='https://github.com/Z3Prover/z3/releases/download/z3-4.8.10/z3-4.8.10-x64-ubuntu-18.04.zip'
 YICES_URL='https://yices.csl.sri.com/releases/2.6.2/yices-2.6.2-x86_64-pc-linux-gnu-static-gmp.tar.gz'
-ABC_URL='https://saw.galois.com/builds/abc/abc-c78ee311-Linux.tar.gz'
+#ABC_URL='https://saw.galois.com/builds/abc/abc-c78ee311-Linux.tar.gz'
+WHAT4_SOLVERS_URL='https://github.com/GaloisInc/what4-solvers/releases/download/snapshot-20241119/ubuntu-20.04-X64-bin.zip'
 
 if [ $# -ne 0 ] && [ "$1" = "--latest" ]; then
   # Determine the URL of the latest SAW and Cryptol nightly
@@ -48,13 +49,17 @@ then
     cp deps/yices/*/bin/yices-smt2 bin/yices-smt2
 fi
 
-# fetch ABC
+# fetch what4_solvers for ABC
 if [ ! -f bin/abc ]
 then
     mkdir -p deps/abc
-    wget $ABC_URL -O deps/abc.tar.gz
-    tar -x -f deps/abc.tar.gz --one-top-level=deps/abc
-    cp deps/abc/*/bin/abc bin/abc
+    wget $WHAT4_SOLVERS_URL -O deps/what4-solvers.zip
+    #tar -x -f deps/abc.tar.gz --one-top-level=deps/abc
+    #cp deps/abc/*/bin/abc bin/abc
+    unzip -d deps/abc deps/what4-solvers.zip
+    cp deps/abc/abc bin/abc
+    # just in case, zip files aren't always good at unix perms
+    chmod 755 bin/abc
 fi
 
 # fetch SAW
