@@ -49,7 +49,7 @@ then
     cp deps/yices/*/bin/yices-smt2 bin/yices-smt2
 fi
 
-# fetch what4_solvers for ABC
+# fetch ABC from what4_solvers
 if [ ! -f bin/abc ]
 then
     mkdir -p deps/abc
