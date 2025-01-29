@@ -2,7 +2,7 @@
   {
     "admitmsg": "assumeUnsat: prove_print",
     "dependencies": [],
-    "elapsedtime": 0.000134902,
+    "elapsedtime": 7.8318e-05,
     "id": 1433,
     "loc": "/workdir/proof/correctness_add.saw:18:1-18:26",
     "reason": "prove_print",
@@ -31,17 +31,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.057143483,
-    "id": 257752,
-    "loc": "0x18e60",
-    "method": "sub_mod_384x384",
-    "status": "verified",
-    "type": "method",
-    "vcs": []
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 0.05753531,
+    "elapsedtime": 0.057329776,
     "id": 258941,
     "loc": "0x18e60",
     "method": "sub_mod_384x384",
@@ -51,7 +41,17 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.06283496,
+    "elapsedtime": 0.057548918,
+    "id": 257752,
+    "loc": "0x18e60",
+    "method": "sub_mod_384x384",
+    "status": "verified",
+    "type": "method",
+    "vcs": []
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 0.064538386,
     "id": 256563,
     "loc": "0x18e60",
     "method": "sub_mod_384x384",
@@ -61,7 +61,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.062895517,
+    "elapsedtime": 0.06677857,
     "id": 253686,
     "loc": "0x18e60",
     "method": "sub_mod_384x384",
@@ -71,7 +71,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.06602668,
+    "elapsedtime": 0.071961285,
     "id": 250809,
     "loc": "0x18e60",
     "method": "sub_mod_384x384",
@@ -81,7 +81,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.117890905,
+    "elapsedtime": 0.116449682,
     "id": 31606,
     "loc": "0x1bec0",
     "method": "sub_mod_256",
@@ -91,7 +91,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.119680916,
+    "elapsedtime": 0.120128278,
     "id": 30921,
     "loc": "0x1bec0",
     "method": "sub_mod_256",
@@ -101,17 +101,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.129334057,
-    "id": 135710,
-    "loc": "0x181a0",
-    "method": "sub_mod_384",
-    "status": "verified",
-    "type": "method",
-    "vcs": []
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 0.13081161,
+    "elapsedtime": 0.17873646,
     "id": 134824,
     "loc": "0x181a0",
     "method": "sub_mod_384",
@@ -121,7 +111,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.185942793,
+    "elapsedtime": 0.217182048,
     "id": 157986,
     "loc": "0x184a0",
     "method": "sgn0_pty_mod_384",
@@ -130,7 +120,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 0.052360586,
+        "elapsedtime": 0.067933211,
         "id": 157985,
         "loc": "ProgramLoc {plFunction = sgn0_pty_mod_384, plSourceLoc = 0x184a0}",
         "provers": [
@@ -145,31 +135,17 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.266094779,
-    "id": 187896,
-    "loc": "0x18640",
-    "method": "vec_select_48",
+    "elapsedtime": 0.217187243,
+    "id": 135710,
+    "loc": "0x181a0",
+    "method": "sub_mod_384",
     "status": "verified",
     "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 0.142087715,
-        "id": 187895,
-        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
+    "vcs": []
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.273577185,
+    "elapsedtime": 0.28198362,
     "id": 163234,
     "loc": "0x18640",
     "method": "vec_select_48",
@@ -178,7 +154,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 0.142983191,
+        "elapsedtime": 0.151680622,
         "id": 163233,
         "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
         "provers": [
@@ -193,7 +169,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.273961709,
+    "elapsedtime": 0.286943321,
     "id": 212558,
     "loc": "0x18640",
     "method": "vec_select_48",
@@ -202,7 +178,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 0.146611931,
+        "elapsedtime": 0.154707564,
         "id": 212557,
         "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
         "provers": [
@@ -217,27 +193,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.277625211,
-    "id": 148183,
-    "loc": "0x18280",
-    "method": "sub_mod_384x",
-    "status": "verified",
-    "type": "method",
-    "vcs": []
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 0.292873631,
-    "id": 149535,
-    "loc": "0x18280",
-    "method": "sub_mod_384x",
-    "status": "verified",
-    "type": "method",
-    "vcs": []
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 0.301198947,
+    "elapsedtime": 0.315504569,
     "id": 161364,
     "loc": "0x18520",
     "method": "sgn0_pty_mod_384x",
@@ -246,7 +202,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 0.081190147,
+        "elapsedtime": 0.080726844,
         "id": 161363,
         "loc": "ProgramLoc {plFunction = sgn0_pty_mod_384x, plSourceLoc = 0x18520}",
         "provers": [
@@ -261,7 +217,51 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.443396825,
+    "elapsedtime": 0.317323182,
+    "id": 149535,
+    "loc": "0x18280",
+    "method": "sub_mod_384x",
+    "status": "verified",
+    "type": "method",
+    "vcs": []
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 0.318810533,
+    "id": 187896,
+    "loc": "0x18640",
+    "method": "vec_select_48",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 0.153409996,
+        "id": 187895,
+        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 0.321065714,
+    "id": 148183,
+    "loc": "0x18280",
+    "method": "sub_mod_384x",
+    "status": "verified",
+    "type": "method",
+    "vcs": []
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 0.442211418,
     "id": 7030,
     "loc": "0x1bc00",
     "method": "add_mod_256",
@@ -270,7 +270,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 0.310067081,
+        "elapsedtime": 0.316859703,
         "id": 7029,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:189:1}",
         "provers": [
@@ -285,7 +285,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.448006091,
+    "elapsedtime": 0.448086153,
     "id": 8387,
     "loc": "0x1bc00",
     "method": "add_mod_256",
@@ -294,7 +294,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 0.308343713,
+        "elapsedtime": 0.31960224,
         "id": 8386,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:190:1}",
         "provers": [
@@ -309,7 +309,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.929709106,
+    "elapsedtime": 0.924806605,
     "id": 39141,
     "loc": "0x17980",
     "method": "add_mod_384",
@@ -318,7 +318,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 0.799120504,
+        "elapsedtime": 0.795077601,
         "id": 39140,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:515:1}",
         "provers": [
@@ -333,7 +333,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.948527772,
+    "elapsedtime": 0.934704817,
     "id": 40979,
     "loc": "0x17980",
     "method": "add_mod_384",
@@ -342,7 +342,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 0.822663678,
+        "elapsedtime": 0.808101894,
         "id": 40978,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:516:1}",
         "provers": [
@@ -357,7 +357,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 1.403875032,
+    "elapsedtime": 1.416955024,
     "id": 171150,
     "loc": "0x18920",
     "method": "vec_select_144",
@@ -366,7 +366,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 1.255664684,
+        "elapsedtime": 1.257074114,
         "id": 171149,
         "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
         "provers": [
@@ -381,31 +381,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 1.42130086,
-    "id": 177196,
-    "loc": "0x187a0",
-    "method": "vec_select_192",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 1.262452909,
-        "id": 177195,
-        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 1.426046875,
+    "elapsedtime": 1.461794441,
     "id": 166496,
     "loc": "0x186c0",
     "method": "vec_select_96",
@@ -414,7 +390,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 1.286699116,
+        "elapsedtime": 1.316895372,
         "id": 166495,
         "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
         "provers": [
@@ -429,151 +405,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 1.427468423,
-    "id": 191158,
-    "loc": "0x186c0",
-    "method": "vec_select_96",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 1.290573368,
-        "id": 191157,
-        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 1.433986467,
-    "id": 195812,
-    "loc": "0x18920",
-    "method": "vec_select_144",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 1.289164001,
-        "id": 195811,
-        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 1.478421218,
-    "id": 201858,
-    "loc": "0x187a0",
-    "method": "vec_select_192",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 1.321820128,
-        "id": 201857,
-        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 1.484628853,
-    "id": 24573,
-    "loc": "0x1be20",
-    "method": "cneg_mod_256",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 1.359171028,
-        "id": 24572,
-        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:201:1}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 1.492425611,
-    "id": 215820,
-    "loc": "0x186c0",
-    "method": "vec_select_96",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 1.354697385,
-        "id": 215819,
-        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 1.510839744,
-    "id": 220474,
-    "loc": "0x18920",
-    "method": "vec_select_144",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 1.362105279,
-        "id": 220473,
-        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 1.521007799,
+    "elapsedtime": 1.483607781,
     "id": 25841,
     "loc": "0x1be20",
     "method": "cneg_mod_256",
@@ -582,7 +414,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 1.4054115,
+        "elapsedtime": 1.363968628,
         "id": 25840,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:202:1}",
         "provers": [
@@ -597,7 +429,151 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 1.543598557,
+    "elapsedtime": 1.484992676,
+    "id": 24573,
+    "loc": "0x1be20",
+    "method": "cneg_mod_256",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 1.362309318,
+        "id": 24572,
+        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:201:1}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 1.487983569,
+    "id": 220474,
+    "loc": "0x18920",
+    "method": "vec_select_144",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 1.342062593,
+        "id": 220473,
+        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 1.499667262,
+    "id": 177196,
+    "loc": "0x187a0",
+    "method": "vec_select_192",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 1.304175586,
+        "id": 177195,
+        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 1.533153084,
+    "id": 201858,
+    "loc": "0x187a0",
+    "method": "vec_select_192",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 1.360979954,
+        "id": 201857,
+        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 1.55942252,
+    "id": 215820,
+    "loc": "0x186c0",
+    "method": "vec_select_96",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 1.421302584,
+        "id": 215819,
+        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 1.581239406,
+    "id": 191158,
+    "loc": "0x186c0",
+    "method": "vec_select_96",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 1.409475892,
+        "id": 191157,
+        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 1.597448828,
     "id": 226520,
     "loc": "0x187a0",
     "method": "vec_select_192",
@@ -606,7 +582,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 1.37876875,
+        "elapsedtime": 1.43672027,
         "id": 226519,
         "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
         "provers": [
@@ -621,7 +597,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 1.597517281,
+    "elapsedtime": 1.651751069,
     "id": 247932,
     "loc": "0x18e20",
     "method": "add_mod_384x384",
@@ -630,7 +606,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 1.449804476,
+        "elapsedtime": 1.458314784,
         "id": 247931,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384x384.saw:125:1}",
         "provers": [
@@ -645,7 +621,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 1.599474193,
+    "elapsedtime": 1.734269903,
     "id": 245481,
     "loc": "0x18e20",
     "method": "add_mod_384x384",
@@ -654,7 +630,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 1.448885355,
+        "elapsedtime": 1.568690042,
         "id": 245480,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384x384.saw:124:1}",
         "provers": [
@@ -669,7 +645,31 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 1.972261585,
+    "elapsedtime": 1.857823166,
+    "id": 195812,
+    "loc": "0x18920",
+    "method": "vec_select_144",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 1.680024373,
+        "id": 195811,
+        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 1.938630475,
     "id": 54361,
     "loc": "0x17a60",
     "method": "add_mod_384x",
@@ -678,7 +678,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 1.694047442,
+        "elapsedtime": 1.667609696,
         "id": 54360,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:522:1}",
         "provers": [
@@ -693,31 +693,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 2.72155344,
-    "id": 186026,
-    "loc": "0x18a40",
-    "method": "vec_select_288",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 2.538918369,
-        "id": 186025,
-        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 2.816716339,
+    "elapsedtime": 2.932521245,
     "id": 210688,
     "loc": "0x18a40",
     "method": "vec_select_288",
@@ -726,7 +702,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 2.638487347,
+        "elapsedtime": 2.736191284,
         "id": 210687,
         "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
         "provers": [
@@ -741,7 +717,31 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 2.952000865,
+    "elapsedtime": 3.030614954,
+    "id": 186026,
+    "loc": "0x18a40",
+    "method": "vec_select_288",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 2.832889116,
+        "id": 186025,
+        "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 3.043220587,
     "id": 235350,
     "loc": "0x18a40",
     "method": "vec_select_288",
@@ -750,7 +750,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 2.762177743,
+        "elapsedtime": 2.812225196,
         "id": 235349,
         "loc": "ProgramLoc {plFunction = llvm_points_to <for>, plSourceLoc = internal}",
         "provers": [
@@ -765,31 +765,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 3.229645469,
-    "id": 92526,
-    "loc": "0x17d00",
-    "method": "mul_by_b_onE1",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 3.084933363,
-        "id": 92525,
-        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:539:1}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 3.233236433,
+    "elapsedtime": 3.182292994,
     "id": 95669,
     "loc": "0x17d00",
     "method": "mul_by_b_onE1",
@@ -798,7 +774,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 3.078941971,
+        "elapsedtime": 3.03265177,
         "id": 95668,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:540:1}",
         "provers": [
@@ -813,31 +789,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 3.318532111,
-    "id": 57419,
-    "loc": "0x17ae0",
-    "method": "lshift_mod_384",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 3.162431667,
-        "id": 57418,
-        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:525:1}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 3.452151444,
+    "elapsedtime": 3.185670464,
     "id": 74471,
     "loc": "0x17ae0",
     "method": "lshift_mod_384",
@@ -846,7 +798,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 3.294175529,
+        "elapsedtime": 3.036685696,
         "id": 74470,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:528:1}",
         "provers": [
@@ -861,7 +813,55 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 3.960247868,
+    "elapsedtime": 3.205765802,
+    "id": 57419,
+    "loc": "0x17ae0",
+    "method": "lshift_mod_384",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 3.030684105,
+        "id": 57418,
+        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:525:1}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 3.218507215,
+    "id": 92526,
+    "loc": "0x17d00",
+    "method": "mul_by_b_onE1",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 3.079330167,
+        "id": 92525,
+        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:539:1}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 4.209839319,
     "id": 125977,
     "loc": "0x180c0",
     "method": "cneg_mod_384",
@@ -870,7 +870,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 3.82175193,
+        "elapsedtime": 4.036455555,
         "id": 125976,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:559:1}",
         "provers": [
@@ -885,7 +885,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 3.973201595,
+    "elapsedtime": 4.372525308,
     "id": 127743,
     "loc": "0x180c0",
     "method": "cneg_mod_384",
@@ -894,7 +894,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 3.819522731,
+        "elapsedtime": 4.225279949,
         "id": 127742,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:560:1}",
         "provers": [
@@ -909,7 +909,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 7.86035496,
+    "elapsedtime": 8.090634288,
     "id": 5673,
     "loc": "0x1bc00",
     "method": "add_mod_256",
@@ -918,7 +918,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 7.69001319,
+        "elapsedtime": 7.932115218,
         "id": 5672,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:188:1}",
         "provers": [
@@ -933,7 +933,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 11.800134371,
+    "elapsedtime": 12.061645109,
     "id": 4273,
     "loc": "0x1bc00",
     "method": "add_mod_256",
@@ -942,7 +942,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 11.637838595,
+        "elapsedtime": 11.89548612,
         "id": 4272,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:187:1}",
         "provers": [
@@ -957,7 +957,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 12.001386829,
+    "elapsedtime": 12.224109404,
     "id": 2873,
     "loc": "0x1bc00",
     "method": "add_mod_256",
@@ -966,7 +966,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 11.672612665,
+        "elapsedtime": 11.874474637,
         "id": 2872,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:186:1}",
         "provers": [
@@ -981,7 +981,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 18.83031412,
+    "elapsedtime": 18.27607993,
     "id": 37303,
     "loc": "0x17980",
     "method": "add_mod_384",
@@ -990,7 +990,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 18.667952512,
+        "elapsedtime": 18.116265038,
         "id": 37302,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:514:1}",
         "provers": [
@@ -1005,31 +1005,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 20.536846219,
-    "id": 35404,
-    "loc": "0x17980",
-    "method": "add_mod_384",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 20.37464529,
-        "id": 35403,
-        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:513:1}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 20.640752493,
+    "elapsedtime": 19.899986981,
     "id": 33505,
     "loc": "0x17980",
     "method": "add_mod_384",
@@ -1038,7 +1014,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 20.474544689,
+        "elapsedtime": 19.733589617,
         "id": 33504,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:512:1}",
         "provers": [
@@ -1053,7 +1029,31 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 35.503657559,
+    "elapsedtime": 20.021339177,
+    "id": 35404,
+    "loc": "0x17980",
+    "method": "add_mod_384",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 19.860029249,
+        "id": 35403,
+        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:513:1}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 35.964714967,
     "id": 240470,
     "loc": "0x18e20",
     "method": "add_mod_384x384",
@@ -1062,7 +1062,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 35.318678864,
+        "elapsedtime": 35.78211848,
         "id": 240469,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384x384.saw:122:1}",
         "provers": [
@@ -1077,7 +1077,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 35.92493787,
+    "elapsedtime": 36.931340755,
     "id": 237910,
     "loc": "0x18e20",
     "method": "add_mod_384x384",
@@ -1086,7 +1086,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 35.743757537,
+        "elapsedtime": 36.748208826,
         "id": 237909,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384x384.saw:121:1}",
         "provers": [
@@ -1101,7 +1101,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 39.392701996,
+    "elapsedtime": 38.030658833,
     "id": 89379,
     "loc": "0x17c80",
     "method": "mul_by_8_mod_384",
@@ -1110,7 +1110,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 39.229675486,
+        "elapsedtime": 37.884205719,
         "id": 89378,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:536:1}",
         "provers": [
@@ -1125,7 +1125,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 40.414909123,
+    "elapsedtime": 39.288741502,
     "id": 85007,
     "loc": "0x17c80",
     "method": "mul_by_8_mod_384",
@@ -1134,7 +1134,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 40.259765076,
+        "elapsedtime": 39.127267663,
         "id": 85006,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:535:1}",
         "provers": [
@@ -1149,7 +1149,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 50.656936316,
+    "elapsedtime": 50.457767819,
     "id": 243030,
     "loc": "0x18e20",
     "method": "add_mod_384x384",
@@ -1158,7 +1158,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 50.480110595,
+        "elapsedtime": 50.281122931,
         "id": 243029,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384x384.saw:123:1}",
         "provers": [
@@ -1173,7 +1173,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 56.755741223,
+    "elapsedtime": 54.945139493,
     "id": 30236,
     "loc": "0x1bec0",
     "method": "sub_mod_256",
@@ -1182,7 +1182,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 56.595393997,
+        "elapsedtime": 54.792237288,
         "id": 30235,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:207:1}",
         "provers": [
@@ -1197,55 +1197,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 83.191368009,
-    "id": 44354,
-    "loc": "0x17a60",
-    "method": "add_mod_384x",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 82.82429969,
-        "id": 44353,
-        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:519:1}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 84.797180245,
-    "id": 47729,
-    "loc": "0x17a60",
-    "method": "add_mod_384x",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 84.403922998,
-        "id": 47728,
-        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:520:1}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 86.124813612,
+    "elapsedtime": 77.277413816,
     "id": 51104,
     "loc": "0x17a60",
     "method": "add_mod_384x",
@@ -1254,7 +1206,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 85.63273442,
+        "elapsedtime": 76.907616226,
         "id": 51103,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:521:1}",
         "provers": [
@@ -1269,18 +1221,18 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 90.785537277,
-    "id": 27306,
-    "loc": "0x1bec0",
-    "method": "sub_mod_256",
+    "elapsedtime": 78.842112909,
+    "id": 47729,
+    "loc": "0x17a60",
+    "method": "add_mod_384x",
     "status": "verified",
     "type": "method",
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 90.616879391,
-        "id": 27305,
-        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:205:1}",
+        "elapsedtime": 78.478730527,
+        "id": 47728,
+        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:520:1}",
         "provers": [
           "W4 ->z3"
         ],
@@ -1293,7 +1245,31 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 90.940143231,
+    "elapsedtime": 78.979577843,
+    "id": 44354,
+    "loc": "0x17a60",
+    "method": "add_mod_384x",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 78.617022868,
+        "id": 44353,
+        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:519:1}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 87.207895625,
     "id": 28771,
     "loc": "0x1bec0",
     "method": "sub_mod_256",
@@ -1302,7 +1278,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 90.781347812,
+        "elapsedtime": 87.029156515,
         "id": 28770,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:206:1}",
         "provers": [
@@ -1317,7 +1293,31 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 127.046853133,
+    "elapsedtime": 87.798793525,
+    "id": 27306,
+    "loc": "0x1bec0",
+    "method": "sub_mod_256",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 87.644365747,
+        "id": 27305,
+        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:205:1}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 133.08806047,
     "id": 133938,
     "loc": "0x181a0",
     "method": "sub_mod_384",
@@ -1326,7 +1326,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 126.877044531,
+        "elapsedtime": 132.861967928,
         "id": 133937,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:565:1}",
         "provers": [
@@ -1341,7 +1341,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 157.312421295,
+    "elapsedtime": 160.130635672,
     "id": 10694,
     "loc": "0x1bc80",
     "method": "mul_by_3_mod_256",
@@ -1350,7 +1350,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 157.177346034,
+        "elapsedtime": 159.987444426,
         "id": 10693,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:193:1}",
         "provers": [
@@ -1365,7 +1365,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 161.372299659,
+    "elapsedtime": 163.998379498,
     "id": 12997,
     "loc": "0x1bc80",
     "method": "mul_by_3_mod_256",
@@ -1374,7 +1374,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 161.232434573,
+        "elapsedtime": 163.8396128,
         "id": 12996,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:194:1}",
         "provers": [
@@ -1389,31 +1389,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 320.828533274,
-    "id": 123775,
-    "loc": "0x17ea0",
-    "method": "mul_by_8_mod_384x",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 320.500235096,
-        "id": 123774,
-        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:548:1}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 324.803162487,
+    "elapsedtime": 340.356353363,
     "id": 115477,
     "loc": "0x17ea0",
     "method": "mul_by_8_mod_384x",
@@ -1422,7 +1398,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 324.427342852,
+        "elapsedtime": 340.014102834,
         "id": 115476,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:547:1}",
         "provers": [
@@ -1437,31 +1413,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 325.617699584,
-    "id": 131873,
-    "loc": "0x181a0",
-    "method": "sub_mod_384",
-    "status": "verified",
-    "type": "method",
-    "vcs": [
-      {
-        "dependencies": [],
-        "elapsedtime": 325.445349298,
-        "id": 131872,
-        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:564:1}",
-        "provers": [
-          "W4 ->z3"
-        ],
-        "reason": "LLVM points-to",
-        "status": "verified",
-        "tags": [],
-        "type": "vc"
-      }
-    ]
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 329.150141851,
+    "elapsedtime": 343.265592002,
     "id": 129808,
     "loc": "0x181a0",
     "method": "sub_mod_384",
@@ -1470,7 +1422,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 328.973939078,
+        "elapsedtime": 343.090004365,
         "id": 129807,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:563:1}",
         "provers": [
@@ -1485,18 +1437,18 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 486.487924632,
-    "id": 80635,
-    "loc": "0x17c20",
-    "method": "mul_by_3_mod_384",
+    "elapsedtime": 346.067201607,
+    "id": 131873,
+    "loc": "0x181a0",
+    "method": "sub_mod_384",
     "status": "verified",
     "type": "method",
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 486.298809035,
-        "id": 80634,
-        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:532:1}",
+        "elapsedtime": 345.897673641,
+        "id": 131872,
+        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:564:1}",
         "provers": [
           "W4 ->z3"
         ],
@@ -1509,7 +1461,31 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 493.620539405,
+    "elapsedtime": 348.623315731,
+    "id": 123775,
+    "loc": "0x17ea0",
+    "method": "mul_by_8_mod_384x",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 348.304224561,
+        "id": 123774,
+        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:548:1}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 458.334208987,
     "id": 77553,
     "loc": "0x17c20",
     "method": "mul_by_3_mod_384",
@@ -1518,7 +1494,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 493.462519249,
+        "elapsedtime": 458.182753234,
         "id": 77552,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:531:1}",
         "provers": [
@@ -1533,18 +1509,18 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 550.142857768,
-    "id": 18153,
-    "loc": "0x1bd20",
-    "method": "lshift_mod_256",
+    "elapsedtime": 458.796043737,
+    "id": 80635,
+    "loc": "0x17c20",
+    "method": "mul_by_3_mod_384",
     "status": "verified",
     "type": "method",
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 549.962153735,
-        "id": 18152,
-        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:197:1}",
+        "elapsedtime": 458.648944347,
+        "id": 80634,
+        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:532:1}",
         "provers": [
           "W4 ->z3"
         ],
@@ -1557,7 +1533,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 557.518693294,
+    "elapsedtime": 530.953063488,
     "id": 23305,
     "loc": "0x1bd20",
     "method": "lshift_mod_256",
@@ -1566,7 +1542,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 557.359213816,
+        "elapsedtime": 530.798709184,
         "id": 23304,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:198:1}",
         "provers": [
@@ -1581,7 +1557,31 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 647.396995469,
+    "elapsedtime": 536.818027134,
+    "id": 18153,
+    "loc": "0x1bd20",
+    "method": "lshift_mod_256",
+    "status": "verified",
+    "type": "method",
+    "vcs": [
+      {
+        "dependencies": [],
+        "elapsedtime": 536.665884441,
+        "id": 18152,
+        "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_256.saw:197:1}",
+        "provers": [
+          "W4 ->z3"
+        ],
+        "reason": "LLVM points-to",
+        "status": "verified",
+        "tags": [],
+        "type": "vc"
+      }
+    ]
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 671.868119204,
     "id": 156423,
     "loc": "0x18300",
     "method": "mul_by_1_plus_i_mod_384x",
@@ -1590,7 +1590,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 647.111012227,
+        "elapsedtime": 671.59374911,
         "id": 156422,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:578:1}",
         "provers": [
@@ -1605,7 +1605,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 647.607030319,
+    "elapsedtime": 691.202257685,
     "id": 152979,
     "loc": "0x18300",
     "method": "mul_by_1_plus_i_mod_384x",
@@ -1614,7 +1614,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 647.305681465,
+        "elapsedtime": 690.865617805,
         "id": 152978,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:577:1}",
         "provers": [
@@ -1629,7 +1629,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 963.41907984,
+    "elapsedtime": 993.660475583,
     "id": 146831,
     "loc": "0x18280",
     "method": "sub_mod_384x",
@@ -1638,7 +1638,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 963.023410416,
+        "elapsedtime": 993.179056388,
         "id": 146830,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:572:1}",
         "provers": [
@@ -1653,7 +1653,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 1117.464953512,
+    "elapsedtime": 1147.590904801,
     "id": 143124,
     "loc": "0x18280",
     "method": "sub_mod_384x",
@@ -1662,7 +1662,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 1117.051609829,
+        "elapsedtime": 1147.217971318,
         "id": 143123,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:571:1}",
         "provers": [
@@ -1677,7 +1677,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 1117.930012399,
+    "elapsedtime": 1157.600605709,
     "id": 139417,
     "loc": "0x18280",
     "method": "sub_mod_384x",
@@ -1686,7 +1686,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 1117.531254692,
+        "elapsedtime": 1157.185746208,
         "id": 139416,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:570:1}",
         "provers": [
@@ -1701,7 +1701,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 2065.215661534,
+    "elapsedtime": 1950.164169808,
     "id": 71413,
     "loc": "0x17ae0",
     "method": "lshift_mod_384",
@@ -1710,7 +1710,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 2065.03736648,
+        "elapsedtime": 1949.989464212,
         "id": 71412,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:527:1}",
         "provers": [
@@ -1725,7 +1725,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 2099.342968931,
+    "elapsedtime": 1958.538647194,
     "id": 64416,
     "loc": "0x17ae0",
     "method": "lshift_mod_384",
@@ -1734,7 +1734,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 2099.150818564,
+        "elapsedtime": 1958.365757944,
         "id": 64415,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:526:1}",
         "provers": [
@@ -1749,7 +1749,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 4513.545744559,
+    "elapsedtime": 4503.276666428,
     "id": 101424,
     "loc": "0x17e00",
     "method": "mul_by_3_mod_384x",
@@ -1758,7 +1758,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 4513.238205513,
+        "elapsedtime": 4502.982565444,
         "id": 101423,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:543:1}",
         "provers": [
@@ -1773,7 +1773,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 4576.338082013,
+    "elapsedtime": 4600.072615577,
     "id": 107179,
     "loc": "0x17e00",
     "method": "mul_by_3_mod_384x",
@@ -1782,7 +1782,7 @@
     "vcs": [
       {
         "dependencies": [],
-        "elapsedtime": 4576.00406876,
+        "elapsedtime": 4599.774363512,
         "id": 107178,
         "loc": "ProgramLoc {plFunction = llvm_points_to, plSourceLoc = /workdir/proof/x86/correctness/add_mod_384.saw:544:1}",
         "provers": [
@@ -1797,7 +1797,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.016930329,
+    "elapsedtime": 0.016439872,
     "id": 1432,
     "loc": "[internal:<for>]",
     "provers": [
@@ -1809,7 +1809,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.017179206,
+    "elapsedtime": 0.017646683,
     "id": 1429,
     "loc": "[internal:<for>]",
     "provers": [
@@ -1821,19 +1821,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.017432028,
-    "id": 1407,
-    "loc": "[internal:<for>]",
-    "provers": [
-      "W4 ->z3"
-    ],
-    "reason": "prove_core",
-    "status": "verified",
-    "type": "property"
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 0.017491859,
+    "elapsedtime": 0.017873137,
     "id": 1419,
     "loc": "[internal:<for>]",
     "provers": [
@@ -1845,7 +1833,19 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.018387098,
+    "elapsedtime": 0.017911468,
+    "id": 1407,
+    "loc": "[internal:<for>]",
+    "provers": [
+      "W4 ->z3"
+    ],
+    "reason": "prove_core",
+    "status": "verified",
+    "type": "property"
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 0.019309316,
     "id": 1400,
     "loc": "[internal:<for>]",
     "provers": [
@@ -1857,9 +1857,9 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.020285404,
-    "id": 1455,
-    "loc": "/workdir/proof/x86/correctness/helpers.saw:57:1-57:86",
+    "elapsedtime": 0.020477884,
+    "id": 1451,
+    "loc": "/workdir/proof/x86/correctness/helpers.saw:56:1-56:118",
     "provers": [
       "W4 ->z3"
     ],
@@ -1869,19 +1869,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.02075372,
-    "id": 1462,
-    "loc": "/workdir/proof/x86/correctness/helpers.saw:58:1-58:111",
-    "provers": [
-      "W4 ->z3"
-    ],
-    "reason": "prove_print",
-    "status": "verified",
-    "type": "property"
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 0.020796894,
+    "elapsedtime": 0.021012881,
     "id": 1444,
     "loc": "/workdir/proof/x86/correctness/helpers.saw:55:1-55:111",
     "provers": [
@@ -1893,9 +1881,9 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.021030683,
-    "id": 1473,
-    "loc": "/workdir/proof/x86/correctness/helpers.saw:60:1-60:89",
+    "elapsedtime": 0.02118492,
+    "id": 1455,
+    "loc": "/workdir/proof/x86/correctness/helpers.saw:57:1-57:86",
     "provers": [
       "W4 ->z3"
     ],
@@ -1905,19 +1893,7 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.021443376,
-    "id": 1437,
-    "loc": "/workdir/proof/x86/correctness/helpers.saw:54:1-54:86",
-    "provers": [
-      "W4 ->z3"
-    ],
-    "reason": "prove_print",
-    "status": "verified",
-    "type": "property"
-  },
-  {
-    "dependencies": [],
-    "elapsedtime": 0.021669482,
+    "elapsedtime": 0.021245091,
     "id": 1469,
     "loc": "/workdir/proof/x86/correctness/helpers.saw:59:1-59:118",
     "provers": [
@@ -1929,9 +1905,33 @@
   },
   {
     "dependencies": [],
-    "elapsedtime": 0.025963531,
-    "id": 1451,
-    "loc": "/workdir/proof/x86/correctness/helpers.saw:56:1-56:118",
+    "elapsedtime": 0.021364644,
+    "id": 1437,
+    "loc": "/workdir/proof/x86/correctness/helpers.saw:54:1-54:86",
+    "provers": [
+      "W4 ->z3"
+    ],
+    "reason": "prove_print",
+    "status": "verified",
+    "type": "property"
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 0.021619699,
+    "id": 1473,
+    "loc": "/workdir/proof/x86/correctness/helpers.saw:60:1-60:89",
+    "provers": [
+      "W4 ->z3"
+    ],
+    "reason": "prove_print",
+    "status": "verified",
+    "type": "property"
+  },
+  {
+    "dependencies": [],
+    "elapsedtime": 0.022457031,
+    "id": 1462,
+    "loc": "/workdir/proof/x86/correctness/helpers.saw:58:1-58:111",
     "provers": [
       "W4 ->z3"
     ],
