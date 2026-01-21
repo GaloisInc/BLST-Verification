@@ -54,7 +54,7 @@ all_distinct_3_ov <- admit "all_distinct" (all_distinct_spec 3);
 all_distinct_4_ov <- admit "all_distinct" (all_distinct_spec 4);
 
 let blst_pairing_finalverify_A_spec = do {
-  ctx_ptr <- llvm_alloc_readonly (llvm_struct "struct.blst_pairing_st");
+  ctx_ptr <- llvm_alloc_readonly (llvm_alias "struct.blst_pairing_st");
   GT <- llvm_fresh_var "GT" vec384fp12_type;
   llvm_precond {{ fp12_invariant GT }};
   AggrSign <- llvm_fresh_var "AggrSign" POINTonE1_type;
@@ -76,7 +76,7 @@ let blst_pairing_finalverify_A_spec = do {
 };
 
 let blst_pairing_aggregate_pk_in_g2_null_sig_spec ctx_nelems aggr_gt_set = do {
-  ctx_ptr <- llvm_alloc (llvm_struct "struct.blst_pairing_st");
+  ctx_ptr <- llvm_alloc (llvm_alias "struct.blst_pairing_st");
 
   // ctx->ctrl must have AGGR_HASH_OR_ENCODE set and AGGR_MIN_PK unset, but we
   // leave the rest uninterpreted
@@ -268,7 +268,7 @@ blst_pairing_aggregate_pk_in_g2_null_sig_1_nth_commit_ov <- custom_verify
   prove_blst_pairing_aggregate_pk_in_g2_null_sig;
 
 let blst_pairing_aggregate_pk_in_g2_sig_spec = do {
-  ctx_ptr <- llvm_alloc (llvm_struct "struct.blst_pairing_st");
+  ctx_ptr <- llvm_alloc (llvm_alias "struct.blst_pairing_st");
 
   // ctx->ctrl must have AGGR_HASH_OR_ENCODE set and AGGR_MIN_PK unset, but we
   // leave the rest uninterpreted

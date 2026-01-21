@@ -27,8 +27,8 @@ let {{
 
 // case in which no argument is null and the error condition is false
 let blst_core_verify_pk_in_g1_non_null_spec msg_len dst_len aug_len = do {
-  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_struct "struct.POINTonE1_affine");
-  (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_struct "struct.POINTonE2_affine");
+  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_alias "struct.POINTonE1_affine");
+  (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_alias "struct.POINTonE2_affine");
   llvm_precond {{ POINTonE1_affine_invariant pk /\ POINTonE2_affine_invariant sig /\ is_point_affine E' (POINTonE2_affine_abs sig) /\ ~blst_core_verify_pk_in_g1_error_precond pk sig}};
   hash_or_encode <- llvm_fresh_var "hash_or_encode" (llvm_int 32);
   llvm_precond {{ hash_or_encode != zero }};
@@ -41,8 +41,8 @@ let blst_core_verify_pk_in_g1_non_null_spec msg_len dst_len aug_len = do {
 
 // same but with NULL aug
 let blst_core_verify_pk_in_g1_null_aug_spec msg_len dst_len = do {
-  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_struct "struct.POINTonE1_affine");
-  (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_struct "struct.POINTonE2_affine");
+  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_alias "struct.POINTonE1_affine");
+  (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_alias "struct.POINTonE2_affine");
   llvm_precond {{ POINTonE1_affine_invariant pk /\ POINTonE2_affine_invariant sig /\ is_point_affine E' (POINTonE2_affine_abs sig) /\ ~blst_core_verify_pk_in_g1_error_precond pk sig}};
   hash_or_encode <- llvm_fresh_var "hash_or_encode" (llvm_int 32);
   llvm_precond {{ hash_or_encode != zero }};
@@ -55,8 +55,8 @@ let blst_core_verify_pk_in_g1_null_aug_spec msg_len dst_len = do {
 
 // error case
 let blst_core_verify_pk_in_g1_error_spec msg_len dst_len aug_len = do {
-  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_struct "struct.POINTonE1_affine");
-  (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_struct "struct.POINTonE2_affine");
+  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_alias "struct.POINTonE1_affine");
+  (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_alias "struct.POINTonE2_affine");
   llvm_precond {{ POINTonE1_affine_invariant pk /\ POINTonE2_affine_invariant sig /\ is_point_affine E' (POINTonE2_affine_abs sig) /\ blst_core_verify_pk_in_g1_error_precond pk sig }};
   hash_or_encode <- llvm_fresh_var "hash_or_encode" (llvm_int 32);
   llvm_precond {{ hash_or_encode != zero }};
@@ -71,7 +71,7 @@ let blst_core_verify_pk_in_g1_error_spec msg_len dst_len aug_len = do {
 
 // sig is null
 let blst_core_verify_pk_in_g1_null_sig_spec msg_len dst_len aug_len = do {
-  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_struct "struct.POINTonE1_affine");
+  (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_alias "struct.POINTonE1_affine");
   let signature_ptr = llvm_null;
   llvm_precond {{ POINTonE1_affine_invariant pk }};
   hash_or_encode <- llvm_fresh_var "hash_or_encode" (llvm_int 32);

@@ -8,20 +8,20 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 let blst_sign_pk_in_g2_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE1");
-  (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_struct "struct.POINTonE1");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE1");
+  (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_alias "struct.POINTonE1");
   (_, sk_ptr) <- ptr_to_fresh_readonly "SK" pow256_type;
   crucible_execute_func [out_ptr, msg_ptr, sk_ptr];
-  new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
+  new_out <- crucible_fresh_var "new_out" (llvm_alias "struct.POINTonE1");
   crucible_points_to out_ptr (crucible_term new_out);
 };
 
 let blst_sign_pk_in_g1_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2");
-  (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_struct "struct.POINTonE2");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2");
+  (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_alias "struct.POINTonE2");
   (_, sk_ptr) <- ptr_to_fresh_readonly "SK" pow256_type;
   crucible_execute_func [out_ptr, msg_ptr, sk_ptr];
-  new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE2");
+  new_out <- crucible_fresh_var "new_out" (llvm_alias "struct.POINTonE2");
   crucible_points_to out_ptr (crucible_term new_out);
 };
 

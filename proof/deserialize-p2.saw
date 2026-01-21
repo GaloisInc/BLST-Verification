@@ -14,7 +14,7 @@ let compressed_E2_rep_type = (llvm_array 96 (llvm_int 8));
 // The main specification here is for blst_p2_uncompress
 
 let blst_p2_uncompress_OK_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
   crucible_precond {{ uncompress_E2_imp inp != nothing }};
   crucible_execute_func [out_ptr, in_ptr];
@@ -33,7 +33,7 @@ let blst_p2_uncompress_OK_spec = do {
 
 // ... the success case
 let POINTonE2_Uncompress_BE_OK_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
   crucible_precond {{ not_too_big_E2 (uncompress_E2_x inp) }};
   crucible_precond {{ is_square_fp2 (uncompress_E2_y2 inp) }};
@@ -46,7 +46,7 @@ let POINTonE2_Uncompress_BE_OK_spec = do {
 
 // ... first error case, when the given X coordinate is too large
 let POINTonE2_Uncompress_BE_BAD0_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
   crucible_precond {{ ~ (not_too_big_E2 (uncompress_E2_x inp))  }};
   crucible_execute_func [out_ptr, in_ptr];
@@ -55,7 +55,7 @@ let POINTonE2_Uncompress_BE_BAD0_spec = do {
 
 // ... second error case, when the X coordinate does not belong to a point on the curve
 let POINTonE2_Uncompress_BE_BAD1_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
   crucible_precond {{ not_too_big_E2 (uncompress_E2_x inp)  }};
   crucible_precond {{ ~ (is_square_fp2 (uncompress_E2_y2 inp)) }};
@@ -66,7 +66,7 @@ let POINTonE2_Uncompress_BE_BAD1_spec = do {
 // Uncompress
 
 let POINTonE2_Uncompress_OK_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
 
   crucible_precond {{ (inp@0)@0 }}; // only dealing with compressed points
@@ -79,7 +79,7 @@ let POINTonE2_Uncompress_OK_spec = do {
   };
 
 let POINTonE2_Uncompress_inf_OK_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
 
   crucible_precond {{ (inp@0)@0 }}; // only dealing with compressed points
@@ -94,7 +94,7 @@ let POINTonE2_Uncompress_inf_OK_spec = do {
 };
 
 let POINTonE2_Uncompress_inf_BAD_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
 
   crucible_precond {{ (inp@0)@0 }}; // only dealing with compressed points
@@ -108,7 +108,7 @@ let POINTonE2_Uncompress_inf_BAD_spec = do {
 
 // We do not care about specific error codes, so...
 let POINTonE2_Uncompress_BAD_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
   crucible_precond {{ ~ (inp@0)@1 }}; // not point-at-infinity
   crucible_precond {{    ~ (inp@0)@0
@@ -121,7 +121,7 @@ let POINTonE2_Uncompress_BAD_spec = do {
   };
 
 let POINTonE2_Uncompress_BAD1_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Uncompress_in" compressed_E2_rep_type;
   crucible_precond {{ ~ (inp@0)@0 }}; // not compressed
   crucible_execute_func [out_ptr, in_ptr];
@@ -134,7 +134,7 @@ let POINTonE2_Uncompress_BAD1_spec = do {
 // but some analysis is included here in case we want to include these functions later.
 /*
 let POINTonE2_Deserialize_BE_BAD0_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Deserialize_in" (llvm_array 96 (llvm_int 8));
   // crucible_precond {{ deserialize_E2_x inp >= `p \/ deserialize_E2_y inp < `p }}; // given X or Y is too big
   crucible_precond {{ deserialize_E2_x inp >= `p }}; // given X is too big
@@ -143,7 +143,7 @@ let POINTonE2_Deserialize_BE_BAD0_spec = do {
   };
 
 let POINTonE2_Deserialize_BE_BAD0a_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Deserialize_in" (llvm_array 96 (llvm_int 8));
   // crucible_precond {{ deserialize_E2_x inp >= `p \/ deserialize_E2_y inp < `p }}; // given X or Y is too big
   crucible_precond {{ deserialize_E2_y inp >= `p }}; // given Y is too big
@@ -152,7 +152,7 @@ let POINTonE2_Deserialize_BE_BAD0a_spec = do {
   };
 
 let POINTonE2_Deserialize_BE_BAD1_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Deserialize_in" (llvm_array 96 (llvm_int 8));
   crucible_precond {{ deserialize_E2_x inp < `p }}; // given X is not too big
   crucible_precond {{ deserialize_E2_y inp < `p }}; // given Y is not too big
@@ -162,7 +162,7 @@ let POINTonE2_Deserialize_BE_BAD1_spec = do {
   };
 
 let POINTonE2_Deserialize_BE_OK_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Deserialize_in" (llvm_array 96 (llvm_int 8));
   crucible_precond {{ deserialize_E2_x inp < `p }}; // given X is not too big
   crucible_precond {{ deserialize_E2_y inp < `p }}; // given Y is not too big
@@ -173,13 +173,13 @@ let POINTonE2_Deserialize_BE_OK_spec = do {
   };
 
 let POINTonE2_Deserialize_BE_OK_spec' = do { // For proof debugging
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE2_Deserialize_in" (llvm_array 96 (llvm_int 8));
   crucible_precond {{ deserialize_E2_x inp < `p }}; // given X is not too big
   crucible_precond {{ deserialize_E2_y inp < `p }}; // given Y is not too big
   crucible_precond {{ is_point_affine E (deserialize_E2_x_fp inp, deserialize_E2_y_fp inp) }}; // on the curve
   crucible_execute_func [out_ptr, in_ptr];
-  w <- crucible_fresh_var "w" (llvm_struct "struct.POINTonE2_affine");
+  w <- crucible_fresh_var "w" (llvm_alias "struct.POINTonE2_affine");
   crucible_points_to out_ptr (crucible_term w);
   crucible_postcond {{ w.1 == fp_rep (deserialize_E2_y_fp inp) }};
   // {{ w.0 ==  fp_rep (deserialize_E2_x_fp inp) }} ?
@@ -187,7 +187,7 @@ let POINTonE2_Deserialize_BE_OK_spec' = do { // For proof debugging
 
 // just to try:
 let blst_p2_deserialize_inf_spec = do {
-  out_ptr <- crucible_alloc (llvm_struct "struct.POINTonE2_affine");
+  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2_affine");
   inp <- crucible_fresh_var "p2_deserialize_in" (llvm_array 96 (llvm_int 8));
   in_ptr <- crucible_alloc_readonly (llvm_array 96 (llvm_int 8));
   crucible_points_to_untyped in_ptr (crucible_term inp);
@@ -196,7 +196,7 @@ let blst_p2_deserialize_inf_spec = do {
 
   crucible_execute_func [out_ptr, in_ptr];
 
-  new_out <- crucible_fresh_var "new_out" (llvm_struct "struct.POINTonE2_affine");
+  new_out <- crucible_fresh_var "new_out" (llvm_alias "struct.POINTonE2_affine");
   ret <- crucible_fresh_var "ret" (llvm_int 32);
   crucible_conditional_points_to {{ ret == `BLST_SUCCESS }} out_ptr (crucible_term new_out);
   crucible_postcond {{ inp@0 && 0x40 != zero /\ ([inp@0 && 0x3F]#(tail inp)) == zero ==> ret == `BLST_SUCCESS /\ new_out.0 == vec384_rep (from_Fp (point_O E).0) /\ new_out.1 == vec384_rep (from_Fp (point_O E).1) }}; // TODO spec says 0x1F and not 0x3F
