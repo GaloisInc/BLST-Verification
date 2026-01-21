@@ -18,8 +18,8 @@ let {{
 
 // case in which the input is not null and we return BLST_SUCCESS:
 let blst_aggregate_in_g1_OK_nonnull_spec = do {
-  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g1_out" (llvm_struct "struct.POINTonE1");
-  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1");
+  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g1_out" (llvm_alias "struct.POINTonE1");
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_alias "struct.POINTonE1");
   (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
   //
   llvm_precond {{ (zwire@0)@0 }}; // compressed
@@ -28,7 +28,7 @@ let blst_aggregate_in_g1_OK_nonnull_spec = do {
   //
   llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
   //
-  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
+  new_out <- llvm_fresh_var "new_out" (llvm_alias "struct.POINTonE1");
   llvm_points_to out_ptr (llvm_term new_out);
   llvm_postcond {{ affinify E (POINTonE1_abs new_out) == if (zwire@0)@1 then affinify E (POINTonE1_abs out) else add E (affinify E (POINTonE1_abs inp)) (uncompress_E1_OK zwire) }};
   //
@@ -39,7 +39,7 @@ let blst_aggregate_in_g1_OK_nonnull_spec = do {
 
 let blst_aggregate_in_g1_null_spec = do {
   //
-  out_ptr <- llvm_alloc (llvm_struct "struct.POINTonE1");
+  out_ptr <- llvm_alloc (llvm_alias "struct.POINTonE1");
   let inp_ptr = llvm_null;
   //
   (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
@@ -48,7 +48,7 @@ let blst_aggregate_in_g1_null_spec = do {
   //
   llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
   //
-  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
+  new_out <- llvm_fresh_var "new_out" (llvm_alias "struct.POINTonE1");
   llvm_points_to out_ptr (llvm_term new_out);
   llvm_postcond {{ affinify E (POINTonE1_abs new_out) ==
     if (zwire@0)@1
@@ -61,13 +61,13 @@ let blst_aggregate_in_g1_null_spec = do {
 
 // here we cover the error cases:
 let blst_aggregate_in_g1_error_spec = do {
-  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g1_out" (llvm_struct "struct.POINTonE1");
-  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_struct "struct.POINTonE1");
+  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g1_out" (llvm_alias "struct.POINTonE1");
+  (inp, inp_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_in" (llvm_alias "struct.POINTonE1");
   (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
   llvm_precond {{ (zwire@0)@0 }}; // compressed
   llvm_precond {{ aggregate_in_g1_error_precond zwire }};
   llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
-  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
+  new_out <- llvm_fresh_var "new_out" (llvm_alias "struct.POINTonE1");
   llvm_points_to out_ptr (llvm_term new_out);
   llvm_postcond {{ new_out == out }};
   ret <- llvm_fresh_var "blst_aggregate_in_g1_ret" (llvm_int 32);
@@ -77,13 +77,13 @@ let blst_aggregate_in_g1_error_spec = do {
 
 // the behavior in the error case does not depend on whether the input is null or not:
 let blst_aggregate_in_g1_null_error_spec = do {
-  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g1_out" (llvm_struct "struct.POINTonE1");
+  (out, out_ptr) <- ptr_to_fresh "blst_aggregate_in_g1_out" (llvm_alias "struct.POINTonE1");
   let inp_ptr = llvm_null;
   (zwire, zwire_ptr) <- ptr_to_fresh_readonly "blst_aggregate_in_g1_zwire" (llvm_array 48 (llvm_int 8));
   llvm_precond {{ (zwire@0)@0 }}; // compressed
   llvm_precond {{ aggregate_in_g1_error_precond zwire }};
   llvm_execute_func [out_ptr, inp_ptr, zwire_ptr];
-  new_out <- llvm_fresh_var "new_out" (llvm_struct "struct.POINTonE1");
+  new_out <- llvm_fresh_var "new_out" (llvm_alias "struct.POINTonE1");
   llvm_points_to out_ptr (llvm_term new_out);
   llvm_postcond {{ new_out == out }};
   ret <- llvm_fresh_var "blst_aggregate_in_g1_ret" (llvm_int 32);

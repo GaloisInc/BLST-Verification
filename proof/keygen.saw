@@ -81,7 +81,7 @@ let HKDF_Extract_spec salt_len IKM_len = do {
   IKM_ptr <- crucible_alloc_readonly (llvm_array IKM_len (llvm_int 8));
   crucible_points_to IKM_ptr (crucible_term IKM);
 
-  ctx <- crucible_alloc (llvm_struct "struct.HMAC_SHA256_CTX");
+  ctx <- crucible_alloc (llvm_alias "struct.HMAC_SHA256_CTX");
 
   crucible_execute_func [PRK_ptr, salt_ptr, crucible_term {{ `salt_len:[64]}}, IKM_ptr, crucible_term {{ `IKM_len:[64]}}, ctx];
   crucible_points_to PRK_ptr (crucible_term {{ HKDF_Extract salt (IKM # [0]) }});
@@ -109,7 +109,7 @@ let HKDF_Expand_spec info_len L = do {
   //  then do { return (); }
   //  else do {crucible_points_to info_ptr (crucible_term info);} ;
 
-  ctx <- crucible_alloc (llvm_struct "struct.HMAC_SHA256_CTX");
+  ctx <- crucible_alloc (llvm_alias "struct.HMAC_SHA256_CTX");
 
   crucible_execute_func [OKM_ptr, crucible_term {{ `L:[64]}}, PRK_ptr, info_ptr, crucible_term {{ `info_len:[64]}}, ctx];
   crucible_points_to OKM_ptr (crucible_term {{ HKDF_Expand`{L=L} PRK  (info #  I2OSP`{xLen=2} `L) }});
