@@ -9,12 +9,12 @@
 
 // ct_inverse_mod_383
 let ct_inverse_mod_383_spec = do {
-  ret_ptr <- crucible_alloc vec768_type;
+  ret_ptr <- llvm_alloc vec768_type;
   (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384_type;
   mod_ptr <- ptr_to_modulus384;
-  crucible_execute_func [ret_ptr, inp_ptr, mod_ptr];
+  llvm_execute_func [ret_ptr, inp_ptr, mod_ptr];
   let new_ret = {{ ctx_inverse_mod_383 inp modulus384 }};
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -17,13 +17,13 @@ let blst_core_verify_pk_in_g2_non_null_spec msg_len dst_len aug_len = do {
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_alias "struct.POINTonE2_affine");
   (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_alias "struct.POINTonE1_affine");
   llvm_precond {{ POINTonE2_affine_invariant pk /\ POINTonE1_affine_invariant sig /\ is_point_affine E (POINTonE1_affine_abs sig) /\ ~blst_core_verify_pk_in_g2_error_precond pk sig }};
-  hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
+  hash_or_encode <- llvm_fresh_var "hash_or_encode" (llvm_int 32);
   llvm_precond {{ hash_or_encode != zero }};
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (dst, dst_ptr) <- ptr_to_fresh_readonly "dst" (llvm_array dst_len (llvm_int 8));
   (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
-  crucible_execute_func [pk_ptr, signature_ptr, crucible_term hash_or_encode, msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `dst_len : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}];
-  crucible_return (crucible_term {{ if core_verify_pk_in_g2_impl (POINTonE2_affine_abs pk) (POINTonE1_affine_abs sig) msg dst aug then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
+  llvm_execute_func [pk_ptr, signature_ptr, llvm_term hash_or_encode, msg_ptr, llvm_term {{ `msg_len : [64] }}, dst_ptr, llvm_term {{ `dst_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
+  llvm_return (llvm_term {{ if core_verify_pk_in_g2_impl (POINTonE2_affine_abs pk) (POINTonE1_affine_abs sig) msg dst aug then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
 };
 
 // same but with NULL aug
@@ -31,13 +31,13 @@ let blst_core_verify_pk_in_g2_null_aug_spec msg_len dst_len = do {
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_alias "struct.POINTonE2_affine");
   (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_alias "struct.POINTonE1_affine");
   llvm_precond {{ POINTonE2_affine_invariant pk /\ POINTonE1_affine_invariant sig /\ is_point_affine E (POINTonE1_affine_abs sig) /\ ~blst_core_verify_pk_in_g2_error_precond pk sig }};
-  hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
+  hash_or_encode <- llvm_fresh_var "hash_or_encode" (llvm_int 32);
   llvm_precond {{ hash_or_encode != zero }};
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (dst, dst_ptr) <- ptr_to_fresh_readonly "dst" (llvm_array dst_len (llvm_int 8));
   let aug_ptr = llvm_null;
-  crucible_execute_func [pk_ptr, signature_ptr, crucible_term hash_or_encode, msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `dst_len : [64] }}, aug_ptr, crucible_term {{ zero : [64] }}];
-  crucible_return (crucible_term {{ if core_verify_pk_in_g2_impl (POINTonE2_affine_abs pk) (POINTonE1_affine_abs sig) msg dst [] then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
+  llvm_execute_func [pk_ptr, signature_ptr, llvm_term hash_or_encode, msg_ptr, llvm_term {{ `msg_len : [64] }}, dst_ptr, llvm_term {{ `dst_len : [64] }}, aug_ptr, llvm_term {{ zero : [64] }}];
+  llvm_return (llvm_term {{ if core_verify_pk_in_g2_impl (POINTonE2_affine_abs pk) (POINTonE1_affine_abs sig) msg dst [] then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
 };
 
 // error case
@@ -45,12 +45,12 @@ let blst_core_verify_pk_in_g2_error_spec msg_len dst_len aug_len = do {
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_alias "struct.POINTonE2_affine");
   (sig, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_alias "struct.POINTonE1_affine");
   llvm_precond {{ POINTonE2_affine_invariant pk /\ POINTonE1_affine_invariant sig /\ is_point_affine E (POINTonE1_affine_abs sig) /\ blst_core_verify_pk_in_g2_error_precond pk sig }};
-  hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
+  hash_or_encode <- llvm_fresh_var "hash_or_encode" (llvm_int 32);
   llvm_precond {{ hash_or_encode != zero }};
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (dst, dst_ptr) <- ptr_to_fresh_readonly "dst" (llvm_array dst_len (llvm_int 8));
   (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
-  crucible_execute_func [pk_ptr, signature_ptr, crucible_term hash_or_encode, msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `dst_len : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}];
+  llvm_execute_func [pk_ptr, signature_ptr, llvm_term hash_or_encode, msg_ptr, llvm_term {{ `msg_len : [64] }}, dst_ptr, llvm_term {{ `dst_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
   ret <- llvm_fresh_var "blst_core_verify_pk_in_g2_ret" (llvm_int 32);
   llvm_return (llvm_term ret);
   llvm_postcond {{ ret != `BLST_SUCCESS }};
@@ -61,13 +61,13 @@ let blst_core_verify_pk_in_g2_null_sig_spec msg_len dst_len aug_len = do {
   (pk, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_alias "struct.POINTonE2_affine");
   let signature_ptr = llvm_null;
   llvm_precond {{ POINTonE2_affine_invariant pk }};
-  hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
+  hash_or_encode <- llvm_fresh_var "hash_or_encode" (llvm_int 32);
   llvm_precond {{ hash_or_encode != zero }};
   (msg, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (dst, dst_ptr) <- ptr_to_fresh_readonly "dst" (llvm_array dst_len (llvm_int 8));
   (aug, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
-  crucible_execute_func [pk_ptr, signature_ptr, crucible_term hash_or_encode, msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `dst_len : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}];
-  crucible_return (crucible_term {{ if is_point_O E' (POINTonE2_affine_abs pk) then `BLST_PK_IS_INFINITY else if core_verify_pk_in_g2_impl (POINTonE2_affine_abs pk) (POINTonE1_affine_abs zero) msg dst aug then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
+  llvm_execute_func [pk_ptr, signature_ptr, llvm_term hash_or_encode, msg_ptr, llvm_term {{ `msg_len : [64] }}, dst_ptr, llvm_term {{ `dst_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
+  llvm_return (llvm_term {{ if is_point_O E' (POINTonE2_affine_abs pk) then `BLST_PK_IS_INFINITY else if core_verify_pk_in_g2_impl (POINTonE2_affine_abs pk) (POINTonE1_affine_abs zero) msg dst aug then (`BLST_SUCCESS:[32]) else `BLST_VERIFY_FAIL }});
 };
 
 // overrides:

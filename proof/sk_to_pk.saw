@@ -8,19 +8,19 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 let blst_sk_to_pk_in_g1_spec = do {
-  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE1");
+  out_ptr <- llvm_alloc (llvm_alias "struct.POINTonE1");
   (_, SK_ptr) <- ptr_to_fresh_readonly "SK" vec256_type;
-  crucible_execute_func [out_ptr, SK_ptr];
-  new_SK <- crucible_fresh_var "new_SK" vec256_type;
-  crucible_points_to SK_ptr (crucible_term new_SK);
+  llvm_execute_func [out_ptr, SK_ptr];
+  new_SK <- llvm_fresh_var "new_SK" vec256_type;
+  llvm_points_to SK_ptr (llvm_term new_SK);
 };
 
 let blst_sk_to_pk_in_g2_spec = do {
-  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2");
+  out_ptr <- llvm_alloc (llvm_alias "struct.POINTonE2");
   (_, SK_ptr) <- ptr_to_fresh_readonly "SK" vec256_type;
-  crucible_execute_func [out_ptr, SK_ptr];
-  new_SK <- crucible_fresh_var "new_SK" vec256_type;
-  crucible_points_to SK_ptr (crucible_term new_SK);
+  llvm_execute_func [out_ptr, SK_ptr];
+  new_SK <- llvm_fresh_var "new_SK" vec256_type;
+  llvm_points_to SK_ptr (llvm_term new_SK);
 };
 
 ///////////////////////////////////////////////////////////////////////////////

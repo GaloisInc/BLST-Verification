@@ -199,11 +199,11 @@ precomputed_table_invariant_thm <- custom_prove_cryptol
 
 
 let POINTonE2_precompute_w5_spec = do {
-    row_ptr <- crucible_alloc (llvm_array 16 POINTonE2_type);
+    row_ptr <- llvm_alloc (llvm_array 16 POINTonE2_type);
     (point, point_ptr) <- ptr_to_fresh_readonly "point" POINTonE2_type;
-    crucible_precond {{ POINTonE2_invariant point }};
-    crucible_execute_func [row_ptr, point_ptr];
-    crucible_points_to row_ptr (crucible_term {{ precomputed_table (POINTonE2_abs point) }} );
+    llvm_precond {{ POINTonE2_invariant point }};
+    llvm_execute_func [row_ptr, point_ptr];
+    llvm_points_to row_ptr (llvm_term {{ precomputed_table (POINTonE2_abs point) }} );
     };
 
 POINTonE2_precompute_w5_ov <-
@@ -334,14 +334,14 @@ booth'_precomputed_table_thm <- custom_prove_cryptol
 
 
 let POINTonE2_gather_booth_w5_spec = do {
-    p_ptr <- crucible_alloc POINTonE2_type;
+    p_ptr <- llvm_alloc POINTonE2_type;
     (table, table_ptr) <- ptr_to_fresh_readonly "table" (llvm_array 16 POINTonE2_type);
-    booth_idx <- crucible_fresh_var "booth_idx" limb_type;
-    crucible_precond {{ booth_idx <= 16 \/ (-32 <= booth_idx /\ booth_idx <= -16) }}; // NB unsigned comparisons
+    booth_idx <- llvm_fresh_var "booth_idx" limb_type;
+    llvm_precond {{ booth_idx <= 16 \/ (-32 <= booth_idx /\ booth_idx <= -16) }}; // NB unsigned comparisons
     // need to assume each element of the table satisfies the invariant:
-    crucible_precond {{ all POINTonE2_invariant table }};
-    crucible_execute_func [p_ptr, table_ptr, crucible_term {{booth_idx}}];
-    crucible_points_to p_ptr (crucible_term {{ booth' table booth_idx }});
+    llvm_precond {{ all POINTonE2_invariant table }};
+    llvm_execute_func [p_ptr, table_ptr, llvm_term {{booth_idx}}];
+    llvm_points_to p_ptr (llvm_term {{ booth' table booth_idx }});
     };
 
 
@@ -445,19 +445,19 @@ let {{
 */
 
 let POINTonE2_mult_w5_spec n_bytes bits = do {
-    ret_ptr <- crucible_alloc  POINTonE2_type;
+    ret_ptr <- llvm_alloc  POINTonE2_type;
     (point, point_ptr) <- ptr_to_fresh_readonly "point" POINTonE2_type;
     // needs alignment
-    scalar_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array n_bytes (llvm_int 8));
-    scalar <- crucible_fresh_var "scalar" (llvm_array n_bytes (llvm_int 8));
-    crucible_points_to scalar_ptr (crucible_term scalar);
-    crucible_precond {{ POINTonE2_invariant point }};
-    crucible_precond {{ e2_order (affinify E' (POINTonE2_abs point)) >
+    scalar_ptr <- llvm_alloc_readonly_aligned 8 (llvm_array n_bytes (llvm_int 8));
+    scalar <- llvm_fresh_var "scalar" (llvm_array n_bytes (llvm_int 8));
+    llvm_points_to scalar_ptr (llvm_term scalar);
+    llvm_precond {{ POINTonE2_invariant point }};
+    llvm_precond {{ e2_order (affinify E' (POINTonE2_abs point)) >
                         scalar_value`{bits,n_bytes} scalar + shift }};
-    crucible_execute_func [ret_ptr, point_ptr, scalar_ptr, crucible_term {{`bits:Limb}}];
-    ret <- crucible_fresh_var "ret" POINTonE2_type;
-    crucible_points_to ret_ptr (crucible_term ret);
-    crucible_postcond {{ affinify E' (POINTonE2_abs ret) ==
+    llvm_execute_func [ret_ptr, point_ptr, scalar_ptr, llvm_term {{`bits:Limb}}];
+    ret <- llvm_fresh_var "ret" POINTonE2_type;
+    llvm_points_to ret_ptr (llvm_term ret);
+    llvm_postcond {{ affinify E' (POINTonE2_abs ret) ==
                           e2_scalar_mult (scalar_value`{bits,n_bytes} scalar)
                                          (affinify E' (POINTonE2_abs point)) }};
     };

@@ -10,15 +10,15 @@ include "blst_error.saw";
 ///////////////////////////////////////////////////////////////////////////////
 
 let blst_pairing_init_spec DST_len = do {
-  ctx_ptr <- crucible_alloc (llvm_alias "struct.PAIRING");
-  hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
-  DST_ptr <- crucible_fresh_pointer (llvm_array DST_len (llvm_int 8));
-  crucible_execute_func [ctx_ptr, crucible_term hash_or_encode, DST_ptr, crucible_term {{`DST_len:[64]}}];
-  ctx_ctrl <- crucible_fresh_var "new_pairing_init_ctx_ctrl" (llvm_int 32);
-  crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term ctx_ctrl);
-  crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term {{0:[32]}});
-  crucible_points_to (crucible_field ctx_ptr "DST") DST_ptr;
-  crucible_points_to (crucible_field ctx_ptr "DST_len") (crucible_term {{`DST_len:[64]}});
+  ctx_ptr <- llvm_alloc (llvm_alias "struct.PAIRING");
+  hash_or_encode <- llvm_fresh_var "hash_or_encode" (llvm_int 32);
+  DST_ptr <- llvm_fresh_pointer (llvm_array DST_len (llvm_int 8));
+  llvm_execute_func [ctx_ptr, llvm_term hash_or_encode, DST_ptr, llvm_term {{`DST_len:[64]}}];
+  ctx_ctrl <- llvm_fresh_var "new_pairing_init_ctx_ctrl" (llvm_int 32);
+  llvm_points_to (llvm_field ctx_ptr "ctrl") (llvm_term ctx_ctrl);
+  llvm_points_to (llvm_field ctx_ptr "nelems") (llvm_term {{0:[32]}});
+  llvm_points_to (llvm_field ctx_ptr "DST") DST_ptr;
+  llvm_points_to (llvm_field ctx_ptr "DST_len") (llvm_term {{`DST_len:[64]}});
 };
 
 // the enum for aggregate-operations errors
@@ -35,19 +35,19 @@ let N_MAX = 2; // NOTE: must match N_MAX defined in C code
 let {{ is_in_G1 (p : ([6][64], [6][64])) = (undefined:[64]) }}; // NOTE: the goal is to leave it uninterpreted
 let POINTonE1_in_G1_spec = do {
   (p, p_ptr) <- ptr_to_fresh_readonly "p" (llvm_alias "struct.POINTonE1_affine");
-  crucible_execute_func [p_ptr];
-  ret <- crucible_fresh_var "ret" limb_type;
-  crucible_postcond {{ ret == is_in_G1 p }};
-  crucible_return (crucible_term ret);
+  llvm_execute_func [p_ptr];
+  ret <- llvm_fresh_var "ret" limb_type;
+  llvm_postcond {{ ret == is_in_G1 p }};
+  llvm_return (llvm_term ret);
 };
 
 let {{ is_in_G2 (p : ([2][6][64], [2][6][64])) = (undefined:[64]) }}; // NOTE: the goal is to leave it uninterpreted
 let POINTonE2_in_G2_spec = do {
   (p, p_ptr) <- ptr_to_fresh_readonly "p" (llvm_alias "struct.POINTonE2_affine");
-  crucible_execute_func [p_ptr];
-  ret <- crucible_fresh_var "ret" limb_type;
-  crucible_postcond {{ ret == is_in_G2 p }};
-  crucible_return (crucible_term ret);
+  llvm_execute_func [p_ptr];
+  ret <- llvm_fresh_var "ret" limb_type;
+  llvm_postcond {{ ret == is_in_G2 p }};
+  llvm_return (llvm_term ret);
 };
 
 let blst_pairing_aggregate_pk_in_spec DST_len msg_len aug_len nelems null_sig min_sig = do {
@@ -60,210 +60,210 @@ let blst_pairing_aggregate_pk_in_spec DST_len msg_len aug_len nelems null_sig mi
   let group_test = if min_sig then {{is_in_G1}} else {{is_in_G2}};
   let null_sig_val = if min_sig then {{zero:([6][64], [6][64])}} else {{zero:([2][6][64], [2][6][64])}};
 
-  crucible_precond {{ `nelems < `N_MAX }};
+  llvm_precond {{ `nelems < `N_MAX }};
 
-  ctx_ptr <- crucible_alloc (llvm_alias "struct.PAIRING");
-  ctx_ctrl <- crucible_fresh_var (str_concat method_name "_ctx_ctrl") (llvm_int 32);
-  crucible_precond {{ ctx_ctrl && ~(AGGR_MIN_SIG || AGGR_SIGN_SET || AGGR_MIN_PK || AGGR_GT_SET || AGGR_HASH_OR_ENCODE) == zero }};
-  crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term ctx_ctrl);
+  ctx_ptr <- llvm_alloc (llvm_alias "struct.PAIRING");
+  ctx_ctrl <- llvm_fresh_var (str_concat method_name "_ctx_ctrl") (llvm_int 32);
+  llvm_precond {{ ctx_ctrl && ~(AGGR_MIN_SIG || AGGR_SIGN_SET || AGGR_MIN_PK || AGGR_GT_SET || AGGR_HASH_OR_ENCODE) == zero }};
+  llvm_points_to (llvm_field ctx_ptr "ctrl") (llvm_term ctx_ctrl);
 
-  crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term {{ `nelems:[32] }});
+  llvm_points_to (llvm_field ctx_ptr "nelems") (llvm_term {{ `nelems:[32] }});
 
-  ctx_Q <- crucible_fresh_var "pairing_aggregate_pk_in_g2_ctx_Q" (llvm_array nelems (llvm_alias "struct.POINTonE2_affine"));
-  crucible_points_to_untyped (crucible_field ctx_ptr "Q") (crucible_term ctx_Q);
-  ctx_P <- crucible_fresh_var "pairing_aggregate_pk_in_g2_ctx_P" (llvm_array nelems (llvm_alias "struct.POINTonE1_affine"));
-  crucible_points_to_untyped (crucible_field ctx_ptr "P") (crucible_term ctx_P);
+  ctx_Q <- llvm_fresh_var "pairing_aggregate_pk_in_g2_ctx_Q" (llvm_array nelems (llvm_alias "struct.POINTonE2_affine"));
+  llvm_points_to_untyped (llvm_field ctx_ptr "Q") (llvm_term ctx_Q);
+  ctx_P <- llvm_fresh_var "pairing_aggregate_pk_in_g2_ctx_P" (llvm_array nelems (llvm_alias "struct.POINTonE1_affine"));
+  llvm_points_to_untyped (llvm_field ctx_ptr "P") (llvm_term ctx_P);
 
-  ctx_GT <- crucible_fresh_var (str_concat method_name "_ctx_GT") vec384fp12_type;
-  crucible_conditional_points_to {{ (ctx_ctrl && AGGR_GT_SET) != zero }} (crucible_field ctx_ptr "GT") (crucible_term ctx_GT);
+  ctx_GT <- llvm_fresh_var (str_concat method_name "_ctx_GT") vec384fp12_type;
+  llvm_conditional_points_to {{ (ctx_ctrl && AGGR_GT_SET) != zero }} (llvm_field ctx_ptr "GT") (llvm_term ctx_GT);
 
-  ctx_AggrSign <- crucible_fresh_var (str_concat method_name "_ctx_AggrSign") sig_type;
-  crucible_conditional_points_to_untyped {{ (ctx_ctrl && AGGR_SIGN_SET) != zero }} (crucible_field ctx_ptr "AggrSign") (crucible_term ctx_AggrSign);
+  ctx_AggrSign <- llvm_fresh_var (str_concat method_name "_ctx_AggrSign") sig_type;
+  llvm_conditional_points_to_untyped {{ (ctx_ctrl && AGGR_SIGN_SET) != zero }} (llvm_field ctx_ptr "AggrSign") (llvm_term ctx_AggrSign);
 
   (_, DST_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
-  crucible_points_to (crucible_field ctx_ptr "DST") DST_ptr;
-  crucible_points_to (crucible_field ctx_ptr "DST_len") (crucible_term {{`DST_len:[64]}});
+  llvm_points_to (llvm_field ctx_ptr "DST") DST_ptr;
+  llvm_points_to (llvm_field ctx_ptr "DST_len") (llvm_term {{`DST_len:[64]}});
 
   (PK, PK_ptr) <- ptr_to_fresh_readonly "PK" pk_type_affine;
   (sig, sig_ptr) <-
     if (eval_bool {{ (`null_sig:Bit) != False }})
-      then return (null_sig_val ,crucible_null)
+      then return (null_sig_val ,llvm_null)
       else (ptr_to_fresh_readonly "sig" sig_type_affine);
   (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
-  aug <- crucible_fresh_var "aug" (llvm_array aug_len (llvm_int 8));
-  aug_ptr <- crucible_alloc_readonly_aligned aug_len (llvm_array aug_len (llvm_int 8));
-  crucible_points_to aug_ptr (crucible_term aug);
+  aug <- llvm_fresh_var "aug" (llvm_array aug_len (llvm_int 8));
+  aug_ptr <- llvm_alloc_readonly_aligned aug_len (llvm_array aug_len (llvm_int 8));
+  llvm_points_to aug_ptr (llvm_term aug);
 
-  crucible_execute_func [ctx_ptr, PK_ptr, sig_ptr, msg_ptr, crucible_term {{`msg_len:[64]}}, aug_ptr, crucible_term {{`aug_len:[64]}}];
+  llvm_execute_func [ctx_ptr, PK_ptr, sig_ptr, msg_ptr, llvm_term {{`msg_len:[64]}}, aug_ptr, llvm_term {{`aug_len:[64]}}];
 
-  ret <- crucible_fresh_var "ret" (llvm_int 32);
-  crucible_postcond {{ ret == `BLST_AGGR_TYPE_MISMATCH \/ ret == `BLST_POINT_NOT_IN_GROUP \/ ret == `BLST_PK_IS_INFINITY \/ ret == `BLST_SUCCESS }};
+  ret <- llvm_fresh_var "ret" (llvm_int 32);
+  llvm_postcond {{ ret == `BLST_AGGR_TYPE_MISMATCH \/ ret == `BLST_POINT_NOT_IN_GROUP \/ ret == `BLST_PK_IS_INFINITY \/ ret == `BLST_SUCCESS }};
   let cond1 = if min_sig then {{ctx_ctrl && AGGR_MIN_PK == zero}} else {{ctx_ctrl && AGGR_MIN_SIG == zero}} ;
-  crucible_postcond {{ ~cond1 ==> ret == `BLST_AGGR_TYPE_MISMATCH }};
-  crucible_postcond {{ cond1 /\ ((`null_sig:Bit) == False) /\ sig != zero /\ (group_test sig == zero) ==> ret == `BLST_POINT_NOT_IN_GROUP }};
-  crucible_postcond {{ cond1 /\ (((`null_sig:Bit) == True) \/ sig == zero \/ (group_test sig != zero)) /\ PK == zero ==> ret == `BLST_PK_IS_INFINITY }};
-  new_ctx_ctrl <- crucible_fresh_var (str_concat "new_" (str_concat method_name "_ctx_ctrl")) (llvm_int 32);
-  crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term new_ctx_ctrl);
+  llvm_postcond {{ ~cond1 ==> ret == `BLST_AGGR_TYPE_MISMATCH }};
+  llvm_postcond {{ cond1 /\ ((`null_sig:Bit) == False) /\ sig != zero /\ (group_test sig == zero) ==> ret == `BLST_POINT_NOT_IN_GROUP }};
+  llvm_postcond {{ cond1 /\ (((`null_sig:Bit) == True) \/ sig == zero \/ (group_test sig != zero)) /\ PK == zero ==> ret == `BLST_PK_IS_INFINITY }};
+  new_ctx_ctrl <- llvm_fresh_var (str_concat "new_" (str_concat method_name "_ctx_ctrl")) (llvm_int 32);
+  llvm_points_to (llvm_field ctx_ptr "ctrl") (llvm_term new_ctx_ctrl);
 
   if min_sig
     then
-      crucible_postcond {{ cond1 ==> new_ctx_ctrl && AGGR_MIN_SIG != zero }}
+      llvm_postcond {{ cond1 ==> new_ctx_ctrl && AGGR_MIN_SIG != zero }}
     else
-      crucible_postcond {{ cond1 ==> new_ctx_ctrl && AGGR_MIN_PK != zero }};
+      llvm_postcond {{ cond1 ==> new_ctx_ctrl && AGGR_MIN_PK != zero }};
 
-  new_nelems <- crucible_fresh_var (str_concat "new_" (str_concat method_name "_ctx_nelems")) (llvm_int 32);
-  crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term new_nelems);
-  crucible_postcond {{ ret == `BLST_SUCCESS /\ `nelems < `N_MAX-1 ==> new_nelems == ((`nelems+1):[32]) }};
-  crucible_postcond {{ ret == `BLST_SUCCESS /\ `nelems == `N_MAX-1 ==> new_nelems == (zero:[32]) }};
+  new_nelems <- llvm_fresh_var (str_concat "new_" (str_concat method_name "_ctx_nelems")) (llvm_int 32);
+  llvm_points_to (llvm_field ctx_ptr "nelems") (llvm_term new_nelems);
+  llvm_postcond {{ ret == `BLST_SUCCESS /\ `nelems < `N_MAX-1 ==> new_nelems == ((`nelems+1):[32]) }};
+  llvm_postcond {{ ret == `BLST_SUCCESS /\ `nelems == `N_MAX-1 ==> new_nelems == (zero:[32]) }};
 
-  crucible_postcond {{ (cond1 /\ (((`null_sig:Bit) == True) \/ sig == zero \/ (group_test sig != zero)) /\ PK != zero) == (ret == `BLST_SUCCESS) }};
-  new_ctx_Q <- crucible_fresh_var "new_pairing_aggregate_pk_in_g2_ctx_Q" (llvm_array (eval_size {| nelems+1 |}) (llvm_alias "struct.POINTonE2_affine"));
-  new_ctx_P <- crucible_fresh_var "new_pairing_aggregate_pk_in_g2_ctx_P" (llvm_array (eval_size {| nelems+1 |}) (llvm_alias "struct.POINTonE1_affine"));
-  crucible_conditional_points_to_untyped {{ ret == `BLST_SUCCESS }} (crucible_field ctx_ptr "Q") (crucible_term new_ctx_Q);
-  crucible_conditional_points_to_untyped {{ ret == `BLST_SUCCESS }} (crucible_field ctx_ptr "P") (crucible_term new_ctx_P);
+  llvm_postcond {{ (cond1 /\ (((`null_sig:Bit) == True) \/ sig == zero \/ (group_test sig != zero)) /\ PK != zero) == (ret == `BLST_SUCCESS) }};
+  new_ctx_Q <- llvm_fresh_var "new_pairing_aggregate_pk_in_g2_ctx_Q" (llvm_array (eval_size {| nelems+1 |}) (llvm_alias "struct.POINTonE2_affine"));
+  new_ctx_P <- llvm_fresh_var "new_pairing_aggregate_pk_in_g2_ctx_P" (llvm_array (eval_size {| nelems+1 |}) (llvm_alias "struct.POINTonE1_affine"));
+  llvm_conditional_points_to_untyped {{ ret == `BLST_SUCCESS }} (llvm_field ctx_ptr "Q") (llvm_term new_ctx_Q);
+  llvm_conditional_points_to_untyped {{ ret == `BLST_SUCCESS }} (llvm_field ctx_ptr "P") (llvm_term new_ctx_P);
 
-  crucible_postcond {{ ret == `BLST_SUCCESS /\ `nelems == (`N_MAX-1) ==> new_ctx_ctrl && AGGR_GT_SET != zero }};
-  new_ctx_GT <- crucible_fresh_var (str_concat "new_" (str_concat method_name "_ctx_GT")) vec384fp12_type;
-  crucible_conditional_points_to {{ ret == `BLST_SUCCESS /\ `nelems == (`N_MAX-1) }} (crucible_field ctx_ptr "GT") (crucible_term new_ctx_GT);
+  llvm_postcond {{ ret == `BLST_SUCCESS /\ `nelems == (`N_MAX-1) ==> new_ctx_ctrl && AGGR_GT_SET != zero }};
+  new_ctx_GT <- llvm_fresh_var (str_concat "new_" (str_concat method_name "_ctx_GT")) vec384fp12_type;
+  llvm_conditional_points_to {{ ret == `BLST_SUCCESS /\ `nelems == (`N_MAX-1) }} (llvm_field ctx_ptr "GT") (llvm_term new_ctx_GT);
 
-  crucible_postcond {{ (ctx_ctrl && AGGR_SIGN_SET) != zero \/ (cond1 /\ ((`null_sig:Bit) == False) /\ sig != zero /\ (group_test sig) != zero) ==> new_ctx_ctrl && AGGR_SIGN_SET != zero }};
-  new_ctx_AggrSign <- crucible_fresh_var (str_concat "new_" (str_concat method_name "_ctx_AggrSign")) sig_type;
-  crucible_conditional_points_to_untyped {{ (ctx_ctrl && AGGR_SIGN_SET) != zero \/ (cond1 /\ ((`null_sig:Bit) == False) /\ sig != zero /\ (group_test sig) != zero) }} (crucible_field ctx_ptr "AggrSign") (crucible_term new_ctx_AggrSign);
+  llvm_postcond {{ (ctx_ctrl && AGGR_SIGN_SET) != zero \/ (cond1 /\ ((`null_sig:Bit) == False) /\ sig != zero /\ (group_test sig) != zero) ==> new_ctx_ctrl && AGGR_SIGN_SET != zero }};
+  new_ctx_AggrSign <- llvm_fresh_var (str_concat "new_" (str_concat method_name "_ctx_AggrSign")) sig_type;
+  llvm_conditional_points_to_untyped {{ (ctx_ctrl && AGGR_SIGN_SET) != zero \/ (cond1 /\ ((`null_sig:Bit) == False) /\ sig != zero /\ (group_test sig) != zero) }} (llvm_field ctx_ptr "AggrSign") (llvm_term new_ctx_AggrSign);
 
-  crucible_return (crucible_term ret);
+  llvm_return (llvm_term ret);
 };
 
 let blst_pairing_commit_spec nelems = do {
-  ctx_ptr <- crucible_alloc (llvm_alias "struct.PAIRING");
+  ctx_ptr <- llvm_alloc (llvm_alias "struct.PAIRING");
 
-  ctx_ctrl <- crucible_fresh_var "new_pairing_commit_ctx_ctrl" (llvm_int 32);
-  crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term ctx_ctrl);
+  ctx_ctrl <- llvm_fresh_var "new_pairing_commit_ctx_ctrl" (llvm_int 32);
+  llvm_points_to (llvm_field ctx_ptr "ctrl") (llvm_term ctx_ctrl);
 
-  crucible_precond {{ `nelems <= `N_MAX }};
-  crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term {{`nelems:[32]}});
+  llvm_precond {{ `nelems <= `N_MAX }};
+  llvm_points_to (llvm_field ctx_ptr "nelems") (llvm_term {{`nelems:[32]}});
 
-  ctx_GT <- crucible_fresh_var "pairing_commit_ctx_GT" vec384fp12_type;
-  crucible_conditional_points_to {{ ctx_ctrl && AGGR_GT_SET != zero }} (crucible_field ctx_ptr "GT") (crucible_term ctx_GT);
+  ctx_GT <- llvm_fresh_var "pairing_commit_ctx_GT" vec384fp12_type;
+  llvm_conditional_points_to {{ ctx_ctrl && AGGR_GT_SET != zero }} (llvm_field ctx_ptr "GT") (llvm_term ctx_GT);
 
-  ctx_Q <- crucible_fresh_var "pairing_commit_ctx_Q" (llvm_array N_MAX (llvm_alias "struct.POINTonE2_affine"));
-  crucible_points_to_untyped (crucible_field ctx_ptr "Q") (crucible_term ctx_Q);
-  ctx_P <- crucible_fresh_var "pairing_commit_ctx_P" (llvm_array N_MAX (llvm_alias "struct.POINTonE1_affine"));
-  crucible_points_to_untyped (crucible_field ctx_ptr "P") (crucible_term ctx_P);
+  ctx_Q <- llvm_fresh_var "pairing_commit_ctx_Q" (llvm_array N_MAX (llvm_alias "struct.POINTonE2_affine"));
+  llvm_points_to_untyped (llvm_field ctx_ptr "Q") (llvm_term ctx_Q);
+  ctx_P <- llvm_fresh_var "pairing_commit_ctx_P" (llvm_array N_MAX (llvm_alias "struct.POINTonE1_affine"));
+  llvm_points_to_untyped (llvm_field ctx_ptr "P") (llvm_term ctx_P);
 
-  crucible_execute_func [ctx_ptr];
+  llvm_execute_func [ctx_ptr];
 
-  new_nelems <- crucible_fresh_var "new_pairing_commit_nelems" (llvm_int 32);
-  crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term new_nelems);
-  crucible_postcond {{ new_nelems == zero }};
+  new_nelems <- llvm_fresh_var "new_pairing_commit_nelems" (llvm_int 32);
+  llvm_points_to (llvm_field ctx_ptr "nelems") (llvm_term new_nelems);
+  llvm_postcond {{ new_nelems == zero }};
 
-  new_ctx_GT <- crucible_fresh_var "new_pairing_commit_ctx_GT" vec384fp12_type;
-  crucible_conditional_points_to {{ `nelems != zero }} (crucible_field ctx_ptr "GT") (crucible_term new_ctx_GT);
-  crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term {{ zero:[32] }});
+  new_ctx_GT <- llvm_fresh_var "new_pairing_commit_ctx_GT" vec384fp12_type;
+  llvm_conditional_points_to {{ `nelems != zero }} (llvm_field ctx_ptr "GT") (llvm_term new_ctx_GT);
+  llvm_points_to (llvm_field ctx_ptr "nelems") (llvm_term {{ zero:[32] }});
 
 };
 
 let blst_pairing_finalverify_spec null_GTsig min_sig sign_set = do {
-  ctx_ptr <- crucible_alloc (llvm_alias "struct.PAIRING");
+  ctx_ptr <- llvm_alloc (llvm_alias "struct.PAIRING");
 
-  ctx_ctrl <- crucible_fresh_var "pairing_final_verify_ctx_ctrl" (llvm_int 32);
-  crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term ctx_ctrl);
+  ctx_ctrl <- llvm_fresh_var "pairing_final_verify_ctx_ctrl" (llvm_int 32);
+  llvm_points_to (llvm_field ctx_ptr "ctrl") (llvm_term ctx_ctrl);
 
   (GTsig, GTsig_ptr) <-
     if null_GTsig
-      then return ({{ zero:[72][64] }},crucible_null)
+      then return ({{ zero:[72][64] }},llvm_null)
       else (ptr_to_fresh_readonly "GTsig" vec384fp12_type);
 
   if (eval_bool {{ `min_sig:Bit }})
-    then crucible_precond {{ (ctx_ctrl && AGGR_MIN_SIG) != zero /\ (ctx_ctrl && AGGR_MIN_PK) == zero}}
-    else crucible_precond {{ (ctx_ctrl && AGGR_MIN_PK) != zero /\ (ctx_ctrl && AGGR_MIN_SIG) == zero}};
+    then llvm_precond {{ (ctx_ctrl && AGGR_MIN_SIG) != zero /\ (ctx_ctrl && AGGR_MIN_PK) == zero}}
+    else llvm_precond {{ (ctx_ctrl && AGGR_MIN_PK) != zero /\ (ctx_ctrl && AGGR_MIN_SIG) == zero}};
 
   if (eval_bool {{ `sign_set:Bit }})
-    then crucible_precond {{ (ctx_ctrl && AGGR_SIGN_SET) != zero }}
-    else crucible_precond {{ (ctx_ctrl && AGGR_SIGN_SET) == zero }};
+    then llvm_precond {{ (ctx_ctrl && AGGR_SIGN_SET) != zero }}
+    else llvm_precond {{ (ctx_ctrl && AGGR_SIGN_SET) == zero }};
 
   ctx_AggrSign <- if (eval_bool {{ (`min_sig:Bit) /\ (`sign_set:Bit) }})
-      then (crucible_fresh_var "pairing_finalverify_ctx_AggrSign" (llvm_alias "struct.POINTonE1"))
-      else (crucible_fresh_var "pairing_finalverify_ctx_AggrSign" (llvm_alias "struct.POINTonE2"));
+      then (llvm_fresh_var "pairing_finalverify_ctx_AggrSign" (llvm_alias "struct.POINTonE1"))
+      else (llvm_fresh_var "pairing_finalverify_ctx_AggrSign" (llvm_alias "struct.POINTonE2"));
 
-  crucible_conditional_points_to_untyped {{ (ctx_ctrl && AGGR_SIGN_SET) != zero }} (crucible_field ctx_ptr "AggrSign") (crucible_term ctx_AggrSign);
+  llvm_conditional_points_to_untyped {{ (ctx_ctrl && AGGR_SIGN_SET) != zero }} (llvm_field ctx_ptr "AggrSign") (llvm_term ctx_AggrSign);
 
-  ctx_GT <- crucible_fresh_var "pairing_finalverify_ctx_GT" vec384fp12_type;
-  crucible_points_to (crucible_field ctx_ptr "GT") (crucible_term ctx_GT);
+  ctx_GT <- llvm_fresh_var "pairing_finalverify_ctx_GT" vec384fp12_type;
+  llvm_points_to (llvm_field ctx_ptr "GT") (llvm_term ctx_GT);
 
-  crucible_execute_func [ctx_ptr, GTsig_ptr];
-  ret <- crucible_fresh_var "ret" (llvm_int 64);
-  crucible_postcond {{ ((ctx_ctrl && AGGR_GT_SET) == zero) ==> ret == zero }};
+  llvm_execute_func [ctx_ptr, GTsig_ptr];
+  ret <- llvm_fresh_var "ret" (llvm_int 64);
+  llvm_postcond {{ ((ctx_ctrl && AGGR_GT_SET) == zero) ==> ret == zero }};
 
-  crucible_return (crucible_term ret);
+  llvm_return (llvm_term ret);
 };
 
 let blst_pairing_merge_spec min_sig = do {
-  ctx_ptr <- crucible_alloc (llvm_alias "struct.PAIRING");
-  ctx1_ptr <- crucible_alloc (llvm_alias "struct.PAIRING");
+  ctx_ptr <- llvm_alloc (llvm_alias "struct.PAIRING");
+  ctx1_ptr <- llvm_alloc (llvm_alias "struct.PAIRING");
 
-  ctx_ctrl <- crucible_fresh_var "pairing_merge_ctx_ctrl" (llvm_int 32);
-  crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term ctx_ctrl);
-  ctx1_ctrl <- crucible_fresh_var "pairing_merge_ctx1_ctrl" (llvm_int 32);
-  crucible_points_to (crucible_field ctx1_ptr "ctrl") (crucible_term ctx1_ctrl);
+  ctx_ctrl <- llvm_fresh_var "pairing_merge_ctx_ctrl" (llvm_int 32);
+  llvm_points_to (llvm_field ctx_ptr "ctrl") (llvm_term ctx_ctrl);
+  ctx1_ctrl <- llvm_fresh_var "pairing_merge_ctx1_ctrl" (llvm_int 32);
+  llvm_points_to (llvm_field ctx1_ptr "ctrl") (llvm_term ctx1_ctrl);
 
-  nelems <- crucible_fresh_var "pairing_merge_ctx_nelems" (llvm_int 32);
-  crucible_points_to (crucible_field ctx_ptr "nelems") (crucible_term nelems);
-  nelems1 <- crucible_fresh_var "pairing_merge_ctx1_nelems" (llvm_int 32);
-  crucible_points_to (crucible_field ctx1_ptr "nelems") (crucible_term nelems1);
+  nelems <- llvm_fresh_var "pairing_merge_ctx_nelems" (llvm_int 32);
+  llvm_points_to (llvm_field ctx_ptr "nelems") (llvm_term nelems);
+  nelems1 <- llvm_fresh_var "pairing_merge_ctx1_nelems" (llvm_int 32);
+  llvm_points_to (llvm_field ctx1_ptr "nelems") (llvm_term nelems1);
 
-  AggrSignE1 <- crucible_fresh_var "pairing_merge_ctx_AggrSignE1" (llvm_alias "struct.POINTonE1");
-  AggrSignE1_1 <- crucible_fresh_var "pairing_merge_ctx_AggrSignE1" (llvm_alias "struct.POINTonE1");
-  AggrSignE2 <- crucible_fresh_var "pairing_merge_ctx_AggrSignE2" (llvm_alias "struct.POINTonE2");
-  AggrSignE2_1 <- crucible_fresh_var "pairing_merge_ctx_AggrSignE2" (llvm_alias "struct.POINTonE2");
+  AggrSignE1 <- llvm_fresh_var "pairing_merge_ctx_AggrSignE1" (llvm_alias "struct.POINTonE1");
+  AggrSignE1_1 <- llvm_fresh_var "pairing_merge_ctx_AggrSignE1" (llvm_alias "struct.POINTonE1");
+  AggrSignE2 <- llvm_fresh_var "pairing_merge_ctx_AggrSignE2" (llvm_alias "struct.POINTonE2");
+  AggrSignE2_1 <- llvm_fresh_var "pairing_merge_ctx_AggrSignE2" (llvm_alias "struct.POINTonE2");
 
   if min_sig
     then do {
-      crucible_precond {{ ctx_ctrl && AGGR_MIN_SIG != zero }};
-      crucible_conditional_points_to_untyped {{ ctx_ctrl && AGGR_MIN_SIG != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET != zero }} (crucible_field ctx_ptr "AggrSign") (crucible_term AggrSignE1);
-      crucible_conditional_points_to_untyped {{ (ctx_ctrl && AGGR_MIN_SIG != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET != zero) \/ (ctx_ctrl && AGGR_MIN_SIG != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET == zero /\ ctx1_ctrl && AGGR_SIGN_SET != zero) }} (crucible_field ctx1_ptr "AggrSign") (crucible_term AggrSignE1_1);
+      llvm_precond {{ ctx_ctrl && AGGR_MIN_SIG != zero }};
+      llvm_conditional_points_to_untyped {{ ctx_ctrl && AGGR_MIN_SIG != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET != zero }} (llvm_field ctx_ptr "AggrSign") (llvm_term AggrSignE1);
+      llvm_conditional_points_to_untyped {{ (ctx_ctrl && AGGR_MIN_SIG != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET != zero) \/ (ctx_ctrl && AGGR_MIN_SIG != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET == zero /\ ctx1_ctrl && AGGR_SIGN_SET != zero) }} (llvm_field ctx1_ptr "AggrSign") (llvm_term AggrSignE1_1);
     }
     else do {
-      crucible_precond {{ ctx_ctrl && AGGR_MIN_PK != zero }};
-      crucible_conditional_points_to {{ ctx_ctrl && AGGR_MIN_PK != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET != zero }} (crucible_field ctx_ptr "AggrSign") (crucible_term AggrSignE2);
-      crucible_conditional_points_to {{ (ctx_ctrl && AGGR_MIN_PK != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET != zero) \/ (ctx_ctrl && AGGR_MIN_PK != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET == zero /\ ctx1_ctrl && AGGR_SIGN_SET != zero) }} (crucible_field ctx1_ptr "AggrSign") (crucible_term AggrSignE2_1);
+      llvm_precond {{ ctx_ctrl && AGGR_MIN_PK != zero }};
+      llvm_conditional_points_to {{ ctx_ctrl && AGGR_MIN_PK != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET != zero }} (llvm_field ctx_ptr "AggrSign") (llvm_term AggrSignE2);
+      llvm_conditional_points_to {{ (ctx_ctrl && AGGR_MIN_PK != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET != zero) \/ (ctx_ctrl && AGGR_MIN_PK != zero /\ ctx_ctrl && ctx1_ctrl && AGGR_SIGN_SET == zero /\ ctx1_ctrl && AGGR_SIGN_SET != zero) }} (llvm_field ctx1_ptr "AggrSign") (llvm_term AggrSignE2_1);
     };
 
-  ctx_GT <- crucible_fresh_var "pairing_merge_ctx_GT" vec384fp12_type;
-  crucible_conditional_points_to {{ ctx_ctrl && ctx1_ctrl && AGGR_GT_SET != zero }} (crucible_field ctx_ptr "GT") (crucible_term ctx_GT);
-  ctx1_GT <- crucible_fresh_var "pairing_merge_ctx1_GT" vec384fp12_type;
-  crucible_conditional_points_to {{ ctx1_ctrl && AGGR_GT_SET != zero }} (crucible_field ctx1_ptr "GT") (crucible_term ctx1_GT);
+  ctx_GT <- llvm_fresh_var "pairing_merge_ctx_GT" vec384fp12_type;
+  llvm_conditional_points_to {{ ctx_ctrl && ctx1_ctrl && AGGR_GT_SET != zero }} (llvm_field ctx_ptr "GT") (llvm_term ctx_GT);
+  ctx1_GT <- llvm_fresh_var "pairing_merge_ctx1_GT" vec384fp12_type;
+  llvm_conditional_points_to {{ ctx1_ctrl && AGGR_GT_SET != zero }} (llvm_field ctx1_ptr "GT") (llvm_term ctx1_GT);
 
-  crucible_execute_func [ctx_ptr, ctx1_ptr];
-  ret <- crucible_fresh_var "ret" (llvm_int 32);
+  llvm_execute_func [ctx_ptr, ctx1_ptr];
+  ret <- llvm_fresh_var "ret" (llvm_int 32);
 
-  crucible_postcond {{
+  llvm_postcond {{
     ctx_ctrl && MIN_SIG_OR_PK != zero /\ ctx_ctrl && ctx1_ctrl && MIN_SIG_OR_PK == zero
       ==> ret == `BLST_AGGR_TYPE_MISMATCH }};
-  crucible_postcond {{ (nelems != zero) || (nelems1 != zero) ==> ret == `BLST_AGGR_TYPE_MISMATCH }};
+  llvm_postcond {{ (nelems != zero) || (nelems1 != zero) ==> ret == `BLST_AGGR_TYPE_MISMATCH }};
 
-  new_ctx_ctrl <- crucible_fresh_var "new_merge_ctx_ctrl" (llvm_int 32);
-  crucible_points_to (crucible_field ctx_ptr "ctrl") (crucible_term new_ctx_ctrl);
-  new_ctx1_ctrl <- crucible_fresh_var "new_merge_ctx1_ctrl" (llvm_int 32);
-  crucible_points_to (crucible_field ctx1_ptr "ctrl") (crucible_term new_ctx1_ctrl);
-  crucible_postcond {{ ~(ctx_ctrl && MIN_SIG_OR_PK != zero /\ ctx_ctrl && ctx1_ctrl && MIN_SIG_OR_PK == zero) /\ nelems == zero /\ nelems1 == zero /\ ctx1_ctrl && AGGR_SIGN_SET != zero /\ (ctx_ctrl && MIN_SIG_OR_PK == AGGR_MIN_SIG \/ ctx_ctrl && MIN_SIG_OR_PK == AGGR_MIN_PK) ==> new_ctx_ctrl && AGGR_SIGN_SET != zero }};
+  new_ctx_ctrl <- llvm_fresh_var "new_merge_ctx_ctrl" (llvm_int 32);
+  llvm_points_to (llvm_field ctx_ptr "ctrl") (llvm_term new_ctx_ctrl);
+  new_ctx1_ctrl <- llvm_fresh_var "new_merge_ctx1_ctrl" (llvm_int 32);
+  llvm_points_to (llvm_field ctx1_ptr "ctrl") (llvm_term new_ctx1_ctrl);
+  llvm_postcond {{ ~(ctx_ctrl && MIN_SIG_OR_PK != zero /\ ctx_ctrl && ctx1_ctrl && MIN_SIG_OR_PK == zero) /\ nelems == zero /\ nelems1 == zero /\ ctx1_ctrl && AGGR_SIGN_SET != zero /\ (ctx_ctrl && MIN_SIG_OR_PK == AGGR_MIN_SIG \/ ctx_ctrl && MIN_SIG_OR_PK == AGGR_MIN_PK) ==> new_ctx_ctrl && AGGR_SIGN_SET != zero }};
 
-  crucible_return (crucible_term ret);
+  llvm_return (llvm_term ret);
 };
 
 let blst_aggregated_in_g1_spec = do {
-  ret_ptr <- crucible_alloc vec384fp12_type;
+  ret_ptr <- llvm_alloc vec384fp12_type;
   (_, sig_ptr) <- ptr_to_fresh_readonly "aggregated_in_g1_sig" (llvm_alias "struct.POINTonE1_affine");
-  crucible_execute_func [ret_ptr, sig_ptr];
-  new_ret <- crucible_fresh_var "new_aggregated_in_g1_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_execute_func [ret_ptr, sig_ptr];
+  new_ret <- llvm_fresh_var "new_aggregated_in_g1_ret" vec384fp12_type;
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 
 let blst_aggregated_in_g2_spec = do {
-  ret_ptr <- crucible_alloc vec384fp12_type;
+  ret_ptr <- llvm_alloc vec384fp12_type;
   (_, sig_ptr) <- ptr_to_fresh_readonly "aggregated_in_g2_sig" (llvm_alias "struct.POINTonE2_affine");
-  crucible_execute_func [ret_ptr, sig_ptr];
-  new_ret <- crucible_fresh_var "new_aggregated_in_g2_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_execute_func [ret_ptr, sig_ptr];
+  new_ret <- llvm_fresh_var "new_aggregated_in_g2_ret" vec384fp12_type;
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -275,9 +275,9 @@ POINTonE1_in_G1_ov <- admit "POINTonE1_in_G1" POINTonE1_in_G1_spec;
 // Also make sure this is memory safe (even if we don't use this override):
 let POINTonE1_in_G1_spec_ = do {
   (_, p_ptr) <- ptr_to_fresh_readonly "p" (llvm_alias "struct.POINTonE1_affine");
-  crucible_execute_func [p_ptr];
-  ret <- crucible_fresh_var "ret" limb_type;
-  crucible_return (crucible_term ret);
+  llvm_execute_func [p_ptr];
+  ret <- llvm_fresh_var "ret" limb_type;
+  llvm_return (llvm_term ret);
 };
 POINTonE1_in_G1_ov_ <- verify "POINTonE1_in_G1" (concat ec_ops_overrides assembly_overrides) POINTonE1_in_G1_spec_;
 
@@ -286,9 +286,9 @@ POINTonE2_in_G2_ov <- admit "POINTonE2_in_G2" POINTonE2_in_G2_spec;
 // Also make sure this is memory safe (even if we don't use this override):
 let POINTonE2_in_G2_spec_ = do {
   (_, p_ptr) <- ptr_to_fresh_readonly "p" (llvm_alias "struct.POINTonE2_affine");
-  crucible_execute_func [p_ptr];
-  ret <- crucible_fresh_var "ret" limb_type;
-  crucible_return (crucible_term ret);
+  llvm_execute_func [p_ptr];
+  ret <- llvm_fresh_var "ret" limb_type;
+  llvm_return (llvm_term ret);
 };
 POINTonE2_in_G2_ov_ <- verify "POINTonE2_in_G2" (concat ec_ops_overrides assembly_overrides) POINTonE2_in_G2_spec_;
 

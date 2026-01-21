@@ -43,18 +43,18 @@ qi_x_spec_equiv_thm <- custom_prove_cryptol
        w4_unint_z3 (concat fp2_unints fp_unints); };
 
 let qi_x_iwsc_spec = do {
-  out_ptr <- crucible_alloc vec384x_type;
+  out_ptr <- llvm_alloc vec384x_type;
   (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
-  crucible_precond {{ fp2_invariant inp }};
-  crucible_execute_func [out_ptr, inp_ptr];
-  crucible_points_to out_ptr (crucible_term {{fp2_rep (qi_x_abs (fp2_abs inp))}});
+  llvm_precond {{ fp2_invariant inp }};
+  llvm_execute_func [out_ptr, inp_ptr];
+  llvm_points_to out_ptr (llvm_term {{fp2_rep (qi_x_abs (fp2_abs inp))}});
   };
 
 let qi_x_iwsc_alias_spec = do {
   (inp, inp_ptr) <- ptr_to_fresh "inp" vec384x_type;
-  crucible_precond {{ fp2_invariant inp }};
-  crucible_execute_func [inp_ptr, inp_ptr];
-  crucible_points_to inp_ptr (crucible_term {{fp2_rep (qi_x_abs (fp2_abs inp))}});
+  llvm_precond {{ fp2_invariant inp }};
+  llvm_execute_func [inp_ptr, inp_ptr];
+  llvm_points_to inp_ptr (llvm_term {{fp2_rep (qi_x_abs (fp2_abs inp))}});
   };
 
 // Need theorems about the constants
@@ -169,18 +169,18 @@ qi_y_spec_equiv_thm <- custom_prove_cryptol
        w4_unint_z3 fp2_unints; };
 
 let qi_y_iwsc_spec = do {
-  out_ptr <- crucible_alloc vec384x_type;
+  out_ptr <- llvm_alloc vec384x_type;
   (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" vec384x_type;
-  crucible_precond {{ fp2_invariant inp }};
-  crucible_execute_func [out_ptr, inp_ptr];
-  crucible_points_to out_ptr (crucible_term {{fp2_rep (qi_y_abs (fp2_abs inp))}});
+  llvm_precond {{ fp2_invariant inp }};
+  llvm_execute_func [out_ptr, inp_ptr];
+  llvm_points_to out_ptr (llvm_term {{fp2_rep (qi_y_abs (fp2_abs inp))}});
   };
 
 let qi_y_iwsc_alias_spec = do {
   (inp, inp_ptr) <- ptr_to_fresh "inp" vec384x_type;
-  crucible_precond {{ fp2_invariant inp }};
-  crucible_execute_func [inp_ptr, inp_ptr];
-  crucible_points_to inp_ptr (crucible_term {{fp2_rep (qi_y_abs (fp2_abs inp))}});
+  llvm_precond {{ fp2_invariant inp }};
+  llvm_execute_func [inp_ptr, inp_ptr];
+  llvm_points_to inp_ptr (llvm_term {{fp2_rep (qi_y_abs (fp2_abs inp))}});
   };
 
 qi_y_iwsc_ov <- custom_verify "qi_y_iwsc"
@@ -213,37 +213,37 @@ POINT_on_E2_fp2_rep_thm <- custom_prove_cryptol
   do { unfolding ["POINTonE2_abs"]; simplify fp2_simpset; w4_unint_z3 fp2_unints; } ;
 
 let psi_spec = do {
-  out_ptr <- crucible_alloc POINTonE2_type;
+  out_ptr <- llvm_alloc POINTonE2_type;
   (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" POINTonE2_type;
-  crucible_precond {{ POINTonE2_invariant inp }};
-  crucible_execute_func [out_ptr, inp_ptr];
-  out <-  crucible_fresh_var "out_psi" POINTonE2_type;
-  crucible_points_to out_ptr (crucible_term out);
-  crucible_postcond {{ affinify E' (POINTonE2_abs out) == psi (affinify E' (POINTonE2_abs inp)) }};
+  llvm_precond {{ POINTonE2_invariant inp }};
+  llvm_execute_func [out_ptr, inp_ptr];
+  out <-  llvm_fresh_var "out_psi" POINTonE2_type;
+  llvm_points_to out_ptr (llvm_term out);
+  llvm_postcond {{ affinify E' (POINTonE2_abs out) == psi (affinify E' (POINTonE2_abs inp)) }};
   };
 
 let psi_alias_1_2_spec = do {
   (inp, inp_ptr) <- ptr_to_fresh "inp" POINTonE2_type;
-  crucible_precond {{ POINTonE2_invariant inp }};
-  crucible_execute_func [inp_ptr, inp_ptr];
-  out <-  crucible_fresh_var "out_psi" POINTonE2_type;
-  crucible_points_to inp_ptr (crucible_term out);
-  crucible_postcond {{ affinify E' (POINTonE2_abs out) == psi (affinify E' (POINTonE2_abs inp)) }};
+  llvm_precond {{ POINTonE2_invariant inp }};
+  llvm_execute_func [inp_ptr, inp_ptr];
+  out <-  llvm_fresh_var "out_psi" POINTonE2_type;
+  llvm_points_to inp_ptr (llvm_term out);
+  llvm_postcond {{ affinify E' (POINTonE2_abs out) == psi (affinify E' (POINTonE2_abs inp)) }};
   };
 
 let psi_spec' = do {
-  out_ptr <- crucible_alloc POINTonE2_type;
+  out_ptr <- llvm_alloc POINTonE2_type;
   (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" POINTonE2_type;
-  crucible_precond {{ POINTonE2_invariant inp }};
-  crucible_execute_func [out_ptr, inp_ptr];
-  crucible_points_to out_ptr (crucible_term {{ POINTonE2_rep (psi_imp (POINTonE2_abs inp)) }});
+  llvm_precond {{ POINTonE2_invariant inp }};
+  llvm_execute_func [out_ptr, inp_ptr];
+  llvm_points_to out_ptr (llvm_term {{ POINTonE2_rep (psi_imp (POINTonE2_abs inp)) }});
   };
 
 let psi_alias_1_2_spec' = do {
   (inp, inp_ptr) <- ptr_to_fresh "inp" POINTonE2_type;
-  crucible_precond {{ POINTonE2_invariant inp }};
-  crucible_execute_func [inp_ptr, inp_ptr];
-  crucible_points_to inp_ptr (crucible_term {{ POINTonE2_rep (psi_imp (POINTonE2_abs inp)) }});
+  llvm_precond {{ POINTonE2_invariant inp }};
+  llvm_execute_func [inp_ptr, inp_ptr];
+  llvm_points_to inp_ptr (llvm_term {{ POINTonE2_rep (psi_imp (POINTonE2_abs inp)) }});
   };
 
 psi_ov <- custom_verify "psi"

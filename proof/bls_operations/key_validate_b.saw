@@ -60,7 +60,7 @@ is_point_O_E_affine_rev_thm <- prove_cryptol (rewrite (cryptol_ss())
 
 let demo_KeyValidate_B_spec = do {
   (inp, in_ptr) <- ptr_to_fresh_readonly "POINTonE1_Uncompress_in" compressed_E1_rep_type;
-  crucible_precond {{ verify_B_pk_precond inp }};
+  llvm_precond {{ verify_B_pk_precond inp }};
   llvm_execute_func [ in_ptr ];
   llvm_return (llvm_term {{ bool_to_limb (BMPKS::KeyValidate (join inp)) }});
 };

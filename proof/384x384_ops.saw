@@ -54,10 +54,10 @@ let {{ // type shifted_p = p * 2^^384
     }};
 
 // Little-endian representation of `p` in 64-bit limbs
-let p_representation = crucible_term {{ [0xb9feffffffffaaab, 0x1eabfffeb153ffff, 0x6730d2a0f6b0f624,
+let p_representation = llvm_term {{ [0xb9feffffffffaaab, 0x1eabfffeb153ffff, 0x6730d2a0f6b0f624,
                                          0x64774b84f38512bf, 0x4b1ba7b6434bacd7, 0x1a0111ea397fe69a] }};
 
-let p0_term = crucible_term {{ 0x89f3fffcfffcfffd }};
+let p0_term = llvm_term {{ 0x89f3fffcfffcfffd }};
 
 ////////////////////////////////////////////////////////////////
 //
@@ -66,15 +66,15 @@ let p0_term = crucible_term {{ 0x89f3fffcfffcfffd }};
 
 /*
 let add_mod_384x384_spec = do {
-  ret_ptr <- crucible_alloc vec768_type;
+  ret_ptr <- llvm_alloc vec768_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec768_type;
-  p_ptr <- crucible_alloc_readonly vec384_type;
-  crucible_precond {{ fpx2_invariant a }};
-  crucible_precond {{ fpx2_invariant b }};
-  crucible_points_to p_ptr p_representation;
-  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
-  crucible_points_to ret_ptr (crucible_term {{ fpx2_rep (add_mod_384x384 (fpx2_abs a) (fpx2_abs b)) }});
+  p_ptr <- llvm_alloc_readonly vec384_type;
+  llvm_precond {{ fpx2_invariant a }};
+  llvm_precond {{ fpx2_invariant b }};
+  llvm_points_to p_ptr p_representation;
+  llvm_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  llvm_points_to ret_ptr (llvm_term {{ fpx2_rep (add_mod_384x384 (fpx2_abs a) (fpx2_abs b)) }});
 };
 */
 
@@ -88,12 +88,12 @@ let add_mod_384x384_spec a_aliased b_aliased ab_aliased = do {
   (b, b_ptr) <- if b_aliased then return (ret, ret_ptr)
                 else if ab_aliased then (a, a_ptr)
                      else ptr_to_fresh_readonly "b" vec768_type;
-  p_ptr <- crucible_alloc_readonly vec384_type;
-  crucible_precond {{ fpx2_invariant a }};
-  crucible_precond {{ fpx2_invariant b }};
-  crucible_points_to p_ptr p_representation;
-  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
-  crucible_points_to ret_ptr (crucible_term {{ fpx2_rep (add_mod_384x384 (fpx2_abs a) (fpx2_abs b)) }});
+  p_ptr <- llvm_alloc_readonly vec384_type;
+  llvm_precond {{ fpx2_invariant a }};
+  llvm_precond {{ fpx2_invariant b }};
+  llvm_points_to p_ptr p_representation;
+  llvm_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  llvm_points_to ret_ptr (llvm_term {{ fpx2_rep (add_mod_384x384 (fpx2_abs a) (fpx2_abs b)) }});
 };
 */
 
@@ -107,74 +107,74 @@ let either x y = if x then true else y; // logical `or`
 let add_mod_384x384_spec a_aliased b_aliased = do {
   (ret, ret_ptr) <- if either a_aliased b_aliased
                     then ptr_to_fresh "ret" vec768_type
-                    else do { ptr <- crucible_alloc vec768_type;
+                    else do { ptr <- llvm_alloc vec768_type;
                               return ({{zero: Vec768}}, ptr);
                             };
   (a, a_ptr) <- if a_aliased then return (ret, ret_ptr) else ptr_to_fresh_readonly "a" vec768_type;
   (b, b_ptr) <- if b_aliased then return (ret, ret_ptr) else ptr_to_fresh_readonly "b" vec768_type;
-  p_ptr <- crucible_alloc_readonly vec384_type;
-  crucible_precond {{ fpx2_invariant a }};
-  crucible_precond {{ fpx2_invariant b }};
-  crucible_points_to p_ptr p_representation;
-  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
-  crucible_points_to ret_ptr (crucible_term {{ fpx2_rep (add_mod_384x384 (fpx2_abs a) (fpx2_abs b)) }});
+  p_ptr <- llvm_alloc_readonly vec384_type;
+  llvm_precond {{ fpx2_invariant a }};
+  llvm_precond {{ fpx2_invariant b }};
+  llvm_points_to p_ptr p_representation;
+  llvm_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  llvm_points_to ret_ptr (llvm_term {{ fpx2_rep (add_mod_384x384 (fpx2_abs a) (fpx2_abs b)) }});
 };
 
 let sub_mod_384x384_spec a_aliased b_aliased = do {
   (ret, ret_ptr) <- if either a_aliased b_aliased
                     then ptr_to_fresh "ret" vec768_type
-                    else do { ptr <- crucible_alloc vec768_type;
+                    else do { ptr <- llvm_alloc vec768_type;
                               return ({{zero: Vec768}}, ptr);
                             };
   (a, a_ptr) <- if a_aliased then return (ret, ret_ptr) else ptr_to_fresh_readonly "a" vec768_type;
   (b, b_ptr) <- if b_aliased then return (ret, ret_ptr) else ptr_to_fresh_readonly "b" vec768_type;
-  p_ptr <- crucible_alloc_readonly vec384_type;
-  crucible_precond {{ fpx2_invariant a }};
-  crucible_precond {{ fpx2_invariant b }};
-  crucible_points_to p_ptr p_representation;
-  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
-  crucible_points_to ret_ptr (crucible_term {{ fpx2_rep (sub_mod_384x384 (fpx2_abs a) (fpx2_abs b)) }});
+  p_ptr <- llvm_alloc_readonly vec384_type;
+  llvm_precond {{ fpx2_invariant a }};
+  llvm_precond {{ fpx2_invariant b }};
+  llvm_points_to p_ptr p_representation;
+  llvm_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  llvm_points_to ret_ptr (llvm_term {{ fpx2_rep (sub_mod_384x384 (fpx2_abs a) (fpx2_abs b)) }});
 };
 
 let mul_382x_spec = do {
-  ret_ptr <- crucible_alloc vec768x_type;
+  ret_ptr <- llvm_alloc vec768x_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384x_type;
-  p_ptr <- crucible_alloc_readonly vec384_type;
-  crucible_precond {{ fp2_invariant a }}; // a is smallish
-  crucible_precond {{ fp2_invariant b }};
-  crucible_points_to p_ptr p_representation;
-  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
-  crucible_points_to ret_ptr (crucible_term {{ fp2x2_rep (mul_382x (abs_384x a) (abs_384x b)) }});
+  p_ptr <- llvm_alloc_readonly vec384_type;
+  llvm_precond {{ fp2_invariant a }}; // a is smallish
+  llvm_precond {{ fp2_invariant b }};
+  llvm_points_to p_ptr p_representation;
+  llvm_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  llvm_points_to ret_ptr (llvm_term {{ fp2x2_rep (mul_382x (abs_384x a) (abs_384x b)) }});
 };
 
 let redcx_mont_384_spec = do {
-  ret_ptr <- crucible_alloc vec384_type;
+  ret_ptr <- llvm_alloc vec384_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
-  p_ptr <- crucible_alloc vec384_type;
-  crucible_points_to p_ptr p_representation;
-  crucible_execute_func [ret_ptr, a_ptr, p_ptr, p0_term];
-  crucible_points_to ret_ptr (crucible_term {{ rep_384 (redc_mont_384 (fpx2_abs a)) }});
+  p_ptr <- llvm_alloc vec384_type;
+  llvm_points_to p_ptr p_representation;
+  llvm_execute_func [ret_ptr, a_ptr, p_ptr, p0_term];
+  llvm_points_to ret_ptr (llvm_term {{ rep_384 (redc_mont_384 (fpx2_abs a)) }});
 };
 
 let redcx_mont_384_alt_spec = do {
-  ret_ptr <- crucible_alloc vec384_type;
+  ret_ptr <- llvm_alloc vec384_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec384_type;
-  crucible_precond {{  b == vec384_rep `p }};
-  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p0_term];
-  crucible_points_to ret_ptr (crucible_term {{ rep_384 (redc_mont_384 (fpx2_abs a)) }});
+  llvm_precond {{  b == vec384_rep `p }};
+  llvm_execute_func [ret_ptr, a_ptr, b_ptr, p0_term];
+  llvm_points_to ret_ptr (llvm_term {{ rep_384 (redc_mont_384 (fpx2_abs a)) }});
 };
 
 
 let sqr_382x_spec = do {
-  ret_ptr <- crucible_alloc vec768x_type;
+  ret_ptr <- llvm_alloc vec768x_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384x_type;
-  p_ptr <- crucible_alloc_readonly vec384_type;
-  crucible_precond {{ fp2_invariant a }}; // a is smallish
-  crucible_points_to p_ptr p_representation;
-  crucible_execute_func [ret_ptr, a_ptr, p_ptr];
-  crucible_points_to ret_ptr (crucible_term {{ fp2x2_rep (sqr_382x (abs_384x a)) }});
+  p_ptr <- llvm_alloc_readonly vec384_type;
+  llvm_precond {{ fp2_invariant a }}; // a is smallish
+  llvm_points_to p_ptr p_representation;
+  llvm_execute_func [ret_ptr, a_ptr, p_ptr];
+  llvm_points_to ret_ptr (llvm_term {{ fp2x2_rep (sqr_382x (abs_384x a)) }});
 };
 
 

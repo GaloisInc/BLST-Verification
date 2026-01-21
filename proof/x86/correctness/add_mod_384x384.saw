@@ -23,94 +23,94 @@ let {{
 
 // add_mod_384x384
 let add_mod_384x384_spec = do {
-  ret_ptr <- crucible_alloc vec768_type;
+  ret_ptr <- llvm_alloc vec768_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec768_type;
   p_ptr <- ptr_to_modulus384;
-  crucible_precond {{ vec768_abs a < modulus768 }};
-  crucible_precond {{ vec768_abs b < modulus768 }};
-  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  llvm_precond {{ vec768_abs a < modulus768 }};
+  llvm_precond {{ vec768_abs b < modulus768 }};
+  llvm_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
   let new_ret = {{ add_mod_768 a b }};
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 let add_mod_384x384_alias_ret_a_spec = do {
   (a, ret_ptr) <- ptr_to_fresh "ret" vec768_type;
   (b, b_ptr) <- ptr_to_fresh_readonly "b" vec768_type;
   p_ptr <- ptr_to_modulus384;
-  crucible_precond {{ vec768_abs a < modulus768 }};
-  crucible_precond {{ vec768_abs b < modulus768 }};
-  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr];
+  llvm_precond {{ vec768_abs a < modulus768 }};
+  llvm_precond {{ vec768_abs b < modulus768 }};
+  llvm_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr];
   let new_ret = {{ add_mod_768 a b }};
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 let add_mod_384x384_alias_ret_b_spec = do {
   (b, ret_ptr) <- ptr_to_fresh "ret" vec768_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
   p_ptr <- ptr_to_modulus384;
-  crucible_precond {{ vec768_abs a < modulus768 }};
-  crucible_precond {{ vec768_abs b < modulus768 }};
-  crucible_execute_func [ret_ptr, a_ptr, ret_ptr, p_ptr];
+  llvm_precond {{ vec768_abs a < modulus768 }};
+  llvm_precond {{ vec768_abs b < modulus768 }};
+  llvm_execute_func [ret_ptr, a_ptr, ret_ptr, p_ptr];
   let new_ret = {{ add_mod_768 a b }};
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 let add_mod_384x384_alias_a_b_spec = do {
-  ret_ptr <- crucible_alloc vec768_type;
+  ret_ptr <- llvm_alloc vec768_type;
   (ab, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
   p_ptr <- ptr_to_modulus384;
-  crucible_precond {{ vec768_abs ab < modulus768 }};
-  crucible_execute_func [ret_ptr, a_ptr, a_ptr, p_ptr];
+  llvm_precond {{ vec768_abs ab < modulus768 }};
+  llvm_execute_func [ret_ptr, a_ptr, a_ptr, p_ptr];
   let new_ret = {{ add_mod_768 ab ab }};
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 let add_mod_384x384_alias_ret_a_b_spec = do {
   (ab, ret_ptr) <- ptr_to_fresh "ret" vec768_type;
   p_ptr <- ptr_to_modulus384;
-  crucible_precond {{ vec768_abs ab < modulus768 }};
-  crucible_execute_func [ret_ptr, ret_ptr, ret_ptr, p_ptr];
+  llvm_precond {{ vec768_abs ab < modulus768 }};
+  llvm_execute_func [ret_ptr, ret_ptr, ret_ptr, p_ptr];
   let new_ret = {{ add_mod_768 ab ab }};
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 
 // sub_mod_384x384
 let sub_mod_384x384_spec = do {
-  ret_ptr <- crucible_alloc vec768_type;
+  ret_ptr <- llvm_alloc vec768_type;
   (_, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
   (_, b_ptr) <- ptr_to_fresh_readonly "b" vec768_type;
   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  crucible_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
-  new_ret <- crucible_fresh_var "new_ret" vec768_type;
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_execute_func [ret_ptr, a_ptr, b_ptr, p_ptr];
+  new_ret <- llvm_fresh_var "new_ret" vec768_type;
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 let sub_mod_384x384_alias_ret_a_spec = do {
   (_, ret_ptr) <- ptr_to_fresh "ret" vec768_type;
   (_, b_ptr) <- ptr_to_fresh_readonly "b" vec768_type;
   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  crucible_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr];
-  new_ret <- crucible_fresh_var "new_ret" vec768_type;
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_execute_func [ret_ptr, ret_ptr, b_ptr, p_ptr];
+  new_ret <- llvm_fresh_var "new_ret" vec768_type;
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 let sub_mod_384x384_alias_ret_b_spec = do {
   (_, ret_ptr) <- ptr_to_fresh "ret" vec768_type;
   (_, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  crucible_execute_func [ret_ptr, a_ptr, ret_ptr, p_ptr];
-  new_ret <- crucible_fresh_var "new_ret" vec768_type;
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_execute_func [ret_ptr, a_ptr, ret_ptr, p_ptr];
+  new_ret <- llvm_fresh_var "new_ret" vec768_type;
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 let sub_mod_384x384_alias_a_b_spec = do {
-  ret_ptr <- crucible_alloc vec768_type;
+  ret_ptr <- llvm_alloc vec768_type;
   (_, a_ptr) <- ptr_to_fresh_readonly "a" vec768_type;
   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  crucible_execute_func [ret_ptr, a_ptr, a_ptr, p_ptr];
-  new_ret <- crucible_fresh_var "new_ret" vec768_type;
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_execute_func [ret_ptr, a_ptr, a_ptr, p_ptr];
+  new_ret <- llvm_fresh_var "new_ret" vec768_type;
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 let sub_mod_384x384_alias_ret_a_b_spec = do {
   (_, ret_ptr) <- ptr_to_fresh "ret" vec768_type;
   (_, p_ptr) <- ptr_to_fresh_readonly "p" vec384_type;
-  crucible_execute_func [ret_ptr, ret_ptr, ret_ptr, p_ptr];
-  new_ret <- crucible_fresh_var "new_ret" vec768_type;
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_execute_func [ret_ptr, ret_ptr, ret_ptr, p_ptr];
+  new_ret <- llvm_fresh_var "new_ret" vec768_type;
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
