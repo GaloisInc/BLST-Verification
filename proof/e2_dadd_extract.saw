@@ -8,18 +8,18 @@ import "../spec/implementation/Types.cry";
 import "../spec/implementation/CurveOperation.cry";
 
 let POINTonE2_dadd_null_spec = do {
-  out_ptr <- crucible_alloc POINTonE2_type;
+  out_ptr <- llvm_alloc POINTonE2_type;
   (p1, p1_ptr) <- ptr_to_fresh_readonly "p1" POINTonE2_type;
   (p2, p2_ptr) <- ptr_to_fresh_readonly "p2" POINTonE2_type;
-  crucible_precond {{ POINTonE2_invariant p1 /\ POINTonE2_invariant p2 }};
-  crucible_execute_func [out_ptr, p1_ptr, p2_ptr, crucible_null];
-  new_out <- crucible_fresh_var "new_POINTonE2_add_affine_out" POINTonE2_type;
-  crucible_points_to out_ptr (crucible_term  new_out);
+  llvm_precond {{ POINTonE2_invariant p1 /\ POINTonE2_invariant p2 }};
+  llvm_execute_func [out_ptr, p1_ptr, p2_ptr, llvm_null];
+  new_out <- llvm_fresh_var "new_POINTonE2_add_affine_out" POINTonE2_type;
+  llvm_points_to out_ptr (llvm_term  new_out);
 };
 
 enable_experimental;
 
-POINTonE2_dadd_null_ov <- crucible_llvm_compositional_extract m
+POINTonE2_dadd_null_ov <- llvm_compositional_extract m
   "POINTonE2_dadd"
   "POINTonE2_dadd_term"
   (foldr concat [vec_fp2_overrides, fp2_overrides] [])

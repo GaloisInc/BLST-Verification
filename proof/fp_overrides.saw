@@ -25,75 +25,75 @@ let use_concrete_method = true;
 
 // generic unary operation specification, pass-by-reference, no aliasing
 let unop_spec name llvm_type inv rep abs op = do {
-  ret_ptr <- crucible_alloc llvm_type;
+  ret_ptr <- llvm_alloc llvm_type;
   (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
-  crucible_precond {{ inv x }};
-  crucible_execute_func [ret_ptr, x_ptr];
+  llvm_precond {{ inv x }};
+  llvm_execute_func [ret_ptr, x_ptr];
   if use_abs_method
   then do {
-    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
-    crucible_points_to ret_ptr (crucible_term ret);
-    crucible_postcond {{inv ret }};
-    crucible_postcond {{ abs ret == op (abs x) }};
+    ret <- llvm_fresh_var (str_concat name "_ret") llvm_type;
+    llvm_points_to ret_ptr (llvm_term ret);
+    llvm_postcond {{inv ret }};
+    llvm_postcond {{ abs ret == op (abs x) }};
     }
   else if use_concrete_method
-  then crucible_points_to ret_ptr (crucible_term {{ rep (op (abs x)) }})
-  else crucible_points_to ret_ptr (crucible_term {{ op x }});
+  then llvm_points_to ret_ptr (llvm_term {{ rep (op (abs x)) }})
+  else llvm_points_to ret_ptr (llvm_term {{ op x }});
 };
 
 // generic unary operation specification, pass-by-reference, aliasing
 let unop_alias_1_2_spec name llvm_type inv rep abs op = do {
   (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
-  crucible_precond {{ inv x }};
-  crucible_execute_func [x_ptr, x_ptr];
+  llvm_precond {{ inv x }};
+  llvm_execute_func [x_ptr, x_ptr];
   if use_abs_method
   then do {
-    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
-    crucible_points_to x_ptr (crucible_term ret);
-    crucible_postcond {{inv ret }};
-    crucible_postcond {{ abs ret == op (abs x) }};
+    ret <- llvm_fresh_var (str_concat name "_ret") llvm_type;
+    llvm_points_to x_ptr (llvm_term ret);
+    llvm_postcond {{inv ret }};
+    llvm_postcond {{ abs ret == op (abs x) }};
     }
   else if use_concrete_method
-  then crucible_points_to x_ptr (crucible_term {{ rep (op (abs x)) }})
-  else crucible_points_to x_ptr (crucible_term {{ op x }});
+  then llvm_points_to x_ptr (llvm_term {{ rep (op (abs x)) }})
+  else llvm_points_to x_ptr (llvm_term {{ op x }});
 };
 
 // generic binary operation specification, pass-by-reference, no aliasing
 let binop_spec name llvm_type inv rep abs op = do {
-  ret_ptr <- crucible_alloc llvm_type;
+  ret_ptr <- llvm_alloc llvm_type;
   (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
   (y, y_ptr) <- ptr_to_fresh_readonly "y" llvm_type;
-  crucible_precond {{ inv x /\ inv y }};
-  crucible_execute_func [ret_ptr, x_ptr, y_ptr];
+  llvm_precond {{ inv x /\ inv y }};
+  llvm_execute_func [ret_ptr, x_ptr, y_ptr];
   res <- if use_abs_method
   then do {
-    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
-    crucible_postcond {{ abs ret == op (abs x, abs y) }};
+    ret <- llvm_fresh_var (str_concat name "_ret") llvm_type;
+    llvm_postcond {{ abs ret == op (abs x, abs y) }};
     return ret;
     }
   else if use_concrete_method
   then return {{ rep (op (abs x, abs y)) }}
   else return {{ op x y }};
-  crucible_points_to ret_ptr (crucible_term res);
-  crucible_postcond {{ inv res }};
+  llvm_points_to ret_ptr (llvm_term res);
+  llvm_postcond {{ inv res }};
 };
 
 let binop_alias_1_2_spec name llvm_type inv rep abs op = do {
   (x, x_ptr) <- ptr_to_fresh "x" llvm_type;
   (y, y_ptr) <- ptr_to_fresh_readonly "y" llvm_type;
-  crucible_precond {{ inv x /\ inv y }};
-  crucible_execute_func [x_ptr, x_ptr, y_ptr];
+  llvm_precond {{ inv x /\ inv y }};
+  llvm_execute_func [x_ptr, x_ptr, y_ptr];
   res <- if use_abs_method
   then do {
-    ret <- crucible_fresh_var (str_concat name "_ret") llvm_type;
-    crucible_postcond {{ abs ret == op (abs x, abs y) }};
+    ret <- llvm_fresh_var (str_concat name "_ret") llvm_type;
+    llvm_postcond {{ abs ret == op (abs x, abs y) }};
     return ret;
     }
   else if use_concrete_method
   then return {{ rep (op (abs x, abs y)) }}
   else return {{ op x y }};
-  crucible_points_to x_ptr (crucible_term res);
-  crucible_postcond {{ inv res }};
+  llvm_points_to x_ptr (llvm_term res);
+  llvm_postcond {{ inv res }};
 };
 
 // generic binary operation specification, pass-by-reference, aliasing return with second arg
@@ -101,20 +101,20 @@ let binop_alias_1_2_spec name llvm_type inv rep abs op = do {
 let binop_alias_1_3_spec name llvm_type inv rep abs op = do {
   (x, x_ptr) <- ptr_to_fresh_readonly "x" llvm_type;
   (y, y_ptr) <- ptr_to_fresh "y" llvm_type;
-  crucible_precond {{ inv x /\ inv y }};
-  crucible_execute_func [y_ptr, x_ptr, y_ptr];
+  llvm_precond {{ inv x /\ inv y }};
+  llvm_execute_func [y_ptr, x_ptr, y_ptr];
   let res = {{ rep (op (abs x, abs y)) }};
-  crucible_points_to y_ptr (crucible_term res);
-  crucible_postcond {{ inv res }};
+  llvm_points_to y_ptr (llvm_term res);
+  llvm_postcond {{ inv res }};
 };
 
 let binop_alias_1_2_3_spec name llvm_type inv rep abs op = do {
   (x, x_ptr) <- ptr_to_fresh "x" llvm_type;
-  crucible_precond {{ inv x }};
-  crucible_execute_func [x_ptr, x_ptr, x_ptr];
+  llvm_precond {{ inv x }};
+  llvm_execute_func [x_ptr, x_ptr, x_ptr];
   let res = {{ rep (op (abs x, abs x)) }};
-  crucible_points_to x_ptr (crucible_term res);
-  crucible_postcond {{ inv res }};
+  llvm_points_to x_ptr (llvm_term res);
+  llvm_postcond {{ inv res }};
 };
 
 ////////////////////////////////////////////////////////////////
@@ -355,22 +355,22 @@ mul_by_8_fp_alias_1_2_ov <- admit "mul_by_8_fp" mul_by_8_fp_alias_1_2_spec;
 
 // TODO: include the other possible forms of this spec (abstract_method etc.)
 let cneg_fp_spec = do {
-  ret_ptr <- crucible_alloc vec384_type;
+  ret_ptr <- llvm_alloc vec384_type;
   (a, a_ptr) <- ptr_to_fresh_readonly "a" vec384_type;
-  cbit <- crucible_fresh_var "cbit" limb_type;
-  crucible_precond {{ fp_invariant a }};
-  crucible_execute_func [ret_ptr, a_ptr, crucible_term cbit];
-  crucible_points_to ret_ptr (crucible_term {{ if cbit != 0 then fp_rep (Fp.neg (fp_abs a)) else a }});
+  cbit <- llvm_fresh_var "cbit" limb_type;
+  llvm_precond {{ fp_invariant a }};
+  llvm_execute_func [ret_ptr, a_ptr, llvm_term cbit];
+  llvm_points_to ret_ptr (llvm_term {{ if cbit != 0 then fp_rep (Fp.neg (fp_abs a)) else a }});
 };
 
 cneg_fp_ov <- admit "cneg_fp" cneg_fp_spec;
 
 let cneg_fp_alias_1_2_spec = do {
   (a, a_ptr) <- ptr_to_fresh "a" vec384_type;
-  cbit <- crucible_fresh_var "cbit" limb_type;
-  crucible_precond {{ fp_invariant a }};
-  crucible_execute_func [a_ptr, a_ptr, crucible_term cbit];
-  crucible_points_to a_ptr (crucible_term {{ if cbit != 0 then fp_rep (Fp.neg (fp_abs a)) else a }});
+  cbit <- llvm_fresh_var "cbit" limb_type;
+  llvm_precond {{ fp_invariant a }};
+  llvm_execute_func [a_ptr, a_ptr, llvm_term cbit];
+  llvm_points_to a_ptr (llvm_term {{ if cbit != 0 then fp_rep (Fp.neg (fp_abs a)) else a }});
 };
 
 cneg_fp_alias_1_2_ov <- admit "cneg_fp" cneg_fp_alias_1_2_spec;

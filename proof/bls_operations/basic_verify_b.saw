@@ -52,9 +52,9 @@ hoist_POINTonE1_affine_abs_thm <- prove_cryptol
 
 let verify_B_sig_preconds sig = do {
   // Uncompression succeeds
-  crucible_precond {{ uncompress_E2_imp sig != nothing }};
+  llvm_precond {{ uncompress_E2_imp sig != nothing }};
   // sig does not have infinity bit set
-  crucible_precond {{ ~((sig@0)@1) }};
+  llvm_precond {{ ~((sig@0)@1) }};
   // Uncompressed sig is not point_O
   llvm_precond {{ ~(is_point_O E' (uncompress_E2_OK sig)) }};
   // Uncompression produces a point on the curve.  This is unnecessary to state

@@ -8,175 +8,175 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 let map_to_g2_spec = do {
-  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2");
+  out_ptr <- llvm_alloc (llvm_alias "struct.POINTonE2");
   (_, u_ptr) <- ptr_to_fresh_readonly "u" vec384x_type;
   (_, v_ptr) <- ptr_to_fresh_readonly "v" vec384x_type;
-  crucible_execute_func [out_ptr, u_ptr, v_ptr];
-  new_map_to_g2_out <- crucible_fresh_var "new_map_to_g2_out" (llvm_alias "struct.POINTonE2");
-  crucible_points_to out_ptr (crucible_term new_map_to_g2_out);
+  llvm_execute_func [out_ptr, u_ptr, v_ptr];
+  new_map_to_g2_out <- llvm_fresh_var "new_map_to_g2_out" (llvm_alias "struct.POINTonE2");
+  llvm_points_to out_ptr (llvm_term new_map_to_g2_out);
 };
 
 let map_to_g2_v_null_spec = do {
-  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE2");
+  out_ptr <- llvm_alloc (llvm_alias "struct.POINTonE2");
   (_, u_ptr) <- ptr_to_fresh_readonly "u" vec384x_type;
-  crucible_execute_func [out_ptr, u_ptr, crucible_null];
-  new_map_to_g2_out <- crucible_fresh_var "new_map_to_g2_out" (llvm_alias "struct.POINTonE2");
-  crucible_points_to out_ptr (crucible_term new_map_to_g2_out);
+  llvm_execute_func [out_ptr, u_ptr, llvm_null];
+  new_map_to_g2_out <- llvm_fresh_var "new_map_to_g2_out" (llvm_alias "struct.POINTonE2");
+  llvm_points_to out_ptr (llvm_term new_map_to_g2_out);
 };
 
 let map_to_g1_spec = do {
-  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE1");
+  out_ptr <- llvm_alloc (llvm_alias "struct.POINTonE1");
   (_, u_ptr) <- ptr_to_fresh_readonly "u" vec384_type;
   (_, v_ptr) <- ptr_to_fresh_readonly "v" vec384_type;
-  crucible_execute_func [out_ptr, u_ptr, v_ptr];
-  new_map_to_g1_out <- crucible_fresh_var "new_map_to_g1_out" (llvm_alias "struct.POINTonE1");
-  crucible_points_to out_ptr (crucible_term new_map_to_g1_out);
+  llvm_execute_func [out_ptr, u_ptr, v_ptr];
+  new_map_to_g1_out <- llvm_fresh_var "new_map_to_g1_out" (llvm_alias "struct.POINTonE1");
+  llvm_points_to out_ptr (llvm_term new_map_to_g1_out);
 };
 
 let map_to_g1_v_null_spec = do {
-  out_ptr <- crucible_alloc (llvm_alias "struct.POINTonE1");
+  out_ptr <- llvm_alloc (llvm_alias "struct.POINTonE1");
   (_, u_ptr) <- ptr_to_fresh_readonly "u" vec384_type;
-  crucible_execute_func [out_ptr, u_ptr, crucible_null];
-  new_map_to_g1_out <- crucible_fresh_var "new_map_to_g1_out" (llvm_alias "struct.POINTonE1");
-  crucible_points_to out_ptr (crucible_term new_map_to_g1_out);
+  llvm_execute_func [out_ptr, u_ptr, llvm_null];
+  new_map_to_g1_out <- llvm_fresh_var "new_map_to_g1_out" (llvm_alias "struct.POINTonE1");
+  llvm_points_to out_ptr (llvm_term new_map_to_g1_out);
 };
 
 let miller_loop_n_spec n = do {
-  ret_ptr <- crucible_alloc vec384fp12_type;
+  ret_ptr <- llvm_alloc vec384fp12_type;
   (_, Q_ptr) <- ptr_to_fresh_readonly "Q" (llvm_array n (llvm_alias "struct.POINTonE2_affine"));
   (_, P_ptr) <- ptr_to_fresh_readonly "P" (llvm_array n (llvm_alias "struct.POINTonE1_affine"));
-  crucible_execute_func [ret_ptr, Q_ptr, P_ptr, crucible_term {{ `n:[64] }}];
-  new_miller_loop_n_ret <- crucible_fresh_var "new_miller_loop_n_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_miller_loop_n_ret);
+  llvm_execute_func [ret_ptr, Q_ptr, P_ptr, llvm_term {{ `n:[64] }}];
+  new_miller_loop_n_ret <- llvm_fresh_var "new_miller_loop_n_ret" vec384fp12_type;
+  llvm_points_to ret_ptr (llvm_term new_miller_loop_n_ret);
 };
 
 let miller_loop_n_alias_spec n = do {
-  ret_ptr <- crucible_alloc vec384fp12_type;
+  ret_ptr <- llvm_alloc vec384fp12_type;
   (_, Q_ptr) <- ptr_to_fresh_readonly "Q" (llvm_array n (llvm_alias "struct.POINTonE2_affine"));
   (_, P_ptr) <- ptr_to_fresh_readonly "P" (llvm_array n (llvm_alias "struct.POINTonE1_affine"));
-  crucible_execute_func [ret_ptr, Q_ptr, P_ptr, crucible_term {{ `n:[64] }}];
-  new_miller_loop_n_ret <- crucible_fresh_var "new_miller_loop_n_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_miller_loop_n_ret);
+  llvm_execute_func [ret_ptr, Q_ptr, P_ptr, llvm_term {{ `n:[64] }}];
+  new_miller_loop_n_ret <- llvm_fresh_var "new_miller_loop_n_ret" vec384fp12_type;
+  llvm_points_to ret_ptr (llvm_term new_miller_loop_n_ret);
 };
 
 
 let start_dbl_n_spec n = do {
-  ret_ptr <- crucible_alloc vec384fp12_type;
+  ret_ptr <- llvm_alloc vec384fp12_type;
   //(_, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
-  //T_ptr <- crucible_alloc (llvm_array n (llvm_alias "struct.POINTonE2"));
+  //T_ptr <- llvm_alloc (llvm_array n (llvm_alias "struct.POINTonE2"));
   (_, T_ptr) <- ptr_to_fresh "T" (llvm_array n (llvm_alias "struct.POINTonE2"));
   (_, Px2_ptr) <- ptr_to_fresh_readonly "Px2" (llvm_array n (llvm_alias "struct.POINTonE1_affine"));
-  crucible_execute_func [ret_ptr, T_ptr, Px2_ptr, crucible_term {{ `n:[64] }}];
-  new_start_dbl_n_ret <- crucible_fresh_var "new_start_dbl_n_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_start_dbl_n_ret);
-  new_start_dbl_n_T <- crucible_fresh_var "new_start_dbl_n_T" (llvm_array n (llvm_alias "struct.POINTonE2"));
-  crucible_points_to T_ptr (crucible_term new_start_dbl_n_T);
+  llvm_execute_func [ret_ptr, T_ptr, Px2_ptr, llvm_term {{ `n:[64] }}];
+  new_start_dbl_n_ret <- llvm_fresh_var "new_start_dbl_n_ret" vec384fp12_type;
+  llvm_points_to ret_ptr (llvm_term new_start_dbl_n_ret);
+  new_start_dbl_n_T <- llvm_fresh_var "new_start_dbl_n_T" (llvm_array n (llvm_alias "struct.POINTonE2"));
+  llvm_points_to T_ptr (llvm_term new_start_dbl_n_T);
 };
 
 let add_n_dbl_n_spec n k = do {
   (_, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
-  //T_ptr <- crucible_alloc (llvm_array n (llvm_alias "struct.POINTonE2"));
+  //T_ptr <- llvm_alloc (llvm_array n (llvm_alias "struct.POINTonE2"));
   (_, T_ptr) <- ptr_to_fresh "T" (llvm_array n (llvm_alias "struct.POINTonE2"));
   (_, Q_ptr) <- ptr_to_fresh_readonly "Q" (llvm_array n (llvm_alias "struct.POINTonE2_affine"));
   (_, Px2_ptr) <- ptr_to_fresh_readonly "Px2" (llvm_array n (llvm_alias "struct.POINTonE1_affine"));
-  crucible_execute_func [ret_ptr, T_ptr, Q_ptr, Px2_ptr, crucible_term {{ `n:[64] }}, crucible_term {{ `k:[64] }}];
-  new_add_n_dbl_n_ret <- crucible_fresh_var "new_add_n_dbl_n_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_add_n_dbl_n_ret);
-  new_add_n_dbl_n_T <- crucible_fresh_var "new_add_n_dbl_n_T" (llvm_array n (llvm_alias "struct.POINTonE2"));
-  crucible_points_to T_ptr (crucible_term new_add_n_dbl_n_T);
+  llvm_execute_func [ret_ptr, T_ptr, Q_ptr, Px2_ptr, llvm_term {{ `n:[64] }}, llvm_term {{ `k:[64] }}];
+  new_add_n_dbl_n_ret <- llvm_fresh_var "new_add_n_dbl_n_ret" vec384fp12_type;
+  llvm_points_to ret_ptr (llvm_term new_add_n_dbl_n_ret);
+  new_add_n_dbl_n_T <- llvm_fresh_var "new_add_n_dbl_n_T" (llvm_array n (llvm_alias "struct.POINTonE2"));
+  llvm_points_to T_ptr (llvm_term new_add_n_dbl_n_T);
 };
 
 let final_exp_spec = do {
-  ret_ptr <- crucible_alloc vec384fp12_type;
+  ret_ptr <- llvm_alloc vec384fp12_type;
   (_, f_ptr) <- ptr_to_fresh_readonly "f" vec384fp12_type;
-  crucible_execute_func [ret_ptr, f_ptr];
-  new_ret <- crucible_fresh_var "new_final_exp_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_execute_func [ret_ptr, f_ptr];
+  new_ret <- llvm_fresh_var "new_final_exp_ret" vec384fp12_type;
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 
 let final_exp_alias_spec = do {
   (_, ret_ptr) <- ptr_to_fresh "f" vec384fp12_type;
-  crucible_execute_func [ret_ptr, ret_ptr];
-  new_ret <- crucible_fresh_var "new_final_exp_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_execute_func [ret_ptr, ret_ptr];
+  new_ret <- llvm_fresh_var "new_final_exp_ret" vec384fp12_type;
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 
 let mul_n_sqr_spec n = do {
   (_, ret_ptr) <- ptr_to_fresh "ret" vec384fp12_type;
   (_, a_ptr) <- ptr_to_fresh_readonly "a" vec384fp12_type;
-  crucible_execute_func [ret_ptr, a_ptr, crucible_term {{`n:[64]}}];
-  new_ret <- crucible_fresh_var "new_mul_n_sqr_ret" vec384fp12_type;
-  crucible_points_to ret_ptr (crucible_term new_ret);
+  llvm_execute_func [ret_ptr, a_ptr, llvm_term {{`n:[64]}}];
+  new_ret <- llvm_fresh_var "new_mul_n_sqr_ret" vec384fp12_type;
+  llvm_points_to ret_ptr (llvm_term new_ret);
 };
 
 let line_dbl_spec = do {
-  line_ptr <- crucible_alloc vec384fp6_type;
+  line_ptr <- llvm_alloc vec384fp6_type;
   (_, T_ptr) <- ptr_to_fresh "line_dbl_T" (llvm_alias "struct.POINTonE2");
   (_, Q_ptr) <- ptr_to_fresh_readonly "line_dbl_Q" (llvm_alias "struct.POINTonE2");
-  crucible_execute_func [line_ptr, T_ptr, Q_ptr];
-  new_T <- crucible_fresh_var "new_line_dbl_T" (llvm_alias "struct.POINTonE2");
-  crucible_points_to T_ptr (crucible_term new_T);
-  new_line <- crucible_fresh_var "new_line_dbl_line" vec384fp6_type;
-  crucible_points_to line_ptr (crucible_term new_line);
+  llvm_execute_func [line_ptr, T_ptr, Q_ptr];
+  new_T <- llvm_fresh_var "new_line_dbl_T" (llvm_alias "struct.POINTonE2");
+  llvm_points_to T_ptr (llvm_term new_T);
+  new_line <- llvm_fresh_var "new_line_dbl_line" vec384fp6_type;
+  llvm_points_to line_ptr (llvm_term new_line);
 };
 
 let line_dbl_alias_spec = do {
-  line_ptr <- crucible_alloc vec384fp6_type;
+  line_ptr <- llvm_alloc vec384fp6_type;
   (_, T_ptr) <- ptr_to_fresh "line_dbl_T" (llvm_alias "struct.POINTonE2");
-  crucible_execute_func [line_ptr, T_ptr, T_ptr];
-  new_T <- crucible_fresh_var "new_line_dbl_T" (llvm_alias "struct.POINTonE2");
-  crucible_points_to T_ptr (crucible_term new_T);
-  new_line <- crucible_fresh_var "new_line_dbl_line" vec384fp6_type;
-  crucible_points_to line_ptr (crucible_term new_line);
+  llvm_execute_func [line_ptr, T_ptr, T_ptr];
+  new_T <- llvm_fresh_var "new_line_dbl_T" (llvm_alias "struct.POINTonE2");
+  llvm_points_to T_ptr (llvm_term new_T);
+  new_line <- llvm_fresh_var "new_line_dbl_line" vec384fp6_type;
+  llvm_points_to line_ptr (llvm_term new_line);
 };
 
 let line_add_spec = do {
-  line_ptr <- crucible_alloc vec384fp6_type;
+  line_ptr <- llvm_alloc vec384fp6_type;
   (_, T_ptr) <- ptr_to_fresh "line_add_T" (llvm_alias "struct.POINTonE2");
   (_, R_ptr) <- ptr_to_fresh_readonly "line_add_R" (llvm_alias "struct.POINTonE2");
   (_, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" (llvm_alias "struct.POINTonE2_affine");
-  crucible_execute_func [line_ptr, T_ptr, R_ptr, Q_ptr];
-  new_T <- crucible_fresh_var "new_line_add_T" (llvm_alias "struct.POINTonE2");
-  crucible_points_to T_ptr (crucible_term new_T);
-  new_line <- crucible_fresh_var "new_line_add_line" vec384fp6_type;
-  crucible_points_to line_ptr (crucible_term new_line);
+  llvm_execute_func [line_ptr, T_ptr, R_ptr, Q_ptr];
+  new_T <- llvm_fresh_var "new_line_add_T" (llvm_alias "struct.POINTonE2");
+  llvm_points_to T_ptr (llvm_term new_T);
+  new_line <- llvm_fresh_var "new_line_add_line" vec384fp6_type;
+  llvm_points_to line_ptr (llvm_term new_line);
 };
 
 let line_add_alias_spec = do {
-  line_ptr <- crucible_alloc vec384fp6_type;
+  line_ptr <- llvm_alloc vec384fp6_type;
   (_, T_ptr) <- ptr_to_fresh "line_add_T" (llvm_alias "struct.POINTonE2");
   (_, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" (llvm_alias "struct.POINTonE2_affine");
-  crucible_execute_func [line_ptr, T_ptr, T_ptr, Q_ptr];
-  new_T <- crucible_fresh_var "new_line_add_T" (llvm_alias "struct.POINTonE2");
-  crucible_points_to T_ptr (crucible_term new_T);
-  new_line <- crucible_fresh_var "new_line_add_line" vec384fp6_type;
-  crucible_points_to line_ptr (crucible_term new_line);
+  llvm_execute_func [line_ptr, T_ptr, T_ptr, Q_ptr];
+  new_T <- llvm_fresh_var "new_line_add_T" (llvm_alias "struct.POINTonE2");
+  llvm_points_to T_ptr (llvm_term new_T);
+  new_line <- llvm_fresh_var "new_line_add_line" vec384fp6_type;
+  llvm_points_to line_ptr (llvm_term new_line);
 };
 
 let blst_core_verify_pk_in_g1_spec aug_len msg_len DST_len = do {
   (_, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_alias "struct.POINTonE1_affine");
   (_, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_alias "struct.POINTonE2_affine");
-  hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
+  hash_or_encode <- llvm_fresh_var "hash_or_encode" (llvm_int 32);
   (_, sk_ptr) <- ptr_to_fresh_readonly "SK" pow256_type;
   (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (_, dst_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
   (_, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
-  crucible_execute_func [pk_ptr, signature_ptr, crucible_term hash_or_encode, msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `DST_len : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}];
-  ret <- crucible_fresh_var "ret" (llvm_int 32);
-  crucible_return (crucible_term ret);
+  llvm_execute_func [pk_ptr, signature_ptr, llvm_term hash_or_encode, msg_ptr, llvm_term {{ `msg_len : [64] }}, dst_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
+  ret <- llvm_fresh_var "ret" (llvm_int 32);
+  llvm_return (llvm_term ret);
 };
 
 let blst_core_verify_pk_in_g2_spec aug_len msg_len DST_len = do {
   (_, pk_ptr) <- ptr_to_fresh_readonly "pk" (llvm_alias "struct.POINTonE2_affine");
   (_, signature_ptr) <- ptr_to_fresh_readonly "signature" (llvm_alias "struct.POINTonE1_affine");
-  hash_or_encode <- crucible_fresh_var "hash_or_encode" (llvm_int 32);
+  hash_or_encode <- llvm_fresh_var "hash_or_encode" (llvm_int 32);
   (_, sk_ptr) <- ptr_to_fresh_readonly "SK" pow256_type;
   (_, msg_ptr) <- ptr_to_fresh_readonly "msg" (llvm_array msg_len (llvm_int 8));
   (_, dst_ptr) <- ptr_to_fresh_readonly "DST" (llvm_array DST_len (llvm_int 8));
   (_, aug_ptr) <- ptr_to_fresh_readonly "aug" (llvm_array aug_len (llvm_int 8));
-  crucible_execute_func [pk_ptr, signature_ptr, crucible_term hash_or_encode, msg_ptr, crucible_term {{ `msg_len : [64] }}, dst_ptr, crucible_term {{ `DST_len : [64] }}, aug_ptr, crucible_term {{ `aug_len : [64] }}];
-  ret <- crucible_fresh_var "ret" (llvm_int 32);
-  crucible_return (crucible_term ret);
+  llvm_execute_func [pk_ptr, signature_ptr, llvm_term hash_or_encode, msg_ptr, llvm_term {{ `msg_len : [64] }}, dst_ptr, llvm_term {{ `DST_len : [64] }}, aug_ptr, llvm_term {{ `aug_len : [64] }}];
+  ret <- llvm_fresh_var "ret" (llvm_int 32);
+  llvm_return (llvm_term ret);
 };
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -41,15 +41,15 @@ enable_experimental;
 
 // we use the following spec to extract a term
 let POINTonE2_times_minus_z_spec_ = do {
-  out_ptr <- crucible_alloc POINTonE2_type;
+  out_ptr <- llvm_alloc POINTonE2_type;
   (in_, in_ptr) <- ptr_to_fresh_readonly "in" POINTonE2_type;
-  crucible_precond {{ POINTonE2_invariant in_ }};
-  crucible_execute_func [out_ptr, in_ptr];
-  new_out <- crucible_fresh_var "new_POINTonE2_times_minus_z_spec_out" POINTonE2_type;
-  crucible_points_to out_ptr (crucible_term new_out);
+  llvm_precond {{ POINTonE2_invariant in_ }};
+  llvm_execute_func [out_ptr, in_ptr];
+  new_out <- llvm_fresh_var "new_POINTonE2_times_minus_z_spec_out" POINTonE2_type;
+  llvm_points_to out_ptr (llvm_term new_out);
 };
 
-POINTonE2_times_minus_z_ov_ <- crucible_llvm_compositional_extract m
+POINTonE2_times_minus_z_ov_ <- llvm_compositional_extract m
   "POINTonE2_times_minus_z"
   "POINTonE2_times_minus_z"
   (foldr concat [vec_fp2_overrides, fp2_overrides, curve_operations_e2_ovs] [])
@@ -93,11 +93,11 @@ is_point_projective_POINTonE2_times_minus_z <- custom_prove_cryptol
 
 let POINTonE2_in_g2_spec = do {
   (p, p_ptr) <- ptr_to_fresh_readonly "p" POINTonE2_affine_type;
-  crucible_precond {{ POINTonE2_affine_invariant p }};
-  crucible_precond {{ is_point_affine E' (POINTonE2_affine_abs p) }}; // on the curve
-  crucible_precond {{ ~ (is_point_O E' (POINTonE2_affine_abs p)) }};  // and not at infinity
-  crucible_execute_func [p_ptr];
-  crucible_return (crucible_term {{ bool_to_limb (is_in_g2_impl (POINTonE2_affine_abs p)) }});
+  llvm_precond {{ POINTonE2_affine_invariant p }};
+  llvm_precond {{ is_point_affine E' (POINTonE2_affine_abs p) }}; // on the curve
+  llvm_precond {{ ~ (is_point_O E' (POINTonE2_affine_abs p)) }};  // and not at infinity
+  llvm_execute_func [p_ptr];
+  llvm_return (llvm_term {{ bool_to_limb (is_in_g2_impl (POINTonE2_affine_abs p)) }});
 };
 
 affinify_projectify_thm <- test_cryptol

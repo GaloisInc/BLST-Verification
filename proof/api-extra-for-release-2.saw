@@ -58,16 +58,16 @@ BLS12_381_G2_thms <- for
 let blst_sk_to_pk_in_g1_spec = do {
     let n_bytes = 32;
     let bits = 255;
-    ret_ptr <- crucible_alloc POINTonE1_type;
-    scalar_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array n_bytes (llvm_int 8));
-    scalar <- crucible_fresh_var "scalar" (llvm_array n_bytes (llvm_int 8));
-    crucible_points_to scalar_ptr (crucible_term scalar);
+    ret_ptr <- llvm_alloc POINTonE1_type;
+    scalar_ptr <- llvm_alloc_readonly_aligned 8 (llvm_array n_bytes (llvm_int 8));
+    scalar <- llvm_fresh_var "scalar" (llvm_array n_bytes (llvm_int 8));
+    llvm_points_to scalar_ptr (llvm_term scalar);
     // extra precondition from POINTonE1_mult_w5
-    crucible_precond {{ e1_order BP > scalar_value`{bits,n_bytes} scalar + shift }};
-    crucible_execute_func [ret_ptr, scalar_ptr];
-    ret <- crucible_fresh_var "ret" POINTonE1_type;
-    crucible_points_to ret_ptr (crucible_term ret);
-    crucible_postcond {{ affinify E (POINTonE1_abs ret) ==
+    llvm_precond {{ e1_order BP > scalar_value`{bits,n_bytes} scalar + shift }};
+    llvm_execute_func [ret_ptr, scalar_ptr];
+    ret <- llvm_fresh_var "ret" POINTonE1_type;
+    llvm_points_to ret_ptr (llvm_term ret);
+    llvm_postcond {{ affinify E (POINTonE1_abs ret) ==
                           e1_scalar_mult (scalar_value`{bits,n_bytes} scalar) BP }} ;
     };
 
@@ -84,16 +84,16 @@ blst_sk_to_pk_in_g1_ov <- custom_verify "blst_sk_to_pk_in_g1"
 let blst_sk_to_pk_in_g2_spec = do {
     let n_bytes = 32;
     let bits = 255;
-    ret_ptr <- crucible_alloc POINTonE2_type;
-    scalar_ptr <- crucible_alloc_readonly_aligned 8 (llvm_array n_bytes (llvm_int 8));
-    scalar <- crucible_fresh_var "scalar" (llvm_array n_bytes (llvm_int 8));
-    crucible_points_to scalar_ptr (crucible_term scalar);
+    ret_ptr <- llvm_alloc POINTonE2_type;
+    scalar_ptr <- llvm_alloc_readonly_aligned 8 (llvm_array n_bytes (llvm_int 8));
+    scalar <- llvm_fresh_var "scalar" (llvm_array n_bytes (llvm_int 8));
+    llvm_points_to scalar_ptr (llvm_term scalar);
     // extra precondition from POINTonE2_mult_w5
-    crucible_precond {{ e2_order BP' > scalar_value`{bits,n_bytes} scalar + shift }};
-    crucible_execute_func [ret_ptr, scalar_ptr];
-    ret <- crucible_fresh_var "ret" POINTonE2_type;
-    crucible_points_to ret_ptr (crucible_term ret);
-    crucible_postcond {{ affinify E' (POINTonE2_abs ret) ==
+    llvm_precond {{ e2_order BP' > scalar_value`{bits,n_bytes} scalar + shift }};
+    llvm_execute_func [ret_ptr, scalar_ptr];
+    ret <- llvm_fresh_var "ret" POINTonE2_type;
+    llvm_points_to ret_ptr (llvm_term ret);
+    llvm_postcond {{ affinify E' (POINTonE2_abs ret) ==
                           e2_scalar_mult (scalar_value`{bits,n_bytes} scalar) BP' }} ;
     };
 

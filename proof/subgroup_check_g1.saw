@@ -22,11 +22,11 @@ let {{
 
 
 let sigma_spec = do {
-  out_ptr <- crucible_alloc POINTonE1_type;
+  out_ptr <- llvm_alloc POINTonE1_type;
   (x, x_ptr) <- ptr_to_fresh_readonly "in"  POINTonE1_affine_type;
-  crucible_precond {{ POINTonE1_affine_invariant x }};
-  crucible_execute_func [out_ptr, x_ptr];
-  crucible_points_to out_ptr (crucible_term {{ POINTonE1_rep (projectify E (sigma (POINTonE1_affine_abs x))) }});
+  llvm_precond {{ POINTonE1_affine_invariant x }};
+  llvm_execute_func [out_ptr, x_ptr];
+  llvm_points_to out_ptr (llvm_term {{ POINTonE1_rep (projectify E (sigma (POINTonE1_affine_abs x))) }});
   };
 
 sigma_ov <- custom_verify "sigma"
@@ -74,15 +74,15 @@ let {{
 // the effect of this function
 
 let POINTonE1_times_zz_minus_1_div_by_3_spec = do {
-  out_ptr <- crucible_alloc POINTonE1_type;
+  out_ptr <- llvm_alloc POINTonE1_type;
   (x, x_ptr) <- ptr_to_fresh_readonly "in"  POINTonE1_type;
-  crucible_precond {{ POINTonE1_invariant x }};
-  crucible_execute_func [out_ptr, x_ptr];
-  out <- crucible_fresh_var "out_POINTonE1_times_zz_minus_1_div_by_3" POINTonE1_type;
-  crucible_points_to out_ptr (crucible_term out);
+  llvm_precond {{ POINTonE1_invariant x }};
+  llvm_execute_func [out_ptr, x_ptr];
+  out <- llvm_fresh_var "out_POINTonE1_times_zz_minus_1_div_by_3" POINTonE1_type;
+  llvm_points_to out_ptr (llvm_term out);
   };
 
-POINTonE1_times_zz_minus_1_div_by_3_ov <- crucible_llvm_compositional_extract m
+POINTonE1_times_zz_minus_1_div_by_3_ov <- llvm_compositional_extract m
     "POINTonE1_times_zz_minus_1_div_by_3"
     "POINTonE1_times_c"
     (concat  point_op_overrides fp_overrides)
@@ -147,11 +147,11 @@ vec_is_zero_call_thm <- prove_cryptol
 
 let POINTonE1_in_G1_spec = do {
   (p, p_ptr) <- ptr_to_fresh_readonly "p"  POINTonE1_affine_type;
-  crucible_precond {{ POINTonE1_affine_invariant p }};
-  crucible_precond {{ is_point_affine E (POINTonE1_affine_abs p) }}; // on the curve
-  crucible_precond {{ ~ (is_point_O E (POINTonE1_affine_abs p)) }};  // and not at infinity, i.e. (0,0)
-  crucible_execute_func [p_ptr];
-  crucible_return (crucible_term {{ bool_to_limb (is_in_g1_impl (POINTonE1_affine_abs p)) }});
+  llvm_precond {{ POINTonE1_affine_invariant p }};
+  llvm_precond {{ is_point_affine E (POINTonE1_affine_abs p) }}; // on the curve
+  llvm_precond {{ ~ (is_point_O E (POINTonE1_affine_abs p)) }};  // and not at infinity, i.e. (0,0)
+  llvm_execute_func [p_ptr];
+  llvm_return (llvm_term {{ bool_to_limb (is_in_g1_impl (POINTonE1_affine_abs p)) }});
   };
 
 affinify_projectify_thm <- test_cryptol {{ \P -> affinify E (projectify E P) == normalize_affine_point Fp P }};

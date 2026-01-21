@@ -20,17 +20,17 @@ let {{
 let blst_sha256_emit_spec = do {
   (h, h_ptr) <- ptr_to_fresh_readonly "h" (llvm_array 8 (llvm_int 32)); // should always be initialized
   let md_type = (llvm_array 32 (llvm_int 8));
-  md_ptr <- crucible_alloc md_type;
-  crucible_execute_func [md_ptr, h_ptr];
-  crucible_points_to md_ptr (crucible_term {{ (split (join h)) : [32][8]}} );
+  md_ptr <- llvm_alloc md_type;
+  llvm_execute_func [md_ptr, h_ptr];
+  llvm_points_to md_ptr (llvm_term {{ (split (join h)) : [32][8]}} );
 };
 
 let blst_sha256_hcopy_spec = do {
   let h_type = (llvm_array 8 (llvm_int 32));
-  dst_ptr <- crucible_alloc h_type;
+  dst_ptr <- llvm_alloc h_type;
   (src, src_ptr) <- ptr_to_fresh_readonly "src" h_type;
-  crucible_execute_func [dst_ptr, src_ptr];
-  crucible_points_to dst_ptr (crucible_term src);
+  llvm_execute_func [dst_ptr, src_ptr];
+  llvm_points_to dst_ptr (llvm_term src);
 };
 
 // blocks is a number of 512-bit blocks, which corresponds to 64 bytes
@@ -38,16 +38,16 @@ let blst_sha256_block_data_order_spec blocks = do {
   let h_type = (llvm_array 8 (llvm_int 32));
   (h, h_ptr) <- ptr_to_fresh "h" h_type;
   (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" (llvm_array (eval_size {| 64*blocks |}) (llvm_int 8));
-  crucible_execute_func [h_ptr, inp_ptr, crucible_term {{ `blocks : [64] }}];
-  crucible_points_to h_ptr (crucible_term {{ SHA256foo`{blocks} h inp }});
+  llvm_execute_func [h_ptr, inp_ptr, llvm_term {{ `blocks : [64] }}];
+  llvm_points_to h_ptr (llvm_term {{ SHA256foo`{blocks} h inp }});
 };
 
 let blst_sha256_bcopy_spec len = do {
   let buf_type = (llvm_array len (llvm_int 8));
-  buf_ptr <- crucible_alloc buf_type;
+  buf_ptr <- llvm_alloc buf_type;
   (inp, inp_ptr) <- ptr_to_fresh_readonly "inp" buf_type;
-  crucible_execute_func [buf_ptr, inp_ptr, crucible_term {{ `len : [64] }}];
-  crucible_points_to buf_ptr (crucible_term inp);
+  llvm_execute_func [buf_ptr, inp_ptr, llvm_term {{ `len : [64] }}];
+  llvm_points_to buf_ptr (llvm_term inp);
 };
 
 // blst_keygen calls sha256_block_data_order and sha256_update_bcopy, which are

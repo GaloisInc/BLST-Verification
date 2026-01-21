@@ -44,87 +44,87 @@
 // Only ever called with count=2, and aliased
 let lshift_mod_384_alias_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "x" vec384_type;
-  n_ptr <- crucible_alloc_readonly vec384_type;
-  crucible_precond {{ fp_invariant a}};
-  crucible_points_to n_ptr p_representation;
-  crucible_execute_func [a_ptr, a_ptr, crucible_term {{2:Size_t}} , n_ptr];
-  crucible_points_to a_ptr (crucible_term {{ fp_rep (lshift_fp (fp_abs a) 2) }});
+  n_ptr <- llvm_alloc_readonly vec384_type;
+  llvm_precond {{ fp_invariant a}};
+  llvm_points_to n_ptr p_representation;
+  llvm_execute_func [a_ptr, a_ptr, llvm_term {{2:Size_t}} , n_ptr];
+  llvm_points_to a_ptr (llvm_term {{ fp_rep (lshift_fp (fp_abs a) 2) }});
   };
 
 let lshift_fp2_alias_spec = do {
   (a, a_ptr) <- ptr_to_fresh_readonly "x" vec384x_type;
-  crucible_precond {{ fp2_invariant a}};
-  crucible_execute_func [a_ptr, a_ptr, crucible_term {{2:Size_t}}];
-  crucible_points_to a_ptr (crucible_term {{ fp2_rep (lshift_fp2 (fp2_abs a) 2) }});
+  llvm_precond {{ fp2_invariant a}};
+  llvm_execute_func [a_ptr, a_ptr, llvm_term {{2:Size_t}}];
+  llvm_points_to a_ptr (llvm_term {{ fp2_rep (lshift_fp2 (fp2_abs a) 2) }});
   };
 
 
 let line_by_Px2_spec = do {
     (line, line_ptr) <- ptr_to_fresh "line" vec384fp6_type;
     (Px2, Px2_ptr) <- ptr_to_fresh_readonly "Px2" POINTonE1_affine_type;
-    crucible_precond {{ POINTonE1_affine_invariant Px2 }};
-    crucible_precond {{ fp6_invariant line }};
-    crucible_execute_func [line_ptr, Px2_ptr];
-    crucible_points_to line_ptr (crucible_term
+    llvm_precond {{ POINTonE1_affine_invariant Px2 }};
+    llvm_precond {{ fp6_invariant line }};
+    llvm_execute_func [line_ptr, Px2_ptr];
+    llvm_points_to line_ptr (llvm_term
       {{ fp6_rep (line_by_Px2 (fp6_abs line) (POINTonE1_affine_abs Px2)) }});
 };
 
 let line_dbl_spec = do {
-  line_ptr <- crucible_alloc vec384fp6_type;
-  T_ptr <- crucible_alloc POINTonE2_type;
+  line_ptr <- llvm_alloc vec384fp6_type;
+  T_ptr <- llvm_alloc POINTonE2_type;
   (Q, Q_ptr) <- ptr_to_fresh_readonly "line_dbl_Q" POINTonE2_type;
-  crucible_precond {{ POINTonE2_invariant Q }};
-  crucible_execute_func [line_ptr, T_ptr, Q_ptr];
-  crucible_points_to T_ptr (crucible_term {{ POINTonE2_rep (point_double Fp_2 (POINTonE2_abs Q)) }});
-  crucible_points_to line_ptr (crucible_term {{ fp6_rep (line_double_imp (POINTonE2_abs Q)) }});
+  llvm_precond {{ POINTonE2_invariant Q }};
+  llvm_execute_func [line_ptr, T_ptr, Q_ptr];
+  llvm_points_to T_ptr (llvm_term {{ POINTonE2_rep (point_double Fp_2 (POINTonE2_abs Q)) }});
+  llvm_points_to line_ptr (llvm_term {{ fp6_rep (line_double_imp (POINTonE2_abs Q)) }});
 };
 
 let line_dbl_alias_spec = do {
-  line_ptr <- crucible_alloc vec384fp6_type;
+  line_ptr <- llvm_alloc vec384fp6_type;
   (T, T_ptr) <- ptr_to_fresh "line_dbl_T" POINTonE2_type;
-  crucible_precond {{ POINTonE2_invariant T }};
-  crucible_execute_func [line_ptr, T_ptr, T_ptr];
-  crucible_points_to T_ptr (crucible_term {{ POINTonE2_rep (point_double Fp_2 (POINTonE2_abs T)) }});
-  crucible_points_to line_ptr (crucible_term {{ fp6_rep (line_double_imp (POINTonE2_abs T)) }});
+  llvm_precond {{ POINTonE2_invariant T }};
+  llvm_execute_func [line_ptr, T_ptr, T_ptr];
+  llvm_points_to T_ptr (llvm_term {{ POINTonE2_rep (point_double Fp_2 (POINTonE2_abs T)) }});
+  llvm_points_to line_ptr (llvm_term {{ fp6_rep (line_double_imp (POINTonE2_abs T)) }});
 };
 
 let line_add_spec = do {
-  line_ptr <- crucible_alloc vec384fp6_type;
+  line_ptr <- llvm_alloc vec384fp6_type;
   (T, T_ptr) <- ptr_to_fresh "line_add_T" POINTonE2_type;
   (R, R_ptr) <- ptr_to_fresh_readonly "line_add_R" POINTonE2_type;
   (Q, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" POINTonE2_affine_type;
-  crucible_precond {{ POINTonE2_invariant R }};
-  crucible_precond {{ POINTonE2_affine_invariant Q }};
-  crucible_execute_func [line_ptr, T_ptr, R_ptr, Q_ptr];
-  crucible_points_to T_ptr (crucible_term
+  llvm_precond {{ POINTonE2_invariant R }};
+  llvm_precond {{ POINTonE2_affine_invariant Q }};
+  llvm_execute_func [line_ptr, T_ptr, R_ptr, Q_ptr];
+  llvm_points_to T_ptr (llvm_term
     {{ POINTonE2_rep (point_add_affine_alt Fp_2 (POINTonE2_abs R) (POINTonE2_affine_abs Q)) }});
-  crucible_points_to line_ptr (crucible_term
+  llvm_points_to line_ptr (llvm_term
     {{ fp6_rep (line_add_imp (POINTonE2_abs R) (POINTonE2_affine_abs Q)) }});
 };
 
 let line_add_alias_spec = do {
-  line_ptr <- crucible_alloc vec384fp6_type;
+  line_ptr <- llvm_alloc vec384fp6_type;
   (T, T_ptr) <- ptr_to_fresh "line_add_T" POINTonE2_type;
   (Q, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" POINTonE2_affine_type;
-  crucible_precond {{ POINTonE2_invariant T }};
-  crucible_precond {{ POINTonE2_affine_invariant Q }};
-  crucible_execute_func [line_ptr, T_ptr, T_ptr, Q_ptr];
-  crucible_points_to T_ptr (crucible_term
+  llvm_precond {{ POINTonE2_invariant T }};
+  llvm_precond {{ POINTonE2_affine_invariant Q }};
+  llvm_execute_func [line_ptr, T_ptr, T_ptr, Q_ptr];
+  llvm_points_to T_ptr (llvm_term
     {{ POINTonE2_rep (point_add_affine_alt Fp_2 (POINTonE2_abs T) (POINTonE2_affine_abs Q)) }});
-  crucible_points_to line_ptr (crucible_term
+  llvm_points_to line_ptr (llvm_term
     {{ fp6_rep (line_add_imp (POINTonE2_abs T) (POINTonE2_affine_abs Q)) }});
 };
 
 let start_dbl_n_spec n = do {
-  ret_ptr <- crucible_alloc vec384fp12_type;
+  ret_ptr <- llvm_alloc vec384fp12_type;
   (T, T_ptr) <- ptr_to_fresh "T" (llvm_array n POINTonE2_type);
   (Px2, Px2_ptr) <- ptr_to_fresh_readonly "Px2" (llvm_array n POINTonE1_affine_type);
-  crucible_precond {{ all POINTonE2_invariant T }};
-  crucible_precond {{ all POINTonE1_affine_invariant Px2 }};
-  crucible_execute_func [ret_ptr, T_ptr, Px2_ptr, llvm_term {{ (`n:Size_t) }}];
-  crucible_points_to ret_ptr (llvm_term
+  llvm_precond {{ all POINTonE2_invariant T }};
+  llvm_precond {{ all POINTonE1_affine_invariant Px2 }};
+  llvm_execute_func [ret_ptr, T_ptr, Px2_ptr, llvm_term {{ (`n:Size_t) }}];
+  llvm_points_to ret_ptr (llvm_term
     {{ fp12_rep (start_dbl_n_imp (map POINTonE2_abs T) (map POINTonE1_affine_abs Px2)) }});
-  crucible_points_to T_ptr (crucible_term {{ map (\ Q -> POINTonE2_rep (point_double Fp_2 (POINTonE2_abs Q))) T }});
+  llvm_points_to T_ptr (llvm_term {{ map (\ Q -> POINTonE2_rep (point_double Fp_2 (POINTonE2_abs Q))) T }});
   };
 
 let add_n_dbl_n_1_spec k = do {
@@ -132,15 +132,15 @@ let add_n_dbl_n_1_spec k = do {
   (T, T_ptr) <- ptr_to_fresh "T" POINTonE2_type;
   (Q, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" POINTonE2_affine_type;
   (Px2, Px2_ptr) <- ptr_to_fresh_readonly "Px2" POINTonE1_affine_type;
-  crucible_precond {{ fp12_invariant ret }};
-  crucible_precond {{ POINTonE2_invariant T }};
-  crucible_precond {{ POINTonE2_affine_invariant Q }};
-  crucible_precond {{ POINTonE1_affine_invariant Px2 }};
-  crucible_execute_func [ret_ptr, T_ptr, Q_ptr, Px2_ptr, llvm_term {{ (1:Size_t) }}
+  llvm_precond {{ fp12_invariant ret }};
+  llvm_precond {{ POINTonE2_invariant T }};
+  llvm_precond {{ POINTonE2_affine_invariant Q }};
+  llvm_precond {{ POINTonE1_affine_invariant Px2 }};
+  llvm_execute_func [ret_ptr, T_ptr, Q_ptr, Px2_ptr, llvm_term {{ (1:Size_t) }}
                         , llvm_term {{ (`k:Size_t) }}];
-  crucible_points_to ret_ptr (llvm_term
+  llvm_points_to ret_ptr (llvm_term
     {{ fp12_rep (add_n_dbl_ret`{k} (fp12_abs ret) (POINTonE2_abs T) (POINTonE2_affine_abs Q) (POINTonE1_affine_abs Px2)) }});
-  crucible_points_to T_ptr (llvm_term
+  llvm_points_to T_ptr (llvm_term
     {{ POINTonE2_rep (add_n_dbl_alt`{k}  (POINTonE2_abs T) (POINTonE2_affine_abs Q)) }});
   };
 
@@ -149,16 +149,16 @@ let add_n_dbl_n_spec n k = do {
   (T, T_ptr) <- ptr_to_fresh "T" (llvm_array n POINTonE2_type);
   (Q, Q_ptr) <- ptr_to_fresh_readonly "line_add_Q" (llvm_array n POINTonE2_affine_type);
   (Px2, Px2_ptr) <- ptr_to_fresh_readonly "Px2" (llvm_array n POINTonE1_affine_type);
-  crucible_precond {{ fp12_invariant ret }};
-  crucible_precond {{ all POINTonE2_invariant T }};
-  crucible_precond {{ all POINTonE2_affine_invariant Q }};
-  crucible_precond {{ all POINTonE1_affine_invariant Px2 }};
-  crucible_execute_func [ret_ptr, T_ptr, Q_ptr, Px2_ptr, llvm_term {{ (`n:Size_t) }}
+  llvm_precond {{ fp12_invariant ret }};
+  llvm_precond {{ all POINTonE2_invariant T }};
+  llvm_precond {{ all POINTonE2_affine_invariant Q }};
+  llvm_precond {{ all POINTonE1_affine_invariant Px2 }};
+  llvm_execute_func [ret_ptr, T_ptr, Q_ptr, Px2_ptr, llvm_term {{ (`n:Size_t) }}
                         , llvm_term {{ (`k:Size_t) }}];
-  crucible_points_to ret_ptr (llvm_term
+  llvm_points_to ret_ptr (llvm_term
     {{ fp12_rep (add_n_dbl_n_ret`{n,k} (fp12_abs ret) (map POINTonE2_abs T)
                                        (map POINTonE2_affine_abs Q) (map POINTonE1_affine_abs Px2)) }});
-  crucible_points_to T_ptr (llvm_term
+  llvm_points_to T_ptr (llvm_term
     {{ [ POINTonE2_rep (add_n_dbl_alt`{k} (POINTonE2_abs Ti) (POINTonE2_affine_abs Qi)) | Ti <- T | Qi <- Q ] }});
   };
 
@@ -166,25 +166,25 @@ let add_n_dbl_n_spec n k = do {
 // differently when n=1.  So here I have separated out that case into a separate spec.
 
 let miller_loop_n_1_spec = do {
-  ret_ptr <- crucible_alloc vec384fp12_type;
+  ret_ptr <- llvm_alloc vec384fp12_type;
   (Q, Q_ptr) <- ptr_to_fresh_readonly "Q" POINTonE2_affine_type; // array in general
   (P, P_ptr) <- ptr_to_fresh_readonly "P" POINTonE1_affine_type; // array in general
-  crucible_precond {{ POINTonE2_affine_invariant Q }};
-  crucible_precond {{ POINTonE1_affine_invariant P }};
-  crucible_execute_func [ret_ptr, Q_ptr, P_ptr, llvm_term {{ (1:Size_t) }}];
-  crucible_points_to ret_ptr (llvm_term
+  llvm_precond {{ POINTonE2_affine_invariant Q }};
+  llvm_precond {{ POINTonE1_affine_invariant P }};
+  llvm_execute_func [ret_ptr, Q_ptr, P_ptr, llvm_term {{ (1:Size_t) }}];
+  llvm_points_to ret_ptr (llvm_term
     {{ fp12_rep (miller_loop_opt_checked (POINTonE1_affine_abs P) (POINTonE2_affine_abs Q)) }});
   };
 
 // In the general case, n >= 2, we get the product of several Miller loop results.
 let miller_loop_n_spec n = do {
-  ret_ptr <- crucible_alloc vec384fp12_type;
+  ret_ptr <- llvm_alloc vec384fp12_type;
   (Qs, Q_ptr) <- ptr_to_fresh "Q" (llvm_array n POINTonE2_affine_type);
   (Ps, P_ptr) <- ptr_to_fresh_readonly "P" (llvm_array n POINTonE1_affine_type);
-  crucible_precond {{ all POINTonE2_affine_invariant Qs }};
-  crucible_precond {{ all POINTonE1_affine_invariant Ps }};
-  crucible_execute_func [ret_ptr, Q_ptr, P_ptr, llvm_term {{ (`n:Size_t) }}];
-  crucible_points_to ret_ptr (llvm_term
+  llvm_precond {{ all POINTonE2_affine_invariant Qs }};
+  llvm_precond {{ all POINTonE1_affine_invariant Ps }};
+  llvm_execute_func [ret_ptr, Q_ptr, P_ptr, llvm_term {{ (`n:Size_t) }}];
+  llvm_points_to ret_ptr (llvm_term
     {{ fp12_rep (F_prod Fp_12 [miller_loop_opt P Q | Q <- map POINTonE2_affine_abs Qs
                                                    | P <- map POINTonE1_affine_abs Ps ]) }});
   };

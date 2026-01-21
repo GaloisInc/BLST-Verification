@@ -28,8 +28,8 @@ let blst_pairing_finalverify_B_spec = do {
 
   AggrSign <- llvm_fresh_var "AggrSign" POINTonE2_type;
   llvm_precond {{ POINTonE2_invariant AggrSign }};
-  crucible_precond {{ is_point_projective E' (POINTonE2_abs AggrSign) }}; // on the curve
-  crucible_precond {{ ~(Fp_2.is_equal ((fp2_abs (AggrSign.2)), Fp_2.field_zero)) }};
+  llvm_precond {{ is_point_projective E' (POINTonE2_abs AggrSign) }}; // on the curve
+  llvm_precond {{ ~(Fp_2.is_equal ((fp2_abs (AggrSign.2)), Fp_2.field_zero)) }};
 
   llvm_points_to (llvm_elem ctx_ptr 0)
                  (llvm_term {{ AGGR_HASH_OR_ENCODE
