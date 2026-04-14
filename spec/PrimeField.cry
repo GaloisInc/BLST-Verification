@@ -4,7 +4,7 @@
 */
 // Three representation of a finite field with p elements, where p is prime.
 //
-// The first uses Integers, the second the modular type `Z n`, and 
+// The first uses Integers, the second the modular type `Z n`, and
 // the third uses bit vectors.
 //
 // In the second, then, "p" is a type parameter, while in the other two it
