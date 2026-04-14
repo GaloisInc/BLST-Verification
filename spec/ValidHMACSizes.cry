@@ -1,0 +1,13 @@
+module ValidHMACSizes where
+
+import Primitive::Symmetric::KDF::HKDF256
+
+// This is defined internally in cryptol-specs'
+// Primitive::Symmetric::KDF::HKDF256. For now, we simply redefine it here so
+// that other definitions may refer to it. We may consider re-exporting this
+// from cryptol-specs in the future.
+type constraint validHMACSizes KeyLen MsgLen =
+  ( fin KeyLen, fin MsgLen
+      , 32 >= width MsgLen
+      , 64 >= width (8 * KeyLen)
+      , 64 >= width (8 * 64 + MsgLen))

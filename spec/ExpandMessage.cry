@@ -5,7 +5,7 @@
 module ExpandMessage where
 
 import rfc8017 (I2OSP, OS2IP)
-import Primitive::Keyless::Hash::SHA256 as SHA256
+import Primitive::Keyless::Hash::SHA2Internal::SHA256 as SHA256
 
 private
     // From Section 4. Utility Functions

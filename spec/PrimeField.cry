@@ -13,7 +13,6 @@
 module PrimeField where
 
 import Common::Field
-import Common::ModDivZ
 import Common::mod_arith
 
 /**
@@ -117,3 +116,31 @@ prime_field_bv m =
     , field_unit = 1
     , is_equal (x, y) = x==y // does this need to handle unnormalized values?
     }
+
+// Historical note: the definitions below used to be provided by cryptol-specs,
+// but they have since been removed, as the `moddiv` function has been largely
+// superseded by the (/.) function over Fields. Unfortunately, it is not
+// entirely straightforward to replace uses of `moddiv` with (/.) in the code
+// above, as this would require changing a fair number of type signatures.
+// Moreover, it is unclear if the shape of the proof goals would be
+// substantially different or not.
+//
+// We opt to simply re-define `moddiv` below for the sake of convenience.
+private
+  even k = k % 2 == 0
+
+  // Calulate x / y in F_p using Euler's binary gcd algorithm
+  moddiv : {p}(fin p, p >= 3) => Z p -> Z p -> Z p  // p prime!
+  moddiv x y = if y == 0 then error "division by 0"  // zero has no inverse
+                         else fromInteger (egcd `p 0 (fromZ y) (fromZ x))
+      where
+
+      egcd : Integer -> Integer -> Integer -> Integer -> Integer
+      egcd a ra b rb =  // a odd!
+          if b == 0 then ra
+           | even b then egcd a ra (   b    / 2) (half rb)
+           | a < b  then egcd a ra ((b - a) / 2) (half ((rb - ra) % `p))
+                    else egcd b rb ((a - b) / 2) (half ((ra - rb) % `p))
+
+      half : Integer -> Integer
+      half k = (if even k then k else (k + `p)) / 2

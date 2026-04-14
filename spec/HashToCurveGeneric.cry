@@ -9,7 +9,7 @@
 module HashToCurveGeneric where
 
 import rfc8017 (I2OSP, OS2IP)
-import Primitive::Keyless::Hash::SHA256 as SHA256
+import Primitive::Keyless::Hash::SHA2Internal::SHA256 as SHA256
 import Common::Field
 import Parameters (t_Fp, Fp, to_Fp)
 import FieldExtras
@@ -35,11 +35,11 @@ parameter
     type constraint fin _m
 
     // various constraints thrown up by the type checker
-    type constraint 8 * ((128 + lg2 p) /^ 8) >= 384
-    type constraint 2 * m <= 127
+    type constraint 8 * ((128 + lg2 _p) /^ 8) >= 384
+    type constraint 2 * _m <= 127
 
     // Convert a list of elements of F_p to an element of F_q
-    _base_to_F: [m]t_Fp -> _t_F
+    _base_to_F: [_m]t_Fp -> _t_F
 
     // The curve (will be E1 or E2)
     _C: EC::EllipticCurve _t_F

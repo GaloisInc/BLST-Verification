@@ -18,7 +18,7 @@ import Common::Field (FieldRep)
 import ShortWeierstrassCurve as EC
 import Parameters as P
 import Maybe
-import Primitive::Keyless::Hash::SHA256
+import Primitive::Keyless::Hash::SHA2Internal::SHA256
 import Primitive::Symmetric::KDF::HKDF256
 import rfc8017
 
@@ -50,6 +50,9 @@ parameter
     // type DST_len: #
     DST: [43][8]
 
+    //type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + DST_len))
+    type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + 43))
+
     hash_to_point: {msg_len} (Hashable msg_len) =>
                [msg_len][8] -> EC::AffinePoint t_F
 
@@ -68,9 +71,6 @@ parameter
 
     pubkey_subgroup_check: EC::AffinePoint t_F' -> Bool
     signature_subgroup_check: EC::AffinePoint t_F -> Bool
-
-//type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + DST_len))
-type constraint Hashable msg_len = (msg_len <= 255, 61 >= width (69 + msg_len + 43))
 
 reexport_DST = DST
 
