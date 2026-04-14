@@ -7,9 +7,10 @@ module implementation::Keygen where
 // Definitions needed for the code proof of blst_keygen
 
 import Parameters as P
-import Primitive::Keyless::Hash::SHA256
+import Primitive::Keyless::Hash::SHA2Internal::SHA256
 import Primitive::Symmetric::KDF::HKDF256
 import rfc8017
+import ValidHMACSizes
 
 import Common::bv
 

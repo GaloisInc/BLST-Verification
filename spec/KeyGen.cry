@@ -7,9 +7,10 @@ module KeyGen where
 // 2.3 KeyGen
 
 import Parameters as P
-import Primitive::Keyless::Hash::SHA256
+import Primitive::Keyless::Hash::SHA2Internal::SHA256
 import Primitive::Symmetric::KDF::HKDF256
 import rfc8017
+import ValidHMACSizes
 
 /**
  * KeyGen from draft-02

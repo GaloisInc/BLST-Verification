@@ -27,7 +27,7 @@ import "../spec/KeyGen.cry";
 import "../spec/implementation/Keygen.cry";
 
 // hashing
-import "../cryptol-specs/Primitive/Keyless/Hash/SHA256.cry";
+import "../cryptol-specs/Primitive/Keyless/Hash/SHA2Internal/SHA256.cry";
 import "../spec/ExpandMessage.cry";
 HE1 <- cryptol_load "../spec/HashToCurveE1.cry";
 HE1Aux <- cryptol_load "../spec/HashToCurveE1Aux.cry";
