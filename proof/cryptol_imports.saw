@@ -22,7 +22,7 @@ import "../spec/implementation/Field.cry";
 
 // Key generation
 import "../spec/rfc8017.cry";
-import "../cryptol-specs/Primitive/Symmetric/KDF/HKDF256.cry";
+import "../spec/SHA2Internal/HKDF256.cry";
 import "../spec/KeyGen.cry";
 import "../spec/implementation/Keygen.cry";
 

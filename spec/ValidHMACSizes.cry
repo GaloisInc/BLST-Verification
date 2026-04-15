@@ -1,6 +1,6 @@
 module ValidHMACSizes where
 
-import Primitive::Symmetric::KDF::HKDF256
+import SHA2Internal::HKDF256
 
 // This is defined internally in cryptol-specs'
 // Primitive::Symmetric::KDF::HKDF256. For now, we simply redefine it here so

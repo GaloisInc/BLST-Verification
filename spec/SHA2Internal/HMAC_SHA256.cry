@@ -1,0 +1,12 @@
+// Like `Primitive::Symmetric::MAC::HMAC::Instantiations::HMAC_SHA256`, but
+// instantiated to use `Primitive::Keyless::Hash::SHA2Internal::SHA256` instead
+// of `Primitive::Keyless::Hash::SHA2::Instantiations::SHA256`.
+module SHA2Internal::HMAC_SHA256 = Primitive::Symmetric::MAC::HMAC::Specification where
+
+import Primitive::Keyless::Hash::SHA2Internal::SHA256
+
+type B = 64
+type L = 32
+
+H : {T} (width (8 * T) <= B) => [T][8] -> [L][8]
+H M = split (SHAImp M)

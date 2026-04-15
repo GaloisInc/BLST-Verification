@@ -66,7 +66,7 @@ let redc_mont_256_alias_1_2_spec = do {
 // Now we give specs for the functions we verify:
 
 //import "../spec/rfc8017.cry";
-//import "../cryptol-specs/Primitive/Symmetric/KDF/HKDF256.cry";
+//import "../spec/SHA2Internal/HKDF256.cry";
 
 let HKDF_Extract_spec salt_len IKM_len = do {
   PRK_ptr <- llvm_alloc (llvm_array 32 (llvm_int 8));
