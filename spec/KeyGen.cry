@@ -8,7 +8,7 @@ module KeyGen where
 
 import Parameters as P
 import Primitive::Keyless::Hash::SHA2Internal::SHA256
-import Primitive::Symmetric::KDF::HKDF256
+import SHA2Internal::HKDF256
 import rfc8017
 import ValidHMACSizes
 

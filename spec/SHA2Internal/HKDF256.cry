@@ -1,0 +1,14 @@
+// Like `Primitive::Symmetric::KDF::HKDF256`, but instantiated to use a version
+// of HMAC_SHA256 that uses `Primitive::Keyless::Hash::SHA2Internal::SHA256`
+// instead of `Primitive::Keyless::Hash::SHA2::Instantiations::SHA256`.
+module SHA2Internal::HKDF256 = Primitive::Symmetric::KDF::HKDF where
+
+import SHA2Internal::HMAC_SHA256 as HMAC_SHA256
+
+type HashLen = 32
+HMAC = hmacBytes
+
+hmacBytes : {n, m} (64 >= width (8 * (64 + m)),
+                    64 >= width (8 * n), 32 >= width m, fin m, fin n) =>
+            [n][8] -> [m][8] -> [32][8]
+hmacBytes key msg = HMAC_SHA256::hmac key msg
